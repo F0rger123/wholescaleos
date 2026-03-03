@@ -11,7 +11,6 @@ import {
   DETECTED_TYPE_COLORS,
   DETECTED_TYPE_TO_TARGET,
 } from '../store/useStore';
-import { useNavigate } from 'react-router-dom';
 import {
   fetchGoogleSheet,
   smartDetectColumns,
@@ -65,8 +64,6 @@ function mapPropertyType(raw: string): PropertyType {
   return 'single-family';
 }
 
-// Column auto-detection now handled by smartDetectColumns from google-sheets.ts
-
 // ─── Confidence Badge ───────────────────────────────────────────────────────
 
 function ConfidenceBadge({ score }: { score: number }) {
@@ -108,7 +105,6 @@ export function Imports() {
     getMockScrapedProperty, getMockPdfExtraction,
     importLeadsFromData,
   } = useStore();
-  const navigate = useNavigate();
 
   // Wizard state
   const [activeView, setActiveView] = useState<'home' | 'wizard'>('home');
@@ -368,10 +364,6 @@ export function Imports() {
       setWizardStep(3);
     }, 1500);
   };
-
-  // ─── Save mapping as template ──────────────────────────
-
-  // (template saving is now inlined in the JSX)
 
   // ─── Smart Paste handlers ─────────────────────────────
 
@@ -1393,7 +1385,7 @@ export function Imports() {
             </div>
 
             <div className="flex items-center justify-center gap-3 pt-4">
-              <button onClick={() => navigate('/leads')}
+              <button onClick={() => window.location.href = '/leads'}
                 className="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors">
                 <Users size={16} /> View Leads
               </button>

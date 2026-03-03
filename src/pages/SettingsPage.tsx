@@ -79,7 +79,7 @@ function GeneralTab() {
   const [errorMsg, setErrorMsg] = useState('');
 
   const [formData, setFormData] = useState({
-    companyName: teamConfig.name || '',
+    companyName: teamConfig?.name || '',
     companyAddress: '',
     companyPhone: '',
     companyEmail: '',
@@ -92,11 +92,16 @@ function GeneralTab() {
     async function loadSettings() {
       if (!supabase || !teamId) return;
       try {
-        const { data } = await supabase.from('teams').select('name, settings').eq('id', teamId).single();
+        const { data } = await supabase
+          .from('teams')
+          .select('name, settings')
+          .eq('id', teamId)
+          .single();
+          
         if (data) {
           const s = (data.settings as Record<string, string>) || {};
           setFormData({
-            companyName: data.name || teamConfig.name || '',
+            companyName: data.name || teamConfig?.name || '',
             companyAddress: s.address || '',
             companyPhone: s.phone || '',
             companyEmail: s.email || '',
@@ -109,7 +114,7 @@ function GeneralTab() {
       }
     }
     loadSettings();
-  }, [teamId]);
+  }, [teamId, teamConfig]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -294,7 +299,7 @@ function GeneralTab() {
 }
 
 /* ============================================================
-   APPEARANCE TAB - WITH SUPABASE THEME PERSISTENCE
+   APPEARANCE TAB - WITH SUPABASE THEME PERSISTENCE (FIXED)
    ============================================================ */
 function AppearanceTab() {
   const { currentTheme, setTheme } = useStore();
@@ -307,7 +312,9 @@ function AppearanceTab() {
     // Save to Supabase
     if (supabase && isSupabaseConfigured) {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+      const { data } = await (supabase.auth as any).getUser();
+const user = data?.user; 
+
         if (user) {
           // First get existing settings
           const { data: profile } = await supabase
@@ -411,7 +418,7 @@ function NotificationsTab() {
     digestDaily: false,
   });
 
-  const toggle = (key: string) => setSettings(prev => ({ ...prev, [key]: !prev[key as keyof typeof prev] }));
+  const toggle = (key: keyof typeof settings) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
 
   const ToggleSwitch = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
     <button onClick={onToggle} className="relative w-10 h-5 rounded-full transition-colors" style={{ background: enabled ? 'var(--t-primary)' : 'var(--t-border)' }}>
@@ -435,7 +442,7 @@ function NotificationsTab() {
                 <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{label}</p>
                 <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{desc}</p>
               </div>
-              <ToggleSwitch enabled={settings[key as keyof typeof settings] as boolean} onToggle={() => toggle(key)} />
+              <ToggleSwitch enabled={settings[key as keyof typeof settings]} onToggle={() => toggle(key as keyof typeof settings)} />
             </div>
           ))}
         </div>
@@ -455,7 +462,7 @@ function NotificationsTab() {
                 <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{label}</p>
                 <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{desc}</p>
               </div>
-              <ToggleSwitch enabled={settings[key as keyof typeof settings] as boolean} onToggle={() => toggle(key)} />
+              <ToggleSwitch enabled={settings[key as keyof typeof settings]} onToggle={() => toggle(key as keyof typeof settings)} />
             </div>
           ))}
         </div>
@@ -473,7 +480,7 @@ function NotificationsTab() {
                 <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{label}</p>
                 <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{desc}</p>
               </div>
-              <ToggleSwitch enabled={settings[key as keyof typeof settings] as boolean} onToggle={() => toggle(key)} />
+              <ToggleSwitch enabled={settings[key as keyof typeof settings]} onToggle={() => toggle(key as keyof typeof settings)} />
             </div>
           ))}
         </div>
@@ -612,10 +619,10 @@ function TeamTab() {
         <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--t-text)' }}>Invite Code</h2>
         <div className="flex items-center gap-3">
           <code className="px-4 py-2 rounded-lg text-lg font-mono tracking-wider" style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-primary)' }}>
-            {teamConfig.inviteCode}
+            {teamConfig?.inviteCode || 'WS-XXXXXX'}
           </code>
           <button
-            onClick={() => { navigator.clipboard.writeText(teamConfig.inviteCode); alert('Invite code copied!'); }}
+            onClick={() => { navigator.clipboard.writeText(teamConfig?.inviteCode || ''); alert('Invite code copied!'); }}
             className="p-2 rounded-lg hover:opacity-80"
             style={{ background: 'var(--t-primary)' + '20', color: 'var(--t-primary)' }}
           >

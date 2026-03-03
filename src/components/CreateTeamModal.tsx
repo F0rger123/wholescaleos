@@ -100,7 +100,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
     setIsRlsError(false);
 
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: { user: authUser } } = await (supabase.auth as any).getUser();
       if (!authUser) {
         setError('Not authenticated. Please sign in again.');
         setLoading(false);
