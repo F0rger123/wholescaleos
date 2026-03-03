@@ -303,6 +303,7 @@ export function Imports() {
 
   const importFromSheet = async () => {
     setIsLoading(true);
+    setImportResult(null);
     
     try {
       // Map each row to a lead object
@@ -335,13 +336,23 @@ export function Imports() {
         return lead;
       }).filter(lead => lead.name || lead.propertyAddress); // Only keep leads with at least name or address
 
-      // Import each lead using the store's addLead function
+      if (rows.length === 0) {
+        alert('❌ No valid leads found to import');
+        setIsLoading(false);
+        return;
+      }
+
+      alert(`📊 Starting import of ${rows.length} leads...`);
+
       let imported = 0;
+      const errors: string[] = [];
+
       for (const lead of rows) {
         try {
           await addLead(lead);
           imported++;
-        } catch (err) {
+        } catch (err: any) {
+          errors.push(err.message);
           console.error('Failed to import lead:', err);
         }
       }
@@ -364,8 +375,14 @@ export function Imports() {
         skippedCount: 0,
         duplicateCount: duplicates,
         templateUsed: selectedTemplate ? importTemplates.find(t => t.id === selectedTemplate)?.name : undefined,
-        errors: [],
+        errors,
       });
+
+      if (errors.length === 0) {
+        alert(`✅ Successfully imported ${imported} leads!`);
+      } else {
+        alert(`⚠️ Imported ${imported} leads, ${errors.length} errors. Check console.`);
+      }
 
       setWizardStep(3);
     } catch (err: any) {
