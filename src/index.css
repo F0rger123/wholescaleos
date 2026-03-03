@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand-950: #172554;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-slate-750: #293548;
+  --color-slate-850: #162032;
+}
+
+/* ─── Theme CSS Variables (defaults = dark theme) ───────────────────────── */
+
+:root {
+  --t-primary: #3b82f6;
+  --t-primary-dim: rgba(59, 130, 246, 0.2);
+  --t-primary-text: #60a5fa;
+  --t-secondary: #6366f1;
+  --t-accent: #8b5cf6;
+  --t-bg: #0f172a;
+  --t-surface: #1e293b;
+  --t-surface-hover: #334155;
+  --t-surface-active: #3b4d6b;
+  --t-text: #f1f5f9;
+  --t-text-secondary: #94a3b8;
+  --t-text-muted: #64748b;
+  --t-border: #334155;
+  --t-border-light: #475569;
+  --t-success: #10b981;
+  --t-warning: #f59e0b;
+  --t-error: #ef4444;
+  --t-info: #3b82f6;
+  --t-sidebar-bg: #0f172a;
+  --t-sidebar-border: #1e293b;
+  --t-sidebar-hover: #1e293b;
+  --t-input-bg: #1e293b;
+  --t-input-border: #334155;
+  --t-input-focus: #3b82f6;
+  --t-avatar-from: #3b82f6;
+  --t-avatar-to: #8b5cf6;
+  --t-glow: none;
+  --t-radius: 0.75rem;
+  --t-card-radius: 1rem;
+  --t-glow-shadow: none;
+  --t-gradient: linear-gradient(135deg, #3b82f6, #6366f1);
+}
+
+/* ─── Navigation hover styles ───────────────────────────────────────────── */
+
+.inactive-nav-item:hover {
+  background: var(--t-sidebar-hover) !important;
+  color: var(--t-text) !important;
+}
+
+/* ─── Leaflet container fix ─────────────────────────────────────────────── */
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--t-radius);
+}
+
+/* ─── Custom scrollbar ──────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--t-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--t-border-light);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--t-text-muted);
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--t-bg);
+  color: var(--t-text);
+}
+
+/* ─── Custom marker overrides ───────────────────────────────────────────── */
+
+.custom-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.buyer-marker {
+  background: none !important;
+  border: none !important;
+}
+
+/* ─── Leaflet popup dark overrides ──────────────────────────────────────── */
+
+.leaflet-popup-content {
+  margin: 10px 12px;
+}
+
+/* ─── Range slider styling ──────────────────────────────────────────────── */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 6px;
+  background: var(--t-border);
+  border-radius: 3px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--t-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+}
+
+/* ─── Theme preview animations ──────────────────────────────────────────── */
+
+@keyframes theme-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.theme-card-glow {
+  transition: all 0.3s ease;
+}
+.theme-card-glow:hover {
+  transform: translateY(-2px);
+}
+
+/* ─── Notification slide-in animation ───────────────────────────────────── */
+
+@keyframes notif-slide {
+  from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notif-panel-enter {
+  animation: notif-slide 0.2s ease-out;
+}
