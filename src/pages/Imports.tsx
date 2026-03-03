@@ -220,8 +220,14 @@ export function Imports() {
     try {
       const result = await fetchGoogleSheet(sheetUrl);
 
-      if (!result.success || result.data.length === 0) {
-        setConnectionError(result.error || 'No data found in the sheet. Make sure it has headers in the first row and data below.');
+      if (!result.success) {
+        setConnectionError(result.error || 'Failed to fetch sheet. Make sure it is publicly accessible.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (result.data.length === 0) {
+        setConnectionError('No data found in the sheet. Make sure it has headers in the first row and data below.');
         setIsLoading(false);
         return;
       }
