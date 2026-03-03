@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import {
   useStore,
   type ImportSource,
@@ -16,6 +17,7 @@ import {
   smartDetectColumns,
   isGoogleSheetsUrl,
 } from '../lib/google-sheets';
+import { supabase } from '../lib/supabase';
 import {
   FileSpreadsheet, Globe, FileText, Link2, ArrowRight, ArrowLeft,
   Search, Check, X, ChevronDown, Upload, Download, Trash2,
@@ -103,8 +105,36 @@ export function Imports() {
     addImportTemplate, deleteImportTemplate,
     addImportHistory, updateDuplicateSettings,
     getMockScrapedProperty, getMockPdfExtraction,
-    importLeadsFromData,
+    importLeadsFromData, addLead, teamId,
   } = useStore();
+
+  // Custom Fields State
+  const [customFields, setCustomFields] = useState<Array<{ id: string; name: string; field_key: string; field_type: 'text' | 'number' }>>([]);
+  const [showAddField, setShowAddField] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldType, setNewFieldType] = useState<'text' | 'number'>('text');
+  const [fieldSaveSuccess, setFieldSaveSuccess] = useState(false);
+
+  // Load custom fields from Supabase
+  useEffect(() => {
+    if (!supabase || !teamId) return;
+    
+    const loadCustomFields = async () => {
+      const { data, error } = await supabase!
+        .from('custom_fields')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('display_order');
+      
+      if (error) {
+        console.error('Error loading custom fields:', error);
+      } else if (data) {
+        setCustomFields(data);
+      }
+    };
+    
+    loadCustomFields();
+  }, [teamId]);
 
   // Wizard state
   const [activeView, setActiveView] = useState<'home' | 'wizard'>('home');
@@ -271,9 +301,11 @@ export function Imports() {
 
   // ─── Import from sheet ─────────────────────────────────
 
-  const importFromSheet = () => {
+  const importFromSheet = async () => {
     setIsLoading(true);
-    setTimeout(() => {
+    
+    try {
+      // Map each row to a lead object
       const rows = sheetData.map(row => {
         const mapped: Record<string, string> = {};
         columnMappings.forEach(m => {
@@ -281,19 +313,39 @@ export function Imports() {
             mapped[m.targetField] = row[m.sourceColumn] || '';
           }
         });
-        return {
+        
+        // Build lead with proper field mapping
+        const lead: any = {
           name: mapped.name || '',
           email: mapped.email || '',
           phone: mapped.phone || '',
-          address: mapped.propertyAddress || '',
-          value: parseValue(mapped.estimatedValue || '0'),
-          propertyType: mapPropertyType(mapped.propertyType || 'single-family') as PropertyType,
-          source: 'other' as LeadSource,
+          propertyAddress: mapped.propertyAddress || '',
+          estimatedValue: parseFloat(mapped.estimatedValue?.replace(/[^0-9.-]/g, '') || '0') || 0,
           notes: mapped.notes || '',
+          status: 'new',
         };
-      });
+        
+        // Add custom field values
+        customFields.forEach(field => {
+          if (mapped[field.field_key]) {
+            lead[field.field_key] = mapped[field.field_key];
+          }
+        });
+        
+        return lead;
+      }).filter(lead => lead.name || lead.propertyAddress); // Only keep leads with at least name or address
 
-      const imported = importLeadsFromData(rows);
+      // Import each lead using the store's addLead function
+      let imported = 0;
+      for (const lead of rows) {
+        try {
+          await addLead(lead);
+          imported++;
+        } catch (err) {
+          console.error('Failed to import lead:', err);
+        }
+      }
+
       const duplicates = rows.length - imported;
 
       setImportResult({
@@ -315,9 +367,12 @@ export function Imports() {
         errors: [],
       });
 
-      setIsLoading(false);
       setWizardStep(3);
-    }, 1500);
+    } catch (err: any) {
+      alert(`❌ Import failed: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ─── Import from scraped ───────────────────────────────
@@ -1408,6 +1463,155 @@ export function Imports() {
 
   return (
     <div className="space-y-6">
+      {/* CUSTOM FIELDS SECTION - MOVED FROM LEADS PAGE */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-400" />
+            <h2 className="text-base font-semibold text-white">Custom Import Fields</h2>
+            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded-full">
+              {customFields.length}
+            </span>
+          </div>
+          {!showAddField && (
+            <button 
+              onClick={() => setShowAddField(true)} 
+              className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg"
+            >
+              <Plus className="w-3 h-3" /> Add Field
+            </button>
+          )}
+        </div>
+
+        {showAddField && (
+          <div className="mb-3 flex items-center gap-2">
+            <input 
+              value={newFieldName} 
+              onChange={e => setNewFieldName(e.target.value)} 
+              placeholder="Field name (e.g., Lot Size, ARV, Equity)" 
+              className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" 
+              autoFocus 
+            />
+            <select 
+              value={newFieldType} 
+              onChange={e => setNewFieldType(e.target.value as any)} 
+              className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
+            >
+              <option value="text">Text</option>
+              <option value="number">Number</option>
+            </select>
+            <button 
+              onClick={async () => {
+                if (!newFieldName.trim() || !teamId) return;
+                
+                const fieldKey = newFieldName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+                const newField = {
+                  id: uuidv4(),
+                  name: newFieldName.trim(),
+                  field_key: fieldKey,
+                  field_type: newFieldType
+                };
+                
+                try {
+                  if (supabase) {
+                    const { error } = await supabase
+                      .from('custom_fields')
+                      .insert([{ 
+                        ...newField, 
+                        team_id: teamId, 
+                        display_order: customFields.length 
+                      }]);
+                    
+                    if (error) {
+                      alert(`❌ Failed to save: ${error.message}`);
+                      return;
+                    }
+                  }
+                  
+                  setCustomFields(p => [...p, newField]);
+                  setNewFieldName('');
+                  setShowAddField(false);
+                  setFieldSaveSuccess(true);
+                  setTimeout(() => setFieldSaveSuccess(false), 3000);
+                  
+                } catch (err: any) {
+                  alert(`❌ Error: ${err.message}`);
+                }
+              }} 
+              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => { 
+                setShowAddField(false); 
+                setNewFieldName(''); 
+              }} 
+              className="p-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {fieldSaveSuccess && (
+          <div className="mb-3 p-2 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-xs flex items-center gap-1">
+            <Check size={12} />
+            Field saved to database!
+          </div>
+        )}
+
+        {customFields.length === 0 ? (
+          <p className="text-slate-400 text-sm">No custom fields yet. Add fields like &quot;Lot Size&quot;, &quot;ARV&quot;, or &quot;Equity&quot; to use in imports.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {customFields.map(f => (
+              <span 
+                key={f.id} 
+                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 text-sm group"
+              >
+                <span className="text-white">{f.name}</span>
+                <span className={`px-1.5 py-0.5 text-xs rounded ${
+                  f.field_type === 'number' 
+                    ? 'bg-green-500/20 text-green-400' 
+                    : 'bg-blue-500/20 text-blue-400'
+                }`}>
+                  {f.field_type}
+                </span>
+                <button 
+                  onClick={async () => {
+                    if (!confirm(`Delete field "${f.name}"?`)) return;
+                    
+                    try {
+                      if (supabase) {
+                        const { error } = await supabase
+                          .from('custom_fields')
+                          .delete()
+                          .eq('id', f.id);
+                        
+                        if (error) {
+                          alert(`❌ Failed to delete: ${error.message}`);
+                          return;
+                        }
+                      }
+                      
+                      setCustomFields(p => p.filter(field => field.id !== f.id));
+                      alert('✅ Field deleted');
+                      
+                    } catch (err: any) {
+                      alert(`❌ Error: ${err.message}`);
+                    }
+                  }} 
+                  className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
