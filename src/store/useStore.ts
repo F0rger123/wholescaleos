@@ -11,6 +11,7 @@ export type PropertyType = 'single-family' | 'multi-family' | 'commercial' | 'la
 export type TimelineType = 'call' | 'email' | 'note' | 'status-change' | 'meeting' | 'task';
 export type AIPriorityLevel = 'high' | 'medium' | 'low';
 export type ImportSource = 'google-sheets' | 'homes-com' | 'url' | 'pdf' | 'csv' | 'smart-paste';
+export type PresenceStatus = 'online' | 'offline' | 'busy' | 'dnd';
 
 export interface TimelineEntry {
   id: string;
@@ -55,6 +56,35 @@ export interface Lead {
   statusHistory: StatusHistoryEntry[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CoverageArea {
+  id: string;
+  teamId: string;
+  name: string;
+  coordinates: number[][][]; // GeoJSON Polygon format
+  color: string;
+  opacity: number;
+  leadCount?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface Buyer {
+  id: string;
+  teamId: string;
+  name: string;
+  email: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  budgetMin: number;
+  budgetMax: number;
+  active: boolean;
+  dealScore?: number;
+  notes?: string;
+  criteria?: Record<string, any>;
+  createdAt: string;
 }
 
 export interface ColumnMapping {
@@ -189,7 +219,6 @@ export const DETECTED_TYPE_TO_TARGET: Record<string, string> = {
   text: 'notes',
 };
 
-// ADD THIS NEW BLOCK
 export const PRESENCE_COLORS: Record<string, string> = {
   online: 'bg-green-500',
   offline: 'bg-slate-500',
@@ -203,8 +232,6 @@ export const PRESENCE_LABELS: Record<string, string> = {
   busy: 'Busy',
   dnd: 'Do Not Disturb',
 };
-
-export type PresenceStatus = 'online' | 'offline' | 'busy' | 'dnd';
 
 // ─── Helper Functions ──────────────────────────────────────────────────────
 
@@ -390,6 +417,31 @@ export function generateNextAction(lead: Lead): {
     confidence: 70,
     actionLabel: 'Send Email',
   };
+}
+
+export function getLeadsInArea(leads: Lead[], area: CoverageArea): Lead[] {
+  if (!area.coordinates || area.coordinates.length === 0) return [];
+  
+  // Simple point-in-polygon check
+  return leads.filter(lead => {
+    if (!lead.lat || !lead.lng) return false;
+    
+    // Ray casting algorithm for point in polygon
+    const point = [lead.lng, lead.lat]; // GeoJSON uses [lng, lat]
+    const polygon = area.coordinates[0]; // Assume first ring
+    
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+      const xi = polygon[i][0], yi = polygon[i][1];
+      const xj = polygon[j][0], yj = polygon[j][1];
+      
+      const intersect = ((yi > point[1]) !== (yj > point[1])) &&
+        (point[0] < (xj - xi) * (point[1] - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    
+    return inside;
+  });
 }
 
 // ─── Smart Paste Functions ─────────────────────────────────────────────────
@@ -592,8 +644,8 @@ interface AppState {
   // Data
   leads: Lead[];
   tasks: any[];
-  buyers: any[];
-  coverageAreas: any[];
+  buyers: Buyer[];
+  coverageAreas: CoverageArea[];
   callRecordings: CallRecording[];
   
   // Import data
