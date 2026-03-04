@@ -189,6 +189,23 @@ export const DETECTED_TYPE_TO_TARGET: Record<string, string> = {
   text: 'notes',
 };
 
+// ADD THIS NEW BLOCK
+export const PRESENCE_COLORS: Record<string, string> = {
+  online: 'bg-green-500',
+  offline: 'bg-slate-500',
+  busy: 'bg-yellow-500',
+  dnd: 'bg-red-500',
+};
+
+export const PRESENCE_LABELS: Record<string, string> = {
+  online: 'Online',
+  offline: 'Offline',
+  busy: 'Busy',
+  dnd: 'Do Not Disturb',
+};
+
+export type PresenceStatus = 'online' | 'offline' | 'busy' | 'dnd';
+
 // ─── Helper Functions ──────────────────────────────────────────────────────
 
 export function calculateDealScore(lead: Partial<Lead>): number {
