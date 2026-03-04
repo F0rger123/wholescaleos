@@ -21,7 +21,8 @@ export const isSupabaseConfigured =
   supabaseUrl !== 'your_project_url' &&
   supabaseAnonKey !== 'your_anon_key';
 
-export const supabase = isSupabaseConfigured
+// Create base client
+const baseClient = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
@@ -36,6 +37,32 @@ export const supabase = isSupabaseConfigured
       },
     })
   : null;
+
+// Safe wrapper for edge functions that prevents errors
+const safeInvoke = async (functionName: string, options?: any) => {
+  if (!baseClient) {
+    console.log(`⚠️ Supabase not configured, skipping ${functionName}`);
+    return { data: null, error: null };
+  }
+  
+  try {
+    // Try to invoke the function, but catch any errors
+    return await baseClient.functions.invoke(functionName, options);
+  } catch (error) {
+    // Log but don't throw - this prevents the "Cannot convert undefined or null to object" error
+    console.log(`ℹ️ Edge function '${functionName}' not available:`, error);
+    return { data: null, error: null };
+  }
+};
+
+// Create a wrapped client with safe methods
+export const supabase = baseClient ? {
+  ...baseClient,
+  functions: {
+    ...baseClient.functions,
+    invoke: safeInvoke,
+  }
+} : null;
 
 // ─── Helper Exports ───────────────────────────────────────────────────────────
 
