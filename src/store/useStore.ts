@@ -683,6 +683,7 @@ interface AppState {
   logout: () => Promise<void>;
   resetPassword?: (email: string) => Promise<any>;
   updateProfile: (updates: { full_name?: string; avatar_url?: string; phone?: string }) => Promise<any>;
+  incrementLoginStreak: () => Promise<void>;
   
   // Lead actions
   setLeads: (leads: Lead[]) => void;
@@ -774,6 +775,10 @@ export const useStore = create<AppState>()(
           });
           if (error) throw error;
           set({ user: data.user, session: data.session, isLoading: false });
+          
+          // Increment login streak after successful login
+          await get().incrementLoginStreak();
+          
           return data;
         } catch (error) {
           set({ isLoading: false });
@@ -879,6 +884,71 @@ export const useStore = create<AppState>()(
             saveMessage: `Failed to update profile: ${error.message}`
           });
           throw error;
+        }
+      },
+
+      incrementLoginStreak: async () => {
+        const { user } = get();
+        if (!user) return;
+
+        try {
+          // Get today's date (YYYY-MM-DD)
+          const today = new Date().toISOString().split('T')[0];
+          
+          // Get current streak data from profiles table
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('streak, last_login, longest_streak')
+            .eq('id', user.id)
+            .single();
+            
+          if (fetchError) {
+            console.error('Error fetching streak data:', fetchError);
+            return;
+          }
+          
+          let newStreak = 1;
+          let newLongestStreak = profile?.longest_streak || 1;
+          
+          // Check if last login was yesterday
+          if (profile?.last_login) {
+            const lastLogin = new Date(profile.last_login);
+            const todayDate = new Date(today);
+            
+            // Calculate difference in days
+            const diffTime = todayDate.getTime() - lastLogin.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 1) {
+              // Consecutive day
+              newStreak = (profile?.streak || 0) + 1;
+              newLongestStreak = Math.max(newStreak, profile?.longest_streak || 0);
+            } else if (diffDays === 0) {
+              // Already logged in today, keep same streak
+              newStreak = profile?.streak || 1;
+              newLongestStreak = profile?.longest_streak || 1;
+            } else {
+              // Streak broken
+              newStreak = 1;
+              newLongestStreak = profile?.longest_streak || 1;
+            }
+          }
+          
+          // Update profile with new streak data
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              streak: newStreak,
+              last_login: today,
+              longest_streak: newLongestStreak
+            })
+            .eq('id', user.id);
+            
+          if (updateError) {
+            console.error('Error updating streak:', updateError);
+          }
+        } catch (error) {
+          console.error('Error in incrementLoginStreak:', error);
         }
       },
 
