@@ -233,6 +233,12 @@ export const PRESENCE_LABELS: Record<string, string> = {
   dnd: 'Do Not Disturb',
 };
 
+export const PRIORITY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  high: { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/30' },
+  medium: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
+  low: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30' },
+};
+
 // ─── Helper Functions ──────────────────────────────────────────────────────
 
 export function calculateDealScore(lead: Partial<Lead>): number {
