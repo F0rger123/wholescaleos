@@ -18,27 +18,43 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useStore((s) => s.isAuthenticated);
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  console.log('🔒 ProtectedRoute rendering');
+  const isAuthenticated = useStore((s) => {
+    console.log('📊 isAuthenticated value:', s.isAuthenticated);
+    return s.isAuthenticated;
+  });
+  
+  if (!isAuthenticated) {
+    console.log('➡️ Not authenticated, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
   
   // If Supabase is configured but no team selected, redirect to team selection
   if (isSupabaseConfigured) {
     const hasTeam = localStorage.getItem('wholescale-preferred-team');
-    if (!hasTeam) return <Navigate to="/team-selection" replace />;
+    console.log('🏠 hasTeam:', hasTeam);
+    if (!hasTeam) {
+      console.log('➡️ No team, redirecting to team-selection');
+      return <Navigate to="/team-selection" replace />;
+    }
   }
   
+  console.log('✅ ProtectedRoute rendering children');
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
+  console.log('🌍 PublicRoute rendering');
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  
   if (isAuthenticated) {
-    // If authenticated with Supabase, check if team is selected
+    console.log('➡️ Already authenticated, redirecting');
     if (isSupabaseConfigured && !localStorage.getItem('wholescale-preferred-team')) {
       return <Navigate to="/team-selection" replace />;
     }
     return <Navigate to="/" replace />;
   }
+  console.log('✅ PublicRoute rendering children');
   return <>{children}</>;
 }
 
@@ -58,68 +74,102 @@ function LoadingScreen() {
 }
 
 export function App() {
+  console.log('🚀 App component rendering');
   const [checking, setChecking] = useState(true);
-  const { login, updateProfile, incrementLoginStreak } = useStore();
+  const { login, updateProfile, incrementLoginStreak, isAuthenticated } = useStore();
+  
+  console.log('📊 Store state:', { isAuthenticated, checking });
 
   // On mount: check for existing Supabase session
   useEffect(() => {
+    console.log('📞 checkSession useEffect running');
+    
     async function checkSession() {
+      console.log('🔍 checkSession started');
+      
       if (isSupabaseConfigured && supabase) {
+        console.log('✅ Supabase configured, checking session');
+        
         try {
           // First, check if there's an auth callback in the URL hash
-          // Supabase email confirmations redirect with #access_token=...&type=signup
           const hash = window.location.hash;
+          console.log('📍 Current hash:', hash);
+          
           if (hash.includes('access_token') && (hash.includes('type=signup') || hash.includes('type=magiclink') || hash.includes('type=recovery'))) {
-            // Don't auto-process here — let EmailConfirmed page handle it
-            // But if we're not on the email-confirmed page, redirect there
+            console.log('📧 Auth callback detected');
             if (!hash.includes('/email-confirmed')) {
-              // The hash router makes this tricky — Supabase puts tokens in the hash
-              // We need to extract them and redirect to our confirmation page
               const tokenHash = hash.startsWith('#/') ? hash : hash;
-              // Store tokens temporarily so EmailConfirmed page can pick them up
               sessionStorage.setItem('supabase-auth-callback', tokenHash);
+              console.log('💾 Stored auth callback in sessionStorage');
               setChecking(false);
               return;
             }
           }
 
-          const { data: { session } } = await supabase.auth.getSession();
+          console.log('🔐 Getting session from Supabase');
+          const { data: { session }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('❌ Session error:', error);
+          }
+          
+          console.log('📦 Session data:', session ? 'Session exists' : 'No session');
+          
           if (session?.user) {
-            // User has an active Supabase session — restore auth state
-            const user = session.user;
+            console.log('👤 User found:', session.user.email);
             
-            // Login with empty password (we're just restoring session)
-            await login(user.email || '', '');
-            
-            // Update profile with correct format
-            await updateProfile({
-              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              avatar_url: null,
-              phone: null,
-            });
-            
-            await incrementLoginStreak();
-            // Session restored — ProtectedRoute will check for team selection
+            try {
+              // Login with empty password (we're just restoring session)
+              console.log('🔑 Logging in...');
+              await login(session.user.email || '', '');
+              console.log('✅ Login successful');
+              
+              // Update profile with correct format
+              console.log('📝 Updating profile...');
+              await updateProfile({
+                full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+                avatar_url: null,
+                phone: null,
+              });
+              console.log('✅ Profile updated');
+              
+              console.log('🔥 Incrementing streak...');
+              await incrementLoginStreak();
+              console.log('✅ Streak incremented');
+              
+            } catch (loginError) {
+              console.error('❌ Error during login flow:', loginError);
+            }
           }
         } catch (error) {
-          console.error('Session check error:', error);
-          // Session check failed — stay logged out
+          console.error('❌ Session check error:', error);
         }
+      } else {
+        console.log('⚠️ Supabase not configured');
       }
+      
+      console.log('✅ checkSession complete, setting checking to false');
       setChecking(false);
     }
+    
     checkSession();
 
-    // Listen for auth state changes (e.g., token refresh, sign out from another tab)
+    // Listen for auth state changes
     if (isSupabaseConfigured && supabase) {
+      console.log('👂 Setting up auth state listener');
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('🔄 Auth state changed:', event);
+        
         if (event === 'SIGNED_OUT' || !session) {
+          console.log('🚪 User signed out');
           useStore.getState().logout();
         } else if (event === 'SIGNED_IN' && session?.user) {
-          // Auto-login when session is established (e.g., after email confirmation)
+          console.log('🔐 User signed in');
           const user = session.user;
           const store = useStore.getState();
+          
           if (!store.isAuthenticated) {
+            console.log('🔄 Auto-login triggered');
             try {
               await store.login(user.email || '', '');
               await store.updateProfile({
@@ -128,18 +178,29 @@ export function App() {
                 phone: null,
               });
               await store.incrementLoginStreak();
+              console.log('✅ Auto-login complete');
             } catch (error) {
-              console.error('Auto-login error:', error);
+              console.error('❌ Auto-login error:', error);
             }
           }
         }
       });
-      return () => subscription.unsubscribe();
+      
+      return () => {
+        console.log('🧹 Cleaning up auth listener');
+        subscription.unsubscribe();
+      };
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (checking) return <LoadingScreen />;
+  console.log('🎨 Rendering with checking:', checking);
+  
+  if (checking) {
+    console.log('⏳ Showing loading screen');
+    return <LoadingScreen />;
+  }
 
+  console.log('🗺️ Rendering router');
   return (
     <HashRouter>
       <Routes>
