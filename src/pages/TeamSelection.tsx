@@ -55,6 +55,7 @@ export function TeamSelection() {
           .select('team_id, role, teams(id, name, invite_code)')
           .eq('user_id', user.id);
 
+        // FIX: Add null check here!
         if (memberships && memberships.length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const teamList: TeamInfo[] = memberships.map((m: any) => ({
@@ -81,6 +82,9 @@ export function TeamSelection() {
             selectTeam(teamList[0].teamId);
             return;
           }
+        } else {
+          // FIX: Handle case with no teams
+          setTeams([]);
         }
       } catch (err) {
         console.error('Error fetching teams:', err);
@@ -328,8 +332,8 @@ export function TeamSelection() {
         {/* Main Content */}
         {mode === 'select' && (
           <div className="space-y-4">
-            {/* Existing teams */}
-            {teams.length > 0 && (
+            {/* Existing teams - FIX: Add check for teams array */}
+            {teams && teams.length > 0 ? (
               <>
                 <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 px-1">
                   Your Teams
@@ -367,6 +371,11 @@ export function TeamSelection() {
                   <div className="flex-1 h-px bg-slate-800" />
                 </div>
               </>
+            ) : (
+              // FIX: Show message when no teams
+              <div className="text-center py-8">
+                <p className="text-slate-400 mb-4">You're not a member of any teams yet.</p>
+              </div>
             )}
 
             {/* Action buttons */}
@@ -410,7 +419,7 @@ export function TeamSelection() {
           </div>
         )}
 
-        {/* Join Team Mode */}
+        {/* Join Team Mode (same as before) */}
         {mode === 'join' && (
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -471,7 +480,7 @@ export function TeamSelection() {
           </div>
         )}
 
-        {/* Create Team Mode */}
+        {/* Create Team Mode (same as before) */}
         {mode === 'create' && (
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
