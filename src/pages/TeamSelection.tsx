@@ -20,6 +20,7 @@ export function TeamSelection() {
   const { currentUser, logout } = useStore();
   const [teams, setTeams] = useState<TeamInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<'select' | 'join' | 'create'>('select');
 
   // Join team state
@@ -37,57 +38,94 @@ export function TeamSelection() {
   // Fetch user's teams
   useEffect(() => {
     async function fetchTeams() {
-      if (!isSupabaseConfigured || !supabase) {
-        // Demo mode — go straight to dashboard
-        navigate('/', { replace: true });
-        return;
-      }
-
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          navigate('/login', { replace: true });
+        console.log('🔍 Starting team fetch...');
+        
+        if (!isSupabaseConfigured || !supabase) {
+          console.log('📦 Supabase not configured, going to dashboard');
+          navigate('/', { replace: true });
           return;
         }
 
-        const { data: memberships } = await supabase
+        console.log('🔐 Getting current user...');
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error('❌ User error:', userError);
+          throw userError;
+        }
+        
+        if (!user) {
+          console.log('👤 No user found, redirecting to login');
+          navigate('/login', { replace: true });
+          return;
+        }
+        
+        console.log('✅ User found:', user.id);
+
+        console.log('📋 Fetching team memberships...');
+        const { data: memberships, error: membershipsError } = await supabase
           .from('team_members')
           .select('team_id, role, teams(id, name, invite_code)')
           .eq('user_id', user.id);
 
+        if (membershipsError) {
+          console.error('❌ Memberships error:', membershipsError);
+          throw membershipsError;
+        }
+
+        console.log('📊 Memberships data:', memberships);
+
         // FIX: Add null check here!
         if (memberships && memberships.length > 0) {
+          console.log(`📦 Found ${memberships.length} teams`);
+          
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const teamList: TeamInfo[] = memberships.map((m: any) => ({
-            teamId: m.team_id,
-            teamName: m.teams?.name || 'My Team',
-            role: m.role || 'member',
-            memberCount: 0,
-            inviteCode: m.teams?.invite_code || '',
-          }));
+          const teamList: TeamInfo[] = memberships.map((m: any) => {
+            console.log('🏢 Processing team:', m);
+            return {
+              teamId: m.team_id,
+              teamName: m.teams?.name || 'My Team',
+              role: m.role || 'member',
+              memberCount: 0,
+              inviteCode: m.teams?.invite_code || '',
+            };
+          });
 
           // Get member counts for each team
           for (const t of teamList) {
-            const { count } = await supabase
-              .from('team_members')
-              .select('*', { count: 'exact', head: true })
-              .eq('team_id', t.teamId);
-            t.memberCount = count || 1;
+            try {
+              const { count, error: countError } = await supabase
+                .from('team_members')
+                .select('*', { count: 'exact', head: true })
+                .eq('team_id', t.teamId);
+              
+              if (countError) {
+                console.error(`❌ Count error for team ${t.teamId}:`, countError);
+              }
+              t.memberCount = count || 1;
+            } catch (countErr) {
+              console.error(`❌ Exception getting count for team ${t.teamId}:`, countErr);
+            }
           }
 
+          console.log('✅ Team list prepared:', teamList);
           setTeams(teamList);
 
           // Auto-select if user has exactly 1 team
           if (teamList.length === 1) {
+            console.log('🎯 Auto-selecting single team:', teamList[0].teamId);
             selectTeam(teamList[0].teamId);
             return;
           }
         } else {
           // FIX: Handle case with no teams
+          console.log('📭 No teams found for user');
           setTeams([]);
         }
       } catch (err) {
-        console.error('Error fetching teams:', err);
+        console.error('❌ Fatal error in fetchTeams:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error occurred');
       } finally {
         setLoading(false);
       }
@@ -97,6 +135,7 @@ export function TeamSelection() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectTeam = (teamId: string) => {
+    console.log('🎯 Selecting team:', teamId);
     localStorage.setItem('wholescale-preferred-team', teamId);
     // Reset dataLoaded so SupabaseSync re-fetches
     useStore.setState({ dataLoaded: false });
@@ -301,6 +340,27 @@ export function TeamSelection() {
     navigate('/login', { replace: true });
   };
 
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-md bg-red-500/10 border border-red-500/30 rounded-2xl p-8 text-center">
+          <AlertTriangle size={48} className="text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+          <p className="text-red-400 text-sm mb-6 font-mono bg-red-950/30 p-4 rounded-xl">
+            {error}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
@@ -332,7 +392,7 @@ export function TeamSelection() {
         {/* Main Content */}
         {mode === 'select' && (
           <div className="space-y-4">
-            {/* Existing teams - FIX: Add check for teams array */}
+            {/* Existing teams */}
             {teams && teams.length > 0 ? (
               <>
                 <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 px-1">
@@ -372,7 +432,6 @@ export function TeamSelection() {
                 </div>
               </>
             ) : (
-              // FIX: Show message when no teams
               <div className="text-center py-8">
                 <p className="text-slate-400 mb-4">You're not a member of any teams yet.</p>
               </div>
@@ -419,7 +478,7 @@ export function TeamSelection() {
           </div>
         )}
 
-        {/* Join Team Mode (same as before) */}
+        {/* Join Team Mode */}
         {mode === 'join' && (
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -480,7 +539,7 @@ export function TeamSelection() {
           </div>
         )}
 
-        {/* Create Team Mode (same as before) */}
+        {/* Create Team Mode */}
         {mode === 'create' && (
           <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
             <div className="flex items-center justify-between">
