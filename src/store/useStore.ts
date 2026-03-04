@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 
@@ -726,7 +725,7 @@ interface AppState {
 
 // ─── Initial State ─────────────────────────────────────────────────────────
 
-const initialState: AppState = {
+const initialState = {
   user: null,
   session: null,
   isLoading: false,
@@ -754,665 +753,544 @@ const initialState: AppState = {
   sidebarOpen: true,
   saveStatus: 'idle',
   saveMessage: null,
-  
-  // Auth actions (placeholders)
-  setUser: () => {},
-  setSession: () => {},
-  setTeamId: () => {},
-  login: async () => ({}),
-  signup: async () => ({}),
-  logout: async () => {},
-  resetPassword: async () => ({}),
-  updateProfile: async () => ({}),
-  incrementLoginStreak: async () => {},
-  
-  // Lead actions
-  setLeads: () => {},
-  addLead: async () => null,
-  updateLead: () => {},
-  deleteLead: () => {},
-  addTimelineEntry: () => {},
-  updateLeadStatus: () => {},
-  
-  // Lead photos
-  addLeadPhoto: () => {},
-  removeLeadPhoto: () => {},
-  reorderLeadPhotos: () => {},
-  
-  // Call recordings
-  addCallRecording: () => {},
-  analyzeRecording: () => {},
-  
-  // Team actions
-  updateMemberRole: () => {},
-  removeTeamMember: () => {},
-  regenerateInviteCode: () => {},
-  updateTeamConfig: () => {},
-  
-  // Import actions
-  addImportTemplate: () => {},
-  deleteImportTemplate: () => {},
-  addImportHistory: () => {},
-  updateDuplicateSettings: () => {},
-  importLeadsFromData: () => 0,
-  
-  // Mock data generators
-  getMockScrapedProperty: () => ({} as ScrapedPropertyData),
-  getMockPdfExtraction: () => [],
-  
-  // Save status
-  setSaveStatus: () => {},
 };
-
-// Clear any corrupted storage on startup
-try {
-  const stored = localStorage.getItem('wholescale-storage');
-  if (stored) {
-    JSON.parse(stored); // This will throw if corrupted
-    console.log('✅ Existing storage is valid');
-  }
-} catch {
-  console.log('🧹 Clearing corrupted storage...');
-  localStorage.removeItem('wholescale-storage');
-}
 
 // ─── Store ─────────────────────────────────────────────────────────────────
 
-export const useStore = create<AppState>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
+export const useStore = create<AppState>((set, get) => ({
+  ...initialState,
 
-      // Auth actions
-      setUser: (user) => set({ user }),
-      setSession: (session) => set({ session }),
-      setTeamId: (teamId) => set({ teamId }),
+  // Auth actions
+  setUser: (user) => set({ user }),
+  setSession: (session) => set({ session }),
+  setTeamId: (teamId) => set({ teamId }),
 
-      login: async (email, password) => {
-        set({ isLoading: true });
-        try {
-          console.log('🔑 Attempting login for:', email);
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
-          if (error) {
-            console.error('❌ Login error:', error);
-            set({ isLoading: false });
-            throw error;
-          }
-          
-          console.log('✅ Login successful:', data.user?.email);
-          set({ 
-            user: data.user, 
-            session: data.session, 
-            isAuthenticated: true,
-            isLoading: false 
-          });
-          
-          // Try streak update but don't let it crash the login
-          try {
-            await get().incrementLoginStreak();
-          } catch (streakError) {
-            console.error('⚠️ Streak update failed (non-critical):', streakError);
-          }
-          
-          return data;
-        } catch (error) {
-          console.error('❌ Login failed:', error);
-          set({ isLoading: false });
-          throw error;
+  login: async (email, password) => {
+    set({ isLoading: true });
+    try {
+      console.log('🔑 Attempting login for:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error('❌ Login error:', error);
+        set({ isLoading: false });
+        throw error;
+      }
+      
+      console.log('✅ Login successful:', data.user?.email);
+      set({ 
+        user: data.user, 
+        session: data.session, 
+        isAuthenticated: true,
+        isLoading: false 
+      });
+      
+      // Try streak update but don't let it crash the login
+      try {
+        await get().incrementLoginStreak();
+      } catch (streakError) {
+        console.error('⚠️ Streak update failed (non-critical):', streakError);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ Login failed:', error);
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  signup: async (email, password, name) => {
+    set({ isLoading: true });
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name || '' }
         }
-      },
+      });
+      if (error) throw error;
+      set({ isLoading: false });
+      return data;
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
 
-      signup: async (email, password, name) => {
-        set({ isLoading: true });
-        try {
-          const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: { full_name: name || '' }
-            }
-          });
-          if (error) throw error;
-          set({ isLoading: false });
-          return data;
-        } catch (error) {
-          set({ isLoading: false });
-          throw error;
-        }
-      },
+  logout: async () => {
+    set({ isLoading: true });
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      set({ 
+        user: null, 
+        session: null, 
+        teamId: null, 
+        isAuthenticated: false,
+        isLoading: false,
+        leads: [],
+        tasks: [],
+        buyers: [],
+        coverageAreas: [],
+        callRecordings: []
+      });
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
 
-      logout: async () => {
-        set({ isLoading: true });
-        try {
-          const { error } = await supabase.auth.signOut();
-          if (error) throw error;
-          set({ 
-            user: null, 
-            session: null, 
-            teamId: null, 
-            isAuthenticated: false,
-            isLoading: false,
-            leads: [],
-            tasks: [],
-            buyers: [],
-            coverageAreas: [],
-            callRecordings: []
-          });
-        } catch (error) {
-          set({ isLoading: false });
-          throw error;
-        }
-      },
+  resetPassword: async (email) => {
+    set({ isLoading: true });
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      set({ isLoading: false });
+      return data;
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
 
-      resetPassword: async (email) => {
-        set({ isLoading: true });
-        try {
-          const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
-          });
-          if (error) throw error;
-          set({ isLoading: false });
-          return data;
-        } catch (error) {
-          set({ isLoading: false });
-          throw error;
-        }
-      },
+  updateProfile: async (updates) => {
+    const { user } = get();
+    if (!user) {
+      console.log('No user logged in, skipping profile update');
+      return null;
+    }
 
-      updateProfile: async (updates) => {
-        const { user } = get();
-        if (!user) {
-          console.log('No user logged in, skipping profile update');
-          return null;
-        }
+    set({ isLoading: true });
+    try {
+      // Update auth metadata
+      const { data, error } = await supabase.auth.updateUser({
+        data: updates
+      });
+      
+      if (error) throw error;
+      
+      // Also update profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: updates.full_name,
+          avatar_url: updates.avatar_url,
+          phone: updates.phone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+        
+      if (profileError) console.error('Error updating profile table:', profileError);
+      
+      set({ 
+        user: data.user, 
+        isLoading: false,
+        saveStatus: 'saved',
+        saveMessage: 'Profile updated successfully!'
+      });
+      
+      setTimeout(() => set({ saveStatus: 'idle' }), 3000);
+      return data;
+    } catch (error) {
+      set({ 
+        isLoading: false,
+        saveStatus: 'error',
+        saveMessage: `Failed to update profile: ${error.message}`
+      });
+      throw error;
+    }
+  },
 
-        set({ isLoading: true });
-        try {
-          // Update auth metadata
-          const { data, error } = await supabase.auth.updateUser({
-            data: updates
-          });
-          
-          if (error) throw error;
-          
-          // Also update profiles table
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({
-              full_name: updates.full_name,
-              avatar_url: updates.avatar_url,
-              phone: updates.phone,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', user.id);
-            
-          if (profileError) console.error('Error updating profile table:', profileError);
-          
-          set({ 
-            user: data.user, 
-            isLoading: false,
-            saveStatus: 'saved',
-            saveMessage: 'Profile updated successfully!'
-          });
-          
-          setTimeout(() => set({ saveStatus: 'idle' }), 3000);
-          return data;
-        } catch (error) {
-          set({ 
-            isLoading: false,
-            saveStatus: 'error',
-            saveMessage: `Failed to update profile: ${error.message}`
-          });
-          throw error;
-        }
-      },
+  incrementLoginStreak: async () => {
+    const { user } = get();
+    if (!user) {
+      console.log('No user logged in, skipping streak update');
+      return;
+    }
 
-      incrementLoginStreak: async () => {
-        const { user } = get();
-        if (!user) {
-          console.log('No user logged in, skipping streak update');
-          return;
-        }
+    try {
+      console.log('✅ Streak update skipped - feature disabled temporarily');
+      // Streak functionality disabled to prevent errors
+    } catch (error) {
+      console.error('Error in incrementLoginStreak:', error);
+    }
+  },
 
-        try {
-          console.log('Updating login streak for user:', user.id);
-          
-          // Simple streak update - just log for now to avoid errors
-          console.log('✅ Streak update skipped - feature disabled temporarily');
-          
-          // If you want to re-enable streaks later, uncomment this:
-          /*
-          const today = new Date().toISOString().split('T')[0];
-          
-          const { data: profile, error: fetchError } = await supabase
-            .from('profiles')
-            .select('streak, last_login, longest_streak')
-            .eq('id', user.id)
-            .single();
-            
-          if (fetchError && fetchError.code !== 'PGRST116') {
-            console.log('Profile not found or error:', fetchError);
-            return;
-          }
-          
-          let newStreak = 1;
-          let newLongestStreak = profile?.longest_streak || 1;
-          
-          if (profile?.last_login) {
-            const lastLogin = new Date(profile.last_login);
-            const todayDate = new Date(today);
-            const diffDays = Math.floor((todayDate.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 1) {
-              newStreak = (profile?.streak || 0) + 1;
-              newLongestStreak = Math.max(newStreak, profile?.longest_streak || 0);
-            } else if (diffDays === 0) {
-              newStreak = profile?.streak || 1;
-              newLongestStreak = profile?.longest_streak || 1;
-            }
-          }
-          
-          await supabase
-            .from('profiles')
-            .update({
-              streak: newStreak,
-              last_login: today,
-              longest_streak: newLongestStreak
-            })
-            .eq('id', user.id);
-          */
-        } catch (error) {
-          console.error('Error in incrementLoginStreak:', error);
-        }
-      },
+  // Lead actions
+  setLeads: (leads) => set({ leads }),
 
-      // Lead actions
-      setLeads: (leads) => set({ leads }),
+  addLead: async (leadData) => {
+    const { teamId } = get();
+    if (!teamId) return null;
 
-      addLead: async (leadData) => {
-        const { teamId } = get();
-        if (!teamId) return null;
+    set({ saveStatus: 'saving', saveMessage: 'Saving lead...' });
 
-        set({ saveStatus: 'saving', saveMessage: 'Saving lead...' });
+    try {
+      const newLead: Lead = {
+        id: uuidv4(),
+        teamId,
+        name: leadData.name || '',
+        email: leadData.email || '',
+        phone: leadData.phone || '',
+        propertyAddress: leadData.propertyAddress || '',
+        propertyType: leadData.propertyType || 'single-family',
+        estimatedValue: leadData.estimatedValue || 0,
+        offerAmount: leadData.offerAmount || 0,
+        status: leadData.status || 'new',
+        source: leadData.source || 'other',
+        importSource: leadData.importSource,
+        probability: leadData.probability || 50,
+        engagementLevel: leadData.engagementLevel || 3,
+        timelineUrgency: leadData.timelineUrgency || 3,
+        competitionLevel: leadData.competitionLevel || 3,
+        dealScore: calculateDealScore(leadData),
+        notes: leadData.notes || '',
+        photos: [],
+        lat: leadData.lat || 30.2672,
+        lng: leadData.lng || -97.7431,
+        assignedTo: leadData.assignedTo || '',
+        timeline: [],
+        statusHistory: [{
+          fromStatus: null,
+          toStatus: leadData.status || 'new',
+          timestamp: new Date().toISOString(),
+          changedBy: 'You',
+        }],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
 
-        try {
-          const newLead: Lead = {
-            id: uuidv4(),
-            teamId,
-            name: leadData.name || '',
-            email: leadData.email || '',
-            phone: leadData.phone || '',
-            propertyAddress: leadData.propertyAddress || '',
-            propertyType: leadData.propertyType || 'single-family',
-            estimatedValue: leadData.estimatedValue || 0,
-            offerAmount: leadData.offerAmount || 0,
-            status: leadData.status || 'new',
-            source: leadData.source || 'other',
-            importSource: leadData.importSource,
-            probability: leadData.probability || 50,
-            engagementLevel: leadData.engagementLevel || 3,
-            timelineUrgency: leadData.timelineUrgency || 3,
-            competitionLevel: leadData.competitionLevel || 3,
-            dealScore: calculateDealScore(leadData),
-            notes: leadData.notes || '',
-            photos: [],
-            lat: leadData.lat || 30.2672,
-            lng: leadData.lng || -97.7431,
-            assignedTo: leadData.assignedTo || '',
-            timeline: [],
-            statusHistory: [{
-              fromStatus: null,
-              toStatus: leadData.status || 'new',
-              timestamp: new Date().toISOString(),
-              changedBy: 'You',
-            }],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-
-          // Save to Supabase
-          if (supabase) {
-            const { error } = await supabase
-              .from('leads')
-              .insert([{
-                ...newLead,
-                team_id: teamId,
-              }]);
-            
-            if (error) {
-              console.error('Supabase error:', error);
-              set({ saveStatus: 'error', saveMessage: `Failed to save: ${error.message}` });
-              return null;
-            }
-          }
-
-          set(state => ({ 
-            leads: [...state.leads, newLead],
-            saveStatus: 'saved',
-            saveMessage: 'Lead saved successfully!'
-          }));
-
-          setTimeout(() => set({ saveStatus: 'idle' }), 3000);
-          
-          return newLead;
-        } catch (error: any) {
-          console.error('Failed to save lead:', error);
+      // Save to Supabase
+      if (supabase) {
+        const { error } = await supabase
+          .from('leads')
+          .insert([{
+            ...newLead,
+            team_id: teamId,
+          }]);
+        
+        if (error) {
+          console.error('Supabase error:', error);
           set({ saveStatus: 'error', saveMessage: `Failed to save: ${error.message}` });
           return null;
         }
-      },
+      }
 
-      updateLead: (id, updates) => {
-        set(state => ({
-          leads: state.leads.map(lead => 
-            lead.id === id ? { ...lead, ...updates, updatedAt: new Date().toISOString() } : lead
-          )
-        }));
-      },
+      set(state => ({ 
+        leads: [...state.leads, newLead],
+        saveStatus: 'saved',
+        saveMessage: 'Lead saved successfully!'
+      }));
 
-      deleteLead: (id) => {
-        set(state => ({
-          leads: state.leads.filter(lead => lead.id !== id)
-        }));
-      },
-
-      addTimelineEntry: (leadId, entry) => {
-        const newEntry: TimelineEntry = {
-          id: uuidv4(),
-          type: entry.type as TimelineType,
-          content: entry.content || '',
-          timestamp: entry.timestamp || new Date().toISOString(),
-          user: entry.user || 'You',
-          metadata: entry.metadata || {},
-        };
-
-        set(state => ({
-          leads: state.leads.map(lead =>
-            lead.id === leadId
-              ? { ...lead, timeline: [...lead.timeline, newEntry] }
-              : lead
-          )
-        }));
-      },
-
-      updateLeadStatus: (leadId, newStatus, changedBy) => {
-        set(state => ({
-          leads: state.leads.map(lead => {
-            if (lead.id !== leadId) return lead;
-            
-            const historyEntry: StatusHistoryEntry = {
-              fromStatus: lead.status,
-              toStatus: newStatus,
-              timestamp: new Date().toISOString(),
-              changedBy,
-            };
-
-            return {
-              ...lead,
-              status: newStatus,
-              statusHistory: [...lead.statusHistory, historyEntry],
-              updatedAt: new Date().toISOString(),
-            };
-          })
-        }));
-      },
-
-      // Lead photos
-      addLeadPhoto: (leadId, photoId) => {
-        set(state => ({
-          leads: state.leads.map(lead =>
-            lead.id === leadId
-              ? { ...lead, photos: [...lead.photos, photoId] }
-              : lead
-          )
-        }));
-      },
-
-      removeLeadPhoto: (leadId, photoId) => {
-        set(state => ({
-          leads: state.leads.map(lead =>
-            lead.id === leadId
-              ? { ...lead, photos: lead.photos.filter(p => p !== photoId) }
-              : lead
-          )
-        }));
-      },
-
-      reorderLeadPhotos: (leadId, photos) => {
-        set(state => ({
-          leads: state.leads.map(lead =>
-            lead.id === leadId ? { ...lead, photos } : lead
-          )
-        }));
-      },
-
-      // Call recordings
-      addCallRecording: (leadId, duration) => {
-        const newRecording: CallRecording = {
-          id: uuidv4(),
-          leadId,
-          duration,
-          timestamp: new Date().toISOString(),
-          analyzed: false,
-        };
-
-        set(state => ({
-          callRecordings: [...state.callRecordings, newRecording]
-        }));
-
-        // Add timeline entry
-        get().addTimelineEntry(leadId, {
-          type: 'call',
-          content: `Recorded a ${duration}s call with ${get().leads.find(l => l.id === leadId)?.name || 'lead'}.`,
-          timestamp: new Date().toISOString(),
-          user: 'You',
-          metadata: { recordingId: newRecording.id, hasTranscript: 'false' },
-        });
-      },
-
-      analyzeRecording: (recordingId) => {
-        const recordings = [...get().callRecordings];
-        const index = recordings.findIndex(r => r.id === recordingId);
-        
-        if (index === -1) return;
-
-        // Mock AI analysis
-        const recording = recordings[index];
-        const sentiments: Array<'positive' | 'neutral' | 'negative'> = ['positive', 'neutral', 'negative'];
-        const sentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
-        
-        recordings[index] = {
-          ...recording,
-          analyzed: true,
-          transcription: {
-            text: "This is a mock transcription of the call. The lead expressed interest in selling their property and mentioned they are motivated to close quickly. They have some concerns about the offer price but are open to negotiation.",
-            sentiment,
-            objections: ["Price is lower than expected", "Need more time to decide"],
-            nextSteps: ["Send updated offer", "Schedule follow-up call next week"],
-            keyPoints: ["Motivated seller", "Flexible on timeline", "Has another offer"],
-            summary: "Lead is motivated but wants a better price. Good potential for negotiation."
-          }
-        };
-
-        set({ callRecordings: recordings });
-
-        // Update timeline entry
-        const leadId = recording.leadId;
-        const lead = get().leads.find(l => l.id === leadId);
-        if (lead) {
-          const timelineIndex = lead.timeline.findIndex(t => t.metadata?.recordingId === recordingId);
-          if (timelineIndex !== -1) {
-            const updatedLead = { ...lead };
-            updatedLead.timeline[timelineIndex] = {
-              ...updatedLead.timeline[timelineIndex],
-              metadata: { ...updatedLead.timeline[timelineIndex].metadata, hasTranscript: 'true' }
-            };
-            
-            set(state => ({
-              leads: state.leads.map(l => l.id === leadId ? updatedLead : l)
-            }));
-          }
-        }
-      },
-
-      // Team actions
-      updateMemberRole: (memberId, role) => {
-        set(state => ({
-          team: state.team.map(member =>
-            member.id === memberId ? { ...member, teamRole: role } : member
-          )
-        }));
-      },
-
-      removeTeamMember: (memberId) => {
-        set(state => ({
-          team: state.team.filter(member => member.id !== memberId)
-        }));
-      },
-
-      regenerateInviteCode: () => {
-        const newCode = 'WS-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-        set(state => ({
-          teamConfig: { ...state.teamConfig, inviteCode: newCode }
-        }));
-      },
-
-      updateTeamConfig: (config) => {
-        set(state => ({
-          teamConfig: { ...state.teamConfig, ...config }
-        }));
-      },
-
-      // Import actions
-      addImportTemplate: (template) => {
-        const newTemplate: ImportTemplate = {
-          id: uuidv4(),
-          ...template,
-          createdAt: new Date().toISOString(),
-        };
-        set(state => ({
-          importTemplates: [...state.importTemplates, newTemplate]
-        }));
-      },
-
-      deleteImportTemplate: (id) => {
-        set(state => ({
-          importTemplates: state.importTemplates.filter(t => t.id !== id)
-        }));
-      },
-
-      addImportHistory: (entry) => {
-        const newEntry: ImportHistoryEntry = {
-          id: uuidv4(),
-          ...entry,
-          timestamp: new Date().toISOString(),
-        };
-        set(state => ({
-          importHistory: [newEntry, ...state.importHistory].slice(0, 50) // Keep last 50
-        }));
-      },
-
-      updateDuplicateSettings: (settings) => {
-        set(state => ({
-          duplicateSettings: { ...state.duplicateSettings, ...settings }
-        }));
-      },
-
-      importLeadsFromData: (leadsToImport) => {
-        const { addLead } = get();
-        let imported = 0;
-        
-        for (const lead of leadsToImport) {
-          addLead(lead);
-          imported++;
-        }
-        
-        return imported;
-      },
-
-      // Mock data generators
-      getMockScrapedProperty: (url) => {
-        const properties = [
-          {
-            address: '123 Main St, Austin, TX 78701',
-            price: 450000,
-            beds: 3,
-            baths: 2,
-            sqft: 2100,
-            propertyType: 'Single Family',
-            owner: 'John Smith',
-            listingDate: '2024-01-15',
-            source: 'Homes.com',
-            sourceUrl: url,
-            confidence: { address: 98, price: 95, owner: 85 },
-            raw: { mls: '123456', taxId: 'TX-98765' }
-          },
-          {
-            address: '456 Oak Ave, Dallas, TX 75201',
-            price: 620000,
-            beds: 4,
-            baths: 3,
-            sqft: 2800,
-            propertyType: 'Single Family',
-            owner: 'Jane Doe',
-            listingDate: '2024-02-01',
-            source: 'Homes.com',
-            sourceUrl: url,
-            confidence: { address: 98, price: 95, owner: 90 },
-            raw: { mls: '789012', taxId: 'TX-54321' }
-          },
-        ];
-        return properties[Math.floor(Math.random() * properties.length)];
-      },
-
-      getMockPdfExtraction: () => {
-        return [
-          {
-            address: '789 Pine Rd, Houston, TX 77002',
-            price: 385000,
-            beds: 3,
-            baths: 2,
-            sqft: 1950,
-            propertyType: 'Single Family',
-            owner: 'Robert Johnson',
-            source: 'PDF Import',
-            confidence: { address: 92, price: 88, owner: 75 },
-            raw: { documentType: 'Tax Record', parcelId: 'HOU-12345' }
-          },
-          {
-            address: '321 Cedar Ln, San Antonio, TX 78201',
-            price: 295000,
-            beds: 2,
-            baths: 1.5,
-            sqft: 1450,
-            propertyType: 'Single Family',
-            owner: 'Maria Garcia',
-            source: 'PDF Import',
-            confidence: { address: 90, price: 85, owner: 80 },
-            raw: { documentType: 'Title Report', parcelId: 'SA-67890' }
-          },
-        ];
-      },
-
-      // Save status
-      setSaveStatus: (status, message = '') => set({ saveStatus: status, saveMessage: message }),
-    }),
-    {
-      name: 'wholescale-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        currentTheme: state.currentTheme,
-        sidebarOpen: state.sidebarOpen,
-        teamId: state.teamId,
-        teamConfig: state.teamConfig,
-        importTemplates: state.importTemplates,
-        importHistory: state.importHistory,
-        duplicateSettings: state.duplicateSettings,
-      }),
+      setTimeout(() => set({ saveStatus: 'idle' }), 3000);
+      
+      return newLead;
+    } catch (error: any) {
+      console.error('Failed to save lead:', error);
+      set({ saveStatus: 'error', saveMessage: `Failed to save: ${error.message}` });
+      return null;
     }
-  )
-);
+  },
+
+  updateLead: (id, updates) => {
+    set(state => ({
+      leads: state.leads.map(lead => 
+        lead.id === id ? { ...lead, ...updates, updatedAt: new Date().toISOString() } : lead
+      )
+    }));
+  },
+
+  deleteLead: (id) => {
+    set(state => ({
+      leads: state.leads.filter(lead => lead.id !== id)
+    }));
+  },
+
+  addTimelineEntry: (leadId, entry) => {
+    const newEntry: TimelineEntry = {
+      id: uuidv4(),
+      type: entry.type as TimelineType,
+      content: entry.content || '',
+      timestamp: entry.timestamp || new Date().toISOString(),
+      user: entry.user || 'You',
+      metadata: entry.metadata || {},
+    };
+
+    set(state => ({
+      leads: state.leads.map(lead =>
+        lead.id === leadId
+          ? { ...lead, timeline: [...lead.timeline, newEntry] }
+          : lead
+      )
+    }));
+  },
+
+  updateLeadStatus: (leadId, newStatus, changedBy) => {
+    set(state => ({
+      leads: state.leads.map(lead => {
+        if (lead.id !== leadId) return lead;
+        
+        const historyEntry: StatusHistoryEntry = {
+          fromStatus: lead.status,
+          toStatus: newStatus,
+          timestamp: new Date().toISOString(),
+          changedBy,
+        };
+
+        return {
+          ...lead,
+          status: newStatus,
+          statusHistory: [...lead.statusHistory, historyEntry],
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    }));
+  },
+
+  // Lead photos
+  addLeadPhoto: (leadId, photoId) => {
+    set(state => ({
+      leads: state.leads.map(lead =>
+        lead.id === leadId
+          ? { ...lead, photos: [...lead.photos, photoId] }
+          : lead
+      )
+    }));
+  },
+
+  removeLeadPhoto: (leadId, photoId) => {
+    set(state => ({
+      leads: state.leads.map(lead =>
+        lead.id === leadId
+          ? { ...lead, photos: lead.photos.filter(p => p !== photoId) }
+          : lead
+      )
+    }));
+  },
+
+  reorderLeadPhotos: (leadId, photos) => {
+    set(state => ({
+      leads: state.leads.map(lead =>
+        lead.id === leadId ? { ...lead, photos } : lead
+      )
+    }));
+  },
+
+  // Call recordings
+  addCallRecording: (leadId, duration) => {
+    const newRecording: CallRecording = {
+      id: uuidv4(),
+      leadId,
+      duration,
+      timestamp: new Date().toISOString(),
+      analyzed: false,
+    };
+
+    set(state => ({
+      callRecordings: [...state.callRecordings, newRecording]
+    }));
+
+    // Add timeline entry
+    get().addTimelineEntry(leadId, {
+      type: 'call',
+      content: `Recorded a ${duration}s call with ${get().leads.find(l => l.id === leadId)?.name || 'lead'}.`,
+      timestamp: new Date().toISOString(),
+      user: 'You',
+      metadata: { recordingId: newRecording.id, hasTranscript: 'false' },
+    });
+  },
+
+  analyzeRecording: (recordingId) => {
+    const recordings = [...get().callRecordings];
+    const index = recordings.findIndex(r => r.id === recordingId);
+    
+    if (index === -1) return;
+
+    // Mock AI analysis
+    const recording = recordings[index];
+    const sentiments: Array<'positive' | 'neutral' | 'negative'> = ['positive', 'neutral', 'negative'];
+    const sentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
+    
+    recordings[index] = {
+      ...recording,
+      analyzed: true,
+      transcription: {
+        text: "This is a mock transcription of the call. The lead expressed interest in selling their property and mentioned they are motivated to close quickly. They have some concerns about the offer price but are open to negotiation.",
+        sentiment,
+        objections: ["Price is lower than expected", "Need more time to decide"],
+        nextSteps: ["Send updated offer", "Schedule follow-up call next week"],
+        keyPoints: ["Motivated seller", "Flexible on timeline", "Has another offer"],
+        summary: "Lead is motivated but wants a better price. Good potential for negotiation."
+      }
+    };
+
+    set({ callRecordings: recordings });
+
+    // Update timeline entry
+    const leadId = recording.leadId;
+    const lead = get().leads.find(l => l.id === leadId);
+    if (lead) {
+      const timelineIndex = lead.timeline.findIndex(t => t.metadata?.recordingId === recordingId);
+      if (timelineIndex !== -1) {
+        const updatedLead = { ...lead };
+        updatedLead.timeline[timelineIndex] = {
+          ...updatedLead.timeline[timelineIndex],
+          metadata: { ...updatedLead.timeline[timelineIndex].metadata, hasTranscript: 'true' }
+        };
+        
+        set(state => ({
+          leads: state.leads.map(l => l.id === leadId ? updatedLead : l)
+        }));
+      }
+    }
+  },
+
+  // Team actions
+  updateMemberRole: (memberId, role) => {
+    set(state => ({
+      team: state.team.map(member =>
+        member.id === memberId ? { ...member, teamRole: role } : member
+      )
+    }));
+  },
+
+  removeTeamMember: (memberId) => {
+    set(state => ({
+      team: state.team.filter(member => member.id !== memberId)
+    }));
+  },
+
+  regenerateInviteCode: () => {
+    const newCode = 'WS-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+    set(state => ({
+      teamConfig: { ...state.teamConfig, inviteCode: newCode }
+    }));
+  },
+
+  updateTeamConfig: (config) => {
+    set(state => ({
+      teamConfig: { ...state.teamConfig, ...config }
+    }));
+  },
+
+  // Import actions
+  addImportTemplate: (template) => {
+    const newTemplate: ImportTemplate = {
+      id: uuidv4(),
+      ...template,
+      createdAt: new Date().toISOString(),
+    };
+    set(state => ({
+      importTemplates: [...state.importTemplates, newTemplate]
+    }));
+  },
+
+  deleteImportTemplate: (id) => {
+    set(state => ({
+      importTemplates: state.importTemplates.filter(t => t.id !== id)
+    }));
+  },
+
+  addImportHistory: (entry) => {
+    const newEntry: ImportHistoryEntry = {
+      id: uuidv4(),
+      ...entry,
+      timestamp: new Date().toISOString(),
+    };
+    set(state => ({
+      importHistory: [newEntry, ...state.importHistory].slice(0, 50) // Keep last 50
+    }));
+  },
+
+  updateDuplicateSettings: (settings) => {
+    set(state => ({
+      duplicateSettings: { ...state.duplicateSettings, ...settings }
+    }));
+  },
+
+  importLeadsFromData: (leadsToImport) => {
+    const { addLead } = get();
+    let imported = 0;
+    
+    for (const lead of leadsToImport) {
+      addLead(lead);
+      imported++;
+    }
+    
+    return imported;
+  },
+
+  // Mock data generators
+  getMockScrapedProperty: (url) => {
+    const properties = [
+      {
+        address: '123 Main St, Austin, TX 78701',
+        price: 450000,
+        beds: 3,
+        baths: 2,
+        sqft: 2100,
+        propertyType: 'Single Family',
+        owner: 'John Smith',
+        listingDate: '2024-01-15',
+        source: 'Homes.com',
+        sourceUrl: url,
+        confidence: { address: 98, price: 95, owner: 85 },
+        raw: { mls: '123456', taxId: 'TX-98765' }
+      },
+      {
+        address: '456 Oak Ave, Dallas, TX 75201',
+        price: 620000,
+        beds: 4,
+        baths: 3,
+        sqft: 2800,
+        propertyType: 'Single Family',
+        owner: 'Jane Doe',
+        listingDate: '2024-02-01',
+        source: 'Homes.com',
+        sourceUrl: url,
+        confidence: { address: 98, price: 95, owner: 90 },
+        raw: { mls: '789012', taxId: 'TX-54321' }
+      },
+    ];
+    return properties[Math.floor(Math.random() * properties.length)];
+  },
+
+  getMockPdfExtraction: () => {
+    return [
+      {
+        address: '789 Pine Rd, Houston, TX 77002',
+        price: 385000,
+        beds: 3,
+        baths: 2,
+        sqft: 1950,
+        propertyType: 'Single Family',
+        owner: 'Robert Johnson',
+        source: 'PDF Import',
+        confidence: { address: 92, price: 88, owner: 75 },
+        raw: { documentType: 'Tax Record', parcelId: 'HOU-12345' }
+      },
+      {
+        address: '321 Cedar Ln, San Antonio, TX 78201',
+        price: 295000,
+        beds: 2,
+        baths: 1.5,
+        sqft: 1450,
+        propertyType: 'Single Family',
+        owner: 'Maria Garcia',
+        source: 'PDF Import',
+        confidence: { address: 90, price: 85, owner: 80 },
+        raw: { documentType: 'Title Report', parcelId: 'SA-67890' }
+      },
+    ];
+  },
+
+  // Save status
+  setSaveStatus: (status, message = '') => set({ saveStatus: status, saveMessage: message }),
+}));
