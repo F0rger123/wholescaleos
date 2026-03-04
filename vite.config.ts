@@ -1,13 +1,16 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'  // Add this import
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    tailwindcss(),  // Add this line
+  ],
   build: {
     outDir: 'dist',
     sourcemap: true,
-    // Ensure assets are properly referenced
     assetsDir: 'assets',
     rollupOptions: {
       output: {
@@ -15,9 +18,7 @@ export default defineConfig({
       },
     },
   },
-  // Ensure proper base path
   base: '/',
-  // Optimize dependencies
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
   },
