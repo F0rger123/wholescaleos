@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
 
@@ -726,7 +726,7 @@ interface AppState {
 
 // ─── Initial State ─────────────────────────────────────────────────────────
 
-const initialState = {
+const initialState: AppState = {
   user: null,
   session: null,
   isLoading: false,
@@ -754,7 +754,66 @@ const initialState = {
   sidebarOpen: true,
   saveStatus: 'idle',
   saveMessage: null,
+  
+  // Auth actions
+  setUser: () => {},
+  setSession: () => {},
+  setTeamId: () => {},
+  login: async () => ({}),
+  signup: async () => ({}),
+  logout: async () => {},
+  resetPassword: async () => ({}),
+  updateProfile: async () => ({}),
+  incrementLoginStreak: async () => {},
+  
+  // Lead actions
+  setLeads: () => {},
+  addLead: async () => null,
+  updateLead: () => {},
+  deleteLead: () => {},
+  addTimelineEntry: () => {},
+  updateLeadStatus: () => {},
+  
+  // Lead photos
+  addLeadPhoto: () => {},
+  removeLeadPhoto: () => {},
+  reorderLeadPhotos: () => {},
+  
+  // Call recordings
+  addCallRecording: () => {},
+  analyzeRecording: () => {},
+  
+  // Team actions
+  updateMemberRole: () => {},
+  removeTeamMember: () => {},
+  regenerateInviteCode: () => {},
+  updateTeamConfig: () => {},
+  
+  // Import actions
+  addImportTemplate: () => {},
+  deleteImportTemplate: () => {},
+  addImportHistory: () => {},
+  updateDuplicateSettings: () => {},
+  importLeadsFromData: () => 0,
+  
+  // Mock data generators
+  getMockScrapedProperty: () => ({} as ScrapedPropertyData),
+  getMockPdfExtraction: () => [],
+  
+  // Save status
+  setSaveStatus: () => {},
 };
+
+// Clear any corrupted storage on startup
+try {
+  const stored = localStorage.getItem('wholescale-storage');
+  if (stored) {
+    JSON.parse(stored); // This will throw if corrupted
+  }
+} catch {
+  console.log('🧹 Clearing corrupted storage...');
+  localStorage.removeItem('wholescale-storage');
+}
 
 // ─── Store ─────────────────────────────────────────────────────────────────
 
@@ -1332,6 +1391,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'wholescale-storage',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         currentTheme: state.currentTheme,
         sidebarOpen: state.sidebarOpen,
