@@ -1,94 +1,66 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { App } from './App';
-import './index.css';
 
-// Create a visible error display
-function showError(message: string, error?: any) {
-  const errorDiv = document.createElement('div');
-  errorDiv.style.position = 'fixed';
-  errorDiv.style.top = '270px';
-  errorDiv.style.left = '0';
-  errorDiv.style.right = '0';
-  errorDiv.style.backgroundColor = '#ef4444';
-  errorDiv.style.color = 'white';
-  errorDiv.style.padding = '20px';
-  errorDiv.style.zIndex = '99997';
-  errorDiv.style.fontSize = '16px';
-  errorDiv.style.fontFamily = 'monospace';
-  errorDiv.style.whiteSpace = 'pre-wrap';
-  errorDiv.style.maxHeight = '300px';
-  errorDiv.style.overflow = 'auto';
-  errorDiv.style.borderTop = '2px solid white';
-  errorDiv.style.borderBottom = '2px solid white';
-  
-  let errorText = `❌ ${message}`;
-  if (error) {
-    errorText += `\n\n${error.toString()}`;
-    if (error.stack) {
-      errorText += `\n\n${error.stack}`;
-    }
-  }
-  
-  errorDiv.innerText = errorText;
-  document.body.appendChild(errorDiv);
+// Simple test component
+function TestApp() {
+  return (
+    <div style={{
+      padding: '40px',
+      background: '#0f172a',
+      color: 'white',
+      minHeight: '100vh',
+      fontFamily: 'sans-serif'
+    }}>
+      <h1 style={{ color: '#3b82f6' }}>✅ Test App Loaded!</h1>
+      <p>If you see this, React is working.</p>
+      <p>Time: {new Date().toLocaleTimeString()}</p>
+    </div>
+  );
 }
 
-// Try to render React with error catching
+// Try to render
 try {
-  console.log('🚀 Attempting to render React...');
-  console.log('📦 App component:', App);
-  
   const root = document.getElementById('root');
-  console.log('📦 root element:', root);
+  console.log('Root element:', root);
   
   if (!root) {
-    showError('root element not found!');
-  } else {
-    // Show loading indicator
-    const loadingDiv = document.createElement('div');
-    loadingDiv.style.position = 'fixed';
-    loadingDiv.style.top = '320px';
-    loadingDiv.style.left = '0';
-    loadingDiv.style.right = '0';
-    loadingDiv.style.backgroundColor = '#3b82f6';
-    loadingDiv.style.color = 'white';
-    loadingDiv.style.padding = '20px';
-    loadingDiv.style.zIndex = '99996';
-    loadingDiv.innerText = '⏳ Attempting to render React...';
-    document.body.appendChild(loadingDiv);
-    
-    // Attempt render
-    ReactDOM.createRoot(root).render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
-    
-    // Success message after a short delay
-    setTimeout(() => {
-      const successDiv = document.createElement('div');
-      successDiv.style.position = 'fixed';
-      successDiv.style.top = '370px';
-      successDiv.style.left = '0';
-      successDiv.style.right = '0';
-      successDiv.style.backgroundColor = '#10b981';
-      successDiv.style.color = 'white';
-      successDiv.style.padding = '20px';
-      successDiv.style.zIndex = '99995';
-      successDiv.innerText = '✅ React.render() called successfully';
-      document.body.appendChild(successDiv);
-    }, 100);
+    throw new Error('Root element not found!');
   }
+  
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <TestApp />
+    </React.StrictMode>
+  );
+  
+  // Add success message
+  const success = document.createElement('div');
+  success.style.position = 'fixed';
+  success.style.top = '0';
+  success.style.left = '0';
+  success.style.right = '0';
+  success.style.background = 'green';
+  success.style.color = 'white';
+  success.style.padding = '10px';
+  success.style.zIndex = '99999';
+  success.innerText = '✅ React rendered successfully!';
+  document.body.appendChild(success);
+  
 } catch (error) {
-  showError('React render error', error);
+  // Show error on screen
+  const errorDiv = document.createElement('div');
+  errorDiv.style.position = 'fixed';
+  errorDiv.style.top = '0';
+  errorDiv.style.left = '0';
+  errorDiv.style.right = '0';
+  errorDiv.style.background = 'red';
+  errorDiv.style.color = 'white';
+  errorDiv.style.padding = '20px';
+  errorDiv.style.zIndex = '99999';
+  errorDiv.style.whiteSpace = 'pre-wrap';
+  errorDiv.style.fontFamily = 'monospace';
+  errorDiv.innerText = `❌ Error: ${error instanceof Error ? error.message : String(error)}`;
+  document.body.appendChild(errorDiv);
+  
+  console.error('Render error:', error);
 }
-
-// Global error handler for uncaught errors
-window.addEventListener('error', (event) => {
-  showError('Uncaught error', event.error);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  showError('Unhandled promise rejection', event.reason);
-});
