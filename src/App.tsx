@@ -87,18 +87,22 @@ export function App() {
           if (session?.user) {
             // User has an active Supabase session — restore auth state
             const user = session.user;
-            login(user.email || '', '');
-            updateProfile({
-              id: user.id,
-              email: user.email || '',
-              name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              avatar: (user.user_metadata?.full_name || user.email?.split('@')[0] || 'U')
-                .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+            
+            // Login with empty password (we're just restoring session)
+            await login(user.email || '', '');
+            
+            // Update profile with correct format
+            await updateProfile({
+              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+              avatar_url: null,
+              phone: null,
             });
-            incrementLoginStreak();
+            
+            await incrementLoginStreak();
             // Session restored — ProtectedRoute will check for team selection
           }
-        } catch {
+        } catch (error) {
+          console.error('Session check error:', error);
           // Session check failed — stay logged out
         }
       }
@@ -108,7 +112,7 @@ export function App() {
 
     // Listen for auth state changes (e.g., token refresh, sign out from another tab)
     if (isSupabaseConfigured && supabase) {
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
           useStore.getState().logout();
         } else if (event === 'SIGNED_IN' && session?.user) {
@@ -116,15 +120,17 @@ export function App() {
           const user = session.user;
           const store = useStore.getState();
           if (!store.isAuthenticated) {
-            store.login(user.email || '', '');
-            store.updateProfile({
-              id: user.id,
-              email: user.email || '',
-              name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              avatar: (user.user_metadata?.full_name || user.email?.split('@')[0] || 'U')
-                .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-            });
-            store.incrementLoginStreak();
+            try {
+              await store.login(user.email || '', '');
+              await store.updateProfile({
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                avatar_url: null,
+                phone: null,
+              });
+              await store.incrementLoginStreak();
+            } catch (error) {
+              console.error('Auto-login error:', error);
+            }
           }
         }
       });
