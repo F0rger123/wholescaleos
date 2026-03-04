@@ -18,6 +18,46 @@ import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
 
+// 🔍 DEBUG: Check localStorage for corrupted data
+console.log('🔍 Checking localStorage...');
+try {
+  const stored = localStorage.getItem('wholescale-storage');
+  if (stored) {
+    console.log('📦 Found stored state, length:', stored.length);
+    try {
+      const parsed = JSON.parse(stored);
+      console.log('✅ Stored state keys:', Object.keys(parsed.state || {}));
+      console.log('✅ Stored state preview:', JSON.stringify(parsed).substring(0, 200) + '...');
+    } catch (parseError) {
+      console.error('❌ CORRUPTED STORAGE DETECTED!', parseError);
+      console.log('🧹 Clearing corrupted storage...');
+      localStorage.removeItem('wholescale-storage');
+    }
+  } else {
+    console.log('📭 No stored state found');
+  }
+} catch (e) {
+  console.error('❌ Error accessing localStorage:', e);
+}
+
+// Also check for any other potential corrupted data
+try {
+  const auth = localStorage.getItem('wholescale-auth');
+  if (auth) {
+    console.log('🔑 Found auth storage');
+    try {
+      const parsed = JSON.parse(auth);
+      console.log('✅ Auth storage keys:', Object.keys(parsed));
+    } catch (parseError) {
+      console.error('❌ CORRUPTED AUTH STORAGE DETECTED!', parseError);
+      console.log('🧹 Clearing corrupted auth storage...');
+      localStorage.removeItem('wholescale-auth');
+    }
+  }
+} catch (e) {
+  console.error('❌ Error accessing auth storage:', e);
+}
+
 console.log('📱 App.tsx loaded');
 console.log('📦 Imports:', {
   HashRouter: typeof HashRouter,
