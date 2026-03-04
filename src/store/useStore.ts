@@ -197,6 +197,13 @@ export const AI_PRIORITY_COLORS: Record<AIPriorityLevel, { bg: string; text: str
   low: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'Low' },
 };
 
+export const TASK_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  todo: { bg: 'bg-slate-500/20', text: 'text-slate-400' },
+  'in-progress': { bg: 'bg-blue-500/20', text: 'text-blue-400' },
+  done: { bg: 'bg-green-500/20', text: 'text-green-400' },
+  cancelled: { bg: 'bg-red-500/20', text: 'text-red-400' },
+};
+
 export const DETECTED_TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   email: { bg: 'bg-purple-500/15', text: 'text-purple-400', label: 'Email' },
   phone: { bg: 'bg-blue-500/15', text: 'text-blue-400', label: 'Phone' },
