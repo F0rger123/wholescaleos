@@ -40,7 +40,7 @@ const SOURCE_CONFIG: Record<ImportSource, { label: string; icon: React.ElementTy
   'smart-paste': { label: 'Smart Paste', icon: ClipboardPaste, color: 'text-pink-400', bg: 'bg-pink-500/15', border: 'border-pink-500/30', desc: 'Paste any text — AI auto-detects fields' },
 };
 
-const TARGET_FIELDS: { value: string; label: string; icon: React.ElementType }[] = [
+const BASE_TARGET_FIELDS: { value: string; label: string; icon: React.ElementType }[] = [
   { value: 'name', label: 'Owner Name', icon: User },
   { value: 'email', label: 'Email', icon: Mail },
   { value: 'phone', label: 'Phone', icon: Phone },
@@ -961,9 +961,23 @@ export function Imports() {
                                 onChange={(e) => updatePasteMapping(idx, e.target.value)}
                                 className="w-full pl-3 pr-8 py-1.5 text-xs rounded-lg bg-slate-900 border border-slate-700 text-slate-200 appearance-none focus:outline-none focus:ring-2 focus:ring-pink-500/50"
                               >
-                                {TARGET_FIELDS.map(f => (
-                                  <option key={f.value} value={f.value}>{f.label}</option>
-                                ))}
+                                {/* Standard Fields */}
+                                <optgroup label="Standard Fields">
+                                  {BASE_TARGET_FIELDS.map(f => (
+                                    <option key={f.value} value={f.value}>{f.label}</option>
+                                  ))}
+                                </optgroup>
+                                
+                                {/* Custom Fields */}
+                                {customFields.length > 0 && (
+                                  <optgroup label="Custom Fields">
+                                    {customFields.map(field => (
+                                      <option key={field.field_key} value={field.field_key}>
+                                        {field.name} ({field.field_type})
+                                      </option>
+                                    ))}
+                                  </optgroup>
+                                )}
                               </select>
                               <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                             </div>
@@ -998,7 +1012,9 @@ export function Imports() {
                               <th key={idx} className="px-3 py-2 text-left whitespace-nowrap">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-slate-300 font-semibold">
-                                    {TARGET_FIELDS.find(f => f.value === m.targetField)?.label || m.sourceColumn}
+                                    {BASE_TARGET_FIELDS.find(f => f.value === m.targetField)?.label || 
+                                     customFields.find(f => f.field_key === m.targetField)?.name || 
+                                     m.sourceColumn}
                                   </span>
                                   <span className={`text-[8px] px-1 py-0.5 rounded ${typeColor.bg} ${typeColor.text}`}>
                                     {typeColor.label}
@@ -1116,9 +1132,23 @@ export function Imports() {
                             onChange={(e) => updateMapping(idx, e.target.value)}
                             className="w-full pl-3 pr-8 py-1.5 text-xs rounded-lg bg-slate-900 border border-slate-700 text-slate-200 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                           >
-                            {TARGET_FIELDS.map(f => (
-                              <option key={f.value} value={f.value}>{f.label}</option>
-                            ))}
+                            {/* Standard Fields */}
+                            <optgroup label="Standard Fields">
+                              {BASE_TARGET_FIELDS.map(f => (
+                                <option key={f.value} value={f.value}>{f.label}</option>
+                              ))}
+                            </optgroup>
+                            
+                            {/* Custom Fields */}
+                            {customFields.length > 0 && (
+                              <optgroup label="Custom Fields">
+                                {customFields.map(field => (
+                                  <option key={field.field_key} value={field.field_key}>
+                                    {field.name} ({field.field_type})
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
                           </select>
                           <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                         </div>
@@ -1143,7 +1173,9 @@ export function Imports() {
                           <th className="px-3 py-2 text-left text-slate-400 font-semibold">#</th>
                           {columnMappings.filter(m => m.targetField !== 'skip').map(m => (
                             <th key={m.sourceColumn} className="px-3 py-2 text-left text-slate-400 font-semibold whitespace-nowrap">
-                              {TARGET_FIELDS.find(f => f.value === m.targetField)?.label || m.targetField}
+                              {BASE_TARGET_FIELDS.find(f => f.value === m.targetField)?.label || 
+                               customFields.find(f => f.field_key === m.targetField)?.name || 
+                               m.targetField}
                             </th>
                           ))}
                         </tr>
@@ -1694,7 +1726,9 @@ export function Imports() {
                   <div className="flex flex-wrap gap-1">
                     {t.mappings.slice(0, 4).map(m => (
                       <span key={m.sourceColumn} className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded">
-                        {m.sourceColumn} → {TARGET_FIELDS.find(f => f.value === m.targetField)?.label || m.targetField}
+                        {m.sourceColumn} → {BASE_TARGET_FIELDS.find(f => f.value === m.targetField)?.label || 
+                          customFields.find(f => f.field_key === m.targetField)?.name || 
+                          m.targetField}
                       </span>
                     ))}
                     {t.mappings.length > 4 && (
