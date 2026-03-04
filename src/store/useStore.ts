@@ -682,6 +682,7 @@ interface AppState {
   signup: (email: string, password: string, name?: string) => Promise<any>;
   logout: () => Promise<void>;
   resetPassword?: (email: string) => Promise<any>;
+  updateProfile: (updates: { full_name?: string; avatar_url?: string; phone?: string }) => Promise<any>;
   
   // Lead actions
   setLeads: (leads: Lead[]) => void;
@@ -832,6 +833,51 @@ export const useStore = create<AppState>()(
           return data;
         } catch (error) {
           set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      updateProfile: async (updates) => {
+        const { user } = get();
+        if (!user) throw new Error('No user logged in');
+
+        set({ isLoading: true });
+        try {
+          // Update auth metadata
+          const { data, error } = await supabase.auth.updateUser({
+            data: updates
+          });
+          
+          if (error) throw error;
+          
+          // Also update profiles table
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              full_name: updates.full_name,
+              avatar_url: updates.avatar_url,
+              phone: updates.phone,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+            
+          if (profileError) console.error('Error updating profile table:', profileError);
+          
+          set({ 
+            user: data.user, 
+            isLoading: false,
+            saveStatus: 'saved',
+            saveMessage: 'Profile updated successfully!'
+          });
+          
+          setTimeout(() => set({ saveStatus: 'idle' }), 3000);
+          return data;
+        } catch (error) {
+          set({ 
+            isLoading: false,
+            saveStatus: 'error',
+            saveMessage: `Failed to update profile: ${error.message}`
+          });
           throw error;
         }
       },
