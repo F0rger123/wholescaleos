@@ -17,20 +17,7 @@
       #root { 
         min-height: 100vh; 
       }
-      #emergency-test { 
-        position: fixed; 
-        top: 0; 
-        left: 0; 
-        right: 0; 
-        background: purple; 
-        color: white; 
-        padding: 20px; 
-        z-index: 99999;
-        font-size: 20px;
-        text-align: center;
-        font-weight: bold;
-      }
-      /* Range slider styling (fixed vendor prefix warning) */
+      /* Range slider styling */
       input[type="range"] {
         -webkit-appearance: none;
         appearance: none;
@@ -60,14 +47,14 @@
     </style>
   </head>
   <body>
-    <div id="emergency-test">🟪 index.html loaded - HTML is working</div>
     <div id="root"></div>
     
-    <!-- Test script to verify JS is running -->
+    <!-- Remove or comment out all the debugging banners
+    <div id="emergency-test">🟪 index.html loaded - HTML is working</div>
+    
     <script>
       console.log('🔵 Inline script running at:', new Date().toLocaleTimeString());
       
-      // Create visible indicator
       const scriptDiv = document.createElement('div');
       scriptDiv.style.position = 'fixed';
       scriptDiv.style.top = '70px';
@@ -82,7 +69,6 @@
       scriptDiv.innerText = `🔵 Inline script executed at ${new Date().toLocaleTimeString()}`;
       document.body.appendChild(scriptDiv);
       
-      // Check if React will load
       window.addEventListener('load', function() {
         console.log('🏁 Window loaded');
         
@@ -100,6 +86,7 @@
         document.body.appendChild(loadDiv);
       });
     </script>
+    -->
     
     <!-- Vite will inject the actual script here -->
   </body>
