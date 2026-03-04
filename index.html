@@ -49,45 +49,7 @@
   <body>
     <div id="root"></div>
     
-    <!-- Remove or comment out all the debugging banners
-    <div id="emergency-test">🟪 index.html loaded - HTML is working</div>
-    
-    <script>
-      console.log('🔵 Inline script running at:', new Date().toLocaleTimeString());
-      
-      const scriptDiv = document.createElement('div');
-      scriptDiv.style.position = 'fixed';
-      scriptDiv.style.top = '70px';
-      scriptDiv.style.left = '0';
-      scriptDiv.style.right = '0';
-      scriptDiv.style.backgroundColor = '#2563eb';
-      scriptDiv.style.color = 'white';
-      scriptDiv.style.padding = '15px';
-      scriptDiv.style.zIndex = '99998';
-      scriptDiv.style.textAlign = 'center';
-      scriptDiv.style.fontSize = '16px';
-      scriptDiv.innerText = `🔵 Inline script executed at ${new Date().toLocaleTimeString()}`;
-      document.body.appendChild(scriptDiv);
-      
-      window.addEventListener('load', function() {
-        console.log('🏁 Window loaded');
-        
-        const loadDiv = document.createElement('div');
-        loadDiv.style.position = 'fixed';
-        loadDiv.style.top = '120px';
-        loadDiv.style.left = '0';
-        loadDiv.style.right = '0';
-        loadDiv.style.backgroundColor = '#f97316';
-        loadDiv.style.color = 'black';
-        loadDiv.style.padding = '15px';
-        loadDiv.style.zIndex = '99997';
-        loadDiv.style.textAlign = 'center';
-        loadDiv.innerText = `🟠 Window loaded at ${new Date().toLocaleTimeString()}`;
-        document.body.appendChild(loadDiv);
-      });
-    </script>
-    -->
-    
-    <!-- Vite will inject the actual script here -->
+    <!-- THIS IS THE IMPORTANT LINE - tells Vite to load your React app -->
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
