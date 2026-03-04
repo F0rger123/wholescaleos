@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAtom } from 'jotai';
 import { Layout } from './components/Layout';
 import { SupabaseSync } from './lib/supabase-sync';
 import { Dashboard } from './pages/Dashboard';
@@ -14,58 +15,18 @@ import SettingsPage from './pages/SettingsPage';
 import { Login } from './pages/Login';
 import { EmailConfirmed } from './pages/EmailConfirmed';
 import { TeamSelection } from './pages/TeamSelection';
-import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
-
-// 🔍 DEBUG: Check localStorage for corrupted data
-console.log('🔍 Checking localStorage...');
-try {
-  const stored = localStorage.getItem('wholescale-storage');
-  if (stored) {
-    console.log('📦 Found stored state, length:', stored.length);
-    try {
-      const parsed = JSON.parse(stored);
-      console.log('✅ Stored state keys:', Object.keys(parsed.state || {}));
-      console.log('✅ Stored state preview:', JSON.stringify(parsed).substring(0, 200) + '...');
-    } catch (parseError) {
-      console.error('❌ CORRUPTED STORAGE DETECTED!', parseError);
-      console.log('🧹 Clearing corrupted storage...');
-      localStorage.removeItem('wholescale-storage');
-    }
-  } else {
-    console.log('📭 No stored state found');
-  }
-} catch (e) {
-  console.error('❌ Error accessing localStorage:', e);
-}
-
-// Also check for any other potential corrupted data
-try {
-  const auth = localStorage.getItem('wholescale-auth');
-  if (auth) {
-    console.log('🔑 Found auth storage');
-    try {
-      const parsed = JSON.parse(auth);
-      console.log('✅ Auth storage keys:', Object.keys(parsed));
-    } catch (parseError) {
-      console.error('❌ CORRUPTED AUTH STORAGE DETECTED!', parseError);
-      console.log('🧹 Clearing corrupted auth storage...');
-      localStorage.removeItem('wholescale-auth');
-    }
-  }
-} catch (e) {
-  console.error('❌ Error accessing auth storage:', e);
-}
+// Import Jotai atoms
+import { 
+  userAtom, 
+  isLoadingAtom, 
+  isAuthenticatedAtom, 
+  teamIdAtom,
+  setTeamIdAtom 
+} from './store/atoms';
 
 console.log('📱 App.tsx loaded');
-console.log('📦 Imports:', {
-  HashRouter: typeof HashRouter,
-  Routes: typeof Routes,
-  Route: typeof Route,
-  Navigate: typeof Navigate,
-  Layout: typeof Layout
-});
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
@@ -94,7 +55,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const [isAuthenticated] = useAtom(isAuthenticatedAtom);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   
   if (isSupabaseConfigured) {
@@ -106,7 +67,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const [isAuthenticated] = useAtom(isAuthenticatedAtom);
   if (isAuthenticated) {
     if (isSupabaseConfigured && !localStorage.getItem('wholescale-preferred-team')) {
       return <Navigate to="/team-selection" replace />;
@@ -132,7 +93,9 @@ function LoadingScreen() {
 
 export function App() {
   const [checking, setChecking] = useState(true);
-  const { login, updateProfile, incrementLoginStreak } = useStore();
+  const [, setUser] = useAtom(userAtom);
+  const [, setIsAuthenticated] = useAtom(isAuthenticatedAtom);
+  const [, setTeamId] = useAtom(setTeamIdAtom);
 
   useEffect(() => {
     async function checkSession() {
@@ -150,14 +113,12 @@ export function App() {
 
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            const user = session.user;
-            await login(user.email || '', '');
-            await updateProfile({
-              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              avatar_url: null,
-              phone: null,
-            });
-            await incrementLoginStreak();
+            setUser(session.user);
+            const teamId = localStorage.getItem('wholescale-preferred-team');
+            if (teamId) {
+              setTeamId(teamId);
+            }
+            setIsAuthenticated(true);
           }
         } catch (error) {
           console.error('Session check error:', error);
@@ -170,23 +131,12 @@ export function App() {
     if (isSupabaseConfigured && supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
-          useStore.getState().logout();
+          setUser(null);
+          setIsAuthenticated(false);
+          setTeamId(null);
         } else if (event === 'SIGNED_IN' && session?.user) {
-          const user = session.user;
-          const store = useStore.getState();
-          if (!store.isAuthenticated) {
-            try {
-              await store.login(user.email || '', '');
-              await store.updateProfile({
-                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-                avatar_url: null,
-                phone: null,
-              });
-              await store.incrementLoginStreak();
-            } catch (error) {
-              console.error('Auto-login error:', error);
-            }
-          }
+          setUser(session.user);
+          setIsAuthenticated(true);
         }
       });
       return () => subscription.unsubscribe();

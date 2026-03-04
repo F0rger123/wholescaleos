@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAtom } from 'jotai';
 import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff, Database, ExternalLink, Copy, Check } from 'lucide-react';
-import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { sendWelcomeEmail } from '../lib/email';
+import { loginAtom, userAtom, isLoadingAtom } from '../store/atoms';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -25,7 +26,10 @@ function isDatabaseSetupError(msg: string): boolean {
 
 export function Login() {
   const navigate = useNavigate();
-  const { login, signup, clearAuthError } = useStore();
+  const [, login] = useAtom(loginAtom);
+  const [, setUser] = useAtom(userAtom);
+  const [isLoading] = useAtom(isLoadingAtom);
+  
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
@@ -53,7 +57,6 @@ export function Login() {
     setInfo(null);
     setShowDbSetup(false);
     setShowEmailFix(false);
-    clearAuthError();
     setForgotSent(false);
   };
 
@@ -373,15 +376,12 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
       }
     }
 
-    login(user.email || form.email, form.password);
-    const store = useStore.getState();
-    store.updateProfile({
-      id: user.id,
-      email: user.email || form.email,
-      name: displayName,
-      avatar: displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-    });
-    sendWelcomeEmail(user.email || form.email, displayName).catch(() => {});
+    // Set user in Jotai atom
+    setUser(user);
+    
+    // Call login atom
+    await login({ email: form.email, password: form.password });
+    
     // Go to team selection so user can pick/create/join a team
     navigate('/team-selection');
   };
@@ -555,10 +555,11 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
       } else {
         // Demo mode — always works
         if (mode === 'login') {
-          login(form.email, form.password);
+          // Set demo user
+          setUser({ email: form.email, id: 'demo-id' });
           navigate('/');
         } else if (mode === 'signup') {
-          signup(form.name.trim(), form.email, form.password);
+          setUser({ email: form.email, id: 'demo-id', user_metadata: { full_name: form.name } });
           navigate('/');
         } else {
           setForgotSent(true);
@@ -581,7 +582,8 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
   };
 
   const handleDemoLogin = () => {
-    login('demo@wholescale.io', 'demo123');
+    // Set demo user
+    setUser({ email: 'demo@wholescale.io', id: 'demo-id' });
     // Demo mode skips team selection — no Supabase
     navigate('/');
   };

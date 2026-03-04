@@ -4,7 +4,8 @@ import {
   Building2, Loader2, Plus, ArrowRight, Users, LogOut,
   X, ArrowRightLeft, Copy, Check, AlertTriangle,
 } from 'lucide-react';
-import { useStore } from '../store/useStore';
+import { useAtom } from 'jotai';
+import { userAtom, logoutAtom } from '../store/atoms';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface TeamInfo {
@@ -17,7 +18,9 @@ interface TeamInfo {
 
 export function TeamSelection() {
   const navigate = useNavigate();
-  const { currentUser, logout } = useStore();
+  const [currentUser] = useAtom(userAtom);
+  const [, logout] = useAtom(logoutAtom);
+  
   const [teams, setTeams] = useState<TeamInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +79,6 @@ export function TeamSelection() {
 
         console.log('📊 Memberships data:', memberships);
 
-        // FIX: Add null check here!
         if (memberships && memberships.length > 0) {
           console.log(`📦 Found ${memberships.length} teams`);
           
@@ -119,7 +121,6 @@ export function TeamSelection() {
             return;
           }
         } else {
-          // FIX: Handle case with no teams
           console.log('📭 No teams found for user');
           setTeams([]);
         }
@@ -132,13 +133,12 @@ export function TeamSelection() {
     }
 
     fetchTeams();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Add the missing selectTeam function
   const selectTeam = (teamId: string) => {
     console.log('🎯 Selecting team:', teamId);
     localStorage.setItem('wholescale-preferred-team', teamId);
-    // Reset dataLoaded so SupabaseSync re-fetches
-    useStore.setState({ dataLoaded: false });
     navigate('/', { replace: true });
   };
 
@@ -265,7 +265,7 @@ export function TeamSelection() {
         .insert({
           name: trimmed,
           invite_code: code,
-          owner_id: user.id,  // Must match auth.uid() for RLS
+          owner_id: user.id,
         })
         .select()
         .single();
@@ -300,7 +300,6 @@ export function TeamSelection() {
 
       if (memberErr) {
         console.error('Member insert error:', memberErr);
-        // Team was created — don't block, just log
       }
 
       // 3. Create #general channel
