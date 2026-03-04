@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WholeScale OS</title>
     <style>
-      /* Emergency styles in case CSS fails */
+      /* Emergency styles */
       body { 
         margin: 0; 
         padding: 0; 
@@ -30,16 +30,32 @@
         text-align: center;
         font-weight: bold;
       }
-      .debug-bar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        padding: 15px;
-        text-align: center;
-        font-family: monospace;
-        z-index: 99998;
-        font-size: 14px;
-        border-bottom: 2px solid rgba(255,255,255,0.2);
+      /* Range slider styling (fixed vendor prefix warning) */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 6px;
+        background: #334155;
+        border-radius: 3px;
+        outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        background: #3b82f6;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid white;
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        background: #3b82f6;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid white;
       }
     </style>
   </head>
@@ -47,86 +63,44 @@
     <div id="emergency-test">🟪 index.html loaded - HTML is working</div>
     <div id="root"></div>
     
+    <!-- Test script to verify JS is running -->
     <script>
-      // This runs immediately
-      console.log('🔵 inline script running at:', new Date().toLocaleTimeString());
+      console.log('🔵 Inline script running at:', new Date().toLocaleTimeString());
       
-      // Create debug div for script loaded
-      const scriptLoadedDiv = document.createElement('div');
-      scriptLoadedDiv.className = 'debug-bar';
-      scriptLoadedDiv.style.top = '70px';
-      scriptLoadedDiv.style.backgroundColor = '#2563eb';
-      scriptLoadedDiv.style.color = 'white';
-      scriptLoadedDiv.innerText = `🔵 inline script executed at ${new Date().toLocaleTimeString()}`;
-      document.body.appendChild(scriptLoadedDiv);
+      // Create visible indicator
+      const scriptDiv = document.createElement('div');
+      scriptDiv.style.position = 'fixed';
+      scriptDiv.style.top = '70px';
+      scriptDiv.style.left = '0';
+      scriptDiv.style.right = '0';
+      scriptDiv.style.backgroundColor = '#2563eb';
+      scriptDiv.style.color = 'white';
+      scriptDiv.style.padding = '15px';
+      scriptDiv.style.zIndex = '99998';
+      scriptDiv.style.textAlign = 'center';
+      scriptDiv.style.fontSize = '16px';
+      scriptDiv.innerText = `🔵 Inline script executed at ${new Date().toLocaleTimeString()}`;
+      document.body.appendChild(scriptDiv);
       
-      // Wait for window load
+      // Check if React will load
       window.addEventListener('load', function() {
-        console.log('🏁 window loaded event fired');
+        console.log('🏁 Window loaded');
         
-        // Check all scripts
-        const scripts = document.querySelectorAll('script');
-        console.log('📦 total scripts found:', scripts.length);
-        
-        // Create window load div
-        const windowLoadDiv = document.createElement('div');
-        windowLoadDiv.className = 'debug-bar';
-        windowLoadDiv.style.top = '120px';
-        windowLoadDiv.style.backgroundColor = '#f97316';
-        windowLoadDiv.style.color = 'black';
-        windowLoadDiv.innerText = `🟠 window.load fired at ${new Date().toLocaleTimeString()} - Scripts: ${scripts.length}`;
-        document.body.appendChild(windowLoadDiv);
-        
-        // Check each script
-        scripts.forEach((script, i) => {
-          console.log(`  script ${i}:`, script.src || 'inline');
-        });
-        
-        // Check if root element exists
-        const root = document.getElementById('root');
-        console.log('📦 root element:', root);
-        
-        // Add root check div
-        const rootCheckDiv = document.createElement('div');
-        rootCheckDiv.className = 'debug-bar';
-        rootCheckDiv.style.top = '170px';
-        rootCheckDiv.style.backgroundColor = root ? '#10b981' : '#ef4444';
-        rootCheckDiv.style.color = 'white';
-        rootCheckDiv.innerText = root ? 
-          `✅ root element found - waiting for React` : 
-          `❌ root element NOT found!`;
-        document.body.appendChild(rootCheckDiv);
+        const loadDiv = document.createElement('div');
+        loadDiv.style.position = 'fixed';
+        loadDiv.style.top = '120px';
+        loadDiv.style.left = '0';
+        loadDiv.style.right = '0';
+        loadDiv.style.backgroundColor = '#f97316';
+        loadDiv.style.color = 'black';
+        loadDiv.style.padding = '15px';
+        loadDiv.style.zIndex = '99997';
+        loadDiv.style.textAlign = 'center';
+        loadDiv.innerText = `🟠 Window loaded at ${new Date().toLocaleTimeString()}`;
+        document.body.appendChild(loadDiv);
       });
-      
-      // Check every second for React
-      let attempts = 0;
-      const interval = setInterval(() => {
-        attempts++;
-        const root = document.getElementById('root');
-        if (root && root.children.length > 0) {
-          console.log('✅ React has rendered!');
-          const reactDiv = document.createElement('div');
-          reactDiv.className = 'debug-bar';
-          reactDiv.style.top = '220px';
-          reactDiv.style.backgroundColor = '#8b5cf6';
-          reactDiv.style.color = 'white';
-          reactDiv.innerText = `✅ React rendered at ${new Date().toLocaleTimeString()}`;
-          document.body.appendChild(reactDiv);
-          clearInterval(interval);
-        } else if (attempts > 10) {
-          console.log('❌ React failed to render after 10 seconds');
-          const timeoutDiv = document.createElement('div');
-          timeoutDiv.className = 'debug-bar';
-          timeoutDiv.style.top = '220px';
-          timeoutDiv.style.backgroundColor = '#ef4444';
-          timeoutDiv.style.color = 'white';
-          timeoutDiv.innerText = `❌ React failed to render - check console for errors`;
-          document.body.appendChild(timeoutDiv);
-          clearInterval(interval);
-        }
-      }, 1000);
     </script>
     
-    <!-- Vite will inject the correct script here automatically -->
+    <!-- Vite will inject the actual script here -->
   </body>
 </html>
