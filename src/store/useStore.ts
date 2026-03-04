@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+\import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '../lib/supabase';
@@ -646,6 +646,7 @@ interface AppState {
   user: any | null;
   session: any | null;
   isLoading: boolean;
+  isAuthenticated: boolean;
   
   // Team state
   teamId: string | null;
@@ -729,6 +730,7 @@ const initialState = {
   user: null,
   session: null,
   isLoading: false,
+  isAuthenticated: false,
   teamId: null,
   team: [],
   teamConfig: {
@@ -774,9 +776,13 @@ export const useStore = create<AppState>()(
             password,
           });
           if (error) throw error;
-          set({ user: data.user, session: data.session, isLoading: false });
+          set({ 
+            user: data.user, 
+            session: data.session, 
+            isAuthenticated: true,
+            isLoading: false 
+          });
           
-          // Increment login streak after successful login
           await get().incrementLoginStreak();
           
           return data;
@@ -814,6 +820,7 @@ export const useStore = create<AppState>()(
             user: null, 
             session: null, 
             teamId: null, 
+            isAuthenticated: false,
             isLoading: false,
             leads: [],
             tasks: [],
