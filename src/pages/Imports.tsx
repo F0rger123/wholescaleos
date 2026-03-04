@@ -171,6 +171,9 @@ export function Imports() {
   // History filter
   const [historyFilter, setHistoryFilter] = useState<ImportSource | 'all'>('all');
 
+  // Connection error message
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
   // ─── Reset ──────────────────────────────────────────────
 
   const resetWizard = useCallback(() => {
@@ -198,9 +201,6 @@ export function Imports() {
   }, []);
 
   // ─── Connect / Fetch data ──────────────────────────────
-
-  // Connection error message
-  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const connectGoogleSheets = async () => {
     setConnectionError(null);
@@ -448,7 +448,9 @@ export function Imports() {
   const analyzePastedText = () => {
     if (!pastedText.trim()) return;
     setIsLoading(true);
-    setTimeout(() => {
+    
+    // Use the improved parser (no setTimeout needed - it's sync)
+    try {
       const result = parsePastedData(pastedText);
       setParseResult(result);
       setEditedRows(result.rows.map(r => [...r]));
@@ -460,10 +462,15 @@ export function Imports() {
         confidence: col.confidence,
         sample: col.samples[0] || '',
       }));
+      
       setPasteColumnMappings(mappings);
-      setIsLoading(false);
       setWizardStep(1);
-    }, 1200);
+    } catch (error) {
+      console.error('Error parsing pasted text:', error);
+      alert('❌ Failed to parse pasted text. Please check the format.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updatePasteMapping = (index: number, targetField: string) => {
@@ -483,7 +490,8 @@ export function Imports() {
   const importFromPaste = () => {
     if (!parseResult) return;
     setIsLoading(true);
-    setTimeout(() => {
+    
+    try {
       const rows = editedRows.map(row => {
         const mapped: Record<string, string> = {};
         pasteColumnMappings.forEach((m, idx) => {
@@ -495,13 +503,13 @@ export function Imports() {
           name: mapped.name || '',
           email: mapped.email || '',
           phone: mapped.phone || '',
-          address: mapped.propertyAddress || '',
-          value: parseValue(mapped.estimatedValue || '0'),
+          propertyAddress: mapped.propertyAddress || mapped.address || '',
+          estimatedValue: parseValue(mapped.estimatedValue || '0'),
           propertyType: mapPropertyType(mapped.propertyType || 'single-family') as PropertyType,
           source: 'other' as LeadSource,
           notes: mapped.notes || '',
         };
-      }).filter(r => r.name.trim() || r.address.trim());
+      }).filter(r => r.name.trim() || r.propertyAddress.trim());
 
       const imported = importLeadsFromData(rows);
       const duplicates = rows.length - imported;
@@ -524,9 +532,13 @@ export function Imports() {
         errors: [],
       });
 
-      setIsLoading(false);
       setWizardStep(3);
-    }, 1500);
+    } catch (error) {
+      console.error('Error importing pasted data:', error);
+      alert('❌ Failed to import data. Please check the mappings.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ─── Render ────────────────────────────────────────────
@@ -809,7 +821,6 @@ export function Imports() {
                       value={pastedText}
                       onChange={(e) => setPastedText(e.target.value)}
                       onPaste={(e) => {
-                        // Allow natural paste behavior
                         const text = e.clipboardData.getData('text');
                         if (text) {
                           e.preventDefault();
@@ -937,7 +948,7 @@ export function Imports() {
                   <div className="space-y-2">
                     {pasteColumnMappings.map((mapping, idx) => {
                       const col = parseResult.columns[idx];
-                      const typeColor = DETECTED_TYPE_COLORS[col?.detectedType || 'text'];
+                      const typeColor = col ? DETECTED_TYPE_COLORS[col.detectedType] || DETECTED_TYPE_COLORS.text : DETECTED_TYPE_COLORS.text;
                       return (
                         <div key={idx} className={`grid grid-cols-12 gap-3 px-3 py-3 rounded-xl border transition-colors ${
                           mapping.targetField === 'skip' ? 'bg-slate-800/30 border-slate-800' : 'bg-slate-800/70 border-slate-700'
@@ -1007,7 +1018,7 @@ export function Imports() {
                           <th className="px-3 py-2 text-left text-slate-400 font-semibold w-10">#</th>
                           {pasteColumnMappings.map((m, idx) => {
                             const col = parseResult.columns[idx];
-                            const typeColor = DETECTED_TYPE_COLORS[col?.detectedType || 'text'];
+                            const typeColor = col ? DETECTED_TYPE_COLORS[col.detectedType] || DETECTED_TYPE_COLORS.text : DETECTED_TYPE_COLORS.text;
                             return (
                               <th key={idx} className="px-3 py-2 text-left whitespace-nowrap">
                                 <div className="flex items-center gap-1.5">
