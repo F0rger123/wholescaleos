@@ -43,7 +43,6 @@ export function Layout() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
 
-  // Fetch all teams user belongs to
   useEffect(() => {
     async function fetchTeams() {
       if (!isSupabaseConfigured || !supabase || !currentUser?.id) return;
@@ -55,7 +54,6 @@ export function Layout() {
 
         if (data) {
           const currentTeamId = useStore.getState().teamId;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const teams: UserTeam[] = data.map((row: any) => ({
             teamId: row.team_id,
             teamName: row.teams?.name || 'Unnamed Team',
@@ -70,60 +68,73 @@ export function Layout() {
   }, [currentUser?.id]);
 
   return (
-    <div className="flex h-screen bg-slate-950 text-white">
+    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#0f172a', color: 'white' }}>
       {/* Sidebar */}
-      <aside
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-300 shrink-0`}
-      >
+      <div style={{
+        width: sidebarOpen ? '256px' : '80px',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#1e293b',
+        borderRight: '1px solid #334155',
+        transition: 'width 0.3s',
+        flexShrink: 0
+      }}>
         {/* Logo */}
-        <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-800">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600 text-white shrink-0">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '20px', borderBottom: '1px solid #334155' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '12px',
+            backgroundColor: '#2563eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            flexShrink: 0
+          }}>
             <Building2 size={22} />
           </div>
           {sidebarOpen && (
-            <div className="overflow-hidden">
-              <h1 className="text-lg font-bold leading-tight tracking-tight text-white">
-                WholeScale
-              </h1>
-              <p className="text-[10px] uppercase tracking-widest font-semibold text-blue-400">
-                OS
-              </p>
+            <div style={{ overflow: 'hidden' }}>
+              <h1 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white' }}>WholeScale</h1>
+              <p style={{ fontSize: '10px', textTransform: 'uppercase', color: '#60a5fa' }}>OS</p>
             </div>
           )}
         </div>
 
         {/* Team Switcher */}
         {sidebarOpen && (
-          <div className="mx-3 mt-3 rounded-xl border border-slate-800 overflow-hidden bg-slate-900/50">
+          <div style={{ margin: '12px', borderRadius: '12px', border: '1px solid #334155', overflow: 'hidden', backgroundColor: '#0f172a' }}>
             <button
               onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px',
+                textAlign: 'left',
+                cursor: 'pointer',
+                background: 'none',
+                border: 'none',
+                color: 'white'
+              }}
             >
-              <div className="w-7 h-7 rounded-lg bg-blue-600/15 flex items-center justify-center shrink-0">
-                <Building2 size={13} className="text-blue-400" />
+              <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#2563eb20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Building2 size={13} color="#60a5fa" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate text-white">
-                  {teamConfig.name || 'My Team'}
-                </p>
-                <p className="text-[10px] text-slate-400">
-                  {team.length} member{team.length !== 1 ? 's' : ''}
-                </p>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: 'white' }}>{teamConfig.name || 'My Team'}</p>
+                <p style={{ fontSize: '10px', margin: 0, color: '#94a3b8' }}>{team.length} member{team.length !== 1 ? 's' : ''}</p>
               </div>
-              <ChevronDown
-                size={14}
-                className={`text-slate-400 transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
-              />
+              <ChevronDown size={14} style={{ color: '#94a3b8', transform: showTeamDropdown ? 'rotate(180deg)' : 'none' }} />
             </button>
 
             {showTeamDropdown && (
-              <div className="border-t border-slate-800">
-                {/* Team list */}
+              <div style={{ borderTop: '1px solid #334155' }}>
                 {userTeams.length > 1 && (
-                  <div className="p-1.5">
-                    <p className="text-[9px] uppercase tracking-wider font-semibold px-2 py-1 text-slate-400">
-                      Switch Team
-                    </p>
+                  <div style={{ padding: '6px' }}>
+                    <p style={{ fontSize: '9px', textTransform: 'uppercase', padding: '4px 8px', color: '#94a3b8', margin: 0 }}>Switch Team</p>
                     {userTeams.map(t => (
                       <button
                         key={t.teamId}
@@ -131,31 +142,37 @@ export function Layout() {
                           if (!t.isCurrent) switchToTeam(t.teamId);
                           setShowTeamDropdown(false);
                         }}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left hover:bg-white/5 transition-colors"
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 8px',
+                          borderRadius: '8px',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          background: 'none',
+                          border: 'none',
+                          color: 'white'
+                        }}
                       >
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${t.isCurrent ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-                        <span className={`text-xs truncate flex-1 ${t.isCurrent ? 'text-blue-400' : 'text-slate-300'}`}>
-                          {t.teamName}
-                        </span>
-                        {t.isCurrent && (
-                          <span className="text-[9px] text-emerald-400">✓</span>
-                        )}
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: t.isCurrent ? '#34d399' : '#64748b' }} />
+                        <span style={{ fontSize: '12px', flex: 1, color: t.isCurrent ? '#60a5fa' : '#cbd5e1' }}>{t.teamName}</span>
+                        {t.isCurrent && <span style={{ fontSize: '9px', color: '#34d399' }}>✓</span>}
                       </button>
                     ))}
                   </div>
                 )}
-
-                {/* Actions */}
-                <div className={`p-1.5 space-y-0.5 ${userTeams.length > 1 ? 'border-t border-slate-800' : ''}`}>
+                <div style={{ padding: '6px', borderTop: userTeams.length > 1 ? '1px solid #334155' : 'none' }}>
                   <button
                     onClick={() => { setShowJoinModal(true); setShowTeamDropdown(false); }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs text-slate-300 hover:bg-white/5 transition-colors"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', background: 'none', border: 'none', color: '#cbd5e1', fontSize: '12px' }}
                   >
                     <ArrowRightLeft size={12} /> Join Team
                   </button>
                   <button
                     onClick={() => { setShowCreateModal(true); setShowTeamDropdown(false); }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs text-slate-300 hover:bg-white/5 transition-colors"
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '8px', textAlign: 'left', cursor: 'pointer', background: 'none', border: 'none', color: '#cbd5e1', fontSize: '12px', marginTop: '2px' }}
                   >
                     <Plus size={12} /> Create Team
                   </button>
@@ -166,7 +183,7 @@ export function Layout() {
         )}
 
         {/* Nav */}
-        <nav className="flex-1 flex flex-col gap-1 p-3 mt-2">
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px', padding: '12px', marginTop: '8px' }}>
           {navItems.map(({ to, label, icon: Icon }) => {
             const badge =
               label === 'Tasks' ? pendingTaskCount :
@@ -178,29 +195,45 @@ export function Layout() {
                 key={to}
                 to={to}
                 end={to === '/'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all group relative ${
-                    isActive ? 'bg-blue-600/15 text-blue-400' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                  }`
-                }
+                style={({ isActive }) => ({
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  textDecoration: 'none',
+                  backgroundColor: isActive ? '#2563eb20' : 'transparent',
+                  color: isActive ? '#60a5fa' : '#94a3b8',
+                  position: 'relative'
+                })}
               >
-                <Icon size={20} className="shrink-0" />
-                {sidebarOpen && <span className="flex-1">{label}</span>}
+                <Icon size={20} />
+                {sidebarOpen && <span style={{ flex: 1 }}>{label}</span>}
                 {sidebarOpen && badge > 0 && (
-                  <span className={`text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center ${
-                    label === 'Tasks' ? 'bg-amber-500' :
-                    label === 'Chat' ? 'bg-blue-500' :
-                    'bg-emerald-500'
-                  }`}>
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    padding: '2px 6px',
+                    borderRadius: '999px',
+                    minWidth: '20px',
+                    textAlign: 'center',
+                    backgroundColor: label === 'Tasks' ? '#f59e0b' : label === 'Chat' ? '#2563eb' : '#10b981'
+                  }}>
                     {badge}
                   </span>
                 )}
                 {!sidebarOpen && badge > 0 && (
-                  <span className={`absolute right-2 w-2 h-2 rounded-full ${
-                    label === 'Tasks' ? 'bg-amber-500' :
-                    label === 'Chat' ? 'bg-blue-500' :
-                    'bg-emerald-500'
-                  }`} />
+                  <span style={{
+                    position: 'absolute',
+                    right: '8px',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: label === 'Tasks' ? '#f59e0b' : label === 'Chat' ? '#2563eb' : '#10b981'
+                  }} />
                 )}
               </NavLink>
             );
@@ -209,68 +242,101 @@ export function Layout() {
 
         {/* Online Team Members */}
         {sidebarOpen && (
-          <div className="px-4 py-3 border-t border-slate-800">
-            <p className="text-[10px] uppercase tracking-wider font-semibold mb-2 text-slate-400">
-              Online Now
-            </p>
-            <div className="space-y-1.5">
+          <div style={{ padding: '16px', borderTop: '1px solid #334155' }}>
+            <p style={{ fontSize: '10px', textTransform: 'uppercase', marginBottom: '8px', color: '#94a3b8' }}>Online Now</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {team
                 .filter(m => m.presenceStatus !== 'offline')
                 .slice(0, 4)
                 .map(m => (
-                  <div key={m.id} className="flex items-center gap-2">
-                    <div className="relative">
-                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[9px] font-bold text-white">
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ position: 'relative' }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #2563eb, #9333ea)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '9px',
+                        fontWeight: 'bold',
+                        color: 'white'
+                      }}>
                         {m.avatar}
                       </div>
-                      <span className="absolute -bottom-0.5 -right-0.5">
+                      <span style={{ position: 'absolute', bottom: '-2px', right: '-2px' }}>
                         <StatusIndicator status={m.presenceStatus} size="sm" />
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs truncate text-slate-300">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '12px', margin: 0, color: '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {m.name.split(' ')[0]}
                       </p>
                     </div>
                   </div>
                 ))}
               {team.filter(m => m.presenceStatus !== 'offline').length === 0 && (
-                <p className="text-xs text-slate-400">No one online</p>
+                <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>No one online</p>
               )}
             </div>
           </div>
         )}
-      </aside>
+      </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {/* Top bar */}
-        <header className="flex items-center justify-between px-6 py-3 border-b border-slate-800 bg-slate-900/80 backdrop-blur-sm shrink-0">
-          <div className="flex items-center gap-4">
+        <header style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 24px',
+          borderBottom: '1px solid #334155',
+          backgroundColor: '#1e293b',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button
               onClick={toggleSidebar}
-              className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              style={{
+                padding: '8px',
+                borderRadius: '8px',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                background: 'none',
+                border: 'none'
+              }}
             >
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <div style={{ position: 'relative' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
               <input
                 type="text"
                 placeholder="Search leads, tasks, team..."
-                className="w-72 pl-9 pr-4 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                style={{
+                  width: '288px',
+                  padding: '8px 12px 8px 36px',
+                  fontSize: '14px',
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  color: 'white',
+                  outline: 'none'
+                }}
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <NotificationPanel />
-            <div className="w-px h-6 bg-slate-700" />
+            <div style={{ width: '1px', height: '24px', backgroundColor: '#334155' }} />
             <UserMenu />
           </div>
         </header>
 
         {/* Page */}
-        <main className="flex-1 overflow-auto p-6 bg-slate-950">
+        <main style={{ flex: 1, overflow: 'auto', padding: '24px', backgroundColor: '#0f172a' }}>
           <Outlet />
         </main>
       </div>
