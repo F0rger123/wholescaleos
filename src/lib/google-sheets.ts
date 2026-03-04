@@ -1,340 +1,183 @@
-// ─── Google Sheets Real Data Fetcher ─────────────────────────────────────────
-// Fetches REAL data from a shared Google Sheet (no API key needed).
-// The sheet must be shared as "Anyone with the link can view".
-//
-// Uses Google Visualization API CSV export endpoint which supports CORS.
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface SheetFetchResult {
-  success: boolean;
-  data: Record<string, string>[];
+export interface SheetData {
   headers: string[];
-  rowCount: number;
-  error?: string;
-  sheetTitle?: string;
+  rows: Record<string, string>[];
+  sheetId: string;
+  sheetName: string;
 }
 
-// ─── Extract Sheet ID from URL ───────────────────────────────────────────────
-export function extractSheetId(url: string): string | null {
-  // Matches: https://docs.google.com/spreadsheets/d/SHEET_ID/...
-  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
-  if (match) return match[1];
-
-  // Matches: https://docs.google.com/spreadsheets/d/e/PUBLISHED_ID/...
-  const pubMatch = url.match(/\/spreadsheets\/d\/e\/([a-zA-Z0-9_-]+)/);
-  if (pubMatch) return pubMatch[1];
-
-  // Raw ID pasted
-  if (/^[a-zA-Z0-9_-]{20,}$/.test(url.trim())) return url.trim();
-
-  return null;
-}
-
-// ─── Extract GID (sheet tab) from URL ────────────────────────────────────────
-export function extractGid(url: string): string {
-  const match = url.match(/[#&?]gid=(\d+)/);
-  return match ? match[1] : '0';
-}
-
-// ─── Parse CSV handling quoted fields ────────────────────────────────────────
-function parseCSVLine(line: string): string[] {
-  const cells: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    const next = line[i + 1];
-
-    if (ch === '"') {
-      if (inQuotes && next === '"') {
-        // Escaped quote inside quoted field
-        current += '"';
-        i++;
-      } else {
-        // Toggle quote mode
-        inQuotes = !inQuotes;
+export async function fetchGoogleSheet(sheetId: string): Promise<{ success: boolean; data: Record<string, string>[]; headers: string[]; error?: string }> {
+  try {
+    // Extract sheet ID from various URL formats
+    const extractedId = extractSheetId(sheetId);
+    
+    // First, try to get sheet metadata to find the first sheet name
+    const metadataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${extractedId}?key=${import.meta.env.VITE_GOOGLE_API_KEY}`;
+    const metadataResponse = await fetch(metadataUrl);
+    
+    if (!metadataResponse.ok) {
+      if (metadataResponse.status === 403) {
+        return { 
+          success: false, 
+          data: [], 
+          headers: [],
+          error: 'Sheet is not publicly accessible. Please make sure it is shared as "Anyone with the link can view".'
+        };
       }
-    } else if (ch === ',' && !inQuotes) {
-      cells.push(current.trim());
-      current = '';
-    } else {
-      current += ch;
+      throw new Error(`Google Sheets API error: ${metadataResponse.statusText}`);
     }
-  }
-  cells.push(current.trim());
-  return cells;
-}
+    
+    const metadata = await metadataResponse.json();
+    
+    // Get the first sheet name and its properties
+    const sheetName = metadata.sheets?.[0]?.properties?.title || 'Sheet1';
+    
+    // Get the sheet's grid properties to know the range
+    const sheetProperties = metadata.sheets?.[0]?.properties;
+    const rowCount = sheetProperties?.gridProperties?.rowCount || 1000;
+    const columnCount = sheetProperties?.gridProperties?.columnCount || 26;
+    
+    // Convert column count to letter range (e.g., 26 -> Z, 27 -> AA)
+    const endColumn = columnToLetter(columnCount);
+    
+    // Use the full range of the sheet
+    const dataUrl = `https://sheets.googleapis.com/v4/spreadsheets/${extractedId}/values/${sheetName}!A1:${endColumn}${rowCount}?key=${import.meta.env.VITE_GOOGLE_API_KEY}`;
+    
+    const response = await fetch(dataUrl);
+    if (!response.ok) {
+      throw new Error(`Google Sheets API error: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.values || data.values.length === 0) {
+      return { 
+        success: false, 
+        data: [], 
+        headers: [],
+        error: 'No data found in the sheet. Make sure it has headers in the first row and data below.'
+      };
+    }
 
-function parseCSV(csvText: string): { headers: string[]; rows: Record<string, string>[] } {
-  const lines = csvText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  if (lines.length === 0) return { headers: [], rows: [] };
-
-  const headers = parseCSVLine(lines[0]).map(h => h.replace(/^"|"$/g, ''));
-  const rows: Record<string, string>[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const cells = parseCSVLine(lines[i]);
-    const row: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      const value = (cells[idx] || '').replace(/^"|"$/g, '');
-      if (value) row[header] = value;
+    // Get headers from first row
+    const headers = data.values[0] || [];
+    
+    // Clean up headers - remove empty ones and trim
+    const cleanHeaders = headers.map((h: string, index: number) => {
+      if (!h || h.trim() === '') {
+        return `Column_${index + 1}`;
+      }
+      return h.trim();
     });
-    // Only add rows that have at least one non-empty value
-    if (Object.values(row).some(v => v.trim().length > 0)) {
-      rows.push(row);
-    }
-  }
 
-  return { headers, rows };
-}
+    // Process the rest as rows
+    const rows = data.values.slice(1).map((row: string[]) => {
+      const rowData: Record<string, string> = {};
+      cleanHeaders.forEach((header: string, index: number) => {
+        rowData[header] = row[index] || '';
+      });
+      return rowData;
+    }).filter((row: Record<string, string>) => {
+      // Filter out completely empty rows
+      return Object.values(row).some(val => val && val.trim() !== '');
+    });
 
-// ─── Fetch from Google Sheets ────────────────────────────────────────────────
-export async function fetchGoogleSheet(url: string): Promise<SheetFetchResult> {
-  const sheetId = extractSheetId(url);
-  if (!sheetId) {
+    // Log for debugging
+    console.log('Google Sheets fetch result:', {
+      headers: cleanHeaders,
+      rowCount: rows.length,
+      sampleRow: rows[0]
+    });
+
     return {
-      success: false,
-      data: [],
+      success: true,
+      headers: cleanHeaders,
+      data: rows
+    };
+  } catch (error) {
+    console.error('Failed to fetch Google Sheet:', error);
+    return { 
+      success: false, 
+      data: [], 
       headers: [],
-      rowCount: 0,
-      error: 'Invalid Google Sheets URL. Please paste the full URL from your browser address bar.',
+      error: `Failed to fetch sheet: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
+}
 
-  const gid = extractGid(url);
-
-  // Try multiple endpoints for maximum compatibility
-  const endpoints = [
-    // Google Visualization API — best CORS support
-    `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`,
-    // Direct CSV export
-    `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`,
-    // Published spreadsheet format
-    `https://docs.google.com/spreadsheets/d/e/${sheetId}/pub?output=csv&gid=${gid}`,
-  ];
-
-  for (const endpoint of endpoints) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-      const response = await fetch(endpoint, {
-        signal: controller.signal,
-        headers: {
-          'Accept': 'text/csv,text/plain,*/*',
-        },
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        // If 403/404, sheet isn't shared properly
-        if (response.status === 403) {
-          return {
-            success: false,
-            data: [],
-            headers: [],
-            rowCount: 0,
-            error: 'Access denied. Make sure the sheet is shared as "Anyone with the link can view". Go to Share → General access → Anyone with the link.',
-          };
-        }
-        if (response.status === 404) {
-          return {
-            success: false,
-            data: [],
-            headers: [],
-            rowCount: 0,
-            error: 'Sheet not found. Check the URL is correct and the sheet still exists.',
-          };
-        }
-        continue; // Try next endpoint
-      }
-
-      const text = await response.text();
-
-      // Check if we got HTML instead of CSV (Google sometimes returns login page)
-      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
-        continue; // Try next endpoint
-      }
-
-      // Check if it looks like Google's JSON wrapper (not CSV)
-      if (text.trim().startsWith('google.visualization.Query.setResponse')) {
-        // Parse the JSONP response
-        try {
-          const jsonStr = text.replace(/^.*setResponse\(/, '').replace(/\);?\s*$/, '');
-          const json = JSON.parse(jsonStr);
-          if (json.table) {
-            const headers = json.table.cols.map((c: { label?: string; id?: string }) => c.label || c.id || '');
-            const rows = json.table.rows.map((r: { c: Array<{ v?: string | number | null }> }) => {
-              const row: Record<string, string> = {};
-              r.c.forEach((cell: { v?: string | number | null }, idx: number) => {
-                if (cell && cell.v !== null && cell.v !== undefined) {
-                  row[headers[idx]] = String(cell.v);
-                }
-              });
-              return row;
-            }).filter((r: Record<string, string>) => Object.values(r).some(v => v.trim().length > 0));
-
-            return {
-              success: true,
-              data: rows,
-              headers: headers.filter((h: string) => h.length > 0),
-              rowCount: rows.length,
-              sheetTitle: json.table.cols[0]?.label ? 'Google Sheet' : undefined,
-            };
-          }
-        } catch {
-          continue; // Try next endpoint
-        }
-      }
-
-      // Parse as CSV
-      const { headers, rows } = parseCSV(text);
-
-      if (headers.length === 0 || rows.length === 0) {
-        continue; // Try next endpoint — might not be CSV
-      }
-
-      return {
-        success: true,
-        data: rows,
-        headers,
-        rowCount: rows.length,
-      };
-    } catch (err) {
-      // AbortError means timeout, TypeError means CORS
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        continue; // Try next endpoint
-      }
-      // CORS errors throw TypeError
-      if (err instanceof TypeError) {
-        continue; // Try next endpoint
-      }
-      continue;
-    }
+// Helper function to convert column number to letter (1 -> A, 27 -> AA)
+function columnToLetter(column: number): string {
+  let temp;
+  let letter = '';
+  while (column > 0) {
+    temp = (column - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    column = (column - temp - 1) / 26;
   }
+  return letter;
+}
 
-  // All endpoints failed
-  return {
-    success: false,
-    data: [],
-    headers: [],
-    rowCount: 0,
-    error: 'Could not fetch the sheet. Make sure:\n1. The sheet is shared as "Anyone with the link can view"\n2. The URL is from docs.google.com/spreadsheets\n3. Try using "Smart Paste" instead — copy the data from your sheet and paste it directly.',
+export function extractSheetId(input: string): string {
+  // Handle full URLs
+  const urlMatch = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if (urlMatch) return urlMatch[1];
+  
+  // Handle direct IDs
+  if (input.match(/^[a-zA-Z0-9-_]+$/)) return input;
+  
+  throw new Error('Invalid Google Sheets URL or ID');
+}
+
+export function getSheetUrl(sheetId: string): string {
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+}
+
+export function isGoogleSheetsUrl(url: string): boolean {
+  return url.includes('docs.google.com/spreadsheets') || url.includes('sheets.googleapis.com');
+}
+
+export function smartDetectColumns(headers: string[], data: Record<string, string>[]): { sourceColumn: string; targetField: string; confidence: number; sample: string }[] {
+  const fieldPatterns: Record<string, RegExp[]> = {
+    name: [/^name$/i, /full.?name/i, /owner/i, /contact/i, /client/i, /buyer/i, /seller/i],
+    email: [/email/i, /e-?mail/i, /@/i],
+    phone: [/phone/i, /cell/i, /mobile/i, /tel/i, /phone.?number/i],
+    propertyAddress: [/address/i, /property.?address/i, /street/i, /location/i, /site.?address/i],
+    estimatedValue: [/value/i, /price/i, /amount/i, /\$/i, /estimate/i, /sale.?price/i, /list.?price/i],
+    propertyType: [/type/i, /property.?type/i, /home.?type/i, /building.?type/i],
+    notes: [/note/i, /comment/i, /description/i, /remark/i, /additional.?info/i],
   };
-}
 
-// ─── Auto-detect column mapping with enhanced patterns ───────────────────────
-export interface SmartColumnMapping {
-  sourceColumn: string;
-  targetField: string;
-  confidence: number;
-  sample: string;
-  detectedPattern: string;
-}
-
-const COLUMN_PATTERNS: {
-  targetField: string;
-  headerPatterns: RegExp;
-  dataPatterns?: RegExp;
-  priority: number;
-}[] = [
-  // Name patterns
-  { targetField: 'name', headerPatterns: /^(owner|seller|contact|name|full.?name|first.?name|last.?name|client|person|lead.?name|property.?owner)$/i, priority: 90 },
-  // Email patterns
-  { targetField: 'email', headerPatterns: /^(email|e.?mail|email.?address|contact.?email)$/i, dataPatterns: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, priority: 98 },
-  // Phone patterns
-  { targetField: 'phone', headerPatterns: /^(phone|tel|telephone|mobile|cell|contact.?phone|phone.?number|cell.?phone)$/i, dataPatterns: /^[\(\+]?\d[\d\s\-\(\)\.]{6,}\d$/, priority: 96 },
-  // Address patterns
-  { targetField: 'propertyAddress', headerPatterns: /^(address|property.?address|location|street|property|mailing|site.?address|prop.?addr)$/i, dataPatterns: /^\d+\s+[A-Za-z].*(?:St|Ave|Blvd|Dr|Rd|Ln|Ct|Way|Pl|Cir|Pkwy|Hwy)\b/i, priority: 92 },
-  // Value patterns
-  { targetField: 'estimatedValue', headerPatterns: /^(value|price|amount|est.?value|estimated|asking|list.?price|arv|market.?value|assessed|worth|sale.?price)$/i, dataPatterns: /^\$[\d,]+/, priority: 88 },
-  // Property type patterns
-  { targetField: 'propertyType', headerPatterns: /^(type|property.?type|prop.?type|category|class|use.?code|land.?use|zoning)$/i, priority: 82 },
-  // Notes patterns
-  { targetField: 'notes', headerPatterns: /^(notes?|comment|description|detail|remark|memo|info|additional|motivation|situation)$/i, priority: 75 },
-];
-
-export function smartDetectColumns(
-  headers: string[],
-  sampleRows: Record<string, string>[],
-): SmartColumnMapping[] {
   return headers.map(header => {
-    // First: try matching by header name
-    for (const pattern of COLUMN_PATTERNS) {
-      if (pattern.headerPatterns.test(header.trim())) {
-        const sample = sampleRows[0]?.[header] || '';
-        return {
-          sourceColumn: header,
-          targetField: pattern.targetField,
-          confidence: pattern.priority,
-          sample,
-          detectedPattern: 'header-match',
-        };
-      }
-    }
-
-    // Second: try matching by data content (analyze first 5 rows)
-    const sampleValues = sampleRows.slice(0, 5).map(r => r[header] || '').filter(v => v.trim());
-
-    if (sampleValues.length > 0) {
-      for (const pattern of COLUMN_PATTERNS) {
-        if (pattern.dataPatterns) {
-          const matchCount = sampleValues.filter(v => pattern.dataPatterns!.test(v.trim())).length;
-          const matchRatio = matchCount / sampleValues.length;
-          if (matchRatio >= 0.6) { // 60% of samples match
-            return {
-              sourceColumn: header,
-              targetField: pattern.targetField,
-              confidence: Math.round(matchRatio * pattern.priority),
-              sample: sampleValues[0],
-              detectedPattern: 'data-match',
-            };
+    let bestMatch = { field: 'skip', confidence: 0 };
+    const headerLower = header.toLowerCase();
+    
+    // Check each pattern
+    for (const [field, patterns] of Object.entries(fieldPatterns)) {
+      for (const pattern of patterns) {
+        if (pattern.test(headerLower)) {
+          // Higher confidence for exact matches
+          const confidence = pattern.source.includes('^') ? 95 : 85;
+          if (confidence > bestMatch.confidence) {
+            bestMatch = { field, confidence };
           }
+          break;
         }
       }
+    }
 
-      // Check if values look like names (2-3 capitalized words)
-      const nameMatchCount = sampleValues.filter(v => {
-        const words = v.trim().split(/\s+/);
-        return words.length >= 2 && words.length <= 4 && words.every(w => /^[A-Z]/.test(w));
-      }).length;
-      if (nameMatchCount / sampleValues.length >= 0.6) {
-        return {
-          sourceColumn: header,
-          targetField: 'name',
-          confidence: 78,
-          sample: sampleValues[0],
-          detectedPattern: 'name-inference',
-        };
-      }
-
-      // Check if values look like currency
-      const currencyMatchCount = sampleValues.filter(v => /^\$?[\d,]+(\.\d{2})?$/.test(v.trim())).length;
-      if (currencyMatchCount / sampleValues.length >= 0.6) {
-        return {
-          sourceColumn: header,
-          targetField: 'estimatedValue',
-          confidence: 75,
-          sample: sampleValues[0],
-          detectedPattern: 'currency-inference',
-        };
+    // Get sample data from first non-empty row
+    let sample = '';
+    for (const row of data) {
+      if (row[header] && row[header].trim() !== '') {
+        sample = row[header];
+        break;
       }
     }
 
-    // No match — skip
     return {
       sourceColumn: header,
-      targetField: 'skip',
-      confidence: 0,
-      sample: sampleRows[0]?.[header] || '',
-      detectedPattern: 'none',
+      targetField: bestMatch.field,
+      confidence: bestMatch.confidence,
+      sample: sample.substring(0, 50) // Truncate long samples
     };
   });
-}
-
-// ─── Validate URL is a Google Sheets URL ─────────────────────────────────────
-export function isGoogleSheetsUrl(url: string): boolean {
-  return /docs\.google\.com\/spreadsheets/.test(url) || /^[a-zA-Z0-9_-]{20,}$/.test(url.trim());
 }
