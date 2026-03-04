@@ -678,6 +678,10 @@ interface AppState {
   setUser: (user: any) => void;
   setSession: (session: any) => void;
   setTeamId: (teamId: string) => void;
+  login: (email: string, password: string) => Promise<any>;
+  signup: (email: string, password: string, name?: string) => Promise<any>;
+  logout: () => Promise<void>;
+  resetPassword?: (email: string) => Promise<any>;
   
   // Lead actions
   setLeads: (leads: Lead[]) => void;
@@ -759,6 +763,78 @@ export const useStore = create<AppState>()(
       setUser: (user) => set({ user }),
       setSession: (session) => set({ session }),
       setTeamId: (teamId) => set({ teamId }),
+
+      login: async (email, password) => {
+        set({ isLoading: true });
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (error) throw error;
+          set({ user: data.user, session: data.session, isLoading: false });
+          return data;
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      signup: async (email, password, name) => {
+        set({ isLoading: true });
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { full_name: name || '' }
+            }
+          });
+          if (error) throw error;
+          set({ isLoading: false });
+          return data;
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      logout: async () => {
+        set({ isLoading: true });
+        try {
+          const { error } = await supabase.auth.signOut();
+          if (error) throw error;
+          set({ 
+            user: null, 
+            session: null, 
+            teamId: null, 
+            isLoading: false,
+            leads: [],
+            tasks: [],
+            buyers: [],
+            coverageAreas: [],
+            callRecordings: []
+          });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      resetPassword: async (email) => {
+        set({ isLoading: true });
+        try {
+          const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+          });
+          if (error) throw error;
+          set({ isLoading: false });
+          return data;
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
 
       // Lead actions
       setLeads: (leads) => set({ leads }),
