@@ -1,86 +1,68 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { App } from './App';
-import './index.css';
 
-// Create a massive visible error display
-const errorContainer = document.createElement('div');
-errorContainer.id = 'error-container';
-errorContainer.style.position = 'fixed';
-errorContainer.style.top = '0';
-errorContainer.style.left = '0';
-errorContainer.style.right = '0';
-errorContainer.style.bottom = '0';
-errorContainer.style.backgroundColor = '#1a1a1a';
-errorContainer.style.color = '#ff4444';
-errorContainer.style.padding = '40px';
-errorContainer.style.zIndex = '999999';
-errorContainer.style.overflow = 'auto';
-errorContainer.style.fontFamily = 'monospace';
-errorContainer.style.fontSize = '14px';
-errorContainer.style.whiteSpace = 'pre-wrap';
-errorContainer.style.display = 'none';
-document.body.appendChild(errorContainer);
-
-function showError(error: any) {
-  console.error('Render error:', error);
-  
-  const errorContainer = document.getElementById('error-container');
-  if (!errorContainer) return;
-  
-  errorContainer.style.display = 'block';
-  errorContainer.innerHTML = `
-    <h1 style="color: #ff4444; font-size: 24px; margin-bottom: 20px;">❌ React Render Error</h1>
-    <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-      <strong style="color: #ff8888;">Error:</strong>
-      <pre style="color: #ffaa00; margin-top: 10px;">${error?.toString() || 'Unknown error'}</pre>
-    </div>
-    ${error?.stack ? `
-      <div style="background: #2a2a2a; padding: 20px; border-radius: 8px;">
-        <strong style="color: #ff8888;">Stack Trace:</strong>
-        <pre style="color: #88ff88; margin-top: 10px;">${error.stack}</pre>
+// Super simple test component - no imports, no dependencies
+function TestComponent() {
+  return (
+    <div style={{
+      padding: '40px',
+      background: '#0f172a',
+      color: 'white',
+      minHeight: '100vh',
+      fontFamily: 'sans-serif'
+    }}>
+      <h1 style={{ color: '#3b82f6', fontSize: '32px' }}>✅ REACT IS WORKING!</h1>
+      <p style={{ fontSize: '18px', marginTop: '20px' }}>
+        If you see this, React is rendering correctly.
+      </p>
+      <div style={{
+        marginTop: '30px',
+        padding: '20px',
+        background: '#1e293b',
+        borderRadius: '8px'
+      }}>
+        <p><strong>Time:</strong> {new Date().toLocaleTimeString()}</p>
+        <p><strong>React version:</strong> {React.version}</p>
       </div>
-    ` : ''}
-    <button onclick="location.reload()" style="
-      margin-top: 20px;
-      padding: 10px 20px;
-      background: #444;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-    ">Reload Page</button>
-  `;
+    </div>
+  );
 }
 
-// Try to render with error catching
+// Simple render with error catching
 try {
-  const root = document.getElementById('root');
+  const rootElement = document.getElementById('root');
   
-  if (!root) {
+  if (!rootElement) {
     throw new Error('Root element not found!');
   }
   
-  console.log('Attempting to render React...');
+  console.log('Rendering test component...');
   
-  ReactDOM.createRoot(root).render(
+  ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <App />
+      <TestComponent />
     </React.StrictMode>
   );
   
-  console.log('React render called successfully');
+  // Show success message
+  const success = document.createElement('div');
+  success.style.position = 'fixed';
+  success.style.top = '10px';
+  success.style.right = '10px';
+  success.style.background = '#10b981';
+  success.style.color = 'white';
+  success.style.padding = '10px 20px';
+  success.style.borderRadius = '4px';
+  success.style.zIndex = '99999';
+  success.innerText = '✅ React rendered!';
+  document.body.appendChild(success);
   
 } catch (error) {
-  showError(error);
+  // Show error on screen
+  document.body.innerHTML = `
+    <div style="padding: 40px; background: #1a1a1a; color: #ff4444; font-family: monospace;">
+      <h1 style="font-size: 24px;">❌ React Render Error</h1>
+      <pre style="margin-top: 20px; padding: 20px; background: #2a2a2a; color: #ffaa00;">${error}</pre>
+    </div>
+  `;
 }
-
-// Catch any errors that happen after render
-window.addEventListener('error', (event) => {
-  showError(event.error || event.message);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  showError(event.reason);
-});
