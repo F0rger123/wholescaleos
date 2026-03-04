@@ -1,12 +1,29 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WholeScale OS v2.1 — Real Estate CRM</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>WholeScale OS</title>
+    <style>
+      /* Emergency styles in case CSS fails */
+      body { margin: 0; padding: 0; background: #0f172a; color: white; }
+      #root { min-height: 100vh; }
+      #emergency-test { 
+        position: fixed; 
+        top: 0; 
+        left: 0; 
+        right: 0; 
+        background: purple; 
+        color: white; 
+        padding: 20px; 
+        z-index: 99999;
+        font-size: 20px;
+      }
+    </style>
   </head>
   <body>
+    <div id="emergency-test">🟪 index.html loaded - if you see this, HTML is working</div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
