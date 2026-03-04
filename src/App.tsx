@@ -17,6 +17,15 @@ import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
 
+console.log('📱 App.tsx loaded');
+console.log('📦 Imports:', {
+  HashRouter: typeof HashRouter,
+  Routes: typeof Routes,
+  Route: typeof Route,
+  Navigate: typeof Navigate,
+  Layout: typeof Layout
+});
+
 // Error Boundary Component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
   constructor(props: { children: React.ReactNode }) {
