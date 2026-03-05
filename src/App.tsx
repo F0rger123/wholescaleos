@@ -26,7 +26,7 @@ import {
   setTeamIdAtom 
 } from './store/atoms';
 
-// Add this at the top of App.tsx, after imports
+// Global error handlers
 window.addEventListener('error', (event) => {
   console.error('🔴 GLOBAL ERROR:', event.error);
   console.error('Error stack:', event.error?.stack);
@@ -162,7 +162,8 @@ export function App() {
         <Route path="/email-confirmed" element={<EmailConfirmed />} />
         <Route path="/team-selection" element={<TeamSelection />} />
         
-        {/* Protected routes with error boundary */}
+        {/* 🔴 PROTECTED ROUTES COMMENTED OUT FOR DEBUGGING 🔴 */}
+        {/* 
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/leads" element={<Leads />} />
@@ -173,6 +174,7 @@ export function App() {
           <Route path="/imports" element={<Imports />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
+        */}
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
