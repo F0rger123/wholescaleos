@@ -162,19 +162,20 @@ export function App() {
         <Route path="/email-confirmed" element={<EmailConfirmed />} />
         <Route path="/team-selection" element={<TeamSelection />} />
         
-        {/* 🔴 PROTECTED ROUTES COMMENTED OUT FOR DEBUGGING 🔴 */}
-        {/* 
+        {/* 🔴 TESTING DASHBOARD ONLY 🔴 */}
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
+          {/* Only Dashboard is uncommented */}
           <Route path="/" element={<Dashboard />} />
-          <Route path="/leads" element={<Leads />} />
-          <Route path="/map" element={<MapView />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/imports" element={<Imports />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          
+          {/* All others are commented out */}
+          {/* <Route path="/leads" element={<Leads />} /> */}
+          {/* <Route path="/map" element={<MapView />} /> */}
+          {/* <Route path="/team" element={<Team />} /> */}
+          {/* <Route path="/tasks" element={<Tasks />} /> */}
+          {/* <Route path="/chat" element={<Chat />} /> */}
+          {/* <Route path="/imports" element={<Imports />} /> */}
+          {/* <Route path="/settings" element={<SettingsPage />} /> */}
         </Route>
-        */}
         
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
