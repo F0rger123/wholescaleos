@@ -8,6 +8,32 @@ export const isLoadingAtom = atom(false);
 export const isAuthenticatedAtom = atom(false);
 export const teamIdAtom = atom<string | null>(null);
 
+// Layout and UI atoms
+export const sidebarOpenAtom = atom(true);
+export const teamAtom = atom<any[]>([]);
+export const tasksAtom = atom<any[]>([]);
+export const unreadCountsAtom = atom<Record<string, number>>({});
+export const teamConfigAtom = atom({
+  name: 'My Team',
+  inviteCode: '',
+  settings: {},
+});
+
+// Data atoms
+export const leadsAtom = atom<any[]>([]);
+export const buyersAtom = atom<any[]>([]);
+export const coverageAreasAtom = atom<any[]>([]);
+export const callRecordingsAtom = atom<any[]>([]);
+
+// Import atoms
+export const importTemplatesAtom = atom<any[]>([]);
+export const importHistoryAtom = atom<any[]>([]);
+export const duplicateSettingsAtom = atom({
+  enabled: true,
+  matchFields: ['email', 'phone'],
+  action: 'skip',
+});
+
 // Action atoms (functions that modify state)
 export const loginAtom = atom(
   null,
@@ -53,5 +79,53 @@ export const setTeamIdAtom = atom(
   null,
   (get, set, teamId: string) => {
     set(teamIdAtom, teamId);
+  }
+);
+
+// Set sidebar state
+export const setSidebarOpenAtom = atom(
+  null,
+  (get, set, open: boolean) => {
+    set(sidebarOpenAtom, open);
+  }
+);
+
+// Toggle sidebar
+export const toggleSidebarAtom = atom(
+  null,
+  (get, set) => {
+    set(sidebarOpenAtom, !get(sidebarOpenAtom));
+  }
+);
+
+// Set team data
+export const setTeamAtom = atom(
+  null,
+  (get, set, team: any[]) => {
+    set(teamAtom, team);
+  }
+);
+
+// Set tasks
+export const setTasksAtom = atom(
+  null,
+  (get, set, tasks: any[]) => {
+    set(tasksAtom, tasks);
+  }
+);
+
+// Set unread counts
+export const setUnreadCountsAtom = atom(
+  null,
+  (get, set, counts: Record<string, number>) => {
+    set(unreadCountsAtom, counts);
+  }
+);
+
+// Set team config
+export const setTeamConfigAtom = atom(
+  null,
+  (get, set, config: Partial<typeof teamConfigAtom>) => {
+    set(teamConfigAtom, { ...get(teamConfigAtom), ...config });
   }
 );

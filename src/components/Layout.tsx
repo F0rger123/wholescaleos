@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { useStore } from '../store/useStore';
+import { useAtom } from 'jotai';
 import { UserMenu } from './UserMenu';
 import { NotificationPanel } from './NotificationPanel';
 import { StatusIndicator } from './StatusIndicator';
@@ -12,6 +12,15 @@ import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
 } from 'lucide-react';
+// Import Jotai atoms
+import { 
+  userAtom,
+  sidebarOpenAtom,
+  teamAtom,
+  tasksAtom,
+  unreadCountsAtom,
+  teamConfigAtom
+} from '../store/atoms';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -32,16 +41,26 @@ interface UserTeam {
 }
 
 export function Layout() {
-  const { sidebarOpen, toggleSidebar, team, tasks, unreadCounts, teamConfig, currentUser } = useStore();
+  const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
+  const [team] = useAtom(teamAtom);
+  const [tasks] = useAtom(tasksAtom);
+  const [unreadCounts] = useAtom(unreadCountsAtom);
+  const [teamConfig] = useAtom(teamConfigAtom);
+  const [currentUser] = useAtom(userAtom);
 
-  const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
-  const pendingTaskCount = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
-  const totalUnread = Object.values(unreadCounts).reduce((sum, c) => sum + c, 0);
+  // Safe defaults in case values are undefined
+  const onlineCount = team?.filter(m => m?.presenceStatus === 'online').length || 0;
+  const pendingTaskCount = tasks?.filter(t => t?.status === 'todo' || t?.status === 'in-progress').length || 0;
+  const totalUnread = unreadCounts ? Object.values(unreadCounts).reduce((sum, c) => sum + (c || 0), 0) : 0;
 
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+  };
 
   useEffect(() => {
     async function fetchTeams() {
@@ -53,7 +72,8 @@ export function Layout() {
           .eq('user_id', currentUser.id);
 
         if (data) {
-          const currentTeamId = useStore.getState().teamId;
+          // We need to get the current teamId from somewhere - for now use localStorage
+          const currentTeamId = localStorage.getItem('wholescale-preferred-team');
           const teams: UserTeam[] = data.map((row: any) => ({
             teamId: row.team_id,
             teamName: row.teams?.name || 'Unnamed Team',
@@ -124,8 +144,8 @@ export function Layout() {
                 <Building2 size={13} color="#60a5fa" />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: 'white' }}>{teamConfig.name || 'My Team'}</p>
-                <p style={{ fontSize: '10px', margin: 0, color: '#94a3b8' }}>{team.length} member{team.length !== 1 ? 's' : ''}</p>
+                <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: 'white' }}>{teamConfig?.name || 'My Team'}</p>
+                <p style={{ fontSize: '10px', margin: 0, color: '#94a3b8' }}>{team?.length || 0} member{(team?.length || 0) !== 1 ? 's' : ''}</p>
               </div>
               <ChevronDown size={14} style={{ color: '#94a3b8', transform: showTeamDropdown ? 'rotate(180deg)' : 'none' }} />
             </button>
@@ -246,7 +266,7 @@ export function Layout() {
             <p style={{ fontSize: '10px', textTransform: 'uppercase', marginBottom: '8px', color: '#94a3b8' }}>Online Now</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {team
-                .filter(m => m.presenceStatus !== 'offline')
+                ?.filter(m => m?.presenceStatus !== 'offline')
                 .slice(0, 4)
                 .map(m => (
                   <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -271,12 +291,12 @@ export function Layout() {
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '12px', margin: 0, color: '#cbd5e1', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {m.name.split(' ')[0]}
+                        {m.name?.split(' ')[0]}
                       </p>
                     </div>
                   </div>
                 ))}
-              {team.filter(m => m.presenceStatus !== 'offline').length === 0 && (
+              {(!team || team.filter(m => m?.presenceStatus !== 'offline').length === 0) && (
                 <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>No one online</p>
               )}
             </div>
