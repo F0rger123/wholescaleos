@@ -32,10 +32,10 @@ export const duplicateSettingsAtom = atom({
   action: 'skip',
 });
 
-// Action atoms with null checks
+// Action atoms with null checks - removed unused 'get' parameters
 export const loginAtom = atom(
   null,
-  async (get, set, { email, password }: { email: string; password: string }) => {
+  async (_get, set, { email, password }: { email: string; password: string }) => {
     set(isLoadingAtom, true);
     try {
       if (!isSupabaseConfigured || !supabase) {
@@ -60,7 +60,7 @@ export const loginAtom = atom(
 
 export const signupAtom = atom(
   null,
-  async (get, set, { email, password, name }: { email: string; password: string; name?: string }) => {
+  async (_get, set, { email, password, name }: { email: string; password: string; name?: string }) => {
     set(isLoadingAtom, true);
     try {
       if (!isSupabaseConfigured || !supabase) {
@@ -85,7 +85,7 @@ export const signupAtom = atom(
 
 export const logoutAtom = atom(
   null,
-  async (get, set) => {
+  async (_get, set) => {
     set(isLoadingAtom, true);
     try {
       if (!isSupabaseConfigured || !supabase) {
@@ -106,7 +106,7 @@ export const logoutAtom = atom(
 
 export const setTeamIdAtom = atom(
   null,
-  (get, set, teamId: string) => {
+  (_get, set, teamId: string) => {
     set(teamIdAtom, teamId);
   }
 );
