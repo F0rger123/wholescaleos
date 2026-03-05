@@ -26,6 +26,16 @@ import {
   setTeamIdAtom 
 } from './store/atoms';
 
+// Add this at the top of App.tsx, after imports
+window.addEventListener('error', (event) => {
+  console.error('🔴 GLOBAL ERROR:', event.error);
+  console.error('Error stack:', event.error?.stack);
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('🔴 UNHANDLED PROMISE REJECTION:', event.reason);
+});
+
 console.log('📱 App.tsx loaded');
 
 // Error Boundary Component
