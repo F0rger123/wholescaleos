@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
+import { useAtom } from 'jotai';
+import { leadsAtom, teamAtom } from '../store/atoms';
+import { calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
 import {
   TrendingUp, DollarSign, Users, Target, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, Zap,
   PieChart, BarChart3, Flame,
@@ -98,49 +100,64 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; lab
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 export function Dashboard() {
-  const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
+  const [leads] = useAtom(leadsAtom);
+  const [team] = useAtom(teamAtom);
+
+  // Safe defaults
+  const safeLeads = Array.isArray(leads) ? leads : [];
+  const safeTeam = Array.isArray(team) ? team : [];
 
   // ─── Calculations ────────────────────────────────────────
-  const totalPipeline = leads
-    .filter((l) => !l.status.startsWith('closed'))
-    .reduce((sum, l) => sum + l.estimatedValue, 0);
-  const closedRevenue = leads
-    .filter((l) => l.status === 'closed-won')
-    .reduce((sum, l) => sum + l.offerAmount, 0);
-  const activeLeads = leads.filter((l) => !l.status.startsWith('closed')).length;
-  const closedLeads = leads.filter((l) => l.status.startsWith('closed'));
+  const totalPipeline = safeLeads
+    .filter((l) => l && !l.status?.startsWith('closed'))
+    .reduce((sum, l) => sum + (l.estimatedValue || 0), 0);
+  
+  const closedRevenue = safeLeads
+    .filter((l) => l && l.status === 'closed-won')
+    .reduce((sum, l) => sum + (l.offerAmount || 0), 0);
+  
+  const activeLeads = safeLeads.filter((l) => l && !l.status?.startsWith('closed')).length;
+  
+  const closedLeads = safeLeads.filter((l) => l && l.status?.startsWith('closed'));
   const winRate = closedLeads.length > 0
-    ? Math.round((leads.filter((l) => l.status === 'closed-won').length / closedLeads.length) * 100)
+    ? Math.round((safeLeads.filter((l) => l && l.status === 'closed-won').length / closedLeads.length) * 100)
     : 0;
-  const avgScore = leads.length > 0
-    ? Math.round(leads.reduce((s, l) => s + calculateDealScore(l), 0) / leads.length) : 0;
+  
+  const avgScore = safeLeads.length > 0
+    ? Math.round(safeLeads.reduce((s, l) => s + calculateDealScore(l || {}), 0) / safeLeads.length) 
+    : 0;
 
   // Profit Projection
-  const activeDeals = leads.filter(l => l.status === 'negotiating' || l.status === 'qualified');
+  const activeDeals = safeLeads.filter(l => l && (l.status === 'negotiating' || l.status === 'qualified'));
   const projectedProfit = activeDeals.reduce((s, l) => {
-    const margin = l.estimatedValue - l.offerAmount;
-    const prob = l.probability / 100;
+    const margin = (l.estimatedValue || 0) - (l.offerAmount || 0);
+    const prob = (l.probability || 0) / 100;
     return s + (margin > 0 ? margin * prob : 0);
   }, 0);
-  const negotiatingValue = leads
-    .filter(l => l.status === 'negotiating')
-    .reduce((s, l) => s + l.estimatedValue, 0);
+  
+  const negotiatingValue = safeLeads
+    .filter(l => l && l.status === 'negotiating')
+    .reduce((s, l) => s + (l.estimatedValue || 0), 0);
+  
   const monthlyProjection = Math.round((closedRevenue + projectedProfit * 0.6) / 3);
 
   // Source Stats
   const sourceCounts: Record<string, number> = {};
   const sourceValues: Record<string, number> = {};
-  leads.forEach(l => {
-    const src = l.source;
+  safeLeads.forEach(l => {
+    if (!l) return;
+    const src = l.source || 'other';
     sourceCounts[src] = (sourceCounts[src] || 0) + 1;
-    sourceValues[src] = (sourceValues[src] || 0) + l.estimatedValue;
+    sourceValues[src] = (sourceValues[src] || 0) + (l.estimatedValue || 0);
   });
+  
   const sortedSources = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]);
   const maxSourceCount = Math.max(...Object.values(sourceCounts), 1);
 
-  const recentLeads = [...leads].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  ).slice(0, 6);
+  const recentLeads = [...safeLeads]
+    .filter(l => l)
+    .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+    .slice(0, 6);
 
   const pipelineStages = [
     { label: 'New', key: 'new' },
@@ -151,18 +168,18 @@ export function Dashboard() {
     { label: 'Lost', key: 'closed-lost' },
   ];
 
-  const topLeads = [...leads]
-    .filter((l) => !l.status.startsWith('closed'))
-    .sort((a, b) => calculateDealScore(b) - calculateDealScore(a))
+  const topLeads = [...safeLeads]
+    .filter((l) => l && !l.status?.startsWith('closed'))
+    .sort((a, b) => calculateDealScore(b || {}) - calculateDealScore(a || {}))
     .slice(0, 5);
 
-  // Streak leaderboard data
-  const streakMembers = team.map(m => ({
-    id: m.id,
-    name: m.name,
-    avatar: m.avatar,
-    loginStreak: memberStreaks[m.id]?.login || 0,
-    taskStreak: memberStreaks[m.id]?.task || 0,
+  // Streak leaderboard data - using default values since memberStreaks doesn't exist in atoms yet
+  const streakMembers = safeTeam.map(m => ({
+    id: m?.id || '',
+    name: m?.name || 'Unknown',
+    avatar: m?.avatar || 'U',
+    loginStreak: 0, // We'll add this later
+    taskStreak: 0,
   }));
 
   return (
@@ -174,8 +191,8 @@ export function Dashboard() {
           <p className="text-slate-400 text-sm mt-1">Welcome back. Here's your pipeline overview.</p>
         </div>
         <div className="flex items-center gap-3">
-          <StreakBadge streak={loginStreak} type="login" size="md" showLabel />
-          {taskStreak > 0 && <StreakBadge streak={taskStreak} type="task" size="md" />}
+          <StreakBadge streak={0} type="login" size="md" showLabel />
+          <StreakBadge streak={0} type="task" size="md" />
         </div>
       </div>
 
@@ -257,7 +274,7 @@ export function Dashboard() {
             <AnimatedCounter value={Math.round(negotiatingValue / 1000)} prefix="$" suffix="k" />
           </p>
           <p className="text-xs text-orange-400/70">
-            {leads.filter(l => l.status === 'negotiating').length} deals in final stages
+            {safeLeads.filter(l => l && l.status === 'negotiating').length} deals in final stages
           </p>
           <button className="mt-3 text-[10px] text-orange-400 hover:text-orange-300 font-medium flex items-center gap-1 transition-colors">
             View negotiating deals <ArrowUpRight size={10} />
@@ -271,15 +288,15 @@ export function Dashboard() {
           <h2 className="text-lg font-semibold text-white mb-4">Pipeline Stages</h2>
           <div className="space-y-3">
             {pipelineStages.map((stage) => {
-              const count = leads.filter((l) => l.status === stage.key).length;
-              const pct = leads.length > 0 ? (count / leads.length) * 100 : 0;
+              const count = safeLeads.filter((l) => l && l.status === stage.key).length;
+              const pct = safeLeads.length > 0 ? (count / safeLeads.length) * 100 : 0;
               return (
                 <div key={stage.key} className="flex items-center gap-4">
                   <span className="text-sm text-slate-400 w-24 shrink-0">{stage.label}</span>
                   <div className="flex-1 h-8 bg-slate-800 rounded-lg overflow-hidden">
                     <div
-                      className={`h-full ${statusBarColors[stage.key]} rounded-lg flex items-center px-3 transition-all duration-500`}
-                      style={{ width: `${Math.max(pct, 8)}%` }}
+                      className={`h-full ${statusBarColors[stage.key] || 'bg-slate-600'} rounded-lg flex items-center px-3 transition-all duration-500`}
+                      style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
                     >
                       <span className="text-xs font-bold text-white">{count}</span>
                     </div>
@@ -337,17 +354,17 @@ export function Dashboard() {
           </div>
           <div className="space-y-3">
             {topLeads.map((lead, i) => {
-              const score = calculateDealScore(lead);
+              const score = calculateDealScore(lead || {});
               const sc = getScoreColor(score);
               return (
-                <div key={lead.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 transition-colors">
+                <div key={lead?.id || i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 transition-colors">
                   <span className="text-sm font-bold text-slate-500 w-5">{i + 1}</span>
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                    {lead.name.split(' ').map((n) => n[0]).join('')}
+                    {lead?.name?.split(' ').map((n) => n[0]).join('') || '?'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{lead.name}</p>
-                    <p className="text-xs text-slate-500">{STATUS_LABELS[lead.status]}</p>
+                    <p className="text-sm font-medium text-white truncate">{lead?.name || 'Unknown'}</p>
+                    <p className="text-xs text-slate-500">{STATUS_LABELS[lead?.status] || 'Unknown'}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className={`text-sm font-black ${sc.text}`}>{score}</span>
@@ -369,27 +386,27 @@ export function Dashboard() {
           <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
           <div className="divide-y divide-slate-800">
             {recentLeads.map((lead) => {
-              const score = calculateDealScore(lead);
+              const score = calculateDealScore(lead || {});
               const sc = getScoreColor(score);
               return (
-                <div key={lead.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                <div key={lead?.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                   <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
-                    {lead.status === 'closed-won' ? (
+                    {lead?.status === 'closed-won' ? (
                       <CheckCircle2 size={16} className="text-emerald-400" />
                     ) : (
                       <Clock size={16} className="text-slate-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{lead.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{lead.propertyAddress}</p>
+                    <p className="text-sm text-white font-medium truncate">{lead?.name || 'Unknown'}</p>
+                    <p className="text-xs text-slate-500 truncate">{lead?.propertyAddress || 'No address'}</p>
                   </div>
                   <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${sc.bg} ${sc.text}`}>
                     <Zap size={8} />
                     {score}
                   </div>
                   <span className="text-[10px] text-slate-500 shrink-0 hidden sm:block">
-                    {formatDistanceToNow(new Date(lead.updatedAt), { addSuffix: true })}
+                    {lead?.updatedAt ? formatDistanceToNow(new Date(lead.updatedAt), { addSuffix: true }) : 'Unknown'}
                   </span>
                 </div>
               );
@@ -402,20 +419,21 @@ export function Dashboard() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
             <h2 className="text-lg font-semibold text-white mb-4">Team Leaderboard</h2>
             <div className="space-y-3">
-              {[...team]
-                .sort((a, b) => b.revenue - a.revenue)
+              {[...safeTeam]
+                .filter(m => m)
+                .sort((a, b) => (b?.revenue || 0) - (a?.revenue || 0))
                 .map((member, i) => (
-                  <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 transition-colors">
+                  <div key={member?.id || i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 transition-colors">
                     <span className="text-sm font-bold text-slate-500 w-5">{i + 1}</span>
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                      {member.avatar}
+                      {member?.avatar || 'U'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{member.name}</p>
-                      <p className="text-xs text-slate-500">{member.dealsCount} deals</p>
+                      <p className="text-sm font-medium text-white truncate">{member?.name || 'Unknown'}</p>
+                      <p className="text-xs text-slate-500">{member?.dealsCount || 0} deals</p>
                     </div>
                     <span className="text-sm font-semibold text-emerald-400">
-                      ${(member.revenue / 1000).toFixed(0)}k
+                      ${((member?.revenue || 0) / 1000).toFixed(0)}k
                     </span>
                   </div>
                 ))}
