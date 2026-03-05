@@ -2,12 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'  // Add this import
 
+import { cloudflare } from "@cloudflare/vite-plugin";
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),  // Add this line
-  ],
+  plugins: [react(), // Add this line
+  tailwindcss(), cloudflare()],
   build: {
     outDir: 'dist',
     sourcemap: true,
