@@ -3,8 +3,38 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import './index.css';
 
+// Add this at the VERY TOP to catch early errors
 console.log('🚀 main.tsx starting...');
-console.log('📦 React version:', React.version);
+
+// Global error handler for sync errors
+window.addEventListener('error', (event) => {
+  console.error('🔥 GLOBAL ERROR CAUGHT:', event.error);
+  console.error('Error stack:', event.error?.stack);
+  
+  // Show error on screen
+  const errorDiv = document.createElement('div');
+  errorDiv.style.position = 'fixed';
+  errorDiv.style.top = '0';
+  errorDiv.style.left = '0';
+  errorDiv.style.right = '0';
+  errorDiv.style.backgroundColor = '#ef4444';
+  errorDiv.style.color = 'white';
+  errorDiv.style.padding = '20px';
+  errorDiv.style.zIndex = '999999';
+  errorDiv.style.fontFamily = 'monospace';
+  errorDiv.style.whiteSpace = 'pre-wrap';
+  errorDiv.innerHTML = `
+    <h3>❌ Error: ${event.error?.message}</h3>
+    <pre style="background: #7f1d1d; padding: 10px; border-radius: 4px; margin-top: 10px;">${event.error?.stack}</pre>
+  `;
+  document.body.appendChild(errorDiv);
+});
+
+// Global error handler for async errors
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('🔥 UNHANDLED PROMISE REJECTION:', event.reason);
+});
+
 console.log('📍 Root element:', document.getElementById('root'));
 
 // Simple render with error catching
