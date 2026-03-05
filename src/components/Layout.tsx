@@ -49,9 +49,13 @@ export function Layout() {
   const [currentUser] = useAtom(userAtom);
 
   // Safe defaults in case values are undefined
-  const onlineCount = team?.filter(m => m?.presenceStatus === 'online').length || 0;
-  const pendingTaskCount = tasks?.filter(t => t?.status === 'todo' || t?.status === 'in-progress').length || 0;
-  const totalUnread = unreadCounts ? Object.values(unreadCounts).reduce((sum, c) => sum + (c || 0), 0) : 0;
+  const safeTeam = team || [];
+  const safeTasks = tasks || [];
+  const safeUnreadCounts = unreadCounts || {};
+
+  const onlineCount = safeTeam.filter(m => m?.presenceStatus === 'online').length;
+  const pendingTaskCount = safeTasks.filter(t => t?.status === 'todo' || t?.status === 'in-progress').length;
+  const totalUnread = Object.values(safeUnreadCounts).reduce((sum, c) => sum + (c || 0), 0);
 
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -145,7 +149,7 @@ export function Layout() {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontSize: '12px', fontWeight: 'bold', margin: 0, color: 'white' }}>{teamConfig?.name || 'My Team'}</p>
-                <p style={{ fontSize: '10px', margin: 0, color: '#94a3b8' }}>{team?.length || 0} member{(team?.length || 0) !== 1 ? 's' : ''}</p>
+                <p style={{ fontSize: '10px', margin: 0, color: '#94a3b8' }}>{safeTeam.length} member{safeTeam.length !== 1 ? 's' : ''}</p>
               </div>
               <ChevronDown size={14} style={{ color: '#94a3b8', transform: showTeamDropdown ? 'rotate(180deg)' : 'none' }} />
             </button>
@@ -265,8 +269,8 @@ export function Layout() {
           <div style={{ padding: '16px', borderTop: '1px solid #334155' }}>
             <p style={{ fontSize: '10px', textTransform: 'uppercase', marginBottom: '8px', color: '#94a3b8' }}>Online Now</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {team
-                ?.filter(m => m?.presenceStatus !== 'offline')
+              {safeTeam
+                .filter(m => m?.presenceStatus !== 'offline')
                 .slice(0, 4)
                 .map(m => (
                   <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -296,7 +300,7 @@ export function Layout() {
                     </div>
                   </div>
                 ))}
-              {(!team || team.filter(m => m?.presenceStatus !== 'offline').length === 0) && (
+              {safeTeam.filter(m => m?.presenceStatus !== 'offline').length === 0 && (
                 <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>No one online</p>
               )}
             </div>
