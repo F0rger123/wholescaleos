@@ -48,10 +48,18 @@ export function Layout() {
   const [teamConfig] = useAtom(teamConfigAtom);
   const [currentUser] = useAtom(userAtom);
 
-  // Safe defaults in case values are undefined
-  const safeTeam = team || [];
-  const safeTasks = tasks || [];
-  const safeUnreadCounts = unreadCounts || {};
+  // Debug logs
+  console.log('🔍 Layout rendering - checking atoms:');
+  console.log('teamAtom:', team);
+  console.log('tasksAtom:', tasks);
+  console.log('unreadCountsAtom:', unreadCounts);
+  console.log('teamConfigAtom:', teamConfig);
+  console.log('userAtom:', currentUser);
+
+  // Safe defaults with array checks
+  const safeTeam = Array.isArray(team) ? team : [];
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeUnreadCounts = unreadCounts && typeof unreadCounts === 'object' ? unreadCounts : {};
 
   const onlineCount = safeTeam.filter(m => m?.presenceStatus === 'online').length;
   const pendingTaskCount = safeTasks.filter(t => t?.status === 'todo' || t?.status === 'in-progress').length;
@@ -76,7 +84,6 @@ export function Layout() {
           .eq('user_id', currentUser.id);
 
         if (data) {
-          // We need to get the current teamId from somewhere - for now use localStorage
           const currentTeamId = localStorage.getItem('wholescale-preferred-team');
           const teams: UserTeam[] = data.map((row: any) => ({
             teamId: row.team_id,

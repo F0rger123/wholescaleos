@@ -1,18 +1,18 @@
 import { atom } from 'jotai';
 import { supabase } from '../lib/supabase';
 
-// Basic atoms (pieces of state)
+// Basic atoms (pieces of state) - ALL WITH EXPLICIT DEFAULTS
 export const userAtom = atom<any | null>(null);
 export const sessionAtom = atom<any | null>(null);
 export const isLoadingAtom = atom(false);
 export const isAuthenticatedAtom = atom(false);
 export const teamIdAtom = atom<string | null>(null);
 
-// Layout and UI atoms
+// Layout and UI atoms - WITH EXPLICIT DEFAULTS
 export const sidebarOpenAtom = atom(true);
-export const teamAtom = atom<any[]>([]);
-export const tasksAtom = atom<any[]>([]);
-export const unreadCountsAtom = atom<Record<string, number>>({});
+export const teamAtom = atom<any[]>([]); // Default empty array
+export const tasksAtom = atom<any[]>([]); // Default empty array
+export const unreadCountsAtom = atom<Record<string, number>>({}); // Default empty object
 export const teamConfigAtom = atom({
   name: 'My Team',
   inviteCode: '',
@@ -95,37 +95,5 @@ export const toggleSidebarAtom = atom(
   null,
   (get, set) => {
     set(sidebarOpenAtom, !get(sidebarOpenAtom));
-  }
-);
-
-// Set team data
-export const setTeamAtom = atom(
-  null,
-  (get, set, team: any[]) => {
-    set(teamAtom, team);
-  }
-);
-
-// Set tasks
-export const setTasksAtom = atom(
-  null,
-  (get, set, tasks: any[]) => {
-    set(tasksAtom, tasks);
-  }
-);
-
-// Set unread counts
-export const setUnreadCountsAtom = atom(
-  null,
-  (get, set, counts: Record<string, number>) => {
-    set(unreadCountsAtom, counts);
-  }
-);
-
-// Set team config
-export const setTeamConfigAtom = atom(
-  null,
-  (get, set, config: Partial<typeof teamConfigAtom>) => {
-    set(teamConfigAtom, { ...get(teamConfigAtom), ...config });
   }
 );
