@@ -17,24 +17,11 @@ import { EmailConfirmed } from './pages/EmailConfirmed';
 import { TeamSelection } from './pages/TeamSelection';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
-// Import Jotai atoms
 import { 
   userAtom, 
-  isLoadingAtom, 
   isAuthenticatedAtom, 
   teamIdAtom,
-  setTeamIdAtom 
 } from './store/atoms';
-
-// Global error handlers
-window.addEventListener('error', (event) => {
-  console.error('🔴 GLOBAL ERROR:', event.error);
-  console.error('Error stack:', event.error?.stack);
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('🔴 UNHANDLED PROMISE REJECTION:', event.reason);
-});
 
 console.log('📱 App.tsx loaded');
 
@@ -105,7 +92,7 @@ export function App() {
   const [checking, setChecking] = useState(true);
   const [, setUser] = useAtom(userAtom);
   const [, setIsAuthenticated] = useAtom(isAuthenticatedAtom);
-  const [, setTeamId] = useAtom(setTeamIdAtom);
+  const [, setTeamId] = useAtom(teamIdAtom);
 
   useEffect(() => {
     async function checkSession() {
@@ -162,19 +149,15 @@ export function App() {
         <Route path="/email-confirmed" element={<EmailConfirmed />} />
         <Route path="/team-selection" element={<TeamSelection />} />
         
-        {/* 🔴 TESTING DASHBOARD ONLY 🔴 */}
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
-          {/* Only Dashboard is uncommented */}
           <Route path="/" element={<Dashboard />} />
-          
-          {/* All others are commented out */}
-          {/* <Route path="/leads" element={<Leads />} /> */}
-          {/* <Route path="/map" element={<MapView />} /> */}
-          {/* <Route path="/team" element={<Team />} /> */}
-          {/* <Route path="/tasks" element={<Tasks />} /> */}
-          {/* <Route path="/chat" element={<Chat />} /> */}
-          {/* <Route path="/imports" element={<Imports />} /> */}
-          {/* <Route path="/settings" element={<SettingsPage />} /> */}
+          <Route path="/leads" element={<Leads />} />
+          <Route path="/map" element={<MapView />} />
+          <Route path="/team" element={<Team />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/imports" element={<Imports />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
         
         <Route path="*" element={<Navigate to="/" replace />} />

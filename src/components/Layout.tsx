@@ -12,7 +12,6 @@ import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
 } from 'lucide-react';
-// Import Jotai atoms
 import { 
   userAtom,
   sidebarOpenAtom,
@@ -48,15 +47,7 @@ export function Layout() {
   const [teamConfig] = useAtom(teamConfigAtom);
   const [currentUser] = useAtom(userAtom);
 
-  // Debug logs
-  console.log('🔍 Layout rendering - checking atoms:');
-  console.log('teamAtom:', team);
-  console.log('tasksAtom:', tasks);
-  console.log('unreadCountsAtom:', unreadCounts);
-  console.log('teamConfigAtom:', teamConfig);
-  console.log('userAtom:', currentUser);
-
-  // Safe defaults with array checks
+  // Safe defaults
   const safeTeam = Array.isArray(team) ? team : [];
   const safeTasks = Array.isArray(tasks) ? tasks : [];
   const safeUnreadCounts = unreadCounts && typeof unreadCounts === 'object' ? unreadCounts : {};
@@ -78,7 +69,9 @@ export function Layout() {
     async function fetchTeams() {
       if (!isSupabaseConfigured || !supabase || !currentUser?.id) return;
       try {
-        const { data } = await supabase
+        // Use type assertion to fix the TypeScript error
+        const supabaseClient = supabase as any;
+        const { data } = await supabaseClient
           .from('team_members')
           .select('team_id, role, teams(name)')
           .eq('user_id', currentUser.id);
@@ -93,7 +86,9 @@ export function Layout() {
           }));
           setUserTeams(teams);
         }
-      } catch { /* ignore */ }
+      } catch (error) {
+        console.error('Error fetching teams:', error);
+      }
     }
     fetchTeams();
   }, [currentUser?.id]);
