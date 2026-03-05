@@ -100,64 +100,132 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; lab
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 export function Dashboard() {
+  console.log('🔍 Dashboard rendering - checking atoms:');
+  
   const [leads] = useAtom(leadsAtom);
   const [team] = useAtom(teamAtom);
+
+  console.log('leadsAtom:', leads);
+  console.log('teamAtom:', team);
+  console.log('leads is array?', Array.isArray(leads));
+  console.log('team is array?', Array.isArray(team));
 
   // Safe defaults
   const safeLeads = Array.isArray(leads) ? leads : [];
   const safeTeam = Array.isArray(team) ? team : [];
 
+  console.log('safeLeads length:', safeLeads.length);
+  console.log('safeTeam length:', safeTeam.length);
+
+  // Test first filter
+  try {
+    const testFilter = safeLeads.filter(l => l);
+    console.log('✅ Basic filter works:', testFilter.length);
+  } catch (e) {
+    console.error('❌ Filter failed:', e);
+  }
+
   // ─── Calculations ────────────────────────────────────────
-  const totalPipeline = safeLeads
-    .filter((l) => l && !l.status?.startsWith('closed'))
-    .reduce((sum, l) => sum + (l.estimatedValue || 0), 0);
+  let totalPipeline = 0;
+  try {
+    totalPipeline = safeLeads
+      .filter((l) => l && !l.status?.startsWith('closed'))
+      .reduce((sum, l) => sum + (l.estimatedValue || 0), 0);
+    console.log('✅ totalPipeline calculated:', totalPipeline);
+  } catch (e) {
+    console.error('❌ totalPipeline error:', e);
+  }
   
-  const closedRevenue = safeLeads
-    .filter((l) => l && l.status === 'closed-won')
-    .reduce((sum, l) => sum + (l.offerAmount || 0), 0);
+  let closedRevenue = 0;
+  try {
+    closedRevenue = safeLeads
+      .filter((l) => l && l.status === 'closed-won')
+      .reduce((sum, l) => sum + (l.offerAmount || 0), 0);
+    console.log('✅ closedRevenue calculated:', closedRevenue);
+  } catch (e) {
+    console.error('❌ closedRevenue error:', e);
+  }
   
   const activeLeads = safeLeads.filter((l) => l && !l.status?.startsWith('closed')).length;
+  console.log('activeLeads:', activeLeads);
   
   const closedLeads = safeLeads.filter((l) => l && l.status?.startsWith('closed'));
+  console.log('closedLeads length:', closedLeads.length);
+  
   const winRate = closedLeads.length > 0
     ? Math.round((safeLeads.filter((l) => l && l.status === 'closed-won').length / closedLeads.length) * 100)
     : 0;
+  console.log('winRate:', winRate);
   
-  const avgScore = safeLeads.length > 0
-    ? Math.round(safeLeads.reduce((s, l) => s + calculateDealScore(l || {}), 0) / safeLeads.length) 
-    : 0;
+  let avgScore = 0;
+  try {
+    avgScore = safeLeads.length > 0
+      ? Math.round(safeLeads.reduce((s, l) => s + calculateDealScore(l || {}), 0) / safeLeads.length) 
+      : 0;
+    console.log('avgScore:', avgScore);
+  } catch (e) {
+    console.error('❌ avgScore error:', e);
+  }
 
   // Profit Projection
   const activeDeals = safeLeads.filter(l => l && (l.status === 'negotiating' || l.status === 'qualified'));
-  const projectedProfit = activeDeals.reduce((s, l) => {
-    const margin = (l.estimatedValue || 0) - (l.offerAmount || 0);
-    const prob = (l.probability || 0) / 100;
-    return s + (margin > 0 ? margin * prob : 0);
-  }, 0);
+  console.log('activeDeals length:', activeDeals.length);
   
-  const negotiatingValue = safeLeads
-    .filter(l => l && l.status === 'negotiating')
-    .reduce((s, l) => s + (l.estimatedValue || 0), 0);
+  let projectedProfit = 0;
+  try {
+    projectedProfit = activeDeals.reduce((s, l) => {
+      const margin = (l.estimatedValue || 0) - (l.offerAmount || 0);
+      const prob = (l.probability || 0) / 100;
+      return s + (margin > 0 ? margin * prob : 0);
+    }, 0);
+    console.log('projectedProfit:', projectedProfit);
+  } catch (e) {
+    console.error('❌ projectedProfit error:', e);
+  }
+  
+  let negotiatingValue = 0;
+  try {
+    negotiatingValue = safeLeads
+      .filter(l => l && l.status === 'negotiating')
+      .reduce((s, l) => s + (l.estimatedValue || 0), 0);
+    console.log('negotiatingValue:', negotiatingValue);
+  } catch (e) {
+    console.error('❌ negotiatingValue error:', e);
+  }
   
   const monthlyProjection = Math.round((closedRevenue + projectedProfit * 0.6) / 3);
+  console.log('monthlyProjection:', monthlyProjection);
 
   // Source Stats
   const sourceCounts: Record<string, number> = {};
   const sourceValues: Record<string, number> = {};
-  safeLeads.forEach(l => {
-    if (!l) return;
-    const src = l.source || 'other';
-    sourceCounts[src] = (sourceCounts[src] || 0) + 1;
-    sourceValues[src] = (sourceValues[src] || 0) + (l.estimatedValue || 0);
-  });
+  
+  try {
+    safeLeads.forEach(l => {
+      if (!l) return;
+      const src = l.source || 'other';
+      sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+      sourceValues[src] = (sourceValues[src] || 0) + (l.estimatedValue || 0);
+    });
+    console.log('sourceCounts:', sourceCounts);
+  } catch (e) {
+    console.error('❌ sourceCounts error:', e);
+  }
   
   const sortedSources = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]);
   const maxSourceCount = Math.max(...Object.values(sourceCounts), 1);
+  console.log('sortedSources:', sortedSources);
 
-  const recentLeads = [...safeLeads]
-    .filter(l => l)
-    .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
-    .slice(0, 6);
+  let recentLeads: any[] = [];
+  try {
+    recentLeads = [...safeLeads]
+      .filter(l => l)
+      .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+      .slice(0, 6);
+    console.log('recentLeads length:', recentLeads.length);
+  } catch (e) {
+    console.error('❌ recentLeads error:', e);
+  }
 
   const pipelineStages = [
     { label: 'New', key: 'new' },
@@ -168,300 +236,43 @@ export function Dashboard() {
     { label: 'Lost', key: 'closed-lost' },
   ];
 
-  const topLeads = [...safeLeads]
-    .filter((l) => l && !l.status?.startsWith('closed'))
-    .sort((a, b) => calculateDealScore(b || {}) - calculateDealScore(a || {}))
-    .slice(0, 5);
+  let topLeads: any[] = [];
+  try {
+    topLeads = [...safeLeads]
+      .filter((l) => l && !l.status?.startsWith('closed'))
+      .sort((a, b) => calculateDealScore(b || {}) - calculateDealScore(a || {}))
+      .slice(0, 5);
+    console.log('topLeads length:', topLeads.length);
+  } catch (e) {
+    console.error('❌ topLeads error:', e);
+  }
 
-  // Streak leaderboard data - using default values since memberStreaks doesn't exist in atoms yet
+  // Streak leaderboard data
   const streakMembers = safeTeam.map(m => ({
     id: m?.id || '',
     name: m?.name || 'Unknown',
     avatar: m?.avatar || 'U',
-    loginStreak: 0, // We'll add this later
+    loginStreak: 0,
     taskStreak: 0,
   }));
+  console.log('streakMembers length:', streakMembers.length);
 
   return (
-    <div className="space-y-6">
-      {/* Header with Streak */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-1">Welcome back. Here's your pipeline overview.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <StreakBadge streak={0} type="login" size="md" showLabel />
-          <StreakBadge streak={0} type="task" size="md" />
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Pipeline" value={`$${(totalPipeline / 1000).toFixed(0)}k`}
-          change="12.5%" changeType="up" icon={TrendingUp}
-          color="bg-brand-500/20 text-brand-400"
-        />
-        <StatCard
-          title="Closed Revenue" value={`$${(closedRevenue / 1000).toFixed(0)}k`}
-          change="8.2%" changeType="up" icon={DollarSign}
-          color="bg-emerald-500/20 text-emerald-400"
-        />
-        <StatCard
-          title="Active Leads" value={String(activeLeads)}
-          change="3 new" changeType="up" icon={Users}
-          color="bg-purple-500/20 text-purple-400"
-        />
-        <StatCard
-          title="Avg Deal Score" value={`${avgScore}`}
-          change={`${winRate}% win rate`} changeType={winRate > 50 ? 'up' : 'down'} icon={Target}
-          color="bg-amber-500/20 text-amber-400"
-        />
-      </div>
-
-      {/* Profit Projection Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900 border border-emerald-800/40 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-emerald-500/20">
-              <TrendingUp size={16} className="text-emerald-400" />
-            </div>
-            <p className="text-sm text-emerald-300 font-medium">Projected Profit</p>
-          </div>
-          <p className="text-3xl font-black text-white mb-1">
-            <AnimatedCounter value={Math.round(projectedProfit / 1000)} prefix="$" suffix="k" />
-          </p>
-          <p className="text-xs text-emerald-400/70">From {activeDeals.length} active deals (probability-weighted)</p>
-          <div className="mt-3 h-1.5 bg-emerald-900/50 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-1000"
-              style={{ width: `${Math.min((projectedProfit / (totalPipeline || 1)) * 100, 100)}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-900/40 to-slate-900 border border-blue-800/40 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-blue-500/20">
-              <BarChart3 size={16} className="text-blue-400" />
-            </div>
-            <p className="text-sm text-blue-300 font-medium">Expected Monthly</p>
-          </div>
-          <p className="text-3xl font-black text-white mb-1">
-            <AnimatedCounter value={Math.round(monthlyProjection / 1000)} prefix="$" suffix="k" />
-          </p>
-          <p className="text-xs text-blue-400/70">Based on 3-month pipeline average</p>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-[10px] text-slate-500">Target: $120k</span>
-            <div className="flex-1 h-1.5 bg-blue-900/50 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-1000"
-                style={{ width: `${Math.min((monthlyProjection / 120000) * 100, 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-900/40 to-slate-900 border border-orange-800/40 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="p-2 rounded-lg bg-orange-500/20">
-              <DollarSign size={16} className="text-orange-400" />
-            </div>
-            <p className="text-sm text-orange-300 font-medium">In Negotiation</p>
-          </div>
-          <p className="text-3xl font-black text-white mb-1">
-            <AnimatedCounter value={Math.round(negotiatingValue / 1000)} prefix="$" suffix="k" />
-          </p>
-          <p className="text-xs text-orange-400/70">
-            {safeLeads.filter(l => l && l.status === 'negotiating').length} deals in final stages
-          </p>
-          <button className="mt-3 text-[10px] text-orange-400 hover:text-orange-300 font-medium flex items-center gap-1 transition-colors">
-            View negotiating deals <ArrowUpRight size={10} />
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pipeline visualization */}
-        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-white mb-4">Pipeline Stages</h2>
-          <div className="space-y-3">
-            {pipelineStages.map((stage) => {
-              const count = safeLeads.filter((l) => l && l.status === stage.key).length;
-              const pct = safeLeads.length > 0 ? (count / safeLeads.length) * 100 : 0;
-              return (
-                <div key={stage.key} className="flex items-center gap-4">
-                  <span className="text-sm text-slate-400 w-24 shrink-0">{stage.label}</span>
-                  <div className="flex-1 h-8 bg-slate-800 rounded-lg overflow-hidden">
-                    <div
-                      className={`h-full ${statusBarColors[stage.key] || 'bg-slate-600'} rounded-lg flex items-center px-3 transition-all duration-500`}
-                      style={{ width: `${Math.max(pct, count > 0 ? 8 : 0)}%` }}
-                    >
-                      <span className="text-xs font-bold text-white">{count}</span>
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-500 w-10 text-right">{pct.toFixed(0)}%</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Lead Source Stats */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <PieChart size={18} className="text-cyan-400" />
-            <h2 className="text-lg font-semibold text-white">Lead Sources</h2>
-          </div>
-          <div className="space-y-3">
-            {sortedSources.map(([source, count]) => {
-              const sc = SOURCE_COLORS[source as LeadSource] || SOURCE_COLORS.other;
-              const value = sourceValues[source] || 0;
-              const pct = (count / maxSourceCount) * 100;
-              return (
-                <div key={source} className="group">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text}`}>
-                        {sc.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400">{count} leads</span>
-                      <span className="text-xs text-slate-500">${(value / 1000).toFixed(0)}k</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${sc.bar} transition-all duration-500`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {sortedSources.length === 0 && (
-            <p className="text-sm text-slate-500 text-center py-4">No source data</p>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top Deal Scores */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap size={18} className="text-amber-400" />
-            <h2 className="text-lg font-semibold text-white">Top Deal Scores</h2>
-          </div>
-          <div className="space-y-3">
-            {topLeads.map((lead, i) => {
-              const score = calculateDealScore(lead || {});
-              const sc = getScoreColor(score);
-              return (
-                <div key={lead?.id || i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 transition-colors">
-                  <span className="text-sm font-bold text-slate-500 w-5">{i + 1}</span>
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                    {lead?.name?.split(' ').map((n) => n[0]).join('') || '?'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{lead?.name || 'Unknown'}</p>
-                    <p className="text-xs text-slate-500">{STATUS_LABELS[lead?.status] || 'Unknown'}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <span className={`text-sm font-black ${sc.text}`}>{score}</span>
-                    <div className="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${sc.bar}`} style={{ width: `${score}%` }} />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {topLeads.length === 0 && (
-              <p className="text-sm text-slate-500 text-center py-4">No active leads</p>
-            )}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h2 className="text-lg font-semibold text-white mb-4">Recent Activity</h2>
-          <div className="divide-y divide-slate-800">
-            {recentLeads.map((lead) => {
-              const score = calculateDealScore(lead || {});
-              const sc = getScoreColor(score);
-              return (
-                <div key={lead?.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                  <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
-                    {lead?.status === 'closed-won' ? (
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                    ) : (
-                      <Clock size={16} className="text-slate-400" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">{lead?.name || 'Unknown'}</p>
-                    <p className="text-xs text-slate-500 truncate">{lead?.propertyAddress || 'No address'}</p>
-                  </div>
-                  <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${sc.bg} ${sc.text}`}>
-                    <Zap size={8} />
-                    {score}
-                  </div>
-                  <span className="text-[10px] text-slate-500 shrink-0 hidden sm:block">
-                    {lead?.updatedAt ? formatDistanceToNow(new Date(lead.updatedAt), { addSuffix: true }) : 'Unknown'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Team Leaderboard + Streaks */}
-        <div className="space-y-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-white mb-4">Team Leaderboard</h2>
-            <div className="space-y-3">
-              {[...safeTeam]
-                .filter(m => m)
-                .sort((a, b) => (b?.revenue || 0) - (a?.revenue || 0))
-                .map((member, i) => (
-                  <div key={member?.id || i} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 transition-colors">
-                    <span className="text-sm font-bold text-slate-500 w-5">{i + 1}</span>
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
-                      {member?.avatar || 'U'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{member?.name || 'Unknown'}</p>
-                      <p className="text-xs text-slate-500">{member?.dealsCount || 0} deals</p>
-                    </div>
-                    <span className="text-sm font-semibold text-emerald-400">
-                      ${((member?.revenue || 0) / 1000).toFixed(0)}k
-                    </span>
-                  </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Mini Streak Panel */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Flame size={16} className="text-orange-400" />
-              <h3 className="text-sm font-semibold text-white">Team Streaks</h3>
-            </div>
-            <div className="space-y-2">
-              {streakMembers
-                .sort((a, b) => b.loginStreak - a.loginStreak)
-                .slice(0, 4)
-                .map(m => (
-                  <div key={m.id} className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-                      {m.avatar}
-                    </div>
-                    <span className="text-xs text-slate-300 flex-1 truncate">{m.name}</span>
-                    <StreakBadge streak={m.loginStreak} size="sm" />
-                  </div>
-                ))}
-            </div>
-          </div>
-        </div>
+    <div className="space-y-6 p-4">
+      <h1 className="text-2xl font-bold text-white">Dashboard Debug</h1>
+      <div className="bg-slate-800 p-4 rounded-lg">
+        <pre className="text-green-400 text-sm">
+          {JSON.stringify({
+            safeLeadsLength: safeLeads.length,
+            safeTeamLength: safeTeam.length,
+            activeLeads,
+            closedLeads: closedLeads.length,
+            totalPipeline,
+            closedRevenue,
+            avgScore,
+            winRate,
+          }, null, 2)}
+        </pre>
       </div>
     </div>
   );
