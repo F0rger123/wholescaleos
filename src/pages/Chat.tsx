@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { useStore, QUICK_REACTIONS, PRESENCE_COLORS, type ChatMessage, type ChatAttachment, type ChatChannel } from '../store/useStore';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { chatService } from '../lib/supabase-service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1191,12 +1193,52 @@ function SearchResultsPanel({
   );
 }
 
+// ─── Load Messages from Supabase ─────────────────────────────────────────────
+
+async function loadMessagesFromSupabase(channelId: string): Promise<ChatMessage[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+  
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('channel_id', channelId)
+      .order('timestamp', { ascending: true });
+
+    if (error) {
+      console.error('Error loading messages:', error);
+      return [];
+    }
+
+    return (data || []).map((msg: any) => ({
+      id: msg.id,
+      channelId: msg.channel_id,
+      senderId: msg.user_id,
+      senderName: msg.sender_name,
+      senderAvatar: msg.sender_avatar || msg.sender_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+      content: msg.content,
+      timestamp: msg.timestamp,
+      type: msg.type || 'text',
+      mentions: msg.mentions || [],
+      reactions: msg.reactions || [],
+      replyToId: msg.reply_to_id,
+      attachments: msg.attachments || [],
+      edited: msg.edited || false,
+      readBy: msg.read_by || [],
+      deleted: msg.deleted || false,
+    }));
+  } catch (error) {
+    console.error('Failed to load messages:', error);
+    return [];
+  }
+}
+
 // ─── Main Chat Page ──────────────────────────────────────────────────────────
 
 export function Chat() {
   const {
     channels, messages, currentChannelId, setCurrentChannel, typingUsers,
-    unreadCounts, markChannelRead, team, currentUser,
+    unreadCounts, markChannelRead, team, currentUser, setBulkData,
   } = useStore();
 
   const [replyToId, setReplyToId] = useState<string | null>(null);
@@ -1205,6 +1247,7 @@ export function Chat() {
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1212,6 +1255,38 @@ export function Chat() {
   const currentChannel = channels.find(ch => ch.id === currentChannelId);
   const channelMessages = currentChannelId ? (messages[currentChannelId] || []) : [];
   const sortedMessages = [...channelMessages].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+  // Load messages when channel changes
+  useEffect(() => {
+    if (!currentChannelId) return;
+
+    const loadMessages = async () => {
+      setLoadingMessages(true);
+      try {
+        // Check if we already have messages in the store
+        if (messages[currentChannelId] && messages[currentChannelId].length > 0) {
+          setLoadingMessages(false);
+          return;
+        }
+
+        const loadedMessages = await loadMessagesFromSupabase(currentChannelId);
+        
+        // Update store with loaded messages
+        setBulkData({
+          messages: {
+            ...messages,
+            [currentChannelId]: loadedMessages,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to load messages:', error);
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    loadMessages();
+  }, [currentChannelId, messages, setBulkData]);
 
   // Mark channel read on switch
   useEffect(() => {
@@ -1341,29 +1416,42 @@ export function Chat() {
             <div className="flex-1 flex flex-col min-w-0">
               {/* Messages */}
               <div ref={containerRef} className="flex-1 overflow-y-auto py-4">
-                {/* Channel welcome */}
-                <div className="px-6 pb-4 mb-2 border-b border-slate-800/50">
-                  <div className="flex items-center gap-3 mb-2">
-                    {currentChannel.type === 'group' ? (
-                      <span className="text-3xl">{currentChannel.avatar}</span>
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-lg font-bold text-white">
-                        {currentChannel.avatar}
-                      </div>
-                    )}
-                    <div>
-                      <h2 className="text-xl font-bold text-white">
-                        {currentChannel.type === 'group' ? `#${currentChannel.name}` : currentChannel.name}
-                      </h2>
-                      <p className="text-sm text-slate-500">
-                        {currentChannel.type === 'group'
-                          ? currentChannel.description || 'This is the start of the channel.'
-                          : 'This is the beginning of your conversation.'
-                        }
-                      </p>
+                {/* Loading indicator */}
+                {loadingMessages && (
+                  <div className="flex justify-center py-4">
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
-                </div>
+                )}
+
+                {/* Channel welcome */}
+                {!loadingMessages && sortedMessages.length === 0 && (
+                  <div className="px-6 pb-4 mb-2 border-b border-slate-800/50">
+                    <div className="flex items-center gap-3 mb-2">
+                      {currentChannel.type === 'group' ? (
+                        <span className="text-3xl">{currentChannel.avatar}</span>
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-lg font-bold text-white">
+                          {currentChannel.avatar}
+                        </div>
+                      )}
+                      <div>
+                        <h2 className="text-xl font-bold text-white">
+                          {currentChannel.type === 'group' ? `#${currentChannel.name}` : currentChannel.name}
+                        </h2>
+                        <p className="text-sm text-slate-500">
+                          {currentChannel.type === 'group'
+                            ? currentChannel.description || 'This is the start of the channel.'
+                            : 'This is the beginning of your conversation.'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Messages list */}
                 {messagesWithDividers.map((item, i) => {
@@ -1398,9 +1486,9 @@ export function Chat() {
                 {typingNames.length > 0 && (
                   <div className="flex items-center gap-2 px-6 py-2 mt-1">
                     <div className="flex gap-0.5">
-                      <Circle size={6} className="text-brand-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <Circle size={6} className="text-brand-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <Circle size={6} className="text-brand-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                     <span className="text-xs text-slate-500 italic">
                       {typingNames.join(', ')} {typingNames.length === 1 ? 'is' : 'are'} typing...
