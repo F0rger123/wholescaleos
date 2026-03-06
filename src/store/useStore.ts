@@ -1101,24 +1101,45 @@ export const useStore = create<AppState>((set, get) => ({
       ),
     })),
 
+  // FIXED: Now saves to Supabase
   updateLeadStatus: (leadId, newStatus, changedBy) =>
     set((s) => {
       const now = new Date().toISOString();
-      return {
-        leads: s.leads.map((l) => {
-          if (l.id !== leadId || l.status === newStatus) return l;
-          const oldStatus = l.status;
-          return {
-            ...l, status: newStatus, updatedAt: now,
-            statusHistory: [...l.statusHistory, { fromStatus: oldStatus, toStatus: newStatus, timestamp: now, changedBy }],
-            timeline: [...l.timeline, {
-              id: uuidv4(), type: 'status-change' as TimelineType,
-              content: `Status changed from ${STATUS_LABELS[oldStatus]} to ${STATUS_LABELS[newStatus]}`,
-              timestamp: now, user: changedBy, metadata: { from: oldStatus, to: newStatus },
-            }],
-          };
-        }),
-      };
+      const updatedLeads = s.leads.map((l) => {
+        if (l.id !== leadId || l.status === newStatus) return l;
+        const oldStatus = l.status;
+        return {
+          ...l,
+          status: newStatus,
+          updatedAt: now,
+          statusHistory: [...l.statusHistory, { 
+            fromStatus: oldStatus, 
+            toStatus: newStatus, 
+            timestamp: now, 
+            changedBy 
+          }],
+          timeline: [...l.timeline, {
+            id: uuidv4(),
+            type: 'status-change' as TimelineType,
+            content: `Status changed from ${STATUS_LABELS[oldStatus]} to ${STATUS_LABELS[newStatus]}`,
+            timestamp: now,
+            user: changedBy,
+            metadata: { from: oldStatus, to: newStatus },
+          }],
+        };
+      });
+
+      // Save to Supabase
+      if (isSupabaseConfigured) {
+        leadsService.update(leadId, { 
+          status: newStatus,
+          updated_at: now
+        }).catch((error) => {
+          console.error('❌ Failed to save status change to Supabase:', error);
+        });
+      }
+
+      return { leads: updatedLeads };
     }),
 
   // ── Team (empty — loaded from Supabase) ───────────────────
