@@ -10,7 +10,8 @@ import {
   Sparkles, Loader2, Save, PhoneCall, Send,
   Users, Mic, Play, Pause, Square, Brain,
   Target, Zap, BarChart3,
-  FileText, Camera, Navigation, Globe, ArrowRight, Volume2, Eye
+  FileText, Camera, Navigation, Globe, ArrowRight, Volume2, Eye,
+  Trash, AlertTriangle
 } from 'lucide-react';
 
 const STATUS_BADGE: Record<string, string> = {
@@ -74,6 +75,12 @@ export default function Leads() {
   const [newFieldType, setNewFieldType] = useState<'text' | 'number'>('text');
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // NEW: Bulk selection state
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   const recordingInterval = useRef<any>(null);
 
   const [formData, setFormData] = useState({
@@ -142,6 +149,42 @@ export default function Leads() {
       return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
     });
 
+  // NEW: Bulk selection handlers
+  const toggleSelectAll = () => {
+    if (selectedLeads.size === filtered.length) {
+      setSelectedLeads(new Set());
+    } else {
+      setSelectedLeads(new Set(filtered.map(l => l.id)));
+    }
+  };
+
+  const toggleSelectLead = (leadId: string) => {
+    const newSelected = new Set(selectedLeads);
+    if (newSelected.has(leadId)) {
+      newSelected.delete(leadId);
+    } else {
+      newSelected.add(leadId);
+    }
+    setSelectedLeads(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      // Delete each selected lead
+      for (const leadId of selectedLeads) {
+        await deleteLead(leadId);
+      }
+      setSelectedLeads(new Set());
+      setShowDeleteConfirm(false);
+      alert(`✅ Successfully deleted ${selectedLeads.size} leads`);
+    } catch (error) {
+      alert('❌ Failed to delete some leads');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const openAdd = () => { 
     setEditingLead(null); 
     setFormData({ 
@@ -208,6 +251,12 @@ export default function Leads() {
     if (confirm('Delete this lead?')) { 
       deleteLead(id); 
       if (expandedLead === id) setExpandedLead(null); 
+      // Remove from selected if it was selected
+      if (selectedLeads.has(id)) {
+        const newSelected = new Set(selectedLeads);
+        newSelected.delete(id);
+        setSelectedLeads(newSelected);
+      }
     } 
   };
 
@@ -269,6 +318,17 @@ export default function Leads() {
               {geocodingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />} Geocode All
             </button>
           )}
+          
+          {/* NEW: Bulk delete button */}
+          {selectedLeads.size > 0 && (
+            <button 
+              onClick={() => setShowDeleteConfirm(true)} 
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+            >
+              <Trash className="w-4 h-4" /> Delete Selected ({selectedLeads.size})
+            </button>
+          )}
+          
           <button 
             onClick={openAdd} 
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
@@ -476,6 +536,33 @@ export default function Leads() {
 
       {/* LEADS LIST */}
       <div className="space-y-3">
+        {/* Bulk selection header */}
+        {filtered.length > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/30 rounded-lg border border-slate-700">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={selectedLeads.size === filtered.length && filtered.length > 0}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-slate-300">
+                {selectedLeads.size === 0 
+                  ? 'Select all' 
+                  : `Selected ${selectedLeads.size} of ${filtered.length}`}
+              </span>
+            </div>
+            {selectedLeads.size > 0 && (
+              <button
+                onClick={() => setSelectedLeads(new Set())}
+                className="text-xs text-slate-400 hover:text-white px-2 py-1 bg-slate-700/50 rounded-lg"
+              >
+                Clear selection
+              </button>
+            )}
+          </div>
+        )}
+
         {filtered.length === 0 ? (
           <div className="text-center py-16 bg-slate-800/30 rounded-xl">
             <Target className="w-12 h-12 text-slate-600 mx-auto mb-3" />
@@ -491,60 +578,72 @@ export default function Leads() {
           return (
             <div key={lead.id} className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-slate-600 transition-colors">
               {/* LEAD ROW */}
-              <div 
-                onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)} 
-                className="flex items-center gap-3 p-4 cursor-pointer"
-              >
-                <div className="flex-shrink-0">
-                  {expandedLead === lead.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+              <div className="flex items-center gap-3 p-4">
+                {/* NEW: Selection checkbox */}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selectedLeads.has(lead.id)}
+                    onChange={() => toggleSelectLead(lead.id)}
+                    className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                  />
                 </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {(lead.name || 'U')[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-white font-medium">{lead.name || 'Unnamed'}</span>
-                    <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>
-                      {STATUS_LABELS[lead.status] || lead.status}
-                    </span>
-                    <span className={`px-2 py-0.5 text-xs rounded-full border ${scoreBadge(ds)}`}>⚡ {ds}</span>
-                    <span className={`px-2 py-0.5 text-xs rounded-full ${pb.c}`}>🧠 {pb.l}</span>
-                    {lead.importSource && (
-                      <span className={`px-2 py-0.5 text-xs rounded-full ${SOURCE_BADGE[lead.importSource] || SOURCE_BADGE['manual']}`}>
-                        {lead.importSource}
+                
+                <div 
+                  onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)} 
+                  className="flex items-center gap-3 flex-1 cursor-pointer"
+                >
+                  <div className="flex-shrink-0">
+                    {expandedLead === lead.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                    {(lead.name || 'U')[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-white font-medium">{lead.name || 'Unnamed'}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>
+                        {STATUS_LABELS[lead.status] || lead.status}
                       </span>
-                    )}
-                    {lead.photos && lead.photos.length > 0 && (
-                      <span className="px-2 py-0.5 text-xs rounded-full bg-teal-500/20 text-teal-300">📷 {lead.photos.length}</span>
-                    )}
-                    <span className="text-xs text-slate-500">{days}d</span>
-                    <span className={`w-2 h-2 rounded-full ${geo ? 'bg-green-400' : 'bg-amber-400'}`} title={geo ? 'Geocoded' : 'Not geocoded'} />
+                      <span className={`px-2 py-0.5 text-xs rounded-full border ${scoreBadge(ds)}`}>⚡ {ds}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full ${pb.c}`}>🧠 {pb.l}</span>
+                      {lead.importSource && (
+                        <span className={`px-2 py-0.5 text-xs rounded-full ${SOURCE_BADGE[lead.importSource] || SOURCE_BADGE['manual']}`}>
+                          {lead.importSource}
+                        </span>
+                      )}
+                      {lead.photos && lead.photos.length > 0 && (
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-teal-500/20 text-teal-300">📷 {lead.photos.length}</span>
+                      )}
+                      <span className="text-xs text-slate-500">{days}d</span>
+                      <span className={`w-2 h-2 rounded-full ${geo ? 'bg-green-400' : 'bg-amber-400'}`} title={geo ? 'Geocoded' : 'Not geocoded'} />
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5 truncate">{lead.propertyAddress || 'No address'}</p>
+                    <div className="w-24 h-1 bg-slate-700 rounded-full mt-1">
+                      <div 
+                        className={`h-full rounded-full ${ds >= 70 ? 'bg-emerald-500' : ds >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                        style={{ width: `${ds}%` }} 
+                      />
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5 truncate">{lead.propertyAddress || 'No address'}</p>
-                  <div className="w-24 h-1 bg-slate-700 rounded-full mt-1">
-                    <div 
-                      className={`h-full rounded-full ${ds >= 70 ? 'bg-emerald-500' : ds >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
-                      style={{ width: `${ds}%` }} 
-                    />
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-white font-semibold">{fmt$(lead.estimatedValue || 0)}</p>
+                    <p className="text-xs text-slate-400">{lead.propertyType || 'Unknown'}</p>
                   </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-white font-semibold">{fmt$(lead.estimatedValue || 0)}</p>
-                  <p className="text-xs text-slate-400">{lead.propertyType || 'Unknown'}</p>
-                </div>
-                <div className="flex gap-1 flex-shrink-0">
-                  <button 
-                    onClick={e => { e.stopPropagation(); openEdit(lead); }} 
-                    className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button 
-                    onClick={e => { e.stopPropagation(); handleDel(lead.id); }} 
-                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <button 
+                      onClick={e => { e.stopPropagation(); openEdit(lead); }} 
+                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={e => { e.stopPropagation(); handleDel(lead.id); }} 
+                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -951,6 +1050,39 @@ export default function Leads() {
           );
         })}
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-white text-center mb-2">Delete {selectedLeads.size} Leads?</h3>
+              <p className="text-sm text-slate-400 text-center mb-6">
+                This action cannot be undone. All selected leads and their associated data will be permanently removed.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                >
+                  {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {bulkDeleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ADD/EDIT MODAL */}
       {showModal && (
