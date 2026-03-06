@@ -1227,6 +1227,48 @@ export function Chat() {
   const channelMessages = currentChannelId ? (messages[currentChannelId] || []) : [];
   const sortedMessages = [...channelMessages].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
+  // Load channels from Supabase when component mounts
+  useEffect(() => {
+    const loadChannels = async () => {
+      if (!isSupabaseConfigured || !supabase) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('chat_channels')
+          .select('*')
+          .order('last_message_at', { ascending: false });
+
+        if (error) {
+          console.error('Error loading channels:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Convert to your ChatChannel format
+          const loadedChannels = data.map((ch: any) => ({
+            id: ch.id,
+            name: ch.name,
+            type: ch.type,
+            members: ch.members || [],
+            description: ch.description || '',
+            avatar: ch.avatar || (ch.type === 'group' ? '💬' : ch.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)),
+            createdAt: ch.created_at,
+            createdBy: ch.created_by,
+            lastMessageAt: ch.last_message_at,
+            pinnedMessageIds: ch.pinned_message_ids || [],
+          }));
+
+          // Update store with loaded channels
+          setBulkData({ channels: loadedChannels });
+        }
+      } catch (error) {
+        console.error('Failed to load channels:', error);
+      }
+    };
+
+    loadChannels();
+  }, [setBulkData]);
+
   // Load messages when channel changes
   useEffect(() => {
     if (!currentChannelId) {
