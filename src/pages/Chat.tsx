@@ -4,12 +4,11 @@ import {
   Hash, Lock, Search, Plus, Send, Smile, Paperclip, Mic, Play, Pause, X,
   Reply, Edit3, Trash2, Download, File, Image as ImageIcon, Video,
   Volume2, Users, Check, CheckCheck, MessageSquare,
-  Phone, FileText, Circle,
+  Phone, FileText,
 } from 'lucide-react';
 import { useStore, QUICK_REACTIONS, PRESENCE_COLORS, type ChatMessage, type ChatAttachment, type ChatChannel } from '../store/useStore';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { chatService } from '../lib/supabase-service';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
