@@ -37,7 +37,7 @@ function shouldGroupMessage(prev: ChatMessage | undefined, curr: ChatMessage): b
   if (prev.senderId !== curr.senderId) return false;
   if (prev.deleted || curr.deleted) return false;
   const diff = new Date(curr.timestamp).getTime() - new Date(prev.timestamp).getTime();
-  return diff < 5 * 60 * 1000; // 5 minutes
+  return diff < 5 * 60 * 1000;
 }
 
 // ─── Voice Recorder Component ────────────────────────────────────────────────
@@ -361,10 +361,8 @@ function MessageBubble({
   const { editMessage, deleteMessage, addReaction } = useStore();
   const isMine = message.senderId === currentUserId;
 
-  // Render content with @mentions highlighted
   const renderContent = (text: string) => {
     if (message.deleted) return <span className="text-slate-500 italic">{text}</span>;
-    // Replace @Name patterns
     let parts: (string | React.ReactElement)[] = [text];
     for (const member of team) {
       const newParts: (string | React.ReactElement)[] = [];
@@ -403,7 +401,6 @@ function MessageBubble({
     setEditing(false);
   };
 
-  // Read receipts
   const readCount = message.readBy.length;
   const allRead = readCount > 1;
 
@@ -413,7 +410,6 @@ function MessageBubble({
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => { setShowActions(false); setShowReactionPicker(false); }}
     >
-      {/* Avatar */}
       <div className="w-9 shrink-0">
         {!isGrouped && (
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[11px] font-bold text-white mt-0.5">
@@ -422,7 +418,6 @@ function MessageBubble({
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         {!isGrouped && (
           <div className="flex items-baseline gap-2 mb-0.5">
@@ -432,7 +427,6 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Reply reference */}
         {replyMessage && !replyMessage.deleted && (
           <div className="flex items-center gap-2 mb-1 pl-3 border-l-2 border-slate-600">
             <div className="w-4 h-4 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[7px] font-bold text-white shrink-0">
@@ -445,7 +439,6 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Message text */}
         {editing ? (
           <div className="flex items-center gap-2">
             <input
@@ -464,7 +457,6 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Attachments */}
         {message.attachments.length > 0 && (
           <div className="flex flex-col gap-2 mt-1.5">
             {message.attachments.map(att => (
@@ -473,10 +465,8 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Reactions */}
         <ReactionBar reactions={message.reactions} channelId={channelId} messageId={message.id} currentUserId={currentUserId} />
 
-        {/* Read receipts for own messages */}
         {isMine && isGrouped === false && (
           <div className="flex items-center gap-1 mt-0.5">
             {allRead ? (
@@ -491,7 +481,6 @@ function MessageBubble({
         )}
       </div>
 
-      {/* Hover Actions */}
       {showActions && !message.deleted && !editing && (
         <div className="absolute -top-3 right-6 flex items-center bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden z-20">
           {QUICK_REACTIONS.slice(0, 4).map(emoji => (
@@ -535,7 +524,6 @@ function MessageBubble({
         </div>
       )}
 
-      {/* Reaction picker (full) */}
       {showReactionPicker && (
         <div className="absolute -top-52 right-6 z-30">
           <EmojiPicker
@@ -566,7 +554,6 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {/* Channel name & description */}
         <div>
           <div className="flex items-center gap-2 mb-2">
             {channel.type === 'group' ? (
@@ -590,7 +577,6 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
           )}
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-slate-800/50 rounded-xl p-3">
             <p className="text-lg font-bold text-white">{msgCount}</p>
@@ -602,7 +588,6 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
           </div>
         </div>
 
-        {/* Members */}
         <div>
           <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
             Members — {channelMembers.length}
@@ -628,7 +613,6 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
           </div>
         </div>
 
-        {/* Shared Files */}
         {fileCount > 0 && (
           <div>
             <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
@@ -687,7 +671,6 @@ function NewChannelModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800"><X size={18} /></button>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-1 px-5 pt-4">
           {(['group', 'direct'] as const).map(t => (
             <button
@@ -812,7 +795,6 @@ function ChatSidebar({
 
   return (
     <div className="w-72 border-r border-slate-800 bg-slate-900 flex flex-col shrink-0">
-      {/* Header */}
       <div className="px-4 py-3 border-b border-slate-800">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -833,9 +815,7 @@ function ChatSidebar({
         </div>
       </div>
 
-      {/* Channel list */}
       <div className="flex-1 overflow-y-auto py-2">
-        {/* Group channels */}
         <div className="px-3 mb-1">
           <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold px-2 py-1">Channels</p>
         </div>
@@ -878,7 +858,6 @@ function ChatSidebar({
           );
         })}
 
-        {/* Direct messages */}
         <div className="px-3 mt-3 mb-1">
           <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold px-2 py-1">Direct Messages</p>
         </div>
@@ -955,7 +934,6 @@ function MessageInput({
   const handleTextChange = (val: string) => {
     setText(val);
 
-    // Typing indicator
     if (currentUser) {
       setTypingUser(channelId, currentUser.id);
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -964,7 +942,6 @@ function MessageInput({
       }, 3000);
     }
 
-    // Check for @mention
     const lastAtIdx = val.lastIndexOf('@');
     if (lastAtIdx >= 0 && lastAtIdx === val.length - 1) {
       setShowMentions(true);
@@ -993,7 +970,6 @@ function MessageInput({
   const handleSend = () => {
     if (!text.trim() && attachments.length === 0) return;
 
-    // Extract mentions from text
     const mentionIds = team
       .filter(m => text.includes(`@${m.name.split(' ')[0]}`))
       .map(m => m.id);
@@ -1013,7 +989,6 @@ function MessageInput({
   };
 
   const handleFileAttach = () => {
-    // Simulate file selection with random file types
     const fileTypes: { type: ChatAttachment['type']; ext: string }[] = [
       { type: 'document', ext: 'pdf' }, { type: 'document', ext: 'xlsx' }, { type: 'image', ext: 'png' },
     ];
@@ -1042,7 +1017,6 @@ function MessageInput({
 
   return (
     <div className="px-4 pb-4 relative">
-      {/* Reply banner */}
       {replyMessage && (
         <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-slate-800/70 rounded-xl border border-slate-700">
           <Reply size={14} className="text-brand-400 shrink-0" />
@@ -1054,7 +1028,6 @@ function MessageInput({
         </div>
       )}
 
-      {/* Attachments preview */}
       {attachments.length > 0 && (
         <div className="flex gap-2 mb-2 flex-wrap">
           {attachments.map((att, i) => (
@@ -1069,7 +1042,6 @@ function MessageInput({
         </div>
       )}
 
-      {/* Mention autocomplete */}
       {showMentions && (
         <MentionAutocomplete
           query={mentionQuery}
@@ -1079,7 +1051,6 @@ function MessageInput({
         />
       )}
 
-      {/* Emoji picker */}
       {showEmojis && (
         <EmojiPicker
           onSelect={(emoji) => { setText(prev => prev + emoji); inputRef.current?.focus(); }}
@@ -1087,7 +1058,6 @@ function MessageInput({
         />
       )}
 
-      {/* Input area */}
       <div className="flex items-end gap-2 bg-slate-800 border border-slate-700 rounded-2xl px-3 py-2 focus-within:ring-1 focus-within:ring-brand-500/50 focus-within:border-brand-500/50 transition-all">
         <button onClick={() => setShowEmojis(!showEmojis)} className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-400 hover:bg-slate-700 transition-colors shrink-0 mb-0.5">
           <Smile size={18} />
@@ -1195,7 +1165,9 @@ function SearchResultsPanel({
 // ─── Load Messages from Supabase ─────────────────────────────────────────────
 
 async function loadMessagesFromSupabase(channelId: string): Promise<ChatMessage[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
+  if (!isSupabaseConfigured || !supabase) {
+    return [];
+  }
   
   try {
     const { data, error } = await supabase
@@ -1257,17 +1229,14 @@ export function Chat() {
 
   // Load messages when channel changes
   useEffect(() => {
-    if (!currentChannelId) return;
+    if (!currentChannelId) {
+      setLoadingMessages(false);
+      return;
+    }
 
     const loadMessages = async () => {
       setLoadingMessages(true);
       try {
-        // Check if we already have messages in the store
-        if (messages[currentChannelId] && messages[currentChannelId].length > 0) {
-          setLoadingMessages(false);
-          return;
-        }
-
         const loadedMessages = await loadMessagesFromSupabase(currentChannelId);
         
         // Update store with loaded messages
@@ -1285,7 +1254,7 @@ export function Chat() {
     };
 
     loadMessages();
-  }, [currentChannelId, messages, setBulkData]);
+  }, [currentChannelId, setBulkData]);
 
   // Mark channel read on switch
   useEffect(() => {
@@ -1311,13 +1280,11 @@ export function Chat() {
 
   const replyMessage = replyToId ? channelMessages.find(m => m.id === replyToId) : undefined;
 
-  // Typing users for current channel
   const currentTyping = currentChannelId ? (typingUsers[currentChannelId] || []) : [];
   const typingNames = currentTyping
     .filter(uid => uid !== currentUser?.id)
     .map(uid => team.find(m => m.id === uid)?.name.split(' ')[0] || 'Someone');
 
-  // Date dividers
   const messagesWithDividers: { type: 'divider' | 'message'; date?: string; message?: ChatMessage; isGrouped?: boolean }[] = [];
   let lastDate = '';
   for (let i = 0; i < sortedMessages.length; i++) {
@@ -1336,7 +1303,6 @@ export function Chat() {
 
   return (
     <div className="flex h-[calc(100vh-73px)] -m-6 bg-slate-950">
-      {/* Sidebar */}
       <ChatSidebar
         channels={channels}
         currentChannelId={currentChannelId}
@@ -1347,10 +1313,8 @@ export function Chat() {
         onSearch={setSidebarSearch}
       />
 
-      {/* Main chat area */}
       {currentChannel ? (
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Channel header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm shrink-0">
             <div className="flex items-center gap-3">
               {currentChannel.type === 'group' ? (
@@ -1411,14 +1375,12 @@ export function Chat() {
           </div>
 
           <div className="flex flex-1 min-h-0">
-            {/* Messages area */}
             <div className="flex-1 flex flex-col min-w-0">
-              {/* Messages */}
               <div ref={containerRef} className="flex-1 overflow-y-auto py-4">
                 {/* Loading indicator */}
                 {loadingMessages && (
-                  <div className="flex justify-center py-4">
-                    <div className="flex gap-1">
+                  <div className="flex justify-center py-8">
+                    <div className="flex gap-2">
                       <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -1484,7 +1446,7 @@ export function Chat() {
                 {/* Typing indicator */}
                 {typingNames.length > 0 && (
                   <div className="flex items-center gap-2 px-6 py-2 mt-1">
-                    <div className="flex gap-0.5">
+                    <div className="flex gap-1">
                       <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -1498,7 +1460,6 @@ export function Chat() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
               <MessageInput
                 channelId={currentChannelId!}
                 replyToId={replyToId}
@@ -1508,7 +1469,6 @@ export function Chat() {
               />
             </div>
 
-            {/* Info / Search panels */}
             {showChannelInfo && <ChannelInfoPanel channel={currentChannel} onClose={() => setShowChannelInfo(false)} />}
             {showSearchResults && globalSearch && (
               <SearchResultsPanel
@@ -1535,7 +1495,6 @@ export function Chat() {
         </div>
       )}
 
-      {/* New Channel Modal */}
       {showNewChannel && <NewChannelModal onClose={() => setShowNewChannel(false)} />}
     </div>
   );
