@@ -1101,7 +1101,6 @@ export const useStore = create<AppState>((set, get) => ({
       ),
     })),
 
-  // FIXED: Now saves to Supabase
   updateLeadStatus: (leadId, newStatus, changedBy) =>
     set((s) => {
       const now = new Date().toISOString();
@@ -1129,7 +1128,6 @@ export const useStore = create<AppState>((set, get) => ({
         };
       });
 
-      // Save to Supabase
       if (isSupabaseConfigured) {
         leadsService.update(leadId, { 
           status: newStatus,
@@ -1184,7 +1182,6 @@ export const useStore = create<AppState>((set, get) => ({
   regenerateInviteCode: () => {
     const newCode = generateInviteCode();
     set((s) => ({ teamConfig: { ...s.teamConfig, inviteCode: newCode } }));
-    // Persist to Supabase
     const { teamId } = get();
     if (teamId && isSupabaseConfigured) {
       import('../lib/supabase').then(({ supabase: sb }) => {
@@ -1197,7 +1194,6 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateTeamConfig: (updates) => {
     set((s) => ({ teamConfig: { ...s.teamConfig, ...updates } }));
-    // Persist team name or other config to Supabase
     const { teamId } = get();
     if (teamId && isSupabaseConfigured) {
       import('../lib/supabase').then(({ supabase: sb }) => {
@@ -1430,19 +1426,54 @@ export const useStore = create<AppState>((set, get) => ({
       };
     }),
 
+  // FIXED: Now saves channels to Supabase with proper error handling
   createChannel: (name, type, members, description = '') => {
     const id = uuidv4();
     const user = get().currentUser;
+    const now = new Date().toISOString();
+    
+    const newChannel = {
+      id,
+      name,
+      type,
+      members,
+      description,
+      avatar: type === 'group' ? '💬' : name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+      createdAt: now,
+      createdBy: user?.id || '',
+      lastMessageAt: now,
+      pinnedMessageIds: [],
+    };
+    
+    // Update UI immediately
     set((s) => ({
-      channels: [...s.channels, {
-        id, name, type, members, description,
-        avatar: type === 'group' ? '💬' : name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-        createdAt: new Date().toISOString(), createdBy: user?.id || '',
-        lastMessageAt: new Date().toISOString(), pinnedMessageIds: [],
-      }],
+      channels: [...s.channels, newChannel],
       messages: { ...s.messages, [id]: [] },
       unreadCounts: { ...s.unreadCounts, [id]: 0 },
     }));
+
+    // Save to Supabase (fixed error handling)
+    if (isSupabaseConfigured && supabase && user) {
+      supabase
+        .from('chat_channels')
+        .insert([{
+          id,
+          name,
+          type,
+          members,
+          description,
+          avatar: newChannel.avatar,
+          created_by: user.id,
+          last_message_at: now,
+          created_at: now,
+        }])
+        .then(({ error }) => {
+          if (error) {
+            console.error('Failed to save channel to Supabase:', error);
+          }
+        });
+    }
+
     return id;
   },
 
@@ -1579,11 +1610,9 @@ export const useStore = create<AppState>((set, get) => ({
   currentTheme: (typeof window !== 'undefined' && localStorage.getItem('wholescale-theme')) || 'dark',
   setTheme: (theme) => {
     set({ currentTheme: theme });
-    // Persist to localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('wholescale-theme', theme);
     }
-    // Persist to Supabase profile
     if (supabase && isSupabaseConfigured) {
       supabase.auth.getUser().then(({ data }) => {
         if (data?.user) {
@@ -1729,7 +1758,6 @@ export const useStore = create<AppState>((set, get) => ({
 
     set((s) => ({ leads: [...s.leads, ...newLeads] }));
 
-    // Save to Supabase
     if (supabase && isSupabaseConfigured && get().teamId) {
       const teamId = get().teamId;
       const rows = newLeads.map(lead => ({
