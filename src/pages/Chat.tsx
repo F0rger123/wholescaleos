@@ -1365,6 +1365,22 @@ export function Chat() {
   const teamForMentions = team.map(m => ({ id: m.id, name: m.name, avatar: m.avatar, presenceStatus: m.presenceStatus }));
   const teamForBubble = team.map(m => ({ id: m.id, name: m.name }));
 
+  // Show loading indicator while channels are loading
+  if (loadingChannels) {
+    return (
+      <div className="flex h-[calc(100vh-73px)] -m-6 bg-slate-950 items-center justify-center">
+        <div className="text-center">
+          <div className="flex gap-2 justify-center mb-4">
+            <div className="w-3 h-3 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-3 h-3 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-3 h-3 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+          <p className="text-sm text-slate-400">Loading conversations...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-73px)] -m-6 bg-slate-950">
       <ChatSidebar
