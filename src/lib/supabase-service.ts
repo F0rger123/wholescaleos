@@ -229,14 +229,49 @@ export const chatService = {
     return data || [];
   },
 
-  async sendMessage(msg: Record<string, unknown>) {
-    if (!supabase) return null;
-    const { data } = await supabase.from('messages').insert(msg).select().single();
-    if (msg.channel_id) {
-      await supabase.from('channels').update({ last_message_at: new Date().toISOString() }).eq('id', msg.channel_id);
+async sendMessage(msg: Record<string, unknown>) {
+  console.log('📤 chatService.sendMessage called with:', msg);
+  
+  if (!supabase) {
+    console.log('❌ Supabase not configured');
+    return null;
+  }
+  
+  try {
+    console.log('Attempting to insert into messages table...');
+    const { data, error } = await supabase
+      .from('messages')
+      .insert(msg)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('❌ Supabase error in sendMessage:', error);
+      return null;
     }
+    
+    console.log('✅ Message inserted successfully:', data);
+    
+    if (msg.channel_id) {
+      console.log('Updating channel last_message_at for channel:', msg.channel_id);
+      const { error: updateError } = await supabase
+        .from('channels')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', msg.channel_id);
+        
+      if (updateError) {
+        console.error('❌ Error updating channel:', updateError);
+      } else {
+        console.log('✅ Channel updated successfully');
+      }
+    }
+    
     return data;
-  },
+  } catch (error) {
+    console.error('❌ Exception in sendMessage:', error);
+    return null;
+  }
+},
 
   async editMessage(messageId: string, content: string) {
     if (!supabase) return;

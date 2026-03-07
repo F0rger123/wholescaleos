@@ -1336,32 +1336,57 @@ export const useStore = create<AppState>((set, get) => ({
 
   setCurrentChannel: (channelId) => set({ currentChannelId: channelId }),
 
-  sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
-    const user = get().currentUser;
-    if (!user) return;
-    const now = new Date().toISOString();
-    const newId = uuidv4();
-    const msg: ChatMessage = {
-      id: newId, channelId, senderId: user.id,
-      senderName: user.name, senderAvatar: user.avatar,
-      content, timestamp: now, type,
-      mentions, reactions: [], replyToId,
-      attachments, edited: false, readBy: [user.id], deleted: false,
+sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
+  const user = get().currentUser;
+  if (!user) {
+    console.log('❌ No user, cannot send message');
+    return;
+  }
+  const now = new Date().toISOString();
+  const newId = uuidv4();
+  const msg: ChatMessage = {
+    id: newId, channelId, senderId: user.id,
+    senderName: user.name, senderAvatar: user.avatar,
+    content, timestamp: now, type,
+    mentions, reactions: [], replyToId,
+    attachments, edited: false, readBy: [user.id], deleted: false,
+  };
+  
+  console.log('✅ Sending message locally:', { id: newId, channelId, content, user: user.name });
+  
+  // Update UI immediately
+  set((s) => {
+    const channelMsgs = [...(s.messages[channelId] || []), msg];
+    return {
+      messages: { ...s.messages, [channelId]: channelMsgs },
+      channels: s.channels.map(ch => ch.id === channelId ? { ...ch, lastMessageAt: now } : ch),
     };
-    set((s) => {
-      const channelMsgs = [...(s.messages[channelId] || []), msg];
-      return {
-        messages: { ...s.messages, [channelId]: channelMsgs },
-        channels: s.channels.map(ch => ch.id === channelId ? { ...ch, lastMessageAt: now } : ch),
-      };
+  });
+  
+  if (isSupabaseConfigured) {
+    console.log('📤 Saving message to Supabase...');
+    chatService.sendMessage({
+      id: newId, 
+      channel_id: channelId, 
+      user_id: user.id, 
+      sender_name: user.name,
+      sender_avatar: user.avatar,
+      content, 
+      type, 
+      mentions, 
+      reply_to_id: replyToId, 
+      attachments: attachments.length ? attachments : [],
+    })
+    .then((result) => {
+      console.log('✅ Message saved to Supabase successfully:', result);
+    })
+    .catch((error) => {
+      console.error('❌ Failed to save message to Supabase:', error);
     });
-    if (isSupabaseConfigured) {
-      chatService.sendMessage({
-        id: newId, channel_id: channelId, user_id: user.id, sender_name: user.name,
-        content, type, mentions, reply_to_id: replyToId, attachments: attachments.length ? attachments : [],
-      }).catch(() => {});
-    }
-  },
+  } else {
+    console.log('⚠️ Supabase not configured, message only saved locally');
+  }
+},
 
   editMessage: (channelId, messageId, newContent) =>
     set((s) => {
