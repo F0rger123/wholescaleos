@@ -1219,6 +1219,7 @@ export function Chat() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingChannels, setLoadingChannels] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1230,7 +1231,14 @@ export function Chat() {
   // Load channels from Supabase when component mounts
   useEffect(() => {
     const loadChannels = async () => {
-      if (!isSupabaseConfigured || !supabase) return;
+      setLoadingChannels(true);
+      console.log('Loading channels from Supabase...');
+      
+      if (!isSupabaseConfigured || !supabase) {
+        console.log('Supabase not configured');
+        setLoadingChannels(false);
+        return;
+      }
       
       try {
         const { data, error } = await supabase
@@ -1240,8 +1248,11 @@ export function Chat() {
 
         if (error) {
           console.error('Error loading channels:', error);
+          setLoadingChannels(false);
           return;
         }
+
+        console.log('Loaded channels from Supabase:', data);
 
         if (data && data.length > 0) {
           // Convert to your ChatChannel format
@@ -1258,16 +1269,27 @@ export function Chat() {
             pinnedMessageIds: ch.pinned_message_ids || [],
           }));
 
+          console.log('Converted channels:', loadedChannels);
+
           // Update store with loaded channels
           setBulkData({ channels: loadedChannels });
+          
+          // Set first channel as active if none selected
+          if (!currentChannelId && loadedChannels.length > 0) {
+            setCurrentChannel(loadedChannels[0].id);
+          }
+        } else {
+          console.log('No channels found in Supabase');
         }
       } catch (error) {
         console.error('Failed to load channels:', error);
+      } finally {
+        setLoadingChannels(false);
       }
     };
 
     loadChannels();
-  }, [setBulkData]);
+  }, [setBulkData, setCurrentChannel, currentChannelId]);
 
   // Load messages when channel changes
   useEffect(() => {
