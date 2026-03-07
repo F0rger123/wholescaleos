@@ -1171,10 +1171,10 @@ async function loadMessagesFromSupabase(channelId: string): Promise<ChatMessage[
   
   try {
     const { data, error } = await supabase
-      .from('chat_messages')
+      .from('messages')
       .select('*')
       .eq('channel_id', channelId)
-      .order('timestamp', { ascending: true });
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error('Error loading messages:', error);
@@ -1188,14 +1188,14 @@ async function loadMessagesFromSupabase(channelId: string): Promise<ChatMessage[
       senderName: msg.sender_name,
       senderAvatar: msg.sender_avatar || msg.sender_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
       content: msg.content,
-      timestamp: msg.timestamp,
+      timestamp: msg.created_at,
       type: msg.type || 'text',
       mentions: msg.mentions || [],
-      reactions: msg.reactions || [],
+      reactions: [],
       replyToId: msg.reply_to_id,
       attachments: msg.attachments || [],
       edited: msg.edited || false,
-      readBy: msg.read_by || [],
+      readBy: [msg.user_id],
       deleted: msg.deleted || false,
     }));
   } catch (error) {
@@ -1242,8 +1242,8 @@ export function Chat() {
       
       try {
         const { data, error } = await supabase
-          .from('chat_channels')
-          .select('*')
+          .from('channels')
+          .select('*, channel_members(user_id)')
           .order('last_message_at', { ascending: false });
 
         if (error) {
@@ -1260,13 +1260,13 @@ export function Chat() {
             id: ch.id,
             name: ch.name,
             type: ch.type,
-            members: ch.members || [],
+            members: (ch.channel_members || []).map((cm: any) => cm.user_id),
             description: ch.description || '',
             avatar: ch.avatar || (ch.type === 'group' ? '💬' : ch.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)),
             createdAt: ch.created_at,
             createdBy: ch.created_by,
             lastMessageAt: ch.last_message_at,
-            pinnedMessageIds: ch.pinned_message_ids || [],
+            pinnedMessageIds: [],
           }));
 
           console.log('Converted channels:', loadedChannels);
@@ -1276,6 +1276,7 @@ export function Chat() {
           
           // Set first channel as active if none selected
           if (!currentChannelId && loadedChannels.length > 0) {
+            console.log('Setting current channel to:', loadedChannels[0].id);
             setCurrentChannel(loadedChannels[0].id);
           }
         } else {

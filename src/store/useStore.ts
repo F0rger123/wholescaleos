@@ -1426,7 +1426,7 @@ export const useStore = create<AppState>((set, get) => ({
       };
     }),
 
-  // FIXED: Now saves channels to Supabase with proper error handling
+  // FIXED: Now saves channels to Supabase with proper error handling and null checks
   createChannel: (name, type, members, description = '') => {
     const id = uuidv4();
     const user = get().currentUser;
@@ -1452,10 +1452,10 @@ export const useStore = create<AppState>((set, get) => ({
       unreadCounts: { ...s.unreadCounts, [id]: 0 },
     }));
 
-    // Save to Supabase (fixed error handling)
+    // Save to Supabase - FIXED: Use 'channels' table, not 'chat_channels'
     if (isSupabaseConfigured && supabase && user) {
       supabase
-        .from('chat_channels')
+        .from('channels')
         .insert([{
           id,
           name,
@@ -1470,6 +1470,23 @@ export const useStore = create<AppState>((set, get) => ({
         .then(({ error }) => {
           if (error) {
             console.error('Failed to save channel to Supabase:', error);
+          } else {
+            console.log('Channel saved to Supabase successfully');
+            
+            // Also add channel members - FIXED: Added null check for supabase
+            if (members && members.length > 0 && supabase) {
+              supabase
+                .from('channel_members')
+                .insert(members.map(userId => ({
+                  channel_id: id,
+                  user_id: userId,
+                })))
+                .then(({ error: memberError }) => {
+                  if (memberError) {
+                    console.error('Failed to save channel members:', memberError);
+                  }
+                });
+            }
           }
         });
     }
