@@ -917,6 +917,12 @@ interface AppState {
   searchMessages: (query: string) => ChatMessage[];
   getTotalUnread: () => number;
 
+  // NEW: Channel Management Functions
+  updateChannel: (channelId: string, updates: Partial<Pick<ChatChannel, 'name' | 'description'>>) => void;
+  addChannelMember: (channelId: string, userId: string) => void;
+  removeChannelMember: (channelId: string, userId: string) => void;
+  leaveChannel: (channelId: string) => void;
+
   // AI
   callRecordings: CallRecording[];
   addCallRecording: (leadId: string, duration: number) => void;
@@ -1544,6 +1550,141 @@ export const useStore = create<AppState>((set, get) => ({
         currentChannelId: s.currentChannelId === channelId ? (s.channels[0]?.id || null) : s.currentChannelId,
       };
     }),
+
+  // NEW: Update channel name/description
+  updateChannel: (channelId, updates) => {
+    // Update local state
+    set((s) => ({
+      channels: s.channels.map(ch => 
+        ch.id === channelId ? { ...ch, ...updates } : ch
+      ),
+    }));
+
+    // Update Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('channels')
+        .update({
+          name: updates.name,
+          description: updates.description,
+        })
+        .eq('id', channelId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('❌ Failed to update channel:', error);
+          } else {
+            console.log('✅ Channel updated successfully');
+          }
+        });
+    }
+  },
+
+  // NEW: Add member to channel
+  addChannelMember: (channelId, userId) => {
+    const channel = get().channels.find(ch => ch.id === channelId);
+    if (!channel) return;
+
+    // Don't add if already a member
+    if (channel.members.includes(userId)) return;
+
+    // Update local state
+    set((s) => ({
+      channels: s.channels.map(ch =>
+        ch.id === channelId
+          ? { ...ch, members: [...ch.members, userId] }
+          : ch
+      ),
+    }));
+
+    // Add to Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('channel_members')
+        .insert([{
+          channel_id: channelId,
+          user_id: userId,
+        }])
+        .then(({ error }) => {
+          if (error) {
+            console.error('❌ Failed to add channel member:', error);
+          } else {
+            console.log('✅ Channel member added successfully');
+          }
+        });
+    }
+  },
+
+  // NEW: Remove member from channel
+  removeChannelMember: (channelId, userId) => {
+    const channel = get().channels.find(ch => ch.id === channelId);
+    if (!channel) return;
+
+    // Don't remove the creator
+    if (channel.createdBy === userId) {
+      console.warn('Cannot remove channel creator');
+      return;
+    }
+
+    // Update local state
+    set((s) => ({
+      channels: s.channels.map(ch =>
+        ch.id === channelId
+          ? { ...ch, members: ch.members.filter(id => id !== userId) }
+          : ch
+      ),
+    }));
+
+    // Remove from Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('channel_members')
+        .delete()
+        .eq('channel_id', channelId)
+        .eq('user_id', userId)
+        .then(({ error }) => {
+          if (error) {
+            console.error('❌ Failed to remove channel member:', error);
+          } else {
+            console.log('✅ Channel member removed successfully');
+          }
+        });
+    }
+  },
+
+  // NEW: Leave channel (for members)
+  leaveChannel: (channelId) => {
+    const user = get().currentUser;
+    const channel = get().channels.find(ch => ch.id === channelId);
+    if (!user || !channel) return;
+
+    // Don't allow creator to leave (they must delete or transfer ownership)
+    if (channel.createdBy === user.id) {
+      console.warn('Creator cannot leave channel. Delete it instead.');
+      return;
+    }
+
+    // Update local state
+    set((s) => ({
+      channels: s.channels.filter(ch => ch.id !== channelId),
+      currentChannelId: s.currentChannelId === channelId ? (s.channels[0]?.id || null) : s.currentChannelId,
+    }));
+
+    // Remove from Supabase
+    if (isSupabaseConfigured && supabase) {
+      supabase
+        .from('channel_members')
+        .delete()
+        .eq('channel_id', channelId)
+        .eq('user_id', user.id)
+        .then(({ error }) => {
+          if (error) {
+            console.error('❌ Failed to leave channel:', error);
+          } else {
+            console.log('✅ Left channel successfully');
+          }
+        });
+    }
+  },
 
   markChannelRead: (channelId) =>
     set((s) => {

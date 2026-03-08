@@ -4,7 +4,7 @@ import {
   Hash, Lock, Search, Plus, Send, Smile, Paperclip, Mic, Play, Pause, X,
   Reply, Edit3, Trash2, Download, File, Image as ImageIcon, Video,
   Volume2, Users, Check, CheckCheck, MessageSquare,
-  Phone, FileText,
+  Phone, FileText, Settings, UserPlus, LogOut, Edit,
 } from 'lucide-react';
 import { useStore, QUICK_REACTIONS, PRESENCE_COLORS, type ChatMessage, type ChatAttachment, type ChatChannel } from '../store/useStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -536,107 +536,416 @@ function MessageBubble({
   );
 }
 
-// ─── Channel Info Sidebar ────────────────────────────────────────────────────
+// ─── Add Member Modal ────────────────────────────────────────────────────────
+
+function AddMemberModal({ channelId, currentMembers, onClose }: { 
+  channelId: string; 
+  currentMembers: string[];
+  onClose: () => void;
+}) {
+  const { team, addChannelMember } = useStore();
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const availableMembers = team.filter(m => !currentMembers.includes(m.id));
+
+  const filteredMembers = searchQuery
+    ? availableMembers.filter(m => m.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : availableMembers;
+
+  const toggleMember = (id: string) => {
+    setSelectedMembers(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleAdd = () => {
+    if (selectedMembers.length === 0) return;
+    selectedMembers.forEach(userId => {
+      addChannelMember(channelId, userId);
+    });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+          <h3 className="text-lg font-semibold text-white">Add Members</h3>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800"><X size={18} /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search team members..."
+              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-500"
+            />
+          </div>
+
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {filteredMembers.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-4">No members available to add</p>
+            ) : (
+              filteredMembers.map(m => {
+                const selected = selectedMembers.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggleMember(m.id)}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+                      selected ? 'bg-brand-500/15 border border-brand-500/30' : 'hover:bg-slate-800 border border-transparent'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                      {m.avatar}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-200">{m.name}</p>
+                      <p className="text-[10px] text-slate-500">{m.role}</p>
+                    </div>
+                    {selected && <Check size={16} className="text-brand-400" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 pb-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
+          <button
+            onClick={handleAdd}
+            disabled={selectedMembers.length === 0}
+            className="px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-xl hover:bg-brand-500 disabled:opacity-40"
+          >
+            Add {selectedMembers.length > 0 ? `(${selectedMembers.length})` : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Edit Channel Name Modal ─────────────────────────────────────────────────
+
+function EditChannelNameModal({ channel, onClose }: { channel: ChatChannel; onClose: () => void }) {
+  const { updateChannel } = useStore();
+  const [name, setName] = useState(channel.name);
+  const [description, setDescription] = useState(channel.description || '');
+
+  const handleSave = () => {
+    if (!name.trim()) return;
+    updateChannel(channel.id, { name: name.trim(), description: description.trim() });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+          <h3 className="text-lg font-semibold text-white">Edit Channel</h3>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800"><X size={18} /></button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="text-xs text-slate-400 font-medium mb-1 block">Channel Name</label>
+            <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3">
+              <Hash size={14} className="text-slate-500" />
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Channel name"
+                className="flex-1 bg-transparent py-2.5 text-sm text-slate-200 focus:outline-none"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 font-medium mb-1 block">Description (optional)</label>
+            <input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What's this channel about?"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 pb-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={!name.trim()}
+            className="px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-xl hover:bg-brand-500 disabled:opacity-40"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Channel Info Sidebar (Updated with Management Features) ─────────────────
 
 function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose: () => void }) {
-  const { team, messages } = useStore();
+  const { team, messages, currentUser, deleteChannel, removeChannelMember, leaveChannel } = useStore();
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [showEditChannel, setShowEditChannel] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
   const channelMembers = team.filter(m => channel.members.includes(m.id));
   const msgCount = (messages[channel.id] || []).filter(m => !m.deleted).length;
   const fileCount = (messages[channel.id] || []).reduce((sum, m) => sum + m.attachments.length, 0);
+  
+  const isCreator = currentUser?.id === channel.createdBy;
+  const isAdmin = isCreator; // For now, creator is admin
+  const isMember = channel.members.includes(currentUser?.id || '');
+
+  const handleDeleteChannel = () => {
+    if (confirm('Are you sure you want to delete this channel? This action cannot be undone.')) {
+      deleteChannel(channel.id);
+      onClose();
+    }
+  };
+
+  const handleLeaveChannel = () => {
+    if (confirm('Are you sure you want to leave this channel?')) {
+      leaveChannel(channel.id);
+      onClose();
+    }
+  };
+
+  const handleRemoveMember = (userId: string, userName: string) => {
+    if (confirm(`Remove ${userName} from this channel?`)) {
+      removeChannelMember(channel.id, userId);
+    }
+  };
 
   return (
-    <div className="w-80 border-l border-slate-800 bg-slate-900 flex flex-col shrink-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
-        <h3 className="text-sm font-semibold text-white">Channel Info</h3>
-        <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
-          <X size={16} />
-        </button>
-      </div>
+    <>
+      <div className="w-80 border-l border-slate-800 bg-slate-900 flex flex-col shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+          <h3 className="text-sm font-semibold text-white">Channel Info</h3>
+          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+            <X size={16} />
+          </button>
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            {channel.type === 'group' ? (
-              <span className="text-2xl">{channel.avatar}</span>
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white">
-                {channel.avatar}
+        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+          {/* Channel header with actions */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              {channel.type === 'group' ? (
+                <span className="text-2xl">{channel.avatar}</span>
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white">
+                  {channel.avatar}
+                </div>
+              )}
+              <div className="flex-1">
+                <h4 className="text-base font-semibold text-white">
+                  {channel.type === 'group' ? `#${channel.name}` : channel.name}
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Created {format(new Date(channel.createdAt), 'MMM d, yyyy')}
+                </p>
               </div>
+              
+              {/* Channel actions for group chats */}
+              {channel.type === 'group' && (
+                <div className="flex gap-1">
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => setShowEditChannel(true)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                        title="Edit channel"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button
+                        onClick={() => setShowAddMember(true)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                        title="Add members"
+                      >
+                        <UserPlus size={14} />
+                      </button>
+                    </>
+                  )}
+                  {isMember && (
+                    <button
+                      onClick={handleLeaveChannel}
+                      className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-600/20 hover:text-amber-400 transition-colors"
+                      title="Leave channel"
+                    >
+                      <LogOut size={14} />
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:bg-red-600/20 hover:text-red-400 transition-colors"
+                      title="Delete channel"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {channel.description && (
+              <p className="text-sm text-slate-400 mt-2">{channel.description}</p>
             )}
-            <div>
-              <h4 className="text-base font-semibold text-white">
-                {channel.type === 'group' ? `#${channel.name}` : channel.name}
-              </h4>
-              <p className="text-xs text-slate-500">
-                Created {format(new Date(channel.createdAt), 'MMM d, yyyy')}
-              </p>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-slate-800/50 rounded-xl p-3">
+              <p className="text-lg font-bold text-white">{msgCount}</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Messages</p>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-3">
+              <p className="text-lg font-bold text-white">{fileCount}</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Files</p>
             </div>
           </div>
-          {channel.description && (
-            <p className="text-sm text-slate-400 mt-2">{channel.description}</p>
+
+          {/* Members list with management */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+                Members — {channelMembers.length}
+              </h5>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowAddMember(true)}
+                  className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1"
+                >
+                  <Plus size={12} /> Add
+                </button>
+              )}
+            </div>
+            <div className="space-y-1">
+              {channelMembers.map(m => {
+                const isCurrentUser = m.id === currentUser?.id;
+                const canRemove = isAdmin && !isCurrentUser && channel.type === 'group';
+                
+                return (
+                  <div key={m.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-800/50 transition-colors group">
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                        {m.avatar}
+                      </div>
+                      <div
+                        className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900"
+                        style={{ backgroundColor: PRESENCE_COLORS[m.presenceStatus] }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-200 truncate flex items-center gap-1">
+                        {m.name}
+                        {m.id === channel.createdBy && (
+                          <span className="text-[10px] px-1 py-0.5 bg-amber-500/20 text-amber-400 rounded">Creator</span>
+                        )}
+                        {isCurrentUser && (
+                          <span className="text-[10px] px-1 py-0.5 bg-brand-500/20 text-brand-400 rounded">You</span>
+                        )}
+                      </p>
+                      <p className="text-[10px] text-slate-500 truncate">{m.role}</p>
+                    </div>
+                    {canRemove && (
+                      <button
+                        onClick={() => handleRemoveMember(m.id, m.name)}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-400 transition-all"
+                        title="Remove member"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Shared Files */}
+          {fileCount > 0 && (
+            <div>
+              <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
+                Shared Files
+              </h5>
+              <div className="space-y-1">
+                {(messages[channel.id] || [])
+                  .flatMap(m => m.attachments.map(a => ({ ...a, sender: m.senderName, time: m.timestamp })))
+                  .slice(-5)
+                  .reverse()
+                  .map(f => (
+                    <div key={f.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-slate-800/30">
+                      <FileText size={14} className="text-blue-400 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-slate-300 truncate">{f.name}</p>
+                        <p className="text-[10px] text-slate-500">{f.sender} · {formatFileSize(f.size)}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           )}
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-800/50 rounded-xl p-3">
-            <p className="text-lg font-bold text-white">{msgCount}</p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Messages</p>
-          </div>
-          <div className="bg-slate-800/50 rounded-xl p-3">
-            <p className="text-lg font-bold text-white">{fileCount}</p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">Files</p>
-          </div>
-        </div>
+      {/* Modals */}
+      {showAddMember && (
+        <AddMemberModal
+          channelId={channel.id}
+          currentMembers={channel.members}
+          onClose={() => setShowAddMember(false)}
+        />
+      )}
 
-        <div>
-          <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
-            Members — {channelMembers.length}
-          </h5>
-          <div className="space-y-1">
-            {channelMembers.map(m => (
-              <div key={m.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-800/50 transition-colors">
-                <div className="relative">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
-                    {m.avatar}
-                  </div>
-                  <div
-                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900"
-                    style={{ backgroundColor: PRESENCE_COLORS[m.presenceStatus] }}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-slate-200 truncate">{m.name}</p>
-                  <p className="text-[10px] text-slate-500 truncate">{m.role}</p>
-                </div>
+      {showEditChannel && (
+        <EditChannelNameModal
+          channel={channel}
+          onClose={() => setShowEditChannel(false)}
+        />
+      )}
+
+      {/* Delete confirmation dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-red-400" />
               </div>
-            ))}
-          </div>
-        </div>
-
-        {fileCount > 0 && (
-          <div>
-            <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
-              Shared Files
-            </h5>
-            <div className="space-y-1">
-              {(messages[channel.id] || [])
-                .flatMap(m => m.attachments.map(a => ({ ...a, sender: m.senderName, time: m.timestamp })))
-                .slice(-5)
-                .reverse()
-                .map(f => (
-                  <div key={f.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-slate-800/30">
-                    <FileText size={14} className="text-blue-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-300 truncate">{f.name}</p>
-                      <p className="text-[10px] text-slate-500">{f.sender} · {formatFileSize(f.size)}</p>
-                    </div>
-                  </div>
-                ))}
+              <h3 className="text-lg font-semibold text-white mb-2">Delete Channel?</h3>
+              <p className="text-sm text-slate-400 mb-6">
+                This will permanently delete the channel and all message history. This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteChannel}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
 
