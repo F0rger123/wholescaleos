@@ -39,6 +39,13 @@ function applyTheme(themeId: string) {
   root.style.setProperty('--t-card-radius', theme.effects.cardRadius);
   root.style.setProperty('--t-glow-shadow', theme.effects.glowShadow);
   root.style.setProperty('--t-gradient', theme.effects.gradient);
+  
+  // Handle backdrop blur for glass theme
+  if (theme.effects.backdropBlur) {
+    root.style.setProperty('--t-backdrop-blur', theme.effects.backdropBlur);
+  } else {
+    root.style.setProperty('--t-backdrop-blur', 'none');
+  }
 
   // Set data-theme attribute for CSS selectors
   root.setAttribute('data-theme', themeId);
