@@ -21,6 +21,7 @@ export const isSupabaseConfigured =
   supabaseUrl !== 'your_project_url' &&
   supabaseAnonKey !== 'your_anon_key';
 
+// FIXED: Added global headers to help with CORS
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -28,6 +29,11 @@ export const supabase = isSupabaseConfigured
         persistSession: true,
         detectSessionInUrl: true,
         storageKey: 'wholescale-auth',
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'supabase-js-web',
+        },
       },
       realtime: {
         params: {
