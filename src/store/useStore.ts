@@ -1336,57 +1336,57 @@ export const useStore = create<AppState>((set, get) => ({
 
   setCurrentChannel: (channelId) => set({ currentChannelId: channelId }),
 
-sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
-  const user = get().currentUser;
-  if (!user) {
-    console.log('❌ No user, cannot send message');
-    return;
-  }
-  const now = new Date().toISOString();
-  const newId = uuidv4();
-  const msg: ChatMessage = {
-    id: newId, channelId, senderId: user.id,
-    senderName: user.name, senderAvatar: user.avatar,
-    content, timestamp: now, type,
-    mentions, reactions: [], replyToId,
-    attachments, edited: false, readBy: [user.id], deleted: false,
-  };
-  
-  console.log('✅ Sending message locally:', { id: newId, channelId, content, user: user.name });
-  
-  // Update UI immediately
-  set((s) => {
-    const channelMsgs = [...(s.messages[channelId] || []), msg];
-    return {
-      messages: { ...s.messages, [channelId]: channelMsgs },
-      channels: s.channels.map(ch => ch.id === channelId ? { ...ch, lastMessageAt: now } : ch),
+  sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
+    const user = get().currentUser;
+    if (!user) {
+      console.log('❌ No user, cannot send message');
+      return;
+    }
+    const now = new Date().toISOString();
+    const newId = uuidv4();
+    const msg: ChatMessage = {
+      id: newId, channelId, senderId: user.id,
+      senderName: user.name, senderAvatar: user.avatar,
+      content, timestamp: now, type,
+      mentions, reactions: [], replyToId,
+      attachments, edited: false, readBy: [user.id], deleted: false,
     };
-  });
-  
-  if (isSupabaseConfigured) {
-    console.log('📤 Saving message to Supabase...');
-    chatService.sendMessage({
-      id: newId, 
-      channel_id: channelId, 
-      user_id: user.id, 
-      sender_name: user.name,
-      sender_avatar: user.avatar,
-      content, 
-      type, 
-      mentions, 
-      reply_to_id: replyToId, 
-      attachments: attachments.length ? attachments : [],
-    })
-    .then((result) => {
-      console.log('✅ Message saved to Supabase successfully:', result);
-    })
-    .catch((error) => {
-      console.error('❌ Failed to save message to Supabase:', error);
+    
+    console.log('✅ Sending message locally:', { id: newId, channelId, content, user: user.name });
+    
+    // Update UI immediately
+    set((s) => {
+      const channelMsgs = [...(s.messages[channelId] || []), msg];
+      return {
+        messages: { ...s.messages, [channelId]: channelMsgs },
+        channels: s.channels.map(ch => ch.id === channelId ? { ...ch, lastMessageAt: now } : ch),
+      };
     });
-  } else {
-    console.log('⚠️ Supabase not configured, message only saved locally');
-  }
-},
+    
+    if (isSupabaseConfigured) {
+      console.log('📤 Saving message to Supabase...');
+      chatService.sendMessage({
+        id: newId, 
+        channel_id: channelId, 
+        user_id: user.id, 
+        sender_name: user.name,
+        sender_avatar: user.avatar,
+        content, 
+        type, 
+        mentions, 
+        reply_to_id: replyToId, 
+        attachments: attachments.length ? attachments : [],
+      })
+      .then((result) => {
+        console.log('✅ Message saved to Supabase successfully:', result);
+      })
+      .catch((error) => {
+        console.error('❌ Failed to save message to Supabase:', error);
+      });
+    } else {
+      console.log('⚠️ Supabase not configured, message only saved locally');
+    }
+  },
 
   editMessage: (channelId, messageId, newContent) =>
     set((s) => {
@@ -1451,11 +1451,13 @@ sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null
       };
     }),
 
-  // FIXED: Now saves channels to Supabase with proper error handling and null checks
+  // Enhanced createChannel with detailed logging
   createChannel: (name, type, members, description = '') => {
     const id = uuidv4();
     const user = get().currentUser;
     const now = new Date().toISOString();
+    
+    console.log('🎯 Creating channel:', { id, name, type, members, description, userId: user?.id });
     
     const newChannel = {
       id,
@@ -1471,14 +1473,19 @@ sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null
     };
     
     // Update UI immediately
-    set((s) => ({
-      channels: [...s.channels, newChannel],
-      messages: { ...s.messages, [id]: [] },
-      unreadCounts: { ...s.unreadCounts, [id]: 0 },
-    }));
+    set((s) => {
+      console.log('📝 Updating local state with new channel');
+      return {
+        channels: [...s.channels, newChannel],
+        messages: { ...s.messages, [id]: [] },
+        unreadCounts: { ...s.unreadCounts, [id]: 0 },
+      };
+    });
 
-    // Save to Supabase - FIXED: Use 'channels' table, not 'chat_channels'
+    // Save to Supabase
     if (isSupabaseConfigured && supabase && user) {
+      console.log('💾 Attempting to save channel to Supabase...');
+      
       supabase
         .from('channels')
         .insert([{
@@ -1492,28 +1499,33 @@ sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null
           last_message_at: now,
           created_at: now,
         }])
-        .then(({ error }) => {
+        .then(({ data, error }) => {
           if (error) {
-            console.error('Failed to save channel to Supabase:', error);
+            console.error('❌ Failed to save channel to Supabase:', error);
           } else {
-            console.log('Channel saved to Supabase successfully');
+            console.log('✅ Channel saved to Supabase successfully:', data);
             
-            // Also add channel members - FIXED: Added null check for supabase
+            // Also add channel members
             if (members && members.length > 0 && supabase) {
+              console.log('👥 Adding channel members:', members);
               supabase
                 .from('channel_members')
                 .insert(members.map(userId => ({
                   channel_id: id,
                   user_id: userId,
                 })))
-                .then(({ error: memberError }) => {
+                .then(({ data: memberData, error: memberError }) => {
                   if (memberError) {
-                    console.error('Failed to save channel members:', memberError);
+                    console.error('❌ Failed to save channel members:', memberError);
+                  } else {
+                    console.log('✅ Channel members saved successfully:', memberData);
                   }
                 });
             }
           }
         });
+    } else {
+      console.log('⚠️ Supabase not configured or user not logged in');
     }
 
     return id;
