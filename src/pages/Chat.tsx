@@ -4,7 +4,7 @@ import {
   Hash, Lock, Search, Plus, Send, Smile, Paperclip, Mic, Play, Pause, X,
   Reply, Edit3, Trash2, Download, File, Image as ImageIcon, Video,
   Volume2, Users, Check, CheckCheck, MessageSquare,
-  Phone, FileText, Settings, UserPlus, LogOut, Edit,
+  Phone, FileText, UserPlus, LogOut, Edit,
 } from 'lucide-react';
 import { useStore, QUICK_REACTIONS, PRESENCE_COLORS, type ChatMessage, type ChatAttachment, type ChatChannel } from '../store/useStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -703,21 +703,16 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
   const fileCount = (messages[channel.id] || []).reduce((sum, m) => sum + m.attachments.length, 0);
   
   const isCreator = currentUser?.id === channel.createdBy;
-  const isAdmin = isCreator; // For now, creator is admin
   const isMember = channel.members.includes(currentUser?.id || '');
 
   const handleDeleteChannel = () => {
-    if (confirm('Are you sure you want to delete this channel? This action cannot be undone.')) {
-      deleteChannel(channel.id);
-      onClose();
-    }
+    deleteChannel(channel.id);
+    onClose();
   };
 
   const handleLeaveChannel = () => {
-    if (confirm('Are you sure you want to leave this channel?')) {
-      leaveChannel(channel.id);
-      onClose();
-    }
+    leaveChannel(channel.id);
+    onClose();
   };
 
   const handleRemoveMember = (userId: string, userName: string) => {
@@ -759,7 +754,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
               {/* Channel actions for group chats */}
               {channel.type === 'group' && (
                 <div className="flex gap-1">
-                  {isAdmin && (
+                  {isCreator && (
                     <>
                       <button
                         onClick={() => setShowEditChannel(true)}
@@ -777,7 +772,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                       </button>
                     </>
                   )}
-                  {isMember && (
+                  {isMember && !isCreator && (
                     <button
                       onClick={handleLeaveChannel}
                       className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-600/20 hover:text-amber-400 transition-colors"
@@ -786,7 +781,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                       <LogOut size={14} />
                     </button>
                   )}
-                  {isAdmin && (
+                  {isCreator && (
                     <button
                       onClick={() => setShowDeleteConfirm(true)}
                       className="p-1.5 rounded-lg text-slate-400 hover:bg-red-600/20 hover:text-red-400 transition-colors"
@@ -821,7 +816,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
               <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
                 Members — {channelMembers.length}
               </h5>
-              {isAdmin && (
+              {isCreator && (
                 <button
                   onClick={() => setShowAddMember(true)}
                   className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1"
@@ -833,7 +828,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
             <div className="space-y-1">
               {channelMembers.map(m => {
                 const isCurrentUser = m.id === currentUser?.id;
-                const canRemove = isAdmin && !isCurrentUser && channel.type === 'group';
+                const canRemove = isCreator && !isCurrentUser && channel.type === 'group';
                 
                 return (
                   <div key={m.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-800/50 transition-colors group">
