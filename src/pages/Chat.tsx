@@ -3,8 +3,8 @@ import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
 import {
   Hash, Lock, Search, Plus, Send, Smile, Paperclip, Mic, Play, Pause, X,
   Reply, Edit3, Trash2, Download, File, Image as ImageIcon, Video,
-  Volume2, Users, Check, CheckCheck, MessageSquare,
-  Phone, FileText, UserPlus, LogOut, Edit,
+  Volume2, Check, CheckCheck, MessageSquare,
+  Phone, FileText, UserPlus, LogOut, Edit, Settings,
 } from 'lucide-react';
 import { useStore, QUICK_REACTIONS, PRESENCE_COLORS, type ChatMessage, type ChatAttachment, type ChatChannel } from '../store/useStore';
 import { v4 as uuidv4 } from 'uuid';
@@ -1754,7 +1754,7 @@ export function Chat() {
                 onClick={() => { setShowChannelInfo(!showChannelInfo); setShowSearchResults(false); }}
                 className={`p-2 rounded-lg transition-colors ${showChannelInfo ? 'bg-brand-500/20 text-brand-400' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
               >
-                <Users size={16} />
+                <Settings size={16} />
               </button>
             </div>
           </div>
