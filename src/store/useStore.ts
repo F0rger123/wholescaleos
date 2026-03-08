@@ -1537,19 +1537,70 @@ export const useStore = create<AppState>((set, get) => ({
     return id;
   },
 
-  deleteChannel: (channelId) =>
-    set((s) => {
-      const newMsgs = { ...s.messages };
-      delete newMsgs[channelId];
-      const newUnread = { ...s.unreadCounts };
-      delete newUnread[channelId];
-      return {
-        channels: s.channels.filter(ch => ch.id !== channelId),
-        messages: newMsgs,
-        unreadCounts: newUnread,
-        currentChannelId: s.currentChannelId === channelId ? (s.channels[0]?.id || null) : s.currentChannelId,
-      };
-    }),
+deleteChannel: (channelId) => {
+  const user = get().currentUser;
+  const channel = get().channels.find(ch => ch.id === channelId);
+  
+  console.log('🗑️ Attempting to delete channel:', { channelId, user: user?.id, isCreator: user?.id === channel?.createdBy });
+
+  // Check if user is creator (only creators should delete)
+  if (channel && channel.createdBy !== user?.id) {
+    console.error('❌ Only the creator can delete this channel');
+    return;
+  }
+
+  // Update local state immediately (optimistic update)
+  set((s) => {
+    const newMsgs = { ...s.messages };
+    delete newMsgs[channelId];
+    const newUnread = { ...s.unreadCounts };
+    delete newUnread[channelId];
+    
+    const newChannels = s.channels.filter(ch => ch.id !== channelId);
+    const newCurrentId = s.currentChannelId === channelId ? (newChannels[0]?.id || null) : s.currentChannelId;
+    
+    console.log('📝 Updated local state - channel removed');
+    
+    return {
+      channels: newChannels,
+      messages: newMsgs,
+      unreadCounts: newUnread,
+      currentChannelId: newCurrentId,
+    };
+  });
+
+  // Delete from Supabase
+  if (isSupabaseConfigured && supabase) {
+    console.log('💾 Sending delete to Supabase...');
+    
+    supabase
+      .from('channels')
+      .delete()
+      .eq('id', channelId)
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('❌ Failed to delete channel from Supabase:', error);
+          
+          // Revert the local deletion if Supabase fails
+          set((s) => {
+            const originalChannel = get().channels.find(ch => ch.id === channelId);
+            if (!originalChannel) return {};
+            
+            console.log('🔄 Reverting local deletion');
+            
+            return {
+              channels: [...s.channels, originalChannel],
+              currentChannelId: s.currentChannelId === null ? originalChannel.id : s.currentChannelId,
+            };
+          });
+          
+          alert('Failed to delete channel. Please try again.');
+        } else {
+          console.log('✅ Channel deleted successfully from Supabase:', data);
+        }
+      });
+  }
+},
 
   // NEW: Update channel name/description
   updateChannel: (channelId, updates) => {
