@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { leadsService, tasksService, teamService, chatService, notificationsService, mapService } from '../lib/supabase-service';
+import { themes } from '../styles/themes';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -948,6 +949,12 @@ interface AppState {
   currentTheme: string;
   setTheme: (theme: string) => void;
 
+  // NEW: Custom Theme Colors
+  customColors: Record<string, string>;
+  setCustomColor: (property: string, color: string) => void;
+  resetCustomColors: () => void;
+  getCurrentColors: () => Record<string, string>;
+
   // Notifications
   notifications: AppNotification[];
   addNotification: (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
@@ -1052,7 +1059,7 @@ export const useStore = create<AppState>((set, get) => ({
     };
     set((s) => ({ leads: [...s.leads, newLead] }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
+    if (teamId && isSupabaseConfigured && supabase) {
       leadsService.create({
         id: newId, team_id: teamId, name: lead.name, email: lead.email, phone: lead.phone,
         address: lead.propertyAddress, property_type: lead.propertyType, property_value: lead.estimatedValue,
@@ -1095,7 +1102,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteLead: (id) => {
     set((s) => ({ leads: s.leads.filter((l) => l.id !== id) }));
-    if (isSupabaseConfigured) leadsService.remove(id).catch(() => {});
+    if (isSupabaseConfigured && supabase) leadsService.remove(id).catch(() => {});
   },
 
   addTimelineEntry: (leadId, entry) =>
@@ -1134,7 +1141,7 @@ export const useStore = create<AppState>((set, get) => ({
         };
       });
 
-      if (isSupabaseConfigured) {
+      if (isSupabaseConfigured && supabase) {
         leadsService.update(leadId, { 
           status: newStatus,
           updated_at: now
@@ -1158,7 +1165,7 @@ export const useStore = create<AppState>((set, get) => ({
       } : m),
     }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
+    if (teamId && isSupabaseConfigured && supabase) {
       teamService.updatePresence(teamId, id, status).catch(() => {});
     }
   },
@@ -1169,7 +1176,7 @@ export const useStore = create<AppState>((set, get) => ({
   updateMemberRole: (id, role) => {
     set((s) => ({ team: s.team.map((m) => m.id === id ? { ...m, teamRole: role } : m) }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
+    if (teamId && isSupabaseConfigured && supabase) {
       teamService.updateRole(teamId, id, role).catch(() => {});
     }
   },
@@ -1180,7 +1187,7 @@ export const useStore = create<AppState>((set, get) => ({
   removeTeamMember: (id) => {
     set((s) => ({ team: s.team.filter((m) => m.id !== id) }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
+    if (teamId && isSupabaseConfigured && supabase) {
       teamService.removeMember(teamId, id).catch(() => {});
     }
   },
@@ -1189,29 +1196,33 @@ export const useStore = create<AppState>((set, get) => ({
     const newCode = generateInviteCode();
     set((s) => ({ teamConfig: { ...s.teamConfig, inviteCode: newCode } }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
-      import('../lib/supabase').then(({ supabase: sb }) => {
-        if (sb) {
-          sb.from('teams').update({ invite_code: newCode }).eq('id', teamId).then(() => {});
-        }
-      });
+    if (teamId && isSupabaseConfigured && supabase) {
+      supabase
+        .from('teams')
+        .update({ invite_code: newCode })
+        .eq('id', teamId)
+        .then(({ error }) => {
+          if (error) console.error('Failed to update invite code:', error);
+        });
     }
   },
 
   updateTeamConfig: (updates) => {
     set((s) => ({ teamConfig: { ...s.teamConfig, ...updates } }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
-      import('../lib/supabase').then(({ supabase: sb }) => {
-        if (sb) {
-          const dbUpdates: Record<string, unknown> = {};
-          if (updates.name !== undefined) dbUpdates.name = updates.name;
-          if (updates.inviteCode !== undefined) dbUpdates.invite_code = updates.inviteCode;
-          if (Object.keys(dbUpdates).length > 0) {
-            sb.from('teams').update(dbUpdates).eq('id', teamId).then(() => {});
-          }
-        }
-      });
+    if (teamId && isSupabaseConfigured && supabase) {
+      const dbUpdates: Record<string, unknown> = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.inviteCode !== undefined) dbUpdates.invite_code = updates.inviteCode;
+      if (Object.keys(dbUpdates).length > 0) {
+        supabase
+          .from('teams')
+          .update(dbUpdates)
+          .eq('id', teamId)
+          .then(({ error }) => {
+            if (error) console.error('Failed to update team:', error);
+          });
+      }
     }
   },
 
@@ -1223,7 +1234,7 @@ export const useStore = create<AppState>((set, get) => ({
     const now = new Date().toISOString();
     set((s) => ({ tasks: [...s.tasks, { ...task, id: newId, createdAt: now, completedAt: null }] }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
+    if (teamId && isSupabaseConfigured && supabase) {
       tasksService.create({
         id: newId, team_id: teamId, title: task.title, description: task.description,
         assigned_to: task.assignedTo || null, created_by: task.createdBy || null,
@@ -1235,7 +1246,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateTask: (id, updates) => {
     set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, ...updates } : t) }));
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       const dbUp: Record<string, unknown> = {};
       if (updates.title !== undefined) dbUp.title = updates.title;
       if (updates.description !== undefined) dbUp.description = updates.description;
@@ -1248,13 +1259,13 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteTask: (id) => {
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
-    if (isSupabaseConfigured) tasksService.remove(id).catch(() => {});
+    if (isSupabaseConfigured && supabase) tasksService.remove(id).catch(() => {});
   },
 
   completeTask: (id) => {
     const now = new Date().toISOString();
     set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'done' as TaskStatus, completedAt: now } : t) }));
-    if (isSupabaseConfigured) tasksService.complete(id).catch(() => {});
+    if (isSupabaseConfigured && supabase) tasksService.complete(id).catch(() => {});
   },
 
   // ── UI ────────────────────────────────────────────────────
@@ -1279,7 +1290,7 @@ export const useStore = create<AppState>((set, get) => ({
     const newId = uuidv4();
     set((s) => ({ buyers: [...s.buyers, { ...buyer, id: newId, createdAt: new Date().toISOString() }] }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
+    if (teamId && isSupabaseConfigured && supabase) {
       mapService.createBuyer({
         id: newId, team_id: teamId, name: buyer.name, email: buyer.email, phone: buyer.phone,
         lat: buyer.lat, lng: buyer.lng, budget_min: buyer.budgetMin, budget_max: buyer.budgetMax,
@@ -1289,7 +1300,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
   updateBuyer: (id, updates) => {
     set((s) => ({ buyers: s.buyers.map((b) => b.id === id ? { ...b, ...updates } : b) }));
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       const db: Record<string, unknown> = {};
       if (updates.name !== undefined) db.name = updates.name;
       if (updates.email !== undefined) db.email = updates.email;
@@ -1307,13 +1318,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
   deleteBuyer: (id) => {
     set((s) => ({ buyers: s.buyers.filter((b) => b.id !== id) }));
-    if (isSupabaseConfigured) mapService.deleteBuyer(id).catch(() => {});
+    if (isSupabaseConfigured && supabase) mapService.deleteBuyer(id).catch(() => {});
   },
   addCoverageArea: (area) => {
     const newId = uuidv4();
     set((s) => ({ coverageAreas: [...s.coverageAreas, { ...area, id: newId, createdAt: new Date().toISOString() }] }));
     const { teamId } = get();
-    if (teamId && isSupabaseConfigured) {
+    if (teamId && isSupabaseConfigured && supabase) {
       mapService.createCoverageArea({
         id: newId, team_id: teamId, name: area.name, coordinates: JSON.stringify(area.coordinates),
         color: area.color, opacity: area.opacity, notes: area.notes,
@@ -1323,7 +1334,7 @@ export const useStore = create<AppState>((set, get) => ({
   updateCoverageArea: (id, updates) => set((s) => ({ coverageAreas: s.coverageAreas.map((a) => a.id === id ? { ...a, ...updates } : a) })),
   deleteCoverageArea: (id) => {
     set((s) => ({ coverageAreas: s.coverageAreas.filter((a) => a.id !== id) }));
-    if (isSupabaseConfigured) mapService.deleteCoverageArea(id).catch(() => {});
+    if (isSupabaseConfigured && supabase) mapService.deleteCoverageArea(id).catch(() => {});
   },
   toggleMapFilter: (key) => set((s) => ({ mapFilters: { ...s.mapFilters, [key]: !s.mapFilters[key] } })),
   toggleLeadStatusFilter: (status) => set((s) => ({ mapFilters: { ...s.mapFilters, leadStatusFilters: { ...s.mapFilters.leadStatusFilters, [status]: !s.mapFilters.leadStatusFilters[status] } } })),
@@ -1369,7 +1380,7 @@ export const useStore = create<AppState>((set, get) => ({
       };
     });
     
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && supabase) {
       console.log('📤 Saving message to Supabase...');
       chatService.sendMessage({
         id: newId, 
@@ -1858,20 +1869,157 @@ deleteChannel: (channelId) => {
     set({ currentTheme: theme });
     if (typeof window !== 'undefined') {
       localStorage.setItem('wholescale-theme', theme);
+      
+      // Apply theme colors to DOM
+      const themeData = themes[theme];
+      if (themeData) {
+        const root = document.documentElement;
+        const customColors = get().customColors;
+        
+        // Apply base theme colors
+        Object.entries(themeData.colors).forEach(([key, value]) => {
+          const cssVar = `--t-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+          // Override with custom colors if they exist
+          if (customColors[key]) {
+            root.style.setProperty(cssVar, customColors[key]);
+          } else {
+            root.style.setProperty(cssVar, value as string);
+          }
+        });
+      }
     }
     if (supabase && isSupabaseConfigured) {
       supabase.auth.getUser().then(({ data }) => {
-        if (data?.user) {
-          supabase!.from('profiles').select('settings').eq('id', data.user.id).single().then(({ data: profile }) => {
-            const existing = (profile?.settings as Record<string, unknown>) || {};
-            supabase!.from('profiles').update({ settings: { ...existing, theme } }).eq('id', data.user!.id).then(({ error }) => {
-              if (error) console.error('Failed to save theme:', error);
-              else console.log('✅ Theme saved to Supabase:', theme);
+        if (data?.user && supabase) {
+          supabase
+            .from('profiles')
+            .select('settings')
+            .eq('id', data.user.id)
+            .single()
+            .then(({ data: profile }) => {
+              if (profile && supabase) {
+                const existing = (profile.settings as Record<string, unknown>) || {};
+                supabase
+                  .from('profiles')
+                  .update({ settings: { ...existing, theme } })
+                  .eq('id', data.user.id)
+                  .then(({ error }) => {
+                    if (error) console.error('Failed to save theme:', error);
+                    else console.log('✅ Theme saved to Supabase:', theme);
+                  });
+              }
             });
-          });
         }
       });
     }
+  },
+
+  // NEW: Custom Theme Colors
+  customColors: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        return JSON.parse(localStorage.getItem('wholescale-custom-colors') || '{}');
+      }
+      return {};
+    } catch {
+      return {};
+    }
+  })(),
+
+  setCustomColor: (property, color) => {
+    set((state) => {
+      const newColors = { ...state.customColors, [property]: color };
+      
+      // Save to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wholescale-custom-colors', JSON.stringify(newColors));
+      }
+      
+      // Apply to DOM immediately
+      const root = document.documentElement;
+      const cssVar = `--t-${property.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+      root.style.setProperty(cssVar, color);
+      
+      // Save to Supabase if user is logged in
+      const { currentUser } = get();
+      if (supabase && isSupabaseConfigured && currentUser) {
+        supabase
+          .from('profiles')
+          .select('settings')
+          .eq('id', currentUser.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile && supabase) {
+              const existing = (profile.settings as Record<string, unknown>) || {};
+              const customSettings = (existing.customColors as Record<string, string>) || {};
+              supabase
+                .from('profiles')
+                .update({ 
+                  settings: { 
+                    ...existing, 
+                    customColors: { ...customSettings, [property]: color } 
+                  } 
+                })
+                .eq('id', currentUser.id)
+                .then(({ error }) => {
+                  if (error) console.error('Failed to save custom color:', error);
+                });
+            }
+          });
+      }
+      
+      return { customColors: newColors };
+    });
+  },
+
+  resetCustomColors: () => {
+    set((state) => {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('wholescale-custom-colors');
+      }
+      
+      // Reset to theme defaults
+      const themeData = themes[state.currentTheme];
+      if (themeData && typeof window !== 'undefined') {
+        const root = document.documentElement;
+        Object.entries(themeData.colors).forEach(([key, value]) => {
+          const cssVar = `--t-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+          root.style.setProperty(cssVar, value as string);
+        });
+      }
+      
+      // Save to Supabase
+      const { currentUser } = get();
+      if (supabase && isSupabaseConfigured && currentUser) {
+        supabase
+          .from('profiles')
+          .select('settings')
+          .eq('id', currentUser.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile && supabase) {
+              const existing = (profile.settings as Record<string, unknown>) || {};
+              supabase
+                .from('profiles')
+                .update({ 
+                  settings: { ...existing, customColors: {} } 
+                })
+                .eq('id', currentUser.id)
+                .then(({ error }) => {
+                  if (error) console.error('Failed to reset custom colors:', error);
+                });
+            }
+          });
+      }
+      
+      return { customColors: {} };
+    });
+  },
+
+  getCurrentColors: () => {
+    const state = get();
+    const themeColors = themes[state.currentTheme]?.colors || themes.dark.colors;
+    return { ...themeColors, ...state.customColors };
   },
 
   // ── Notifications (empty — loaded from Supabase) ─────────
@@ -1886,26 +2034,26 @@ deleteChannel: (channelId) => {
       ],
     }));
     const { currentUser } = get();
-    if (isSupabaseConfigured && currentUser) {
+    if (isSupabaseConfigured && supabase && currentUser) {
       notificationsService.create({ id: newId, user_id: currentUser.id, type: notif.type, title: notif.title, message: notif.message }).catch(() => {});
     }
   },
 
   markNotificationRead: (id) => {
     set((s) => ({ notifications: s.notifications.map(n => n.id === id ? { ...n, read: true } : n) }));
-    if (isSupabaseConfigured) notificationsService.markRead(id).catch(() => {});
+    if (isSupabaseConfigured && supabase) notificationsService.markRead(id).catch(() => {});
   },
 
   markAllNotificationsRead: () => {
     set((s) => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) }));
     const { currentUser } = get();
-    if (isSupabaseConfigured && currentUser) notificationsService.markAllRead(currentUser.id).catch(() => {});
+    if (isSupabaseConfigured && supabase && currentUser) notificationsService.markAllRead(currentUser.id).catch(() => {});
   },
 
   clearAllNotifications: () => {
     set({ notifications: [] });
     const { currentUser } = get();
-    if (isSupabaseConfigured && currentUser) notificationsService.clearAll(currentUser.id).catch(() => {});
+    if (isSupabaseConfigured && supabase && currentUser) notificationsService.clearAll(currentUser.id).catch(() => {});
   },
 
   // ── Import ──────────────────────────────────────────────
