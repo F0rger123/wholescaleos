@@ -513,52 +513,86 @@ export function Imports() {
   const importFromPaste = (selectedLeads?: Set<number>) => {
     if (!parseResult) return;
     setIsLoading(true);
+    
+    // Debug logging
+    console.log('🚀 Starting import from paste...');
+    console.log('Selected leads:', selectedLeads || previewSelectedLeads);
+    console.log('Edited rows:', editedRows);
+    console.log('Column mappings:', pasteColumnMappings);
+    
     setTimeout(() => {
-      const leadsToUse = selectedLeads || previewSelectedLeads;
-      const rows = editedRows
-        .filter((_, idx) => leadsToUse.has(idx))
-        .map(row => {
-          const mapped: Record<string, string> = {};
-          pasteColumnMappings.forEach((m, idx) => {
-            if (m.targetField !== 'skip') {
-              mapped[m.targetField] = row[idx] || '';
-            }
+      try {
+        const leadsToUse = selectedLeads || previewSelectedLeads;
+        console.log('Leads to use:', leadsToUse);
+        
+        const rows = editedRows
+          .filter((_, idx) => leadsToUse.has(idx))
+          .map(row => {
+            const mapped: Record<string, string> = {};
+            pasteColumnMappings.forEach((m, idx) => {
+              if (m.targetField !== 'skip') {
+                mapped[m.targetField] = row[idx] || '';
+              }
+            });
+            
+            const lead = {
+              name: mapped.name || '',
+              email: mapped.email || '',
+              phone: mapped.phone || '',
+              address: mapped.propertyAddress || '',
+              value: parseValue(mapped.estimatedValue || '0'),
+              propertyType: mapPropertyType(mapped.propertyType || 'single-family') as PropertyType,
+              source: 'other' as LeadSource,
+              notes: mapped.notes || '',
+            };
+            
+            console.log('Mapped lead:', lead);
+            return lead;
+          }).filter(r => {
+            const valid = r.name.trim() || r.address.trim();
+            if (!valid) console.log('Filtering out invalid lead:', r);
+            return valid;
           });
-          return {
-            name: mapped.name || '',
-            email: mapped.email || '',
-            phone: mapped.phone || '',
-            address: mapped.propertyAddress || '',
-            value: parseValue(mapped.estimatedValue || '0'),
-            propertyType: mapPropertyType(mapped.propertyType || 'single-family') as PropertyType,
-            source: 'other' as LeadSource,
-            notes: mapped.notes || '',
-          };
-        }).filter(r => r.name.trim() || r.address.trim());
 
-      const imported = importLeadsFromData(rows);
-      const duplicates = rows.length - imported;
+        console.log(`✅ Found ${rows.length} valid leads to import`);
 
-      setImportResult({
-        total: editedRows.length,
-        imported,
-        skipped: editedRows.length - rows.length,
-        duplicates,
-      });
+        if (rows.length === 0) {
+          alert('No valid leads found to import');
+          setIsLoading(false);
+          return;
+        }
 
-      addImportHistory({
-        source: 'smart-paste',
-        sourceName: `Smart Paste — ${parseResult.rowCount} rows`,
-        status: 'completed',
-        totalRows: editedRows.length,
-        importedCount: imported,
-        skippedCount: editedRows.length - rows.length,
-        duplicateCount: duplicates,
-        errors: [],
-      });
+        const imported = importLeadsFromData(rows);
+        console.log(`📊 importLeadsFromData returned: ${imported} imported`);
+        
+        const duplicates = rows.length - imported;
 
-      setIsLoading(false);
-      setWizardStep(3);
+        setImportResult({
+          total: editedRows.length,
+          imported,
+          skipped: editedRows.length - rows.length,
+          duplicates,
+        });
+
+        addImportHistory({
+          source: 'smart-paste',
+          sourceName: `Smart Paste — ${parseResult.rowCount} rows`,
+          status: 'completed',
+          totalRows: editedRows.length,
+          importedCount: imported,
+          skippedCount: editedRows.length - rows.length,
+          duplicateCount: duplicates,
+          errors: [],
+        });
+
+        console.log('🎉 Import complete!');
+        setIsLoading(false);
+        setWizardStep(3);
+      } catch (error) {
+        console.error('❌ Error during import:', error);
+        alert(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setIsLoading(false);
+      }
     }, 1500);
   };
 

@@ -566,163 +566,482 @@ export interface ParsedPasteResult {
   rowCount: number;
 }
 
-const PASTE_PATTERNS: Record<string, { regex: RegExp; priority: number }> = {
-  email: { regex: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, priority: 99 },
-  phone: { regex: /^[\(\+]?\d[\d\s\-\(\)\.]{6,}\d$/, priority: 95 },
-  currency: { regex: /^\$[\d,]+(\.\d{2})?$/, priority: 94 },
-  url: { regex: /^https?:\/\/[^\s]+$/, priority: 93 },
-  date: { regex: /^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$|^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$|^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}$/i, priority: 90 },
-  address: { regex: /^\d+\s+[A-Za-z].*(?:St|Ave|Blvd|Dr|Rd|Ln|Ct|Way|Pl|Cir|Pkwy|Hwy|Street|Avenue|Boulevard|Drive|Road|Lane|Court|Circle|Parkway|Highway)\b/i, priority: 88 },
-  number: { regex: /^[\d,]+(\.\d+)?$/, priority: 50 },
-};
-
-function detectDelimiter(text: string): string {
-  const firstLines = text.split('\n').slice(0, 5).join('\n');
-  const counts: Record<string, number> = { '\t': 0, ',': 0, '|': 0, ';': 0 };
-
-  for (const char of Object.keys(counts)) {
-    counts[char] = (firstLines.match(new RegExp(char === '|' ? '\\|' : char, 'g')) || []).length;
-  }
-
-  if (counts['\t'] > 0) return '\t';
-  
-  const lines = text.trim().split('\n').slice(0, 5);
-  const commaCounts = lines.map(l => (l.match(/,/g) || []).length);
-  const consistentCommas = commaCounts.every(c => c === commaCounts[0] && c > 0);
-  if (consistentCommas) return ',';
-  
-  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  if (sorted[0][1] > 0) return sorted[0][0];
-  
-  return ',';
-}
-
-function isLikelyHeader(cells: string[]): boolean {
-  const headerScore = cells.filter(c => {
-    const cleaned = c.trim();
-    return cleaned.length > 0 && cleaned.length < 30 &&
-      !/^\d+$/.test(cleaned) && !/\$/.test(cleaned) &&
-      !/^[\(\+]?\d/.test(cleaned) && !/@/.test(cleaned);
-  }).length;
-  return headerScore >= cells.length * 0.6;
-}
-
-function detectColumnType(values: string[]): { type: ParsedColumn['detectedType']; confidence: number } {
-  const nonEmpty = values.filter(v => v.trim().length > 0);
-  if (nonEmpty.length === 0) return { type: 'text', confidence: 10 };
-
-  const typeCounts: Record<string, number> = {};
-  
-  for (const val of nonEmpty) {
-    const trimmed = val.trim();
-    let matched = false;
-    
-    for (const [typeName, { regex }] of Object.entries(PASTE_PATTERNS)) {
-      if (regex.test(trimmed)) {
-        typeCounts[typeName] = (typeCounts[typeName] || 0) + 1;
-        matched = true;
-        break;
-      }
-    }
-    
-    if (!matched) {
-      const words = trimmed.split(/\s+/);
-      // Detect names: 2-4 words, most starting with uppercase, no numbers, reasonable length
-      const looksLikeName = words.length >= 2 && words.length <= 4 &&
-        words.filter(w => /^[A-Z]/.test(w)).length >= words.length * 0.5 &&
-        trimmed.length < 40 && !/\d{3,}/.test(trimmed) && !/@/.test(trimmed) && !/\$/.test(trimmed);
-      if (looksLikeName) {
-        typeCounts['name'] = (typeCounts['name'] || 0) + 1;
-      } else {
-        typeCounts['text'] = (typeCounts['text'] || 0) + 1;
-      }
-    }
-  }
-
-  const sorted = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]);
-  if (sorted.length === 0) return { type: 'text', confidence: 10 };
-
-  const [topType, topCount] = sorted[0];
-  const ratio = topCount / nonEmpty.length;
-  const baseConfidence = ratio * 100;
-  const priority = PASTE_PATTERNS[topType]?.priority || 50;
-  const confidence = Math.round(Math.min(baseConfidence * (priority / 100) + 20, 99));
-
-  return {
-    type: topType as ParsedColumn['detectedType'],
-    confidence,
-  };
-}
-
-function generateHeaderName(colIndex: number, type: string): string {
-  const typeLabels: Record<string, string> = {
-    name: 'Name', email: 'Email', phone: 'Phone', address: 'Address',
-    currency: 'Value', number: 'Number', date: 'Date', url: 'URL', text: 'Text',
-  };
-  const label = typeLabels[type] || 'Column';
-  return `${label} ${colIndex + 1}`;
-}
-
 export function parsePastedData(text: string): ParsedPasteResult {
   if (!text.trim()) {
     return { rows: [], headers: [], columns: [], delimiter: ',', rowCount: 0 };
   }
 
-  const delimiter = detectDelimiter(text);
-  const rawLines = text.trim().split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  // Clean up the text - remove extra whitespace, normalize line endings
+  const cleanText = text
+    .replace(/\r\n/g, '\n') // Normalize line endings
+    .replace(/\r/g, '\n')
+    .trim();
+
+  const lines = cleanText.split('\n').filter(l => l.trim().length > 0);
   
-  if (rawLines.length === 0) {
-    return { rows: [], headers: [], columns: [], delimiter, rowCount: 0 };
+  if (lines.length === 0) {
+    return { rows: [], headers: [], columns: [], delimiter: ',', rowCount: 0 };
   }
 
-  const allRows = rawLines.map(line => {
-    if (delimiter === ',') {
-      const cells: string[] = [];
-      let current = '';
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"') {
-          inQuotes = !inQuotes;
-        } else if (ch === ',' && !inQuotes) {
-          cells.push(current.trim());
-          current = '';
-        } else {
-          current += ch;
+  // Try to detect the delimiter
+  let delimiter = detectDelimiterSmart(lines);
+  
+  // Parse rows based on delimiter
+  const allRows: string[][] = [];
+  
+  for (const line of lines) {
+    let cells: string[] = [];
+    
+    if (delimiter === 'smart') {
+      // Smart parsing for unstructured text
+      cells = parseUnstructuredText(line);
+    } else if (delimiter === ',') {
+      // Parse CSV with quote handling
+      cells = parseCSVLine(line);
+    } else if (delimiter === 'spaces') {
+      // Parse by multiple spaces
+      cells = line.split(/\s{2,}/).map(c => c.trim());
+    } else {
+      // Simple delimiter splitting (tab, pipe, semicolon)
+      cells = line.split(delimiter).map(c => c.trim());
+    }
+    
+    // If we got only one cell but there are clear multiple fields in the line,
+    // try to split by common patterns
+    if (cells.length === 1 && cells[0] === line && (line.includes(',') || line.includes('\t') || line.includes('|'))) {
+      // Try each delimiter again
+      for (const delim of ['\t', ',', '|', ';']) {
+        const split = line.split(delim).map(c => c.trim());
+        if (split.length > 1) {
+          cells = split;
+          delimiter = delim;
+          break;
         }
       }
-      cells.push(current.trim());
-      return cells;
     }
-    return line.split(delimiter).map(c => c.trim());
-  });
+    
+    // If still only one cell, try natural language parsing
+    if (cells.length === 1) {
+      cells = parseNaturalLanguage(line);
+    }
+    
+    allRows.push(cells);
+  }
 
+  // Normalize row lengths
   const maxCols = Math.max(...allRows.map(r => r.length));
   const normalized = allRows.map(r => {
     while (r.length < maxCols) r.push('');
     return r;
   });
 
-  const hasHeader = normalized.length > 1 && isLikelyHeader(normalized[0]);
+  // Detect if first row is headers
+  const hasHeader = detectHeaderSmart(normalized);
   const headers = hasHeader ? normalized[0] : [];
   const dataRows = hasHeader ? normalized.slice(1) : normalized;
 
-  const columns: ParsedColumn[] = [];
-  for (let col = 0; col < maxCols; col++) {
-    const values = dataRows.map(r => r[col] || '');
-    const { type, confidence } = detectColumnType(values);
-    const samples = values.filter(v => v.trim()).slice(0, 3);
-    const name = hasHeader && headers[col] ? headers[col] : generateHeaderName(col, type);
-
-    columns.push({ name, detectedType: type, confidence, samples });
+  // If we have no data rows, treat first row as data
+  if (dataRows.length === 0 && normalized.length > 0) {
+    return {
+      rows: normalized,
+      headers: [],
+      columns: detectColumnsFromData(normalized, []),
+      delimiter: delimiter === 'smart' ? 'auto' : delimiter,
+      rowCount: normalized.length,
+    };
   }
+
+  // Detect column types from data rows
+  const columns = detectColumnsFromData(dataRows, headers);
 
   return {
     rows: dataRows,
-    headers: hasHeader ? headers : columns.map(c => c.name),
+    headers,
     columns,
-    delimiter,
+    delimiter: delimiter === 'smart' ? 'auto' : delimiter,
     rowCount: dataRows.length,
+  };
+}
+
+// Smart delimiter detection
+function detectDelimiterSmart(lines: string[]): string {
+  if (lines.length === 0) return ',';
+  
+  // Check first few lines
+  const sampleLines = lines.slice(0, Math.min(5, lines.length));
+  
+  // Common delimiters to check
+  const delimiters = [
+    { char: '\t', name: 'tab', regex: /\t/g },
+    { char: ',', name: 'comma', regex: /,/g },
+    { char: '|', name: 'pipe', regex: /\|/g },
+    { char: ';', name: 'semicolon', regex: /;/g },
+    { char: ':', name: 'colon', regex: /:/g }
+  ];
+  
+  const scores: Record<string, number> = {};
+  
+  for (const delim of delimiters) {
+    let totalCount = 0;
+    let consistentCount = true;
+    let prevCount: number | null = null;
+    
+    for (const line of sampleLines) {
+      const count = (line.match(delim.regex) || []).length;
+      totalCount += count;
+      
+      if (prevCount !== null && count !== prevCount && count > 0) {
+        consistentCount = false;
+      }
+      if (count > 0) {
+        prevCount = count;
+      }
+    }
+    
+    // Score based on count and consistency
+    if (totalCount > 0) {
+      // Higher score for consistent counts across lines
+      scores[delim.char] = totalCount * (consistentCount ? 3 : 1);
+    }
+  }
+  
+  // Find best delimiter
+  let bestDelim = ',';
+  let bestScore = 0;
+  
+  for (const [delim, score] of Object.entries(scores)) {
+    if (score > bestScore) {
+      bestScore = score;
+      bestDelim = delim;
+    }
+  }
+  
+  // If we found a good delimiter, use it
+  if (bestScore > 2) {
+    return bestDelim;
+  }
+  
+  // Check for multiple spaces as delimiter
+  let spaceLines = 0;
+  for (const line of sampleLines) {
+    if (/\s{2,}/.test(line)) {
+      spaceLines++;
+    }
+  }
+  if (spaceLines >= sampleLines.length / 2) {
+    return 'spaces';
+  }
+  
+  return 'smart';
+}
+
+// Parse CSV line with quotes
+function parseCSVLine(line: string): string[] {
+  const cells: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Escaped quote
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      cells.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  
+  cells.push(current.trim());
+  return cells;
+}
+
+// Parse unstructured text intelligently
+function parseUnstructuredText(line: string): string[] {
+  const trimmed = line.trim();
+  if (!trimmed) return [];
+  
+  // Try to detect common patterns in order of specificity
+  
+  // Pattern 1: Email with name and phone
+  // Example: "John Smith <john@email.com> (555) 123-4567"
+  const emailNamePattern = /^([^<]+)<([^>]+)>\s*(.*)$/;
+  const emailMatch = trimmed.match(emailNamePattern);
+  if (emailMatch) {
+    const parts = [emailMatch[1].trim(), emailMatch[2].trim(), emailMatch[3].trim()].filter(p => p);
+    if (parts.length > 1) return parts;
+  }
+  
+  // Pattern 2: Comma-separated with optional quotes
+  if (trimmed.includes(',')) {
+    const parts = trimmed.split(',').map(p => p.trim()).filter(p => p);
+    if (parts.length > 1) return parts;
+  }
+  
+  // Pattern 3: Tab-separated
+  if (trimmed.includes('\t')) {
+    const parts = trimmed.split('\t').map(p => p.trim()).filter(p => p);
+    if (parts.length > 1) return parts;
+  }
+  
+  // Pattern 4: Pipe-separated
+  if (trimmed.includes('|')) {
+    const parts = trimmed.split('|').map(p => p.trim()).filter(p => p);
+    if (parts.length > 1) return parts;
+  }
+  
+  // Pattern 5: Multiple spaces as delimiter
+  if (/\s{2,}/.test(trimmed)) {
+    const parts = trimmed.split(/\s{2,}/).map(p => p.trim()).filter(p => p);
+    if (parts.length > 1) return parts;
+  }
+  
+  // Pattern 6: Natural language with key information
+  return parseNaturalLanguage(trimmed);
+}
+
+// Parse natural language text to extract fields
+function parseNaturalLanguage(text: string): string[] {
+  const fields: string[] = [];
+  
+  // Try to extract email
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const emailMatch = text.match(emailRegex);
+  if (emailMatch) {
+    fields.push(emailMatch[0]);
+    text = text.replace(emailMatch[0], '').trim();
+  }
+  
+  // Try to extract phone number (various formats)
+  const phoneRegex = /(\+?1?\s*\(?[0-9]{3}\)?[\s.-]?[0-9]{3}[\s.-]?[0-9]{4})/;
+  const phoneMatch = text.match(phoneRegex);
+  if (phoneMatch) {
+    fields.push(phoneMatch[1]);
+    text = text.replace(phoneMatch[1], '').trim();
+  }
+  
+  // Try to extract dollar amount
+  const moneyRegex = /\$?\s*([\d,]+(?:\.\d{2})?)\s*(?:k|K|thousand)?/;
+  const moneyMatch = text.match(moneyRegex);
+  if (moneyMatch) {
+    let value = moneyMatch[1];
+    if (text.toLowerCase().includes('k') && !value.includes(',')) {
+      value = (parseFloat(value.replace(/,/g, '')) * 1000).toString();
+    }
+    fields.push(`$${value}`);
+    text = text.replace(moneyMatch[0], '').trim();
+  }
+  
+  // Try to extract address (number + street name + city/state)
+  const addressRegex = /\d+\s+[A-Za-z\s,]+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Road|Rd|Lane|Ln|Court|Ct|Way|Circle|Cir|Parkway|Pkwy|Highway|Hwy)/i;
+  const addressMatch = text.match(addressRegex);
+  if (addressMatch) {
+    fields.push(addressMatch[0].trim());
+    text = text.replace(addressMatch[0], '').trim();
+  }
+  
+  // Try to extract name (usually at beginning)
+  const nameRegex = /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})/;
+  const nameMatch = text.match(nameRegex);
+  if (nameMatch) {
+    fields.unshift(nameMatch[1]); // Put name first
+    text = text.replace(nameMatch[1], '').trim();
+  }
+  
+  // If we have multiple fields, return them
+  if (fields.length > 0) {
+    return fields;
+  }
+  
+  // If all else fails, return the whole line
+  return [text];
+}
+
+// Smart header detection
+function detectHeaderSmart(rows: string[][]): boolean {
+  if (rows.length < 2) return false;
+  
+  const firstRow = rows[0];
+  const secondRow = rows[1];
+  
+  let headerScore = 0;
+  let dataScore = 0;
+  
+  for (let i = 0; i < firstRow.length; i++) {
+    const header = firstRow[i]?.trim() || '';
+    const data = secondRow[i]?.trim() || '';
+    
+    if (!header && !data) continue;
+    
+    // Headers are usually:
+    // - Short (under 30 chars)
+    // - Don't contain numbers
+    // - Don't look like emails/phones
+    // - Often single words or simple phrases
+    if (header.length > 0 && header.length < 30) {
+      if (/^[a-zA-Z\s]+$/.test(header) && !/\d/.test(header)) {
+        headerScore += 3;
+      }
+      if (!header.includes('@') && !header.match(/\(?\d{3}\)?/)) {
+        headerScore += 2;
+      }
+      // Check if it looks like a field name (capitalized, no special chars)
+      if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/.test(header)) {
+        headerScore += 2;
+      }
+    }
+    
+    // Data rows often contain:
+    // - Numbers, emails, phones
+    // - Longer text
+    if (data) {
+      if (/\d/.test(data)) dataScore += 1;
+      if (data.includes('@')) dataScore += 3;
+      if (data.match(/\(?\d{3}\)?/)) dataScore += 3;
+      if (data.includes('$')) dataScore += 2;
+      if (data.length > 30) dataScore += 1;
+    }
+  }
+  
+  return headerScore > dataScore;
+}
+
+// Detect column types from data
+function detectColumnsFromData(dataRows: string[][], headers: string[]): ParsedColumn[] {
+  if (dataRows.length === 0) return [];
+  
+  const colCount = Math.max(...dataRows.map(r => r.length), headers.length);
+  const columns: ParsedColumn[] = [];
+  
+  for (let col = 0; col < colCount; col++) {
+    const values = dataRows.map(r => r[col] || '').filter(v => v.trim().length > 0);
+    const { type, confidence } = detectFieldType(values);
+    const samples = values.slice(0, 3);
+    
+    // Use header if available and it looks reasonable
+    let name = headers[col] || `Column ${col + 1}`;
+    
+    // Clean up header names
+    if (name) {
+      name = name
+        .replace(/[_\-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      // Capitalize words
+      name = name.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ');
+    }
+    
+    columns.push({ 
+      name, 
+      detectedType: type, 
+      confidence, 
+      samples 
+    });
+  }
+  
+  return columns;
+}
+
+// Enhanced field type detection
+function detectFieldType(values: string[]): { type: ParsedColumn['detectedType']; confidence: number } {
+  if (values.length === 0) {
+    return { type: 'text', confidence: 0 };
+  }
+
+  // Count matches for each type
+  const typeMatches: Record<string, number> = {
+    email: 0,
+    phone: 0,
+    currency: 0,
+    url: 0,
+    date: 0,
+    address: 0,
+    name: 0,
+    number: 0,
+    text: 0
+  };
+  
+  // Enhanced regex patterns
+  const patterns = {
+    email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+    phone: /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/,
+    currency: /^\$?\s*\d{1,3}(?:[,\s]\d{3})*(?:\.\d{2})?\s*$|^\d+\s*dollars?$/i,
+    url: /^https?:\/\/[^\s]+$|^www\.[^\s]+$/,
+    date: /^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$|^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},?\s*\d{4}$/i,
+    address: /^\d+\s+[a-z0-9\s,]+(?:street|st|avenue|ave|boulevard|blvd|drive|dr|road|rd|lane|ln|court|ct|way|circle|cir|parkway|pkwy|highway|hwy)\b/i,
+    number: /^\d+(?:\.\d+)?$/,
+    name: /^[a-z]+(?:[\s-][a-z]+)*$/i,
+  };
+
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+
+    let matched = false;
+
+    // Check each pattern
+    for (const [type, pattern] of Object.entries(patterns)) {
+      if (pattern.test(trimmed)) {
+        typeMatches[type]++;
+        matched = true;
+        break;
+      }
+    }
+
+    // If no pattern matched, check if it looks like a name
+    if (!matched) {
+      const words = trimmed.split(/\s+/);
+      // Names are usually 2-4 words, each capitalized or with common prefixes
+      if (words.length >= 2 && words.length <= 4) {
+        const capitalizedWords = words.filter(w => /^[A-Z][a-z]*$/.test(w)).length;
+        if (capitalizedWords >= words.length - 1) {
+          typeMatches.name++;
+          continue;
+        }
+      }
+      
+      // Check if it looks like an address even without keywords
+      if (/^\d+\s+[a-zA-Z]/.test(trimmed)) {
+        typeMatches.address++;
+        continue;
+      }
+      
+      typeMatches.text++;
+    }
+  }
+
+  // Find the type with the most matches
+  let bestType = 'text';
+  let bestCount = 0;
+  let totalScored = 0;
+
+  for (const [type, count] of Object.entries(typeMatches)) {
+    totalScored += count;
+    if (count > bestCount) {
+      bestCount = count;
+      bestType = type;
+    }
+  }
+
+  // Calculate confidence
+  const confidence = totalScored > 0 
+    ? Math.round((bestCount / totalScored) * 100)
+    : 0;
+
+  return {
+    type: bestType as ParsedColumn['detectedType'],
+    confidence: Math.min(confidence, 99)
   };
 }
 
