@@ -22,6 +22,15 @@ function applyTheme(themeId: string) {
   root.style.setProperty('--t-text-muted', c.textMuted);
   root.style.setProperty('--t-border', c.border);
   root.style.setProperty('--t-border-light', c.borderLight);
+  
+  // NEW PROPERTIES ADDED HERE
+  root.style.setProperty('--t-on-primary', c.onPrimary);
+  root.style.setProperty('--t-on-surface', c.onSurface);
+  root.style.setProperty('--t-on-background', c.onBackground);
+  root.style.setProperty('--t-on-accent', c.onAccent);
+  root.style.setProperty('--t-border-subtle', c.borderSubtle);
+  root.style.setProperty('--t-border-strong', c.borderStrong);
+
   root.style.setProperty('--t-success', c.success);
   root.style.setProperty('--t-warning', c.warning);
   root.style.setProperty('--t-error', c.error);
