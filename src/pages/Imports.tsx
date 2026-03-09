@@ -857,11 +857,31 @@ export function Imports() {
                       value={pastedText}
                       onChange={(e) => setPastedText(e.target.value)}
                       onPaste={(e) => {
-                        // Allow natural paste behavior
+                        // Get pasted text
                         const text = e.clipboardData.getData('text');
                         if (text) {
                           e.preventDefault();
-                          setPastedText(text);
+                          
+                          // If current text is empty, just set it
+                          if (!pastedText.trim()) {
+                            setPastedText(text);
+                            return;
+                          }
+                          
+                          // Ask user if they want to append or replace
+                          const action = window.confirm(
+                            'You already have text in the editor. Do you want to APPEND the new data?\n\n' +
+                            '• Click OK to APPEND (add to existing)\n' +
+                            '• Click CANCEL to REPLACE (overwrite)'
+                          );
+                          
+                          if (action) {
+                            // Append with a newline between
+                            setPastedText(prev => prev + '\n' + text);
+                          } else {
+                            // Replace
+                            setPastedText(text);
+                          }
                         }
                       }}
                       placeholder={`Paste your data here...\n\nExamples:\nJohn Smith, 1420 Oak St Austin TX, (555) 234-5678, john@email.com, $385,000\nJane Doe, 780 Maple Ave Dallas TX, (555) 876-5432, jane@email.com, $620,000\n\nOr tab-separated:\nName\tAddress\tPhone\tEmail\tValue\nJohn Smith\t1420 Oak St\t(555) 234-5678\tjohn@email.com\t$385,000`}
@@ -1550,12 +1570,12 @@ export function Imports() {
                                 .map((mapping, index) => {
                                    // Find the original column index for this mapping
                                    const originalColIndex = pasteColumnMappings.findIndex(m => m.sourceColumn === mapping.sourceColumn);
-        return (
-            <td key={index} className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
-                {row[originalColIndex] || <span className="text-slate-600 italic">—</span>}
-            </td>
-        );
-    })
+                                     return (
+                                     <td key={index} className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
+                                       {row[originalColIndex] || <span className="text-slate-600 italic">—</span>}
+                                          </td>
+                                    );
+                                  })
                           }
                         </tr>
                       );
