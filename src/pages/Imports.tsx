@@ -185,6 +185,9 @@ export function Imports() {
   // History filter
   const [historyFilter, setHistoryFilter] = useState<ImportSource | 'all'>('all');
 
+  // Connection error message
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
   // ─── Reset ──────────────────────────────────────────────
 
   const resetWizard = useCallback(() => {
@@ -214,9 +217,6 @@ export function Imports() {
   }, []);
 
   // ─── Connect / Fetch data ──────────────────────────────
-
-  // Connection error message
-  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const connectGoogleSheets = async () => {
     setConnectionError(null);
@@ -564,7 +564,7 @@ export function Imports() {
 
   // ─── Helper function to check if a row has valid data ─────────────────
 
-  const isRowValid = (row: Record<string, string> | string[], rowIdx: number): boolean => {
+  const isRowValid = (row: Record<string, string> | string[]): boolean => {
     if (selectedSource === 'google-sheets' && isSheetRow(row)) {
       const nameCol = columnMappings.find(m => m.targetField === 'name')?.sourceColumn;
       const addressCol = columnMappings.find(m => m.targetField === 'propertyAddress')?.sourceColumn;
@@ -575,21 +575,6 @@ export function Imports() {
       return !!((nameColIdx >= 0 && row[nameColIdx]) || (addressColIdx >= 0 && row[addressColIdx]));
     }
     return false;
-  };
-
-  // ─── Helper function to get cell value ────────────────────────────────
-
-  const getCellValue = (
-    row: Record<string, string> | string[], 
-    mapping: ColumnMapping, 
-    colIdx: number
-  ): string => {
-    if (isSheetRow(row)) {
-      return row[mapping.sourceColumn] || '';
-    } else if (isPasteRow(row)) {
-      return row[colIdx] || '';
-    }
-    return '';
   };
 
   // ─── Render ───────────────────────────────────────────────────────────
@@ -1068,16 +1053,16 @@ export function Imports() {
                       <thead>
                         <tr className="bg-slate-800">
                           <th className="px-3 py-2 text-left text-slate-400 font-semibold w-10">#</th>
-                          {pasteColumnMappings.map((m, idx) => {
-                            const col = parseResult.columns[idx];
-                            const typeColor = DETECTED_TYPE_COLORS[col?.detectedType || 'text'];
+                          {pasteColumnMappings.map((mapping, idx) => {
+                            const columnData = parseResult?.columns[idx];
+                            const typeColor = DETECTED_TYPE_COLORS[columnData?.detectedType || 'text'];
                             return (
                               <th key={idx} className="px-3 py-2 text-left whitespace-nowrap">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-slate-300 font-semibold">
-                                    {BASE_TARGET_FIELDS.find(f => f.value === m.targetField)?.label || 
-                                     customFields.find(f => f.field_key === m.targetField)?.name || 
-                                     m.sourceColumn}
+                                    {BASE_TARGET_FIELDS.find(f => f.value === mapping.targetField)?.label || 
+                                     customFields.find(f => f.field_key === mapping.targetField)?.name || 
+                                     mapping.sourceColumn}
                                   </span>
                                   <span className={`text-[8px] px-1 py-0.5 rounded ${typeColor.bg} ${typeColor.text}`}>
                                     {typeColor.label}
@@ -1241,11 +1226,11 @@ export function Imports() {
                       <thead>
                         <tr className="bg-slate-800">
                           <th className="px-3 py-2 text-left text-slate-400 font-semibold">#</th>
-                          {columnMappings.filter(m => m.targetField !== 'skip').map(m => (
-                            <th key={m.sourceColumn} className="px-3 py-2 text-left text-slate-400 font-semibold whitespace-nowrap">
-                              {BASE_TARGET_FIELDS.find(f => f.value === m.targetField)?.label || 
-                               customFields.find(f => f.field_key === m.targetField)?.name || 
-                               m.targetField}
+                          {columnMappings.filter(m => m.targetField !== 'skip').map(mapping => (
+                            <th key={mapping.sourceColumn} className="px-3 py-2 text-left text-slate-400 font-semibold whitespace-nowrap">
+                              {BASE_TARGET_FIELDS.find(f => f.value === mapping.targetField)?.label || 
+                               customFields.find(f => f.field_key === mapping.targetField)?.name || 
+                               mapping.targetField}
                             </th>
                           ))}
                         </tr>
@@ -1254,9 +1239,9 @@ export function Imports() {
                         {sheetData.slice(0, 5).map((row, i) => (
                           <tr key={i} className="border-t border-slate-800 hover:bg-slate-800/50">
                             <td className="px-3 py-2 text-slate-500">{i + 1}</td>
-                            {columnMappings.filter(m => m.targetField !== 'skip').map(m => (
-                              <td key={m.sourceColumn} className="px-3 py-2 text-slate-300 whitespace-nowrap">
-                                {row[m.sourceColumn] || '—'}
+                            {columnMappings.filter(m => m.targetField !== 'skip').map(mapping => (
+                              <td key={mapping.sourceColumn} className="px-3 py-2 text-slate-300 whitespace-nowrap">
+                                {row[mapping.sourceColumn] || '—'}
                               </td>
                             ))}
                           </tr>
@@ -1425,7 +1410,7 @@ export function Imports() {
                       const data = selectedSource === 'google-sheets' ? sheetData : editedRows;
                       
                       for (let i = 0; i < total; i++) {
-                        if (isRowValid(data[i], i)) {
+                        if (isRowValid(data[i])) {
                           allValid.add(i);
                         }
                       }
@@ -1505,19 +1490,19 @@ export function Imports() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase">#</th>
                       {selectedSource === 'google-sheets' 
-                        ? columnMappings.filter(m => m.targetField !== 'skip').map(m => (
-                            <th key={m.sourceColumn} className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase whitespace-nowrap">
-                              {BASE_TARGET_FIELDS.find(f => f.value === m.targetField)?.label || 
-                               customFields.find(f => f.field_key === m.targetField)?.name || 
-                               m.targetField}
+                        ? columnMappings.filter(m => m.targetField !== 'skip').map(mapping => (
+                            <th key={mapping.sourceColumn} className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase whitespace-nowrap">
+                              {BASE_TARGET_FIELDS.find(f => f.value === mapping.targetField)?.label || 
+                               customFields.find(f => f.field_key === mapping.targetField)?.name || 
+                               mapping.targetField}
                             </th>
                           ))
-                        : pasteColumnMappings.filter(m => m.targetField !== 'skip').map((m, idx) => {
+                        : pasteColumnMappings.filter(m => m.targetField !== 'skip').map((mapping, idx) => {
                             return (
                               <th key={idx} className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase whitespace-nowrap">
-                                {BASE_TARGET_FIELDS.find(f => f.value === m.targetField)?.label || 
-                                 customFields.find(f => f.field_key === m.targetField)?.name || 
-                                 m.sourceColumn}
+                                {BASE_TARGET_FIELDS.find(f => f.value === mapping.targetField)?.label || 
+                                 customFields.find(f => f.field_key === mapping.targetField)?.name || 
+                                 mapping.sourceColumn}
                               </th>
                             );
                           })
@@ -1526,7 +1511,7 @@ export function Imports() {
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {(selectedSource === 'google-sheets' ? sheetData : editedRows).map((row, rowIdx) => {
-                      const isValid = isRowValid(row, rowIdx);
+                      const isValid = isRowValid(row);
 
                       return (
                         <tr 
@@ -1555,18 +1540,22 @@ export function Imports() {
                           </td>
                           <td className="px-4 py-3 text-sm text-slate-500">{rowIdx + 1}</td>
                           {selectedSource === 'google-sheets' && isSheetRow(row)
-                            ? columnMappings.filter(m => m.targetField !== 'skip').map(m => (
-                                <td key={m.sourceColumn} className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
-                                  {row[m.sourceColumn] || <span className="text-slate-600 italic">—</span>}
+                            ? columnMappings.filter(m => m.targetField !== 'skip').map(mapping => (
+                                <td key={mapping.sourceColumn} className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
+                                  {row[mapping.sourceColumn] || <span className="text-slate-600 italic">—</span>}
                                 </td>
                               ))
-                            : isPasteRow(row) && pasteColumnMappings.filter(m => m.targetField !== 'skip').map((m, colIdx) => {
-                                return (
-                                  <td key={colIdx} className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
-                                    {row[colIdx] || <span className="text-slate-600 italic">—</span>}
-                                  </td>
-                                );
-                              })
+                            : isPasteRow(row) && pasteColumnMappings
+                               .filter(m => m.targetField !== 'skip')
+                                .map((mapping, index) => {
+                                   // Find the original column index for this mapping
+                                   const originalColIndex = pasteColumnMappings.findIndex(m => m.sourceColumn === mapping.sourceColumn);
+        return (
+            <td key={index} className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
+                {row[originalColIndex] || <span className="text-slate-600 italic">—</span>}
+            </td>
+        );
+    })
                           }
                         </tr>
                       );
