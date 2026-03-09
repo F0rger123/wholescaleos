@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
 import { NotificationPanel } from './NotificationPanel';
+import { ThemeSwitcher } from './ThemeSwitcher';
 import { StatusIndicator } from './StatusIndicator';
 import { JoinTeamModal } from './JoinTeamModal';
 import { CreateTeamModal } from './CreateTeamModal';
@@ -330,6 +331,8 @@ export function Layout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <ThemeSwitcher />
+            <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
             <NotificationPanel />
             <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
             <UserMenu />
