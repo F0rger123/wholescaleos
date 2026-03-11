@@ -73,13 +73,13 @@ export function ThemeSwitcher() {
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[9998]"
             onClick={() => setIsOpen(false)}
           />
           
           {/* Theme Picker */}
           <div 
-            className="absolute right-0 mt-2 w-96 max-h-[80vh] overflow-hidden rounded-xl shadow-2xl z-50 border flex flex-col"
+            className="absolute right-0 mt-2 w-96 max-h-[80vh] overflow-hidden rounded-xl shadow-2xl z-[9999] border flex flex-col"
             style={{
               backgroundColor: 'var(--t-surface)',
               borderColor: 'var(--t-border)',
