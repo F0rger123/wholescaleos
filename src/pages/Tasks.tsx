@@ -1,4 +1,3 @@
-import { useState, useMemo } from 'react';
 import {
   Plus, CheckCircle2, Circle, Clock, AlertTriangle, X, Calendar,
   User, ChevronDown, Filter, Zap, Search, Flag, Link2, ArrowUpDown,
@@ -25,7 +24,8 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: 'low', label: 'Low' },
 ];
 
-const inputClass = 'w-full px-3 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/50';
+const inputClass = 'w-full px-3 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-offset-0';
+const inputStyle = { backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border-light)', color: 'var(--t-text)', focusRingColor: 'var(--t-primary)' };
 
 export function Tasks() {
   const { tasks, team, leads, addTask, updateTask, deleteTask, completeTask } = useStore();
@@ -113,11 +113,11 @@ export function Tasks() {
   };
 
   const getDueColor = (t: Task) => {
-    if (t.status === 'done' || t.status === 'cancelled') return 'text-slate-500';
+    if (t.status === 'done' || t.status === 'cancelled') return { color: 'var(--t-text-muted)' };
     const d = parseISO(t.dueDate);
-    if (isPast(d)) return 'text-red-400';
-    if (isToday(d)) return 'text-amber-400';
-    return 'text-slate-400';
+    if (isPast(d)) return { color: 'var(--t-error)' };
+    if (isToday(d)) return { color: 'var(--t-warning)' };
+    return { color: 'var(--t-text-muted)' };
   };
 
   const TaskRow = ({ task }: { task: Task }) => {
@@ -129,53 +129,56 @@ export function Tasks() {
 
     return (
       <div
-        className={`group bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-slate-700 transition-all ${isDone || isCancelled ? 'opacity-60' : ''}`}
+        style={{
+          backgroundColor: 'var(--t-bg)',
+          borderColor: 'var(--t-border)',
+        }}
+        className={`group border rounded-xl p-4 hover:border-opacity-100 transition-all ${isDone || isCancelled ? 'opacity-60' : ''}`}
       >
         <div className="flex items-start gap-3">
-          {/* Check button */}
           <button
             onClick={() => isDone ? updateTask(task.id, { status: 'todo', completedAt: null }) : completeTask(task.id)}
-            className={`mt-0.5 shrink-0 transition-colors ${isDone ? 'text-emerald-400' : 'text-slate-600 hover:text-emerald-400'}`}
+            style={{ color: isDone ? 'var(--t-success)' : 'var(--t-text-muted)' }}
+            className="mt-0.5 shrink-0 transition-colors hover:text-opacity-100"
+            onMouseEnter={(e) => !isDone && (e.currentTarget.style.color = 'var(--t-success)')}
+            onMouseLeave={(e) => !isDone && (e.currentTarget.style.color = 'var(--t-text-muted)')}
           >
             {isDone ? <CheckCircle2 size={20} /> : <Circle size={20} />}
           </button>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className={`text-sm font-medium ${isDone ? 'text-slate-500 line-through' : 'text-white'}`}>{task.title}</h3>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pc.bg} ${pc.text}`}>
+              <h3 style={{ color: isDone ? 'var(--t-text-muted)' : 'var(--t-text)' }} className={`text-sm font-medium ${isDone ? 'line-through' : ''}`}>{task.title}</h3>
+              <span style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }} className="text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {task.priority.toUpperCase()}
               </span>
-              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+              <span style={{ backgroundColor: 'var(--t-primary-dim)', color: 'var(--t-primary)' }} className="text-[10px] font-medium px-2 py-0.5 rounded-full">
                 {task.status === 'in-progress' ? 'In Progress' : task.status.charAt(0).toUpperCase() + task.status.slice(1)}
               </span>
             </div>
 
             {task.description && (
-              <p className="text-xs text-slate-500 mt-1 line-clamp-2">{task.description}</p>
+              <p style={{ color: 'var(--t-text-muted)' }} className="text-xs mt-1 line-clamp-2">{task.description}</p>
             )}
 
             <div className="flex items-center gap-4 mt-2 flex-wrap">
-              {/* Assignee */}
-              <span className="inline-flex items-center gap-1.5 text-xs text-slate-400">
-                <span className="w-5 h-5 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[9px] font-bold text-white">
+              <span style={{ color: 'var(--t-text-muted)' }} className="inline-flex items-center gap-1.5 text-xs">
+                <span className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[9px] font-bold text-white">
                   {getMemberAvatar(task.assignedTo)}
                 </span>
                 {getMemberName(task.assignedTo)}
               </span>
 
-              {/* Due */}
-              <span className={`inline-flex items-center gap-1 text-xs ${getDueColor(task)}`}>
+              <span style={getDueColor(task)} className="inline-flex items-center gap-1 text-xs">
                 <Calendar size={12} />
                 {getDueLabel(task.dueDate)}
                 {isPast(parseISO(task.dueDate)) && task.status !== 'done' && task.status !== 'cancelled' && (
-                  <AlertTriangle size={11} className="text-red-400" />
+                  <AlertTriangle size={11} style={{ color: 'var(--t-error)' }} />
                 )}
               </span>
 
-              {/* Lead link */}
               {leadName && (
-                <span className="inline-flex items-center gap-1 text-xs text-brand-400">
+                <span style={{ color: 'var(--t-primary)' }} className="inline-flex items-center gap-1 text-xs">
                   <Link2 size={11} />
                   {leadName}
                 </span>
@@ -183,7 +186,6 @@ export function Tasks() {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             {!isDone && !isCancelled && (
               <select
@@ -193,15 +195,32 @@ export function Tasks() {
                   if (newStatus === 'done') completeTask(task.id);
                   else updateTask(task.id, { status: newStatus });
                 }}
-                className="text-xs bg-slate-800 border border-slate-700 text-slate-300 rounded-lg px-2 py-1 focus:outline-none"
+                style={{
+                  backgroundColor: 'var(--t-surface)',
+                  borderColor: 'var(--t-border-light)',
+                  color: 'var(--t-text-secondary)',
+                }}
+                className="text-xs rounded-lg px-2 py-1 focus:outline-none border"
               >
                 {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             )}
-            <button onClick={() => startEdit(task)} className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-800 rounded-lg">
+            <button
+              onClick={() => startEdit(task)}
+              style={{ color: 'var(--t-text-muted)' }}
+              className="p-1.5 hover:text-opacity-100 rounded-lg transition-colors"
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--t-text)', e.currentTarget.style.backgroundColor = 'var(--t-surface)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--t-text-muted)', e.currentTarget.style.backgroundColor = 'transparent')}
+            >
               <Flag size={14} />
             </button>
-            <button onClick={() => deleteTask(task.id)} className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg">
+            <button
+              onClick={() => deleteTask(task.id)}
+              style={{ color: 'var(--t-text-muted)' }}
+              className="p-1.5 hover:text-opacity-100 rounded-lg transition-colors"
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--t-error)', e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--t-text-muted)', e.currentTarget.style.backgroundColor = 'transparent')}
+            >
               <X size={14} />
             </button>
           </div>
@@ -210,124 +229,158 @@ export function Tasks() {
     );
   };
 
-  // Board view grouping
   const boardColumns: { status: TaskStatus; label: string; color: string }[] = [
-    { status: 'todo', label: 'To Do', color: 'border-slate-500' },
-    { status: 'in-progress', label: 'In Progress', color: 'border-brand-500' },
-    { status: 'done', label: 'Done', color: 'border-emerald-500' },
+    { status: 'todo', label: 'To Do', color: 'var(--t-border)' },
+    { status: 'in-progress', label: 'In Progress', color: 'var(--t-primary)' },
+    { status: 'done', label: 'Done', color: 'var(--t-success)' },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Tasks</h1>
-          <p className="text-slate-400 text-sm mt-1">Manage team assignments and to-dos</p>
+          <h1 style={{ color: 'var(--t-text)' }} className="text-2xl font-bold">Tasks</h1>
+          <p style={{ color: 'var(--t-text-muted)' }} className="text-sm mt-1">Manage team assignments and to-dos</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex bg-slate-800 rounded-xl p-0.5">
+          <div style={{ backgroundColor: 'var(--t-surface)' }} className="flex rounded-xl p-0.5">
             <button
               onClick={() => setViewMode('list')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${viewMode === 'list' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              style={{
+                backgroundColor: viewMode === 'list' ? 'var(--t-primary)' : 'transparent',
+                color: viewMode === 'list' ? 'var(--t-text)' : 'var(--t-text-muted)',
+              }}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors hover:text-opacity-100"
             >
               List
             </button>
             <button
               onClick={() => setViewMode('board')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${viewMode === 'board' ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              style={{
+                backgroundColor: viewMode === 'board' ? 'var(--t-primary)' : 'transparent',
+                color: viewMode === 'board' ? 'var(--t-text)' : 'var(--t-text-muted)',
+              }}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors hover:text-opacity-100"
             >
               Board
             </button>
           </div>
           <button
             onClick={() => { setShowAdd(true); setEditingId(null); setForm(emptyForm()); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl transition-colors"
+            style={{
+              backgroundColor: 'var(--t-primary)',
+              color: 'var(--t-text)',
+            }}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-xl transition-colors hover:opacity-90"
           >
             <Plus size={16} /> New Task
           </button>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: 'Total', value: stats.total, icon: Zap, color: 'bg-slate-800 text-white' },
-          { label: 'To Do', value: stats.todo, icon: Circle, color: 'bg-slate-500/10 text-slate-400' },
-          { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'bg-brand-500/10 text-brand-400' },
-          { label: 'Done', value: stats.done, icon: CheckCircle2, color: 'bg-emerald-500/10 text-emerald-400' },
-          { label: 'Due Today', value: stats.todayDue, icon: Calendar, color: 'bg-amber-500/10 text-amber-400' },
-          { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, color: 'bg-red-500/10 text-red-400' },
+          { label: 'Total', value: stats.total, icon: Zap, bgStyle: { backgroundColor: 'var(--t-surface)' }, textColor: 'var(--t-text)' },
+          { label: 'To Do', value: stats.todo, icon: Circle, bgStyle: { backgroundColor: 'rgba(148, 163, 184, 0.1)' }, textColor: 'var(--t-text-muted)' },
+          { label: 'In Progress', value: stats.inProgress, icon: Clock, bgStyle: { backgroundColor: 'var(--t-primary-dim)' }, textColor: 'var(--t-primary)' },
+          { label: 'Done', value: stats.done, icon: CheckCircle2, bgStyle: { backgroundColor: 'var(--t-success-dim)' }, textColor: 'var(--t-success)' },
+          { label: 'Due Today', value: stats.todayDue, icon: Calendar, bgStyle: { backgroundColor: 'var(--t-warning-dim)' }, textColor: 'var(--t-warning)' },
+          { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, bgStyle: { backgroundColor: 'var(--t-error-dim)' }, textColor: 'var(--t-error)' },
         ].map((s) => (
-          <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-center">
-            <s.icon size={16} className={`mx-auto mb-1 ${s.color.split(' ')[1]}`} />
-            <p className="text-xl font-bold text-white">{s.value}</p>
-            <p className="text-[10px] text-slate-500 uppercase tracking-wider">{s.label}</p>
+          <div key={s.label} style={{ ...s.bgStyle, backgroundColor: s.bgStyle.backgroundColor, borderColor: 'var(--t-border)' }} className="border rounded-xl p-3 text-center">
+            <s.icon size={16} style={{ color: s.textColor }} className="mx-auto mb-1" />
+            <p style={{ color: 'var(--t-text)' }} className="text-xl font-bold">{s.value}</p>
+            <p style={{ color: 'var(--t-text-muted)' }} className="text-[10px] uppercase tracking-wider">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={16} style={{ color: 'var(--t-text-muted)' }} className="absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tasks..."
-            className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+            style={{
+              backgroundColor: 'var(--t-surface)',
+              borderColor: 'var(--t-border-light)',
+              color: 'var(--t-text)',
+            }}
+            className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border placeholder:opacity-60 focus:outline-none focus:ring-2 focus:ring-offset-0"
           />
         </div>
 
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-1.5 px-3 py-2.5 text-sm rounded-xl border transition-colors ${
-            showFilters ? 'bg-brand-600/20 border-brand-500 text-brand-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-          }`}
+          style={{
+            backgroundColor: showFilters ? 'rgba(var(--t-primary-rgb), 0.2)' : 'var(--t-surface)',
+            borderColor: showFilters ? 'var(--t-primary)' : 'var(--t-border-light)',
+            color: showFilters ? 'var(--t-primary)' : 'var(--t-text-muted)',
+          }}
+          className="flex items-center gap-1.5 px-3 py-2.5 text-sm rounded-xl border transition-colors"
         >
           <Filter size={14} /> Filters <ChevronDown size={12} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
         </button>
 
         <button
           onClick={() => setSortBy(sortBy === 'priority' ? 'due' : sortBy === 'due' ? 'status' : 'priority')}
-          className="flex items-center gap-1.5 px-3 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-slate-400 hover:text-white transition-colors"
+          style={{
+            backgroundColor: 'var(--t-surface)',
+            borderColor: 'var(--t-border-light)',
+            color: 'var(--t-text-muted)',
+          }}
+          className="flex items-center gap-1.5 px-3 py-2.5 text-sm rounded-xl border transition-colors hover:text-opacity-100"
         >
           <ArrowUpDown size={14} /> {sortBy === 'priority' ? 'Priority' : sortBy === 'due' ? 'Due Date' : 'Status'}
         </button>
       </div>
 
-      {/* Filter row */}
       {showFilters && (
-        <div className="flex flex-wrap gap-3 p-4 bg-slate-900 border border-slate-800 rounded-xl">
+        <div style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)' }} className="flex flex-wrap gap-3 p-4 border rounded-xl">
           <div>
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Status</label>
+            <label style={{ color: 'var(--t-text-muted)' }} className="text-[10px] uppercase tracking-wider block mb-1">Status</label>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as TaskStatus | 'all')}
-              className="text-xs bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 focus:outline-none"
+              style={{
+                backgroundColor: 'var(--t-surface)',
+                borderColor: 'var(--t-border-light)',
+                color: 'var(--t-text)',
+              }}
+              className="text-xs rounded-lg px-3 py-2 focus:outline-none border"
             >
               <option value="all">All</option>
               {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Priority</label>
+            <label style={{ color: 'var(--t-text-muted)' }} className="text-[10px] uppercase tracking-wider block mb-1">Priority</label>
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value as TaskPriority | 'all')}
-              className="text-xs bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 focus:outline-none"
+              style={{
+                backgroundColor: 'var(--t-surface)',
+                borderColor: 'var(--t-border-light)',
+                color: 'var(--t-text)',
+              }}
+              className="text-xs rounded-lg px-3 py-2 focus:outline-none border"
             >
               <option value="all">All</option>
               {PRIORITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Assigned To</label>
+            <label style={{ color: 'var(--t-text-muted)' }} className="text-[10px] uppercase tracking-wider block mb-1">Assigned To</label>
             <select
               value={filterAssignee}
               onChange={(e) => setFilterAssignee(e.target.value)}
-              className="text-xs bg-slate-800 border border-slate-700 text-white rounded-lg px-3 py-2 focus:outline-none"
+              style={{
+                backgroundColor: 'var(--t-surface)',
+                borderColor: 'var(--t-border-light)',
+                color: 'var(--t-text)',
+              }}
+              className="text-xs rounded-lg px-3 py-2 focus:outline-none border"
             >
               <option value="all">All Members</option>
               {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
@@ -336,43 +389,43 @@ export function Tasks() {
         </div>
       )}
 
-      {/* Add / Edit Form */}
       {(showAdd || editingId) && (
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-5 space-y-4">
+        <div style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border-light)' }} className="border rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-white">{editingId ? 'Edit Task' : 'New Task'}</h3>
-            <button onClick={() => { setShowAdd(false); setEditingId(null); }} className="text-slate-400 hover:text-white"><X size={16} /></button>
+            <h3 style={{ color: 'var(--t-text)' }} className="text-sm font-semibold">{editingId ? 'Edit Task' : 'New Task'}</h3>
+            <button onClick={() => { setShowAdd(false); setEditingId(null); }} style={{ color: 'var(--t-text-muted)' }} className="hover:text-opacity-100"><X size={16} /></button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
-              <label className="text-xs text-slate-400 mb-1 block">Title *</label>
-              <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} className={inputClass} placeholder="Task title..." />
+              <label style={{ color: 'var(--t-text-muted)' }} className="text-xs mb-1 block">Title *</label>
+              <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border-light)', color: 'var(--t-text)' }} className={inputClass} placeholder="Task title..." />
             </div>
             <div className="md:col-span-2">
-              <label className="text-xs text-slate-400 mb-1 block">Description</label>
-              <textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} className={`${inputClass} h-20 resize-none`} placeholder="Task details..." />
+              <label style={{ color: 'var(--t-text-muted)' }} className="text-xs mb-1 block">Description</label>
+              <textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border-light)', color: 'var(--t-text)' }} className={`${inputClass} h-20 resize-none`} placeholder="Task details..." />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Assign To</label>
-              <select value={form.assignedTo} onChange={(e) => setForm(f => ({ ...f, assignedTo: e.target.value }))} className={inputClass}>
+              <label style={{ color: 'var(--t-text-muted)' }} className="text-xs mb-1 block">Assign To</label>
+              <select value={form.assignedTo} onChange={(e) => setForm(f => ({ ...f, assignedTo: e.target.value }))} style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border-light)', color: 'var(--t-text)' }} className={inputClass}>
                 {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Due Date</label>
-              <input type="datetime-local" value={form.dueDate.slice(0, 16)} onChange={(e) => setForm(f => ({ ...f, dueDate: new Date(e.target.value).toISOString() }))} className={inputClass} />
+              <label style={{ color: 'var(--t-text-muted)' }} className="text-xs mb-1 block">Due Date</label>
+              <input type="datetime-local" value={form.dueDate.slice(0, 16)} onChange={(e) => setForm(f => ({ ...f, dueDate: new Date(e.target.value).toISOString() }))} style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border-light)', color: 'var(--t-text)' }} className={inputClass} />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Priority</label>
+              <label style={{ color: 'var(--t-text-muted)' }} className="text-xs mb-1 block">Priority</label>
               <div className="flex gap-2">
                 {PRIORITY_OPTIONS.map(o => (
                   <button key={o.value} onClick={() => setForm(f => ({ ...f, priority: o.value }))}
-                    className={`flex-1 py-2 text-xs rounded-lg border font-medium transition-colors ${
-                      form.priority === o.value
-                        ? `${PRIORITY_COLORS[o.value].bg} ${PRIORITY_COLORS[o.value].text} border-current`
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                    }`}
+                    style={{
+                      backgroundColor: form.priority === o.value ? 'var(--t-primary)' : 'var(--t-surface)',
+                      borderColor: form.priority === o.value ? 'var(--t-primary)' : 'var(--t-border-light)',
+                      color: form.priority === o.value ? 'var(--t-text)' : 'var(--t-text-muted)',
+                    }}
+                    className="flex-1 py-2 text-xs rounded-lg border font-medium transition-colors"
                   >
                     {o.label}
                   </button>
@@ -380,10 +433,11 @@ export function Tasks() {
               </div>
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Link to Lead (optional)</label>
+              <label style={{ color: 'var(--t-text-muted)' }} className="text-xs mb-1 block">Link to Lead (optional)</label>
               <select
                 value={form.leadId || ''}
                 onChange={(e) => setForm(f => ({ ...f, leadId: e.target.value || undefined }))}
+                style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border-light)', color: 'var(--t-text)' }}
                 className={inputClass}
               >
                 <option value="">No lead</option>
@@ -393,66 +447,65 @@ export function Tasks() {
           </div>
 
           <div className="flex gap-2">
-            <button onClick={handleSave} className="flex items-center gap-1 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-xl font-medium">
+            <button onClick={handleSave} style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }} className="flex items-center gap-1 px-4 py-2 text-sm rounded-xl font-medium transition-colors hover:opacity-90">
               <CheckCircle2 size={14} /> {editingId ? 'Update Task' : 'Create Task'}
             </button>
-            <button onClick={() => { setShowAdd(false); setEditingId(null); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm rounded-xl">Cancel</button>
+            <button onClick={() => { setShowAdd(false); setEditingId(null); }} style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border-light)', color: 'var(--t-text-secondary)' }} className="px-4 py-2 text-sm rounded-xl border">Cancel</button>
           </div>
         </div>
       )}
 
-      {/* Task List View */}
       {viewMode === 'list' && (
         <div className="space-y-2">
           {filtered.length === 0 && (
             <div className="text-center py-12">
-              <CheckCircle2 size={48} className="mx-auto text-slate-700 mb-3" />
-              <p className="text-sm text-slate-500">No tasks found</p>
+              <CheckCircle2 size={48} style={{ color: 'var(--t-border)' }} className="mx-auto mb-3" />
+              <p style={{ color: 'var(--t-text-muted)' }} className="text-sm">No tasks found</p>
             </div>
           )}
           {filtered.map((task) => <TaskRow key={task.id} task={task} />)}
         </div>
       )}
 
-      {/* Board View */}
       {viewMode === 'board' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {boardColumns.map(col => {
             const colTasks = filtered.filter(t => t.status === col.status);
             return (
               <div key={col.status} className="space-y-2">
-                <div className={`flex items-center gap-2 p-3 bg-slate-900 border-l-4 ${col.color} rounded-lg`}>
-                  <h3 className="text-sm font-semibold text-white flex-1">{col.label}</h3>
-                  <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">{colTasks.length}</span>
+                <div style={{ backgroundColor: 'var(--t-bg)', borderLeftColor: col.color }} className="flex items-center gap-2 p-3 border-l-4 rounded-lg">
+                  <h3 style={{ color: 'var(--t-text)' }} className="text-sm font-semibold flex-1">{col.label}</h3>
+                  <span style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text-muted)' }} className="text-xs px-2 py-0.5 rounded-full">{colTasks.length}</span>
                 </div>
                 {colTasks.map(task => (
                   <div
                     key={task.id}
-                    className="bg-slate-900 border border-slate-800 rounded-xl p-3 hover:border-slate-700 transition-colors cursor-pointer"
+                    style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)' }}
+                    className="border rounded-xl p-3 hover:border-opacity-100 transition-colors cursor-pointer"
                     onClick={() => startEdit(task)}
                   >
                     <div className="flex items-center gap-2 mb-1.5">
-                      <span className={`w-2 h-2 rounded-full ${PRIORITY_COLORS[task.priority].dot}`} />
-                      <span className={`text-[10px] font-bold ${PRIORITY_COLORS[task.priority].text}`}>
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--t-primary)' }} />
+                      <span style={{ color: 'var(--t-primary)' }} className="text-[10px] font-bold">
                         {task.priority.toUpperCase()}
                       </span>
                     </div>
-                    <h4 className="text-sm font-medium text-white mb-1">{task.title}</h4>
+                    <h4 style={{ color: 'var(--t-text)' }} className="text-sm font-medium mb-1">{task.title}</h4>
                     {task.description && (
-                      <p className="text-xs text-slate-500 line-clamp-2 mb-2">{task.description}</p>
+                      <p style={{ color: 'var(--t-text-muted)' }} className="text-xs line-clamp-2 mb-2">{task.description}</p>
                     )}
                     <div className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
+                      <span style={{ color: 'var(--t-text-muted)' }} className="inline-flex items-center gap-1 text-[11px]">
                         <User size={11} /> {getMemberName(task.assignedTo).split(' ')[0]}
                       </span>
-                      <span className={`inline-flex items-center gap-1 text-[11px] ${getDueColor(task)}`}>
+                      <span style={getDueColor(task)} className="inline-flex items-center gap-1 text-[11px]">
                         <Clock size={11} /> {getDueLabel(task.dueDate)}
                       </span>
                     </div>
                   </div>
                 ))}
                 {colTasks.length === 0 && (
-                  <div className="text-center py-6 text-xs text-slate-600 bg-slate-900/50 border border-dashed border-slate-800 rounded-xl">
+                  <div style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.5)', borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }} className="text-center py-6 text-xs border-dashed border rounded-xl">
                     No tasks
                   </div>
                 )}
@@ -463,4 +516,3 @@ export function Tasks() {
       )}
     </div>
   );
-}

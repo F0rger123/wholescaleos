@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { 
   Home, TrendingUp, DollarSign, PieChart, 
   RefreshCw, Save, ChevronDown, ChevronUp, Download,
@@ -197,7 +197,7 @@ export function Calculators() {
       type: activeCalculator,
       leadId: selectedLeadId || undefined,
       inputs: getCurrentInputs(),
-      results: getCurrentResults(),
+      results: getCurrentResults() as Record<string, any>,
       notes: scenarioNotes,
     });
 
@@ -230,7 +230,7 @@ export function Calculators() {
       name: scenarioName,
       leadId: selectedLeadId || undefined,
       inputs: getCurrentInputs(),
-      results: getCurrentResults(),
+      results: getCurrentResults() as Record<string, any>,
       notes: scenarioNotes,
     });
 
@@ -245,8 +245,8 @@ export function Calculators() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Real Estate Calculators</h1>
-        <p className="text-slate-400 text-sm mt-1">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>Real Estate Calculators</h1>
+        <p className="text-sm mt-1" style={{ color: 'var(--t-text-secondary)' }}>
           Analyze deals, project profits, and make data-driven decisions
         </p>
       </div>
@@ -254,21 +254,27 @@ export function Calculators() {
       {/* Calculator Type Selector */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { id: 'wholesale', label: 'Wholesale Deal', icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-          { id: 'fixnflip', label: 'Fix & Flip', icon: Home, color: 'text-green-400', bg: 'bg-green-500/15' },
-          { id: 'rental', label: 'Rental Property', icon: DollarSign, color: 'text-purple-400', bg: 'bg-purple-500/15' },
-          { id: 'brrrr', label: 'BRRRR Method', icon: RefreshCw, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+          { id: 'wholesale', label: 'Wholesale Deal', icon: TrendingUp, color: 'var(--t-primary)', bg: 'var(--t-primary-dim)' },
+          { id: 'fixnflip', label: 'Fix & Flip', icon: Home, color: 'var(--t-success)', bg: 'rgba(16, 185, 129, 0.15)' },
+          { id: 'rental', label: 'Rental Property', icon: DollarSign, color: 'var(--t-accent)', bg: 'rgba(139, 92, 246, 0.15)' },
+          { id: 'brrrr', label: 'BRRRR Method', icon: RefreshCw, color: 'var(--t-warning)', bg: 'rgba(245, 158, 11, 0.15)' },
         ].map(calc => (
           <button
             key={calc.id}
             onClick={() => setActiveCalculator(calc.id as CalculatorType)}
             className={`p-4 rounded-xl border transition-all ${
               activeCalculator === calc.id 
-                ? `${calc.bg} ${calc.color} border-${calc.color.split('-')[1]}-500/50 ring-2 ring-${calc.color.split('-')[1]}-500/20` 
-                : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800'
+                ? 'ring-2' 
+                : 'hover:bg-opacity-80'
             }`}
+            style={{
+              backgroundColor: activeCalculator === calc.id ? calc.bg : 'var(--t-surface-hover)',
+              color: activeCalculator === calc.id ? calc.color : 'var(--t-text-muted)',
+              borderColor: activeCalculator === calc.id ? calc.color : 'var(--t-border)',
+              '--tw-ring-color': activeCalculator === calc.id ? calc.color : 'transparent',
+            } as React.CSSProperties}
           >
-            <calc.icon size={24} className={activeCalculator === calc.id ? calc.color : 'text-slate-400'} />
+            <calc.icon size={24} style={{ color: activeCalculator === calc.id ? calc.color : 'var(--t-text-muted)' }} />
             <p className="text-sm font-medium mt-2">{calc.label}</p>
           </button>
         ))}
@@ -277,17 +283,18 @@ export function Calculators() {
       {/* Main Calculator Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Input Panel */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderWidth: '1px' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              {activeCalculator === 'wholesale' && <><TrendingUp className="text-blue-400" /> Wholesale Deal Inputs</>}
-              {activeCalculator === 'fixnflip' && <><Home className="text-green-400" /> Fix & Flip Inputs</>}
-              {activeCalculator === 'rental' && <><DollarSign className="text-purple-400" /> Rental Property Inputs</>}
-              {activeCalculator === 'brrrr' && <><RefreshCw className="text-amber-400" /> BRRRR Method Inputs</>}
+            <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
+              {activeCalculator === 'wholesale' && <><TrendingUp style={{ color: 'var(--t-primary)' }} /> Wholesale Deal Inputs</>}
+              {activeCalculator === 'fixnflip' && <><Home style={{ color: 'var(--t-success)' }} /> Fix & Flip Inputs</>}
+              {activeCalculator === 'rental' && <><DollarSign style={{ color: 'var(--t-accent)' }} /> Rental Property Inputs</>}
+              {activeCalculator === 'brrrr' && <><RefreshCw style={{ color: 'var(--t-warning)' }} /> BRRRR Method Inputs</>}
             </h2>
             <button
               onClick={() => setShowDetails(!showDetails)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="transition-colors"
+              style={{ color: 'var(--t-text-secondary)' }}
             >
               {showDetails ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
             </button>
@@ -297,64 +304,69 @@ export function Calculators() {
           {activeCalculator === 'wholesale' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">After Repair Value (ARV)</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>After Repair Value (ARV)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={wholesaleInputs.arv}
                     onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, arv: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Repair Costs</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Repair Costs</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={wholesaleInputs.repairs}
                     onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, repairs: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Desired Profit</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Desired Profit</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={wholesaleInputs.desiredProfit}
                     onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, desiredProfit: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               {showDetails && (
                 <>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Holding Costs</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Holding Costs</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={wholesaleInputs.holdingCosts}
                         onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, holdingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Closing Costs</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Closing Costs</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={wholesaleInputs.closingCosts}
                         onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, closingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
@@ -367,76 +379,82 @@ export function Calculators() {
           {activeCalculator === 'fixnflip' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Purchase Price</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Purchase Price</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={flipInputs.purchasePrice}
                     onChange={(e) => setFlipInputs({ ...flipInputs, purchasePrice: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Renovation Costs</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Renovation Costs</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={flipInputs.renovationCosts}
                     onChange={(e) => setFlipInputs({ ...flipInputs, renovationCosts: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">After Repair Value (ARV)</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>After Repair Value (ARV)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={flipInputs.arv}
                     onChange={(e) => setFlipInputs({ ...flipInputs, arv: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               {showDetails && (
                 <>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Holding Costs</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Holding Costs</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={flipInputs.holdingCosts}
                         onChange={(e) => setFlipInputs({ ...flipInputs, holdingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Closing Costs</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Closing Costs</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={flipInputs.closingCosts}
                         onChange={(e) => setFlipInputs({ ...flipInputs, closingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Selling Costs (%)</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Selling Costs (%)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>%</span>
                       <input
                         type="number"
                         value={(flipInputs.sellingCosts / flipInputs.arv * 100).toFixed(1)}
                         onChange={(e) => setFlipInputs({ ...flipInputs, sellingCosts: (Number(e.target.value) / 100) * flipInputs.arv })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
@@ -449,113 +467,122 @@ export function Calculators() {
           {activeCalculator === 'rental' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Purchase Price</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Purchase Price</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={rentalInputs.purchasePrice}
                     onChange={(e) => setRentalInputs({ ...rentalInputs, purchasePrice: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Down Payment (%)</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Down Payment (%)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>%</span>
                   <input
                     type="number"
                     value={rentalInputs.downPaymentPercent}
                     onChange={(e) => setRentalInputs({ ...rentalInputs, downPaymentPercent: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Interest Rate (%)</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Interest Rate (%)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>%</span>
                   <input
                     type="number"
                     step="0.125"
                     value={rentalInputs.interestRate}
                     onChange={(e) => setRentalInputs({ ...rentalInputs, interestRate: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Monthly Rent</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Monthly Rent</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={rentalInputs.monthlyRent}
                     onChange={(e) => setRentalInputs({ ...rentalInputs, monthlyRent: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               {showDetails && (
                 <>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Annual Property Taxes</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Annual Property Taxes</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={rentalInputs.propertyTaxes}
                         onChange={(e) => setRentalInputs({ ...rentalInputs, propertyTaxes: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Annual Insurance</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Annual Insurance</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={rentalInputs.insurance}
                         onChange={(e) => setRentalInputs({ ...rentalInputs, insurance: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Annual Maintenance</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Annual Maintenance</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={rentalInputs.maintenance}
                         onChange={(e) => setRentalInputs({ ...rentalInputs, maintenance: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Property Management (%)</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Property Management (%)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>%</span>
                       <input
                         type="number"
                         value={rentalInputs.propertyManagement}
                         onChange={(e) => setRentalInputs({ ...rentalInputs, propertyManagement: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Vacancy Rate (%)</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Vacancy Rate (%)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>%</span>
                       <input
                         type="number"
                         value={rentalInputs.vacancyRate}
                         onChange={(e) => setRentalInputs({ ...rentalInputs, vacancyRate: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
@@ -568,89 +595,96 @@ export function Calculators() {
           {activeCalculator === 'brrrr' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Purchase Price</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Purchase Price</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={brrrrInputs.purchasePrice}
                     onChange={(e) => setBrrrrInputs({ ...brrrrInputs, purchasePrice: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Renovation Costs</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Renovation Costs</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={brrrrInputs.renovationCosts}
                     onChange={(e) => setBrrrrInputs({ ...brrrrInputs, renovationCosts: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">After Repair Value</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>After Repair Value</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={brrrrInputs.afterRepairValue}
                     onChange={(e) => setBrrrrInputs({ ...brrrrInputs, afterRepairValue: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Monthly Rent</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Monthly Rent</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                   <input
                     type="number"
                     value={brrrrInputs.monthlyRent}
                     onChange={(e) => setBrrrrInputs({ ...brrrrInputs, monthlyRent: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    className="w-full pl-8 pr-4 py-2 rounded-lg"
+                    style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   />
                 </div>
               </div>
               {showDetails && (
                 <>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Holding Costs</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Holding Costs</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>$</span>
                       <input
                         type="number"
                         value={brrrrInputs.holdingCosts}
                         onChange={(e) => setBrrrrInputs({ ...brrrrInputs, holdingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Refi LTV (%)</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Refi LTV (%)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>%</span>
                       <input
                         type="number"
                         value={brrrrInputs.refiLtv}
                         onChange={(e) => setBrrrrInputs({ ...brrrrInputs, refiLtv: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 mb-1.5 block">Refi Interest Rate (%)</label>
+                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Refi Interest Rate (%)</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-secondary)' }}>%</span>
                       <input
                         type="number"
                         step="0.125"
                         value={brrrrInputs.refiInterestRate}
                         onChange={(e) => setBrrrrInputs({ ...brrrrInputs, refiInterestRate: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                        className="w-full pl-8 pr-4 py-2 rounded-lg"
+                        style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                       />
                     </div>
                   </div>
@@ -660,10 +694,11 @@ export function Calculators() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-800">
+          <div className="flex items-center gap-3 mt-6 pt-4" style={{ borderColor: 'var(--t-border)', borderWidth: '1px', borderTop: '1px solid' }}>
             <button
               onClick={() => setShowSaveModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
             >
               <Save size={16} />
               {editingScenario ? 'Update Scenario' : 'Save Scenario'}
@@ -716,7 +751,8 @@ export function Calculators() {
                   });
                 }
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ backgroundColor: 'var(--t-surface-hover)', color: 'var(--t-text)' }}
             >
               <RefreshCw size={16} />
               Reset
@@ -725,35 +761,35 @@ export function Calculators() {
         </div>
 
         {/* Results Panel */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <PieChart className="text-green-400" />
+        <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderWidth: '1px' }}>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
+            <PieChart style={{ color: 'var(--t-success)' }} />
             Results
           </h2>
 
           {activeCalculator === 'wholesale' && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-blue-900/30 to-slate-900 rounded-xl p-6 border border-blue-500/30">
-                <p className="text-sm text-slate-400 mb-1">Maximum Offer Price</p>
-                <p className="text-4xl font-bold text-white">${wholesaleResult.maxOffer}</p>
-                <p className="text-xs text-slate-500 mt-2">Based on ARV - Repairs - Profit - Costs</p>
+              <div className="rounded-xl p-6" style={{ background: 'linear-gradient(to bottom right, rgba(59, 130, 246, 0.1), var(--t-surface))', borderColor: 'var(--t-primary)', borderWidth: '1px' }}>
+                <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Maximum Offer Price</p>
+                <p className="text-4xl font-bold mt-1" style={{ color: 'var(--t-text)' }}>${wholesaleResult.maxOffer}</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>Based on ARV - Repairs - Profit - Costs</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">ARV</p>
-                  <p className="text-lg font-semibold text-white">${wholesaleResult.arv}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>ARV</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${wholesaleResult.arv}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Repairs</p>
-                  <p className="text-lg font-semibold text-white">${wholesaleResult.repairs}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Repairs</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${wholesaleResult.repairs}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Target Profit</p>
-                  <p className="text-lg font-semibold text-white">${wholesaleResult.profit}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Target Profit</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${wholesaleResult.profit}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">ROI</p>
-                  <p className="text-lg font-semibold text-green-400">{wholesaleResult.roi}%</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>ROI</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-success)' }}>{wholesaleResult.roi}%</p>
                 </div>
               </div>
             </div>
@@ -761,27 +797,27 @@ export function Calculators() {
 
           {activeCalculator === 'fixnflip' && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-green-900/30 to-slate-900 rounded-xl p-6 border border-green-500/30">
-                <p className="text-sm text-slate-400 mb-1">Net Profit</p>
-                <p className="text-4xl font-bold text-white">${flipResult.netProfit}</p>
-                <p className="text-xs text-slate-500 mt-2">ARV - Total Investment - Selling Costs</p>
+              <div className="rounded-xl p-6" style={{ background: 'linear-gradient(to bottom right, rgba(16, 185, 129, 0.1), var(--t-surface))', borderColor: 'var(--t-success)', borderWidth: '1px' }}>
+                <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Net Profit</p>
+                <p className="text-4xl font-bold mt-1" style={{ color: 'var(--t-text)' }}>${flipResult.netProfit}</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>ARV - Total Investment - Selling Costs</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Total Investment</p>
-                  <p className="text-lg font-semibold text-white">${flipResult.totalInvestment}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Total Investment</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${flipResult.totalInvestment}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">ARV</p>
-                  <p className="text-lg font-semibold text-white">${flipResult.arv}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>ARV</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${flipResult.arv}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">ROI</p>
-                  <p className="text-lg font-semibold text-green-400">{flipResult.roi}%</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>ROI</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-success)' }}>{flipResult.roi}%</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Cash-on-Cash</p>
-                  <p className="text-lg font-semibold text-amber-400">{flipResult.cashOnCash}%</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Cash-on-Cash</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-warning)' }}>{flipResult.cashOnCash}%</p>
                 </div>
               </div>
             </div>
@@ -789,27 +825,27 @@ export function Calculators() {
 
           {activeCalculator === 'rental' && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-purple-900/30 to-slate-900 rounded-xl p-6 border border-purple-500/30">
-                <p className="text-sm text-slate-400 mb-1">Monthly Cash Flow</p>
-                <p className="text-4xl font-bold text-white">${rentalResult.monthlyCashFlow}</p>
-                <p className="text-xs text-slate-500 mt-2">Rent - Mortgage - Expenses</p>
+              <div className="rounded-xl p-6" style={{ background: 'linear-gradient(to bottom right, rgba(139, 92, 246, 0.1), var(--t-surface))', borderColor: 'var(--t-accent)', borderWidth: '1px' }}>
+                <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Monthly Cash Flow</p>
+                <p className="text-4xl font-bold mt-1" style={{ color: 'var(--t-text)' }}>${rentalResult.monthlyCashFlow}</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>Rent - Mortgage - Expenses</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Annual Cash Flow</p>
-                  <p className="text-lg font-semibold text-white">${rentalResult.annualCashFlow}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Annual Cash Flow</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${rentalResult.annualCashFlow}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Mortgage Payment</p>
-                  <p className="text-lg font-semibold text-white">${rentalResult.mortgagePayment}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Mortgage Payment</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${rentalResult.mortgagePayment}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">CoC ROI</p>
-                  <p className="text-lg font-semibold text-green-400">{rentalResult.cashOnCashROI}%</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>CoC ROI</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-success)' }}>{rentalResult.cashOnCashROI}%</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Cap Rate</p>
-                  <p className="text-lg font-semibold text-amber-400">{rentalResult.capRate}%</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Cap Rate</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-warning)' }}>{rentalResult.capRate}%</p>
                 </div>
               </div>
             </div>
@@ -817,27 +853,27 @@ export function Calculators() {
 
           {activeCalculator === 'brrrr' && (
             <div className="space-y-6">
-              <div className="bg-gradient-to-br from-amber-900/30 to-slate-900 rounded-xl p-6 border border-amber-500/30">
-                <p className="text-sm text-slate-400 mb-1">Cash-Out at Refi</p>
-                <p className="text-4xl font-bold text-white">${brrrrResult.cashOut}</p>
-                <p className="text-xs text-slate-500 mt-2">New Loan Amount - Total Investment</p>
+              <div className="rounded-xl p-6" style={{ background: 'linear-gradient(to bottom right, rgba(245, 158, 11, 0.1), var(--t-surface))', borderColor: 'var(--t-warning)', borderWidth: '1px' }}>
+                <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Cash-Out at Refi</p>
+                <p className="text-4xl font-bold mt-1" style={{ color: 'var(--t-text)' }}>${brrrrResult.cashOut}</p>
+                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>New Loan Amount - Total Investment</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">New Loan</p>
-                  <p className="text-lg font-semibold text-white">${brrrrResult.newLoanAmount}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>New Loan</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${brrrrResult.newLoanAmount}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">New Mortgage</p>
-                  <p className="text-lg font-semibold text-white">${brrrrResult.newMortgagePayment}/mo</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>New Mortgage</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-text)' }}>${brrrrResult.newMortgagePayment}/mo</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">Monthly Cash Flow</p>
-                  <p className="text-lg font-semibold text-green-400">${brrrrResult.monthlyCashFlow}</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Monthly Cash Flow</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-success)' }}>${brrrrResult.monthlyCashFlow}</p>
                 </div>
-                <div className="bg-slate-800 rounded-xl p-4">
-                  <p className="text-xs text-slate-400">CoC ROI</p>
-                  <p className="text-lg font-semibold text-amber-400">{brrrrResult.cocROI}%</p>
+                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                  <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>CoC ROI</p>
+                  <p className="text-lg font-semibold mt-1" style={{ color: 'var(--t-warning)' }}>{brrrrResult.cocROI}%</p>
                 </div>
               </div>
             </div>
@@ -848,9 +884,9 @@ export function Calculators() {
       {/* Save/Edit Modal */}
       {showSaveModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full">
+          <div className="rounded-2xl p-6 max-w-md w-full" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderWidth: '1px' }}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>
                 {editingScenario ? 'Edit Scenario' : 'Save Scenario'}
               </h3>
               <button
@@ -861,7 +897,7 @@ export function Calculators() {
                   setScenarioNotes('');
                   setSelectedLeadId('');
                 }}
-                className="text-slate-400 hover:text-white"
+                style={{ color: 'var(--t-text-secondary)' }}
               >
                 <X size={20} />
               </button>
@@ -869,23 +905,25 @@ export function Calculators() {
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Scenario Name *</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Scenario Name *</label>
                 <input
                   type="text"
                   value={scenarioName}
                   onChange={(e) => setScenarioName(e.target.value)}
                   placeholder="e.g., Downtown Flip, Rental #1"
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                  className="w-full px-4 py-2 rounded-lg"
+                  style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Link to Lead (Optional)</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Link to Lead (Optional)</label>
                 <select
                   value={selectedLeadId}
                   onChange={(e) => setSelectedLeadId(e.target.value)}
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                  className="w-full px-4 py-2 rounded-lg"
+                  style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                 >
                   <option value="">No lead linked</option>
                   {leads.map(lead => (
@@ -897,13 +935,14 @@ export function Calculators() {
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Notes</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-secondary)' }}>Notes</label>
                 <textarea
                   value={scenarioNotes}
                   onChange={(e) => setScenarioNotes(e.target.value)}
                   placeholder="Add any notes about this scenario..."
                   rows={3}
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
+                  className="w-full px-4 py-2 rounded-lg resize-none"
+                  style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', color: 'var(--t-text)' }}
                 />
               </div>
 
@@ -911,7 +950,8 @@ export function Calculators() {
                 <button
                   onClick={editingScenario ? handleUpdateScenario : handleSaveScenario}
                   disabled={!scenarioName.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                  className="flex-1 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
                 >
                   {editingScenario ? 'Update' : 'Save'}
                 </button>
@@ -923,7 +963,8 @@ export function Calculators() {
                     setScenarioNotes('');
                     setSelectedLeadId('');
                   }}
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+                  className="px-4 py-2 rounded-lg font-medium transition-colors"
+                  style={{ backgroundColor: 'var(--t-surface-hover)', color: 'var(--t-text)' }}
                 >
                   Cancel
                 </button>
@@ -936,9 +977,9 @@ export function Calculators() {
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold text-white mb-2">Delete Scenario</h3>
-            <p className="text-slate-400 text-sm mb-6">
+          <div className="rounded-2xl p-6 max-w-md w-full" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderWidth: '1px' }}>
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Delete Scenario</h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--t-text-secondary)' }}>
               Are you sure you want to delete this scenario? This action cannot be undone.
             </p>
             <div className="flex items-center gap-3">
@@ -947,13 +988,15 @@ export function Calculators() {
                   deleteCalculatorScenario(showDeleteConfirm);
                   setShowDeleteConfirm(null);
                 }}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ backgroundColor: 'var(--t-error)', color: 'var(--t-text)' }}
               >
                 Delete
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+                className="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ backgroundColor: 'var(--t-surface-hover)', color: 'var(--t-text)' }}
               >
                 Cancel
               </button>
@@ -964,10 +1007,10 @@ export function Calculators() {
 
       {/* Saved Scenarios */}
       {calculatorScenarios.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+        <div className="rounded-2xl p-6" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderWidth: '1px' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Download className="text-blue-400" />
+            <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
+              <Download style={{ color: 'var(--t-primary)' }} />
               Saved Scenarios ({calculatorScenarios.length})
             </h2>
           </div>
@@ -975,16 +1018,16 @@ export function Calculators() {
             {calculatorScenarios.map((scenario) => {
               const linkedLead = leads.find(l => l.id === scenario.leadId);
               return (
-                <div key={scenario.id} className="bg-slate-800 rounded-xl p-4 hover:border-slate-600 border border-slate-700 transition-all group">
+                <div key={scenario.id} className="rounded-xl p-4 transition-all group" style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', borderWidth: '1px', cursor: 'pointer' }}>
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                      <span className="text-xs font-medium px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}>
                         {scenario.type === 'wholesale' ? 'Wholesale' :
                          scenario.type === 'fixnflip' ? 'Fix & Flip' :
                          scenario.type === 'rental' ? 'Rental' : 'BRRRR'}
                       </span>
                       {linkedLead && (
-                        <span className="ml-2 text-xs text-purple-400 inline-flex items-center gap-1">
+                        <span className="ml-2 text-xs inline-flex items-center gap-1" style={{ color: 'var(--t-accent)' }}>
                           <Link2 size={10} />
                           {linkedLead.name}
                         </span>
@@ -993,48 +1036,50 @@ export function Calculators() {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleEditScenario(scenario)}
-                        className="p-1 text-slate-400 hover:text-blue-400 transition-colors"
+                        className="p-1 transition-colors"
+                        style={{ color: 'var(--t-text-secondary)' }}
                       >
                         <Edit2 size={14} />
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(scenario.id)}
-                        className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                        className="p-1 transition-colors"
+                        style={{ color: 'var(--t-text-secondary)' }}
                       >
                         <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-white mb-1">{scenario.name}</p>
-                  <p className="text-xs text-slate-400 mb-2">
+                  <p className="text-sm font-medium mb-1" style={{ color: 'var(--t-text)' }}>{scenario.name}</p>
+                  <p className="text-xs mb-2" style={{ color: 'var(--t-text-secondary)' }}>
                     {new Date(scenario.lastModified).toLocaleDateString()}
                   </p>
                   {scenario.type === 'wholesale' && (
                     <div>
-                      <p className="text-sm text-white font-medium">Max Offer: ${scenario.results.maxOffer}</p>
-                      <p className="text-xs text-slate-400">ARV: ${scenario.results.arv} | ROI: {scenario.results.roi}%</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Max Offer: ${scenario.results.maxOffer}</p>
+                      <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>ARV: ${scenario.results.arv} | ROI: {scenario.results.roi}%</p>
                     </div>
                   )}
                   {scenario.type === 'fixnflip' && (
                     <div>
-                      <p className="text-sm text-white font-medium">Profit: ${scenario.results.netProfit}</p>
-                      <p className="text-xs text-slate-400">ROI: {scenario.results.roi}% | CoC: {scenario.results.cashOnCash}%</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Profit: ${scenario.results.netProfit}</p>
+                      <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>ROI: {scenario.results.roi}% | CoC: {scenario.results.cashOnCash}%</p>
                     </div>
                   )}
                   {scenario.type === 'rental' && (
                     <div>
-                      <p className="text-sm text-white font-medium">Monthly: ${scenario.results.monthlyCashFlow}</p>
-                      <p className="text-xs text-slate-400">CoC: {scenario.results.cashOnCashROI}% | Cap: {scenario.results.capRate}%</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Monthly: ${scenario.results.monthlyCashFlow}</p>
+                      <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>CoC: {scenario.results.cashOnCashROI}% | Cap: {scenario.results.capRate}%</p>
                     </div>
                   )}
                   {scenario.type === 'brrrr' && (
                     <div>
-                      <p className="text-sm text-white font-medium">Cash Out: ${scenario.results.cashOut}</p>
-                      <p className="text-xs text-slate-400">Monthly: ${scenario.results.monthlyCashFlow} | ROI: {scenario.results.cocROI}%</p>
+                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Cash Out: ${scenario.results.cashOut}</p>
+                      <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Monthly: ${scenario.results.monthlyCashFlow} | ROI: {scenario.results.cocROI}%</p>
                     </div>
                   )}
                   {scenario.notes && (
-                    <p className="text-xs text-slate-500 mt-2 line-clamp-2">{scenario.notes}</p>
+                    <p className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--t-text-muted)' }}>{scenario.notes}</p>
                   )}
                 </div>
               );

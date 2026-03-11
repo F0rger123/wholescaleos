@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import {
   Mail, Phone, Award, DollarSign, TrendingUp, Plus, X, Check,
@@ -18,12 +19,12 @@ import { switchToTeam } from '../lib/team-utils';
 
 const ROLE_ICONS: Record<TeamRole, React.ElementType> = { admin: Crown, member: Shield, viewer: Eye };
 const ROLE_COLORS: Record<TeamRole, string> = {
-  admin: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  member: 'bg-brand-500/15 text-brand-400 border-brand-500/30',
-  viewer: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
+  admin: 'px-2 py-0.5 rounded-full border text-[10px] font-bold',
+  member: 'px-2 py-0.5 rounded-full border text-[10px] font-bold',
+  viewer: 'px-2 py-0.5 rounded-full border text-[10px] font-bold',
 };
 
-const inputClass = 'w-full px-3 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/50';
+const inputClass = 'w-full px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2' + ' focus:ring-[var(--t-primary,#3b82f6)]/50';
 
 interface UserTeam {
   teamId: string;
@@ -224,7 +225,10 @@ export function Team() {
                               </p>
                             </div>
                             {t.isCurrent && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{
+                                background: 'var(--t-success-dim, rgba(16,185,129,0.15))',
+                                color: 'var(--t-success, #10b981)',
+                              }}>
                                 Active
                               </span>
                             )}
@@ -316,7 +320,14 @@ export function Team() {
                 <input
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                  className={`${inputClass} flex-1`}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl flex-1 focus:outline-none focus:ring-2"
+                  style={{
+                    background: 'var(--t-surface, #1e293b)',
+                    borderColor: 'var(--t-border, #334155)',
+                    border: '1px solid var(--t-border, #334155)',
+                    color: 'var(--t-text, #fff)',
+                    focusRingColor: 'var(--t-primary, #3b82f6)',
+                  }}
                 />
                 <button
                   onClick={() => updateTeamConfig({ name: teamName })}
@@ -348,7 +359,7 @@ export function Team() {
                     color: 'var(--t-text-secondary, #cbd5e1)',
                   }}
                 >
-                  {copiedCode ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  {copiedCode ? <Check size={14} style={{ color: 'var(--t-success, #10b981)' }} /> : <Copy size={14} />}
                 </button>
                 <button
                   onClick={regenerateInviteCode}
@@ -367,8 +378,8 @@ export function Team() {
           <div
             className="mt-3 p-3 rounded-xl border"
             style={{
-              background: 'rgba(59,130,246,0.05)',
-              borderColor: 'rgba(59,130,246,0.15)',
+              background: 'var(--t-primary-dim, rgba(59,130,246,0.05))',
+              borderColor: 'var(--t-primary-border, rgba(59,130,246,0.15))',
             }}
           >
             <p className="text-xs font-medium mb-1" style={{ color: 'var(--t-primary, #3b82f6)' }}>
@@ -403,32 +414,78 @@ export function Team() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Name *</label>
-              <input value={newMember.name} onChange={(e) => setNewMember(f => ({ ...f, name: e.target.value }))} className={inputClass} placeholder="Full name" />
+              <input value={newMember.name} onChange={(e) => setNewMember(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2" placeholder="Full name"
+                style={{
+                  background: 'var(--t-surface, #1e293b)',
+                  borderColor: 'var(--t-border, #334155)',
+                  border: '1px solid var(--t-border, #334155)',
+                  color: 'var(--t-text, #fff)',
+                }} />
             </div>
             <div>
               <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Job Title</label>
-              <input value={newMember.role} onChange={(e) => setNewMember(f => ({ ...f, role: e.target.value }))} className={inputClass} placeholder="e.g. Acquisitions Manager" />
+              <input value={newMember.role} onChange={(e) => setNewMember(f => ({ ...f, role: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2" placeholder="e.g. Acquisitions Manager"
+                style={{
+                  background: 'var(--t-surface, #1e293b)',
+                  borderColor: 'var(--t-border, #334155)',
+                  border: '1px solid var(--t-border, #334155)',
+                  color: 'var(--t-text, #fff)',
+                }} />
             </div>
             <div>
               <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Email *</label>
-              <input value={newMember.email} onChange={(e) => setNewMember(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="email@example.com" />
+              <input value={newMember.email} onChange={(e) => setNewMember(f => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2" placeholder="email@example.com"
+                style={{
+                  background: 'var(--t-surface, #1e293b)',
+                  borderColor: 'var(--t-border, #334155)',
+                  border: '1px solid var(--t-border, #334155)',
+                  color: 'var(--t-text, #fff)',
+                }} />
             </div>
             <div>
               <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Phone</label>
-              <input value={newMember.phone} onChange={(e) => setNewMember(f => ({ ...f, phone: e.target.value }))} className={inputClass} placeholder="(555) 000-0000" />
+              <input value={newMember.phone} onChange={(e) => setNewMember(f => ({ ...f, phone: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-xl focus:outline-none focus:ring-2" placeholder="(555) 000-0000"
+                style={{
+                  background: 'var(--t-surface, #1e293b)',
+                  borderColor: 'var(--t-border, #334155)',
+                  border: '1px solid var(--t-border, #334155)',
+                  color: 'var(--t-text, #fff)',
+                }} />
             </div>
             <div>
               <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Team Role</label>
               <div className="flex gap-2">
                 {(['admin', 'member', 'viewer'] as TeamRole[]).map(r => {
                   const Icon = ROLE_ICONS[r];
+                  const isSelected = newMember.teamRole === r;
                   return (
                     <button
                       key={r}
                       onClick={() => setNewMember(f => ({ ...f, teamRole: r }))}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs rounded-xl border font-medium transition-colors ${
-                        newMember.teamRole === r ? ROLE_COLORS[r] : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                      }`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs rounded-xl border font-medium transition-colors"
+                      style={{
+                        background: isSelected 
+                          ? r === 'admin' 
+                            ? 'var(--t-warning-dim, rgba(217,119,6,0.15))'
+                            : r === 'member'
+                            ? 'var(--t-primary-dim, rgba(59,130,246,0.15))'
+                            : 'rgba(100,116,139,0.15)'
+                          : 'var(--t-surface, #1e293b)',
+                        borderColor: isSelected
+                          ? r === 'admin'
+                            ? 'var(--t-warning, #d97706)'
+                            : r === 'member'
+                            ? 'var(--t-primary, #3b82f6)'
+                            : 'rgba(100,116,139,0.5)'
+                          : 'var(--t-border, #334155)',
+                        color: isSelected
+                          ? r === 'admin'
+                            ? 'var(--t-warning, #d97706)'
+                            : r === 'member'
+                            ? 'var(--t-primary, #3b82f6)'
+                            : 'rgba(148,163,184,1)'
+                          : 'var(--t-text-secondary, #cbd5e1)',
+                      }}
                     >
                       <Icon size={13} /> {r.charAt(0).toUpperCase() + r.slice(1)}
                     </button>
@@ -459,9 +516,9 @@ export function Team() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { icon: Award, color: 'var(--t-primary, #3b82f6)', bg: 'var(--t-primary-dim, rgba(59,130,246,0.15))', value: team.length, label: 'Members' },
-          { icon: Users, color: 'var(--t-success, #10b981)', bg: 'rgba(16,185,129,0.15)', value: onlineCount, label: 'Online' },
-          { icon: DollarSign, color: 'var(--t-success, #10b981)', bg: 'rgba(16,185,129,0.15)', value: `$${(totalRevenue / 1_000_000).toFixed(1)}M`, label: 'Revenue' },
-          { icon: TrendingUp, color: '#a855f7', bg: 'rgba(168,85,247,0.15)', value: totalDeals, label: 'Deals' },
+          { icon: Users, color: 'var(--t-success, #10b981)', bg: 'var(--t-success-dim, rgba(16,185,129,0.15))', value: onlineCount, label: 'Online' },
+          { icon: DollarSign, color: 'var(--t-success, #10b981)', bg: 'var(--t-success-dim, rgba(16,185,129,0.15))', value: `$${(totalRevenue / 1_000_000).toFixed(1)}M`, label: 'Revenue' },
+          { icon: TrendingUp, color: 'var(--t-info, #a855f7)', bg: 'var(--t-info-dim, rgba(168,85,247,0.15))', value: totalDeals, label: 'Deals' },
         ].map(({ icon: Icon, color, bg, value, label }) => (
           <div key={label} className="rounded-2xl border p-5 text-center"
             style={{ background: 'var(--t-surface, #1e293b)', borderColor: 'var(--t-border, #334155)' }}>
@@ -559,7 +616,24 @@ export function Team() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold" style={{ color: 'var(--t-text, #fff)' }}>{member.name}</h3>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${ROLE_COLORS[member.teamRole]}`}>
+                      <span className={`inline-flex items-center gap-1 ${ROLE_COLORS[member.teamRole]}`}
+                        style={{
+                          background: member.teamRole === 'admin'
+                            ? 'var(--t-warning-dim, rgba(217,119,6,0.15))'
+                            : member.teamRole === 'member'
+                            ? 'var(--t-primary-dim, rgba(59,130,246,0.15))'
+                            : 'rgba(100,116,139,0.15)',
+                          borderColor: member.teamRole === 'admin'
+                            ? 'var(--t-warning, #d97706)'
+                            : member.teamRole === 'member'
+                            ? 'var(--t-primary, #3b82f6)'
+                            : 'rgba(100,116,139,0.5)',
+                          color: member.teamRole === 'admin'
+                            ? 'var(--t-warning, #d97706)'
+                            : member.teamRole === 'member'
+                            ? 'var(--t-primary, #3b82f6)'
+                            : 'rgba(148,163,184,1)',
+                        }}>
                         <RoleIcon size={10} />
                         {member.teamRole.charAt(0).toUpperCase() + member.teamRole.slice(1)}
                       </span>
@@ -628,7 +702,7 @@ export function Team() {
                     <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Deals</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-emerald-400">${(member.revenue / 1000).toFixed(0)}k</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-success, #10b981)' }}>${(member.revenue / 1000).toFixed(0)}k</p>
                     <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Revenue</p>
                   </div>
                   <div className="text-center">
@@ -636,12 +710,11 @@ export function Team() {
                     <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Active Leads</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-amber-400">{pendingTasks.length}</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-warning, #d97706)' }}>{pendingTasks.length}</p>
                     <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Tasks</p>
                   </div>
                   <div className="text-center">
-                    <p className={`text-lg font-bold ${overdueTasks.length > 0 ? 'text-red-400' : ''}`}
-                      style={{ color: overdueTasks.length > 0 ? undefined : 'var(--t-text-muted, #94a3b8)' }}>
+                    <p className="text-lg font-bold" style={{ color: overdueTasks.length > 0 ? 'var(--t-error, #ef4444)' : 'var(--t-text-muted, #94a3b8)' }}>
                       {overdueTasks.length}
                     </p>
                     <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Overdue</p>
@@ -673,7 +746,7 @@ export function Team() {
                 >
                   <ListTodo size={13} />
                   {pendingTasks.length} pending task{pendingTasks.length !== 1 ? 's' : ''}
-                  {todayTasks.length > 0 && <span className="text-amber-400">({todayTasks.length} due today)</span>}
+                  {todayTasks.length > 0 && <span style={{ color: 'var(--t-warning, #d97706)' }}>({todayTasks.length} due today)</span>}
                   <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 </button>
               </div>
@@ -690,12 +763,18 @@ export function Team() {
                           value={customMsg}
                           onChange={(e) => setCustomMsg(e.target.value)}
                           placeholder="What are you working on?"
-                          className={`${inputClass} flex-1 !py-2`}
+                          className="w-full px-3 py-2 text-sm rounded-xl flex-1 focus:outline-none focus:ring-2"
+                          style={{
+                            background: 'var(--t-surface, #1e293b)',
+                            borderColor: 'var(--t-border, #334155)',
+                            border: '1px solid var(--t-border, #334155)',
+                            color: 'var(--t-text, #fff)',
+                          }}
                           autoFocus
                           onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCustomStatus(member.id); }}
                         />
-                        <button onClick={() => handleSaveCustomStatus(member.id)} className="px-2 py-2 text-emerald-400 hover:bg-slate-800 rounded-lg"><Check size={14} /></button>
-                        <button onClick={() => { setEditingStatus(null); setCustomMsg(''); }} className="px-2 py-2 hover:bg-slate-800 rounded-lg" style={{ color: 'var(--t-text-muted, #94a3b8)' }}><X size={14} /></button>
+                        <button onClick={() => handleSaveCustomStatus(member.id)} className="px-2 py-2 rounded-lg" style={{ color: 'var(--t-success, #10b981)', background: 'rgba(16,185,129,0.1)' }}><Check size={14} /></button>
+                        <button onClick={() => { setEditingStatus(null); setCustomMsg(''); }} className="px-2 py-2 rounded-lg" style={{ color: 'var(--t-text-muted, #94a3b8)', background: 'rgba(0,0,0,0.2)' }}><X size={14} /></button>
                       </div>
                     ) : (
                       <button
@@ -727,16 +806,18 @@ export function Team() {
                                 <p className="text-sm font-medium truncate" style={{ color: 'var(--t-text, #fff)' }}>{task.title}</p>
                                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                   <span className={`text-[10px] font-bold ${pc.text}`}>{task.priority.toUpperCase()}</span>
-                                  <span className={`text-[10px] ${isOverdue ? 'text-red-400' : ''}`} style={{ color: isOverdue ? undefined : 'var(--t-text-muted, #94a3b8)' }}>
+                                  <span className={`text-[10px]`} style={{ color: isOverdue ? 'var(--t-error, #ef4444)' : 'var(--t-text-muted, #94a3b8)' }}>
                                     Due {formatDistanceToNow(parseISO(task.dueDate), { addSuffix: true })}
                                   </span>
-                                  {isOverdue && <AlertTriangle size={10} className="text-red-400" />}
+                                  {isOverdue && <AlertTriangle size={10} style={{ color: 'var(--t-error, #ef4444)' }} />}
                                   {leadName && <span className="text-[10px]" style={{ color: 'var(--t-primary, #3b82f6)' }}>🔗 {leadName}</span>}
                                 </div>
                               </div>
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                                task.status === 'in-progress' ? 'bg-brand-500/15 text-brand-400' : 'bg-slate-500/15 text-slate-400'
-                              }`}>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{
+                                  background: task.status === 'in-progress' ? 'var(--t-primary-dim, rgba(59,130,246,0.15))' : 'rgba(100,116,139,0.15)',
+                                  color: task.status === 'in-progress' ? 'var(--t-primary, #3b82f6)' : 'rgba(148,163,184,1)',
+                                }}>
                                 {task.status === 'in-progress' ? 'In Progress' : 'To Do'}
                               </span>
                             </div>
@@ -746,7 +827,7 @@ export function Team() {
                     )}
 
                     {memberTasks.filter(t => t.status === 'done').length > 0 && (
-                      <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-400">
+                      <div className="flex items-center gap-1.5 mt-3 text-xs" style={{ color: 'var(--t-success, #10b981)' }}>
                         <CheckCircle2 size={13} />
                         {memberTasks.filter(t => t.status === 'done').length} task{memberTasks.filter(t => t.status === 'done').length !== 1 ? 's' : ''} completed
                       </div>
@@ -757,7 +838,8 @@ export function Team() {
                   <div className="pt-3" style={{ borderTop: '1px solid var(--t-border, #334155)' }}>
                     <button
                       onClick={() => { if (confirm(`Remove ${member.name} from the team?`)) removeTeamMember(member.id); }}
-                      className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                      className="flex items-center gap-1.5 text-xs transition-colors hover:opacity-80"
+                      style={{ color: 'var(--t-error, #ef4444)' }}
                     >
                       <UserMinus size={13} /> Remove from team
                     </button>
@@ -774,4 +856,3 @@ export function Team() {
       <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
     </div>
   );
-}

@@ -297,15 +297,15 @@ export default function Leads() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto" style={{ backgroundColor: 'var(--t-bg)' }}>
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            Leads <span className="text-sm font-normal px-2 py-1 bg-slate-700 text-slate-300 rounded-full">{filtered.length}</span>
-            {saveStatus === 'saving' && <span className="text-sm text-blue-400 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Saving...</span>}
-            {saveStatus === 'saved' && <span className="text-sm text-green-400">✅ Saved</span>}
-            {saveStatus === 'error' && <span className="text-sm text-red-400">❌ Failed</span>}
+          <h1 className="text-2xl font-bold flex items-center gap-3" style={{ color: 'var(--t-text)' }}>
+            Leads <span className="text-sm font-normal px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--t-surface-hover)', color: 'var(--t-text-secondary)' }}>{filtered.length}</span>
+            {saveStatus === 'saving' && <span className="text-sm flex items-center gap-1" style={{ color: 'var(--t-info)' }}><Loader2 className="w-3 h-3 animate-spin" />Saving...</span>}
+            {saveStatus === 'saved' && <span className="text-sm" style={{ color: 'var(--t-success)' }}>✅ Saved</span>}
+            {saveStatus === 'error' && <span className="text-sm" style={{ color: 'var(--t-error)' }}>❌ Failed</span>}
           </h1>
         </div>
         <div className="flex gap-3">
@@ -313,7 +313,8 @@ export default function Leads() {
             <button 
               onClick={geocodeAll} 
               disabled={geocodingAll} 
-              className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" 
+              style={{ backgroundColor: 'var(--t-warning, rgba(245, 158, 11, 1))', color: 'var(--t-text)' }}
             >
               {geocodingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />} Geocode All
             </button>
@@ -323,7 +324,8 @@ export default function Leads() {
           {selectedLeads.size > 0 && (
             <button 
               onClick={() => setShowDeleteConfirm(true)} 
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg" 
+              style={{ backgroundColor: 'var(--t-error, rgba(239, 68, 68, 1))', color: 'var(--t-text)' }}
             >
               <Trash className="w-4 h-4" /> Delete Selected ({selectedLeads.size})
             </button>
@@ -331,7 +333,8 @@ export default function Leads() {
           
           <button 
             onClick={openAdd} 
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg" 
+            style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
           >
             <Plus className="w-4 h-4" /> Add Lead
           </button>
@@ -339,19 +342,20 @@ export default function Leads() {
       </div>
 
       {/* CUSTOM FIELDS */}
-      <div className="mb-6 p-4 bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl">
+      <div className="mb-6 p-4 border rounded-xl" style={{ backgroundImage: 'linear-gradient(to right, rgba(147, 51, 234, 0.2), rgba(37, 99, 235, 0.2))', borderColor: 'var(--t-border)' }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-400" />
-            <h2 className="text-base font-semibold text-white">Custom Lead Fields</h2>
-            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 text-xs rounded-full">
+            <Sparkles className="w-5 h-5" style={{ color: 'var(--t-primary-text, rgba(168, 85, 247, 1))' }} />
+            <h2 className="text-base font-semibold" style={{ color: 'var(--t-text)' }}>Custom Lead Fields</h2>
+            <span className="px-2 py-0.5 text-xs rounded-full" style={{ backgroundColor: 'var(--t-primary, rgba(168, 85, 247, 0.2))', color: 'var(--t-primary-text, rgba(168, 85, 247, 1))' }}>
               {customFields.length}
             </span>
           </div>
           {!showAddField && (
             <button 
               onClick={() => setShowAddField(true)} 
-              className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg" 
+              style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
             >
               <Plus className="w-3 h-3" /> Add Field
             </button>
@@ -364,13 +368,15 @@ export default function Leads() {
               value={newFieldName} 
               onChange={e => setNewFieldName(e.target.value)} 
               placeholder="Field name (e.g., Lot Size, ARV, Equity)" 
-              className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm" 
+              className="flex-1 px-3 py-2 rounded-lg text-sm" 
+              style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
               autoFocus 
             />
             <select 
               value={newFieldType} 
               onChange={e => setNewFieldType(e.target.value as any)} 
-              className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm"
+              className="px-3 py-2 rounded-lg text-sm" 
+              style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
             >
               <option value="text">Text</option>
               <option value="number">Number</option>
@@ -413,7 +419,8 @@ export default function Leads() {
                   alert(`❌ Error: ${err.message}`);
                 }
               }} 
-              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="p-2 rounded-lg" 
+              style={{ backgroundColor: 'var(--t-success)', color: 'var(--t-text)' }}
             >
               <Check className="w-4 h-4" />
             </button>
@@ -422,7 +429,8 @@ export default function Leads() {
                 setShowAddField(false); 
                 setNewFieldName(''); 
               }} 
-              className="p-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600"
+              className="p-2 rounded-lg" 
+              style={{ backgroundColor: 'var(--t-surface-hover)', color: 'var(--t-text)' }}
             >
               <X className="w-4 h-4" />
             </button>
@@ -430,27 +438,27 @@ export default function Leads() {
         )}
 
         {saveSuccess && (
-          <div className="mb-3 p-2 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400 text-xs flex items-center gap-1">
+          <div className="mb-3 p-2 rounded-lg flex items-center gap-1 text-xs" style={{ backgroundColor: 'var(--t-success-dim, rgba(16, 185, 129, 0.2))', borderColor: 'var(--t-success)', border: '1px solid', color: 'var(--t-success)' }}>
             <Check size={12} />
             Field saved to database!
           </div>
         )}
 
         {customFields.length === 0 ? (
-          <p className="text-slate-400 text-sm">No custom fields yet. Add fields like &quot;Lot Size&quot;, &quot;ARV&quot;, or &quot;Equity&quot;.</p>
+          <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>No custom fields yet. Add fields like &quot;Lot Size&quot;, &quot;ARV&quot;, or &quot;Equity&quot;.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {customFields.map(f => (
               <span 
                 key={f.id} 
-                className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700 text-sm group"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm group" 
+                style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
               >
-                <span className="text-white">{f.name}</span>
-                <span className={`px-1.5 py-0.5 text-xs rounded ${
-                  f.field_type === 'number' 
-                    ? 'bg-green-500/20 text-green-400' 
-                    : 'bg-blue-500/20 text-blue-400'
-                }`}>
+                <span style={{ color: 'var(--t-text)' }}>{f.name}</span>
+                <span className="px-1.5 py-0.5 text-xs rounded" style={{
+                  backgroundColor: f.field_type === 'number' ? 'var(--t-success-dim, rgba(16, 185, 129, 0.2))' : 'var(--t-info, rgba(59, 130, 246, 0.2))',
+                  color: f.field_type === 'number' ? 'var(--t-success)' : 'var(--t-info)'
+                }}>
                   {f.field_type}
                 </span>
                 <button 
@@ -477,7 +485,10 @@ export default function Leads() {
                       alert(`❌ Error: ${err.message}`);
                     }
                   }} 
-                  className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-all"
+                  className="opacity-0 group-hover:opacity-100 transition-all" 
+                  style={{ color: 'var(--t-text-muted)', cursor: 'pointer' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--t-error)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--t-text-muted)')}
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -490,18 +501,20 @@ export default function Leads() {
       {/* SEARCH / FILTER / SORT */}
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
           <input 
             value={searchQuery} 
             onChange={e => setSearchQuery(e.target.value)} 
             placeholder="Search leads..." 
-            className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm" 
+            className="w-full pl-10 pr-4 py-2 rounded-lg text-sm" 
+            style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
           />
         </div>
         <select 
           value={statusFilter} 
           onChange={e => setStatusFilter(e.target.value)} 
-          className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+          className="px-3 py-2 rounded-lg text-sm" 
+          style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
         >
           <option value="all">All Statuses</option>
           <option value="new">New</option>
@@ -514,7 +527,8 @@ export default function Leads() {
         <select 
           value={priorityFilter} 
           onChange={e => setPriorityFilter(e.target.value)} 
-          className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+          className="px-3 py-2 rounded-lg text-sm" 
+          style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
         >
           <option value="all">All Priorities</option>
           <option value="high">🔴 High</option>
@@ -524,7 +538,8 @@ export default function Leads() {
         <select 
           value={sortBy} 
           onChange={e => setSortBy(e.target.value)} 
-          className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+          className="px-3 py-2 rounded-lg text-sm" 
+          style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
         >
           <option value="priority">🧠 AI Priority</option>
           <option value="score">⚡ Deal Score</option>
@@ -538,15 +553,16 @@ export default function Leads() {
       <div className="space-y-3">
         {/* Bulk selection header */}
         {filtered.length > 0 && (
-          <div className="flex items-center gap-3 px-4 py-2 bg-slate-800/30 rounded-lg border border-slate-700">
+          <div className="flex items-center gap-3 px-4 py-2 rounded-lg border" style={{ backgroundColor: 'rgba(var(--t-surface-hover-rgb, 51, 65, 85), 0.3)', borderColor: 'var(--t-border)' }}>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={selectedLeads.size === filtered.length && filtered.length > 0}
                 onChange={toggleSelectAll}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 rounded"
+                style={{ borderColor: 'var(--t-border)', backgroundColor: 'var(--t-surface)', accentColor: 'var(--t-primary)' }}
               />
-              <span className="text-sm text-slate-300">
+              <span className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>
                 {selectedLeads.size === 0 
                   ? 'Select all' 
                   : `Selected ${selectedLeads.size} of ${filtered.length}`}
@@ -555,7 +571,8 @@ export default function Leads() {
             {selectedLeads.size > 0 && (
               <button
                 onClick={() => setSelectedLeads(new Set())}
-                className="text-xs text-slate-400 hover:text-white px-2 py-1 bg-slate-700/50 rounded-lg"
+                className="text-xs px-2 py-1 rounded-lg" 
+                style={{ backgroundColor: 'rgba(var(--t-surface-hover-rgb, 51, 65, 85), 0.5)', color: 'var(--t-text-muted)' }}
               >
                 Clear selection
               </button>
@@ -564,10 +581,10 @@ export default function Leads() {
         )}
 
         {filtered.length === 0 ? (
-          <div className="text-center py-16 bg-slate-800/30 rounded-xl">
-            <Target className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400 text-lg">No leads found</p>
-            <button onClick={openAdd} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg">Add Your First Lead</button>
+          <div className="text-center py-16 rounded-xl" style={{ backgroundColor: 'rgba(var(--t-surface-hover-rgb, 51, 65, 85), 0.3)' }}>
+            <Target className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--t-text-muted)' }} />
+            <p className="text-lg" style={{ color: 'var(--t-text-muted)' }}>No leads found</p>
+            <button onClick={openAdd} className="mt-4 px-4 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}>Add Your First Lead</button>
           </div>
         ) : filtered.map(lead => {
           const ds = calculateDealScore(lead);
@@ -576,7 +593,7 @@ export default function Leads() {
           const days = getDaysInStatus(lead);
           const geo = lead.lat && lead.lat !== 30.2672;
           return (
-            <div key={lead.id} className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden hover:border-slate-600 transition-colors">
+            <div key={lead.id} className="rounded-xl overflow-hidden border transition-colors" style={{ backgroundColor: 'rgba(var(--t-surface-rgb, 30, 41, 59), 0.5)', borderColor: 'var(--t-border)' }}>
               {/* LEAD ROW */}
               <div className="flex items-center gap-3 p-4">
                 {/* NEW: Selection checkbox */}
@@ -585,7 +602,8 @@ export default function Leads() {
                     type="checkbox"
                     checked={selectedLeads.has(lead.id)}
                     onChange={() => toggleSelectLead(lead.id)}
-                    className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded"
+                    style={{ borderColor: 'var(--t-border)', backgroundColor: 'var(--t-surface)', accentColor: 'var(--t-primary)' }}
                   />
                 </div>
                 
@@ -594,14 +612,14 @@ export default function Leads() {
                   className="flex items-center gap-3 flex-1 cursor-pointer"
                 >
                   <div className="flex-shrink-0">
-                    {expandedLead === lead.id ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                    {expandedLead === lead.id ? <ChevronDown className="w-4 h-4" style={{ color: 'var(--t-text-muted)' }} /> : <ChevronRight className="w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />}
                   </div>
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                     {(lead.name || 'U')[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-white font-medium">{lead.name || 'Unnamed'}</span>
+                      <span className="font-medium" style={{ color: 'var(--t-text)' }}>{lead.name || 'Unnamed'}</span>
                       <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>
                         {STATUS_LABELS[lead.status] || lead.status}
                       </span>
@@ -613,33 +631,42 @@ export default function Leads() {
                         </span>
                       )}
                       {lead.photos && lead.photos.length > 0 && (
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-teal-500/20 text-teal-300">📷 {lead.photos.length}</span>
+                        <span className="px-2 py-0.5 text-xs rounded-full" style={{ backgroundColor: 'var(--t-info-dim, rgba(59, 130, 246, 0.2))', color: 'var(--t-info)' }}>📷 {lead.photos.length}</span>
                       )}
-                      <span className="text-xs text-slate-500">{days}d</span>
-                      <span className={`w-2 h-2 rounded-full ${geo ? 'bg-green-400' : 'bg-amber-400'}`} title={geo ? 'Geocoded' : 'Not geocoded'} />
+                      <span className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{days}d</span>
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: geo ? 'var(--t-success)' : 'var(--t-warning)' }} title={geo ? 'Geocoded' : 'Not geocoded'} />
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5 truncate">{lead.propertyAddress || 'No address'}</p>
-                    <div className="w-24 h-1 bg-slate-700 rounded-full mt-1">
+                    <p className="text-xs truncate mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{lead.propertyAddress || 'No address'}</p>
+                    <div className="w-24 h-1 rounded-full mt-1" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
                       <div 
-                        className={`h-full rounded-full ${ds >= 70 ? 'bg-emerald-500' : ds >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} 
-                        style={{ width: `${ds}%` }} 
+                        className="h-full rounded-full" 
+                        style={{ 
+                          width: `${ds}%`,
+                          backgroundColor: ds >= 70 ? 'var(--t-success)' : ds >= 40 ? 'var(--t-warning)' : 'var(--t-error)'
+                        }} 
                       />
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-white font-semibold">{fmt$(lead.estimatedValue || 0)}</p>
-                    <p className="text-xs text-slate-400">{lead.propertyType || 'Unknown'}</p>
+                    <p className="font-semibold" style={{ color: 'var(--t-text)' }}>{fmt$(lead.estimatedValue || 0)}</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{lead.propertyType || 'Unknown'}</p>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
                     <button 
                       onClick={e => { e.stopPropagation(); openEdit(lead); }} 
-                      className="p-2 text-slate-400 hover:text-blue-400 hover:bg-slate-700 rounded-lg"
+                      className="p-2 rounded-lg" 
+                      style={{ color: 'var(--t-text-muted)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--t-info)'; e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--t-text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={e => { e.stopPropagation(); handleDel(lead.id); }} 
-                      className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-lg"
+                      className="p-2 rounded-lg" 
+                      style={{ color: 'var(--t-text-muted)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--t-error)'; e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--t-text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -649,7 +676,7 @@ export default function Leads() {
 
               {/* EXPANDED DETAIL */}
               {expandedLead === lead.id && (
-                <div className="border-t border-slate-700 bg-slate-900/50">
+                <div className="border-t" style={{ borderColor: 'var(--t-border)', backgroundColor: 'rgba(var(--t-bg-rgb, 15, 23, 42), 0.5)' }}>
                   {(() => {
                     const nba = generateNextAction(lead);
                     const recs = callRecordings.filter(r => r.leadId === lead.id);
@@ -659,21 +686,22 @@ export default function Leads() {
                       <>
                         {/* Next Best Action */}
                         {nba && (
-                          <div className="m-4 p-4 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-xl">
+                          <div className="m-4 p-4 border rounded-xl" style={{ backgroundImage: 'linear-gradient(to right, rgba(37, 99, 235, 0.3), rgba(147, 51, 234, 0.3))', borderColor: 'var(--t-info, rgba(59, 130, 246, 0.3))' }}>
                             <div className="flex items-start justify-between">
                               <div className="flex items-start gap-3">
-                                <div className="p-2 bg-blue-500/20 rounded-lg">
-                                  <Brain className="w-5 h-5 text-blue-400" />
+                                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--t-info-dim, rgba(59, 130, 246, 0.2))' }}>
+                                  <Brain className="w-5 h-5" style={{ color: 'var(--t-info)' }} />
                                 </div>
                                 <div>
-                                  <h4 className="text-white font-medium">{nba.title}</h4>
-                                  <p className="text-slate-400 text-sm mt-1">{nba.description}</p>
-                                  <span className="text-xs text-blue-400">{nba.confidence}% confidence</span>
+                                  <h4 className="font-medium" style={{ color: 'var(--t-text)' }}>{nba.title}</h4>
+                                  <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>{nba.description}</p>
+                                  <span className="text-xs" style={{ color: 'var(--t-info)' }}>{nba.confidence}% confidence</span>
                                 </div>
                               </div>
                               <button 
                                 onClick={() => logAct(lead.id, nba.type)} 
-                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg flex items-center gap-1"
+                                className="px-3 py-1.5 text-sm rounded-lg flex items-center gap-1" 
+                                style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
                               >
                                 <Zap className="w-3 h-3" /> {nba.actionLabel}
                               </button>
@@ -691,12 +719,12 @@ export default function Leads() {
                             { i: DollarSign, l: 'Offer', v: fmt$(lead.offerAmount || 0) },
                             { i: Calendar, l: 'Created', v: fmtDate(lead.createdAt) }
                           ].map((x, i) => (
-                            <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
-                              <div className="flex items-center gap-1 text-slate-400 text-xs mb-1">
+                            <div key={i} className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(var(--t-surface-rgb, 30, 41, 59), 0.5)' }}>
+                              <div className="flex items-center gap-1 text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>
                                 <x.i className="w-3 h-3" />
                                 {x.l}
                               </div>
-                              <p className="text-white text-sm truncate">{x.v}</p>
+                              <p className="text-sm truncate" style={{ color: 'var(--t-text)' }}>{x.v}</p>
                             </div>
                           ))}
                         </div>
@@ -706,11 +734,12 @@ export default function Leads() {
                           <div className="px-4 pb-4">
                             <div className="flex gap-2 overflow-x-auto">
                               {lead.photos.map((p, i) => (
-                                <div key={i} className="w-20 h-20 bg-slate-700 rounded-lg flex-shrink-0 flex items-center justify-center relative group">
-                                  <Camera className="w-6 h-6 text-slate-500" />
+                                <div key={i} className="w-20 h-20 rounded-lg flex-shrink-0 flex items-center justify-center relative group" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                                  <Camera className="w-6 h-6" style={{ color: 'var(--t-text-muted)' }} />
                                   <button 
                                     onClick={() => removeLeadPhoto(lead.id, p)} 
-                                    className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs hidden group-hover:flex items-center justify-center"
+                                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-white text-xs hidden group-hover:flex items-center justify-center" 
+                                    style={{ backgroundColor: 'var(--t-error)' }}
                                   >
                                     ×
                                   </button>
@@ -718,7 +747,8 @@ export default function Leads() {
                               ))}
                               <button 
                                 onClick={() => addLeadPhoto(lead.id, uuidv4())} 
-                                className="w-20 h-20 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-300"
+                                className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center" 
+                                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
                               >
                                 <Plus className="w-5 h-5" />
                               </button>
@@ -728,14 +758,14 @@ export default function Leads() {
 
                         {/* Custom Fields */}
                         {customFields.length > 0 && (
-                          <div className="mx-4 mb-4 p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
-                            <h4 className="text-purple-300 text-sm font-medium mb-2 flex items-center gap-1">
+                          <div className="mx-4 mb-4 p-3 rounded-lg border" style={{ backgroundColor: 'rgba(147, 51, 234, 0.2)', borderColor: 'var(--t-primary, rgba(168, 85, 247, 0.3))' }}>
+                            <h4 className="text-sm font-medium mb-2 flex items-center gap-1" style={{ color: 'var(--t-primary-text, rgba(168, 85, 247, 1))' }}>
                               <Sparkles className="w-3 h-3" /> Custom Fields
                             </h4>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                               {customFields.map(f => (
                                 <div key={f.id}>
-                                  <label className="text-xs text-slate-400">{f.name}</label>
+                                  <label className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{f.name}</label>
                                   <input 
                                     type={f.field_type === 'number' ? 'number' : 'text'} 
                                     value={(customFieldValues[lead.id] || {})[f.field_key] || ''} 
@@ -745,7 +775,7 @@ export default function Leads() {
                                         [lead.id]: { ...(p[lead.id] || {}), [f.field_key]: e.target.value } 
                                       })); 
                                     }} 
-                                    className="w-full px-2 py-1 bg-slate-900 border border-slate-700 rounded text-white text-sm mt-0.5" 
+                                    className="w-full px-2 py-1 rounded text-sm mt-0.5" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                                   />
                                 </div>
                               ))}
@@ -754,16 +784,13 @@ export default function Leads() {
                         )}
 
                         {/* Tabs */}
-                        <div className="flex border-b border-slate-700 px-4">
+                        <div className="flex border-b px-4" style={{ borderColor: 'var(--t-border)' }}>
                           {['timeline', 'dealScore', 'aiInsights', 'statusHistory'].map(t => (
                             <button 
                               key={t} 
                               onClick={() => setActiveTab(t)} 
-                              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                                activeTab === t 
-                                  ? 'text-blue-400 border-blue-400' 
-                                  : 'text-slate-400 border-transparent hover:text-slate-300'
-                              }`}
+                              className="px-4 py-2 text-sm font-medium border-b-2 transition-colors"
+                              style={{ color: activeTab === t ? 'var(--t-info)' : 'var(--t-text-muted)', borderBottomColor: activeTab === t ? 'var(--t-info)' : 'transparent' }}
                             >
                               {t === 'timeline' ? '📋 Timeline' : 
                                t === 'dealScore' ? '⚡ Deal Score' : 
@@ -780,33 +807,33 @@ export default function Leads() {
                               <div className="flex flex-wrap gap-2 mb-4">
                                 <button 
                                   onClick={() => logAct(lead.id, 'call')} 
-                                  className="px-3 py-1.5 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-lg text-sm flex items-center gap-1"
+                                  className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1" style={{ backgroundColor: 'var(--t-info-dim, rgba(59, 130, 246, 0.2))', color: 'var(--t-info)' }}
                                 >
                                   <PhoneCall className="w-3 h-3" /> Log Call
                                 </button>
                                 <button 
                                   onClick={() => logAct(lead.id, 'email')} 
-                                  className="px-3 py-1.5 bg-green-600/20 text-green-300 hover:bg-green-600/30 rounded-lg text-sm flex items-center gap-1"
+                                  className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1" style={{ backgroundColor: 'var(--t-success-dim, rgba(16, 185, 129, 0.2))', color: 'var(--t-success)' }}
                                 >
                                   <Mail className="w-3 h-3" /> Log Email
                                 </button>
                                 <button 
                                   onClick={() => logAct(lead.id, 'meeting')} 
-                                  className="px-3 py-1.5 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 rounded-lg text-sm flex items-center gap-1"
+                                  className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1" style={{ backgroundColor: 'var(--t-primary-dim, rgba(168, 85, 247, 0.2))', color: 'var(--t-primary-text)' }}
                                 >
                                   <Users className="w-3 h-3" /> Log Meeting
                                 </button>
                                 {!isRecording ? (
                                   <button 
                                     onClick={startRec} 
-                                    className="px-3 py-1.5 bg-red-600/20 text-red-300 hover:bg-red-600/30 rounded-lg text-sm flex items-center gap-1"
+                                    className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1" style={{ backgroundColor: 'var(--t-error-dim, rgba(239, 68, 68, 0.2))', color: 'var(--t-error)' }}
                                   >
                                     <Mic className="w-3 h-3" /> Record Call
                                   </button>
                                 ) : (
                                   <button 
                                     onClick={() => stopRec(lead.id)} 
-                                    className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm flex items-center gap-1 animate-pulse"
+                                    className="px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 animate-pulse" style={{ backgroundColor: 'var(--t-error)', color: 'var(--t-text)' }}
                                   >
                                     <Square className="w-3 h-3" /> Stop {fmtTime(recordingTime)}
                                   </button>
@@ -819,12 +846,12 @@ export default function Leads() {
                                   onChange={e => setNoteText(e.target.value)} 
                                   onKeyDown={e => e.key === 'Enter' && addNote(lead.id)} 
                                   placeholder="Add a note..." 
-                                  className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm" 
+                                  className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                                 />
                                 <button 
                                   onClick={() => addNote(lead.id)} 
                                   disabled={!noteText.trim()} 
-                                  className="px-3 py-2 bg-blue-600 disabled:bg-slate-700 text-white rounded-lg"
+                                  className="px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
                                 >
                                   <Send className="w-4 h-4" />
                                 </button>
@@ -840,8 +867,8 @@ export default function Leads() {
                                         <Icon className="w-4 h-4" />
                                       </div>
                                       <div className="flex-1">
-                                        <p className="text-white text-sm">{entry.content}</p>
-                                        <p className="text-xs text-slate-500 mt-0.5">
+                                        <p className="text-sm" style={{ color: 'var(--t-text)' }}>{entry.content}</p>
+                                        <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
                                           {entry.user} · {formatDistanceToNow(new Date(entry.timestamp), { addSuffix: true })}
                                         </p>
                                       </div>
@@ -849,40 +876,40 @@ export default function Leads() {
                                   );
                                 })}
                                 {(!lead.timeline || lead.timeline.length === 0) && (
-                                  <p className="text-slate-500 text-sm text-center py-4">No timeline entries yet</p>
+                                  <p className="text-sm text-center py-4" style={{ color: 'var(--t-text-muted)' }}>No timeline entries yet</p>
                                 )}
                               </div>
 
                               {recs.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-slate-700">
-                                  <h4 className="text-white text-sm font-medium mb-3 flex items-center gap-2">
+                                <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
+                                  <h4 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
                                     <Volume2 className="w-4 h-4" /> Recordings
                                   </h4>
                                   {recs.map(r => (
-                                    <div key={r.id} className="p-3 bg-slate-800/50 rounded-lg mb-2">
+                                    <div key={r.id} className="p-3 rounded-lg mb-2" style={{ backgroundColor: 'rgba(var(--t-surface-rgb, 30, 41, 59), 0.5)' }}>
                                       <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                           <button 
                                             onClick={() => setPlayingAudio(playingAudio === r.id ? null : r.id)} 
-                                            className="p-1.5 bg-blue-600 rounded-full text-white"
+                                            className="p-1.5 rounded-full" style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
                                           >
                                             {playingAudio === r.id ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                                           </button>
-                                          <span className="text-white text-sm">{fmtTime(r.duration)}</span>
-                                          <span className="text-slate-400 text-xs">{fmtDate(r.timestamp)}</span>
+                                          <span className="text-sm" style={{ color: 'var(--t-text)' }}>{fmtTime(r.duration)}</span>
+                                          <span className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{fmtDate(r.timestamp)}</span>
                                         </div>
                                         <div>
                                           {r.transcription ? (
                                             <button 
                                               onClick={() => setShowTranscript(showTranscript === r.id ? null : r.id)} 
-                                              className="px-2 py-1 bg-emerald-600/20 text-emerald-300 text-xs rounded flex items-center gap-1"
+                                              className="px-2 py-1 text-xs rounded flex items-center gap-1" style={{ backgroundColor: 'var(--t-success-dim, rgba(16, 185, 129, 0.2))', color: 'var(--t-success)' }}
                                             >
                                               <Eye className="w-3 h-3" /> Transcript
                                             </button>
                                           ) : (
                                             <button 
                                               onClick={() => analyzeRecording(r.id)} 
-                                              className="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded flex items-center gap-1"
+                                              className="px-2 py-1 text-xs rounded flex items-center gap-1" style={{ backgroundColor: 'var(--t-primary-dim, rgba(168, 85, 247, 0.2))', color: 'var(--t-primary-text)' }}
                                             >
                                               <Brain className="w-3 h-3" /> Analyze
                                             </button>
@@ -890,7 +917,7 @@ export default function Leads() {
                                         </div>
                                       </div>
                                       {showTranscript === r.id && r.transcription && (
-                                        <div className="mt-3 p-3 bg-slate-900 rounded-lg space-y-2">
+                                        <div className="mt-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: 'var(--t-bg)' }}>
                                           <span className={`px-2 py-0.5 text-xs rounded ${
                                             r.transcription.sentiment === 'positive' 
                                               ? 'bg-green-500/20 text-green-300' 
@@ -900,15 +927,15 @@ export default function Leads() {
                                           }`}>
                                             {r.transcription.sentiment}
                                           </span>
-                                          <p className="text-slate-300 text-sm">{r.transcription.summary}</p>
+                                          <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>{r.transcription.summary}</p>
                                           {r.transcription.keyPoints.map((p: string, i: number) => (
-                                            <p key={i} className="text-xs text-slate-300">• {p}</p>
+                                            <p key={i} className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>• {p}</p>
                                           ))}
                                           {r.transcription.objections.map((o: string, i: number) => (
-                                            <p key={i} className="text-xs text-amber-300">⚠️ {o}</p>
+                                            <p key={i} className="text-xs" style={{ color: 'var(--t-warning)' }}>⚠️ {o}</p>
                                           ))}
                                           {r.transcription.nextSteps.map((s: string, i: number) => (
-                                            <p key={i} className="text-xs text-emerald-300">✅ {s}</p>
+                                            <p key={i} className="text-xs" style={{ color: 'var(--t-success)' }}>✅ {s}</p>
                                           ))}
                                         </div>
                                       )}
@@ -926,7 +953,7 @@ export default function Leads() {
                                 <div className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${
                                   ds >= 70 ? 'border-emerald-500' : ds >= 40 ? 'border-amber-500' : 'border-red-500'
                                 }`}>
-                                  <span className="text-3xl font-bold text-white">{ds}</span>
+                                  <span className="text-3xl font-bold" style={{ color: 'var(--t-text)' }}>{ds}</span>
                                 </div>
                               </div>
                               <div className="space-y-3">
@@ -939,11 +966,11 @@ export default function Leads() {
                                 ].map((f, i) => (
                                   <div key={i}>
                                     <div className="flex justify-between text-sm mb-1">
-                                      <span className="text-slate-300">{f.l}</span>
-                                      <span className="text-slate-400">{f.w} · {Math.round(f.v)}%</span>
+                                      <span style={{ color: 'var(--t-text-secondary)' }}>{f.l}</span>
+                                      <span style={{ color: 'var(--t-text-muted)' }}>{f.w} · {Math.round(f.v)}%</span>
                                     </div>
-                                    <div className="h-2 bg-slate-700 rounded-full">
-                                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${f.v}%` }} />
+                                    <div className="h-2 rounded-full" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                                      <div className="h-full rounded-full" style={{ width: `${f.v}%`, backgroundColor: 'var(--t-primary)' }} />
                                     </div>
                                   </div>
                                 ))}
@@ -959,8 +986,8 @@ export default function Leads() {
                                   pri.level === 'high' ? 'border-red-500' : pri.level === 'medium' ? 'border-amber-500' : 'border-emerald-500'
                                 }`}>
                                   <div className="text-center">
-                                    <span className="text-2xl font-bold text-white">{pri.score}</span>
-                                    <p className="text-xs text-slate-400">{pri.level}</p>
+                                    <span className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>{pri.score}</span>
+                                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{pri.level}</p>
                                   </div>
                                 </div>
                               </div>
@@ -973,11 +1000,11 @@ export default function Leads() {
                                 ].map((f, i) => (
                                   <div key={i}>
                                     <div className="flex justify-between text-sm mb-1">
-                                      <span className="text-slate-300">{f.l}</span>
-                                      <span className="text-slate-400">{f.w}</span>
+                                      <span style={{ color: 'var(--t-text-secondary)' }}>{f.l}</span>
+                                      <span style={{ color: 'var(--t-text-muted)' }}>{f.w}</span>
                                     </div>
-                                    <div className="h-2 bg-slate-700 rounded-full">
-                                      <div className="h-full bg-purple-500 rounded-full" style={{ width: `${f.v}%` }} />
+                                    <div className="h-2 rounded-full" style={{ backgroundColor: 'var(--t-surface-hover)' }}>
+                                      <div className="h-full rounded-full" style={{ width: `${f.v}%`, backgroundColor: 'var(--t-primary)' }} />
                                     </div>
                                   </div>
                                 ))}
@@ -988,9 +1015,9 @@ export default function Leads() {
                                   { v: recs.length, l: 'Recordings' },
                                   { v: `${days}d`, l: 'In Status' }
                                 ].map((s, i) => (
-                                  <div key={i} className="p-3 bg-slate-800/50 rounded-lg text-center">
-                                    <p className="text-2xl font-bold text-white">{s.v}</p>
-                                    <p className="text-xs text-slate-400">{s.l}</p>
+                                  <div key={i} className="p-3 rounded-lg text-center" style={{ backgroundColor: 'rgba(var(--t-surface-rgb, 30, 41, 59), 0.5)' }}>
+                                    <p className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>{s.v}</p>
+                                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{s.l}</p>
                                   </div>
                                 ))}
                               </div>
@@ -1001,7 +1028,7 @@ export default function Leads() {
                           {activeTab === 'statusHistory' && (
                             <div>
                               <div className="mb-4">
-                                <h4 className="text-slate-400 text-sm mb-2">Change Status:</h4>
+                                <h4 style={{ color: 'var(--t-text-muted)' }} className="text-sm mb-2">Change Status:</h4>
                                 <div className="flex flex-wrap gap-2">
                                   {transitions.map((s: string) => (
                                     <button 
@@ -1013,29 +1040,29 @@ export default function Leads() {
                                     </button>
                                   ))}
                                   {transitions.length === 0 && (
-                                    <p className="text-slate-500 text-sm">No transitions available</p>
+                                    <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>No transitions available</p>
                                   )}
                                 </div>
                               </div>
                               <div className="space-y-3">
                                 {(lead.statusHistory || []).slice().reverse().map((e, i) => (
-                                  <div key={i} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+                                  <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: 'rgba(var(--t-surface-rgb, 30, 41, 59), 0.5)' }}>
                                     <div className="flex items-center gap-2 flex-1">
-                                     <span className={`px-2 py-0.5 text-xs rounded-full border ${e.fromStatus ? STATUS_BADGE[e.fromStatus] : STATUS_BADGE['new']}`}>
-  {e.fromStatus ? (STATUS_LABELS as any)[e.fromStatus] || e.fromStatus : 'New'}
-</span>
-                                      <ArrowRight className="w-4 h-4 text-slate-500" />
+                                      <span className={`px-2 py-0.5 text-xs rounded-full border ${e.fromStatus ? STATUS_BADGE[e.fromStatus] : STATUS_BADGE['new']}`}>
+                                        {e.fromStatus ? (STATUS_LABELS as any)[e.fromStatus] || e.fromStatus : 'New'}
+                                      </span>
+                                      <ArrowRight className="w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
                                       <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[e.toStatus] || ''}`}>
                                         {(STATUS_LABELS as any)[e.toStatus] || e.toStatus}
                                       </span>
                                     </div>
-                                    <span className="text-xs text-slate-500">
+                                    <span className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
                                       {formatDistanceToNow(new Date(e.timestamp), { addSuffix: true })}
                                     </span>
                                   </div>
                                 ))}
                                 {(!lead.statusHistory || lead.statusHistory.length === 0) && (
-                                  <p className="text-slate-500 text-sm text-center py-4">No status changes yet</p>
+                                  <p className="text-sm text-center py-4" style={{ color: 'var(--t-text-muted)' }}>No status changes yet</p>
                                 )}
                               </div>
                             </div>
@@ -1053,27 +1080,27 @@ export default function Leads() {
 
       {/* DELETE CONFIRMATION MODAL */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }} className="fixed inset-0 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }} className="rounded-xl border w-full max-w-md" onClick={e => e.stopPropagation()}>
             <div className="p-6">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--t-error-dim, rgba(239, 68, 68, 0.2))' }}>
+                <AlertTriangle className="w-6 h-6" style={{ color: 'var(--t-error)' }} />
               </div>
-              <h3 className="text-lg font-semibold text-white text-center mb-2">Delete {selectedLeads.size} Leads?</h3>
-              <p className="text-sm text-slate-400 text-center mb-6">
+              <h3 className="text-lg font-semibold text-center mb-2" style={{ color: 'var(--t-text)' }}>Delete {selectedLeads.size} Leads?</h3>
+              <p className="text-sm text-center mb-6" style={{ color: 'var(--t-text-muted)' }}>
                 This action cannot be undone. All selected leads and their associated data will be permanently removed.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium"
+                  className="flex-1 px-4 py-2 rounded-lg font-medium" style={{ backgroundColor: 'var(--t-surface-hover)', color: 'var(--t-text)' }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleBulkDelete}
                   disabled={bulkDeleting}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 rounded-lg font-medium flex items-center justify-center gap-2" style={{ backgroundColor: 'var(--t-error)', color: 'var(--t-text)' }}
                 >
                   {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                   {bulkDeleting ? 'Deleting...' : 'Delete'}
@@ -1086,50 +1113,50 @@ export default function Leads() {
 
       {/* ADD/EDIT MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-slate-800 rounded-xl border border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-slate-700">
-              <h2 className="text-lg font-semibold text-white">{editingLead ? 'Edit Lead' : 'Add New Lead'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:text-white rounded-lg">
+        <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }} className="fixed inset-0 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+          <div style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }} className="rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>{editingLead ? 'Edit Lead' : 'Add New Lead'}</h2>
+              <button onClick={() => setShowModal(false)} className="p-2 rounded-lg" style={{ color: 'var(--t-text-muted)' }}>
                 <X className="w-5 h-5" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-slate-400 mb-1">Name *</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Name *</label>
                   <input 
                     type="text" 
                     value={formData.name} 
                     onChange={e => setFormData({ ...formData, name: e.target.value })} 
                     required 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Email</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Email</label>
                   <input 
                     type="email" 
                     value={formData.email} 
                     onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Phone</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Phone</label>
                   <input 
                     type="tel" 
                     value={formData.phone} 
                     onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Status</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Status</label>
                   <select 
                     value={formData.status} 
                     onChange={e => setFormData({ ...formData, status: e.target.value })} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
                   >
                     <option value="new">New</option>
                     <option value="contacted">Contacted</option>
@@ -1140,19 +1167,19 @@ export default function Leads() {
                   </select>
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-slate-400 mb-1">Property Address</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Property Address</label>
                   <input 
                     value={formData.propertyAddress} 
                     onChange={e => setFormData({ ...formData, propertyAddress: e.target.value })} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Property Type</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Property Type</label>
                   <select 
                     value={formData.propertyType} 
                     onChange={e => setFormData({ ...formData, propertyType: e.target.value })} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }}
                   >
                     <option value="single-family">Single Family</option>
                     <option value="multi-family">Multi Family</option>
@@ -1162,86 +1189,86 @@ export default function Leads() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Estimated Value</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Estimated Value</label>
                   <input 
                     type="number" 
                     value={formData.estimatedValue} 
                     onChange={e => setFormData({ ...formData, estimatedValue: e.target.value })} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-slate-400 mb-1">Offer Amount</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Offer Amount</label>
                   <input 
                     type="number" 
                     value={formData.offerAmount} 
                     onChange={e => setFormData({ ...formData, offerAmount: e.target.value })} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                    className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-slate-400 mb-1">Notes</label>
+                  <label className="block text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Notes</label>
                   <textarea 
                     value={formData.notes} 
                     onChange={e => setFormData({ ...formData, notes: e.target.value })} 
                     rows={3} 
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white resize-none" 
+                    className="w-full px-3 py-2 rounded-lg resize-none" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                   />
                 </div>
               </div>
               
-              <div className="border-t border-slate-700 pt-4">
-                <h3 className="text-white font-medium mb-3 flex items-center gap-2">
+              <div className="border-t pt-4" style={{ borderColor: 'var(--t-border)' }}>
+                <h3 className="font-medium mb-3 flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
                   <BarChart3 className="w-4 h-4" /> Deal Score Parameters
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Probability (0-100)</label>
+                    <label className="block text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>Probability (0-100)</label>
                     <input 
                       type="number" 
                       min="0" 
                       max="100" 
                       value={formData.probability} 
                       onChange={e => setFormData({ ...formData, probability: e.target.value })} 
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                      className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Engagement (1-5)</label>
+                    <label className="block text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>Engagement (1-5)</label>
                     <input 
                       type="number" 
                       min="1" 
                       max="5" 
                       value={formData.engagementLevel} 
                       onChange={e => setFormData({ ...formData, engagementLevel: e.target.value })} 
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                      className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Urgency (1-5)</label>
+                    <label className="block text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>Urgency (1-5)</label>
                     <input 
                       type="number" 
                       min="1" 
                       max="5" 
                       value={formData.timelineUrgency} 
                       onChange={e => setFormData({ ...formData, timelineUrgency: e.target.value })} 
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                      className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-400 mb-1">Competition (1-5)</label>
+                    <label className="block text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>Competition (1-5)</label>
                     <input 
                       type="number" 
                       min="1" 
                       max="5" 
                       value={formData.competitionLevel} 
                       onChange={e => setFormData({ ...formData, competitionLevel: e.target.value })} 
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white" 
+                      className="w-full px-3 py-2 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', border: '1px solid' }} 
                     />
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="text-sm text-slate-400">Preview:</span>
+                  <span className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Preview:</span>
                   {(() => {
                     const previewScore = calculateDealScore({
                       estimatedValue: parseFloat(formData.estimatedValue) || 0,
@@ -1259,18 +1286,20 @@ export default function Leads() {
                 </div>
               </div>
               
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-700">
+              <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
                 <button 
                   type="button" 
                   onClick={() => setShowModal(false)} 
-                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg"
+                  className="px-4 py-2 rounded-lg" 
+                  style={{ backgroundColor: 'var(--t-surface-hover)', color: 'var(--t-text)' }}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={saving} 
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2"
+                  className="px-4 py-2 rounded-lg flex items-center gap-2" 
+                  style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-text)' }}
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
                   {editingLead ? 'Update' : 'Create Lead'}
@@ -1282,4 +1311,3 @@ export default function Leads() {
       )}
     </div>
   );
-}
