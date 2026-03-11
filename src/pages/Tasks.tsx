@@ -218,7 +218,7 @@ export function Tasks() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ backgroundColor: 'var(--t-bg)' }}>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

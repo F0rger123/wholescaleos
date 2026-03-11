@@ -1673,7 +1673,7 @@ export function Chat() {
   // Show loading indicator while channels are loading
   if (loadingChannels) {
     return (
-      <div className="flex h-[calc(100vh-73px)] -m-6 bg-slate-950 items-center justify-center">
+      <div className="flex h-[calc(100vh-73px)] -m-6 items-center justify-center" style={{ backgroundColor: 'var(--t-bg)' }}>
         <div className="text-center">
           <div className="flex gap-2 justify-center mb-4">
             <div className="w-3 h-3 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -1687,7 +1687,7 @@ export function Chat() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-73px)] -m-6 bg-slate-950">
+    <div className="flex h-[calc(100vh-73px)] -m-6" style={{ backgroundColor: 'var(--t-bg)' }}>
       <ChatSidebar
         channels={channels}
         currentChannelId={currentChannelId}
@@ -1865,7 +1865,7 @@ export function Chat() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center bg-slate-950">
+        <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--t-bg)' }}>
           <div className="text-center">
             <MessageSquare size={48} className="text-slate-700 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-400">Select a conversation</h3>

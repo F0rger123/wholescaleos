@@ -187,7 +187,7 @@ export function Dashboard() {
   const revenueChange = ((closedRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
 
   return (
-    <div className="space-y-6 theme-transition">
+    <div className="space-y-6 theme-transition" style={{ backgroundColor: 'var(--t-bg)' }}>
       {/* Header with Streak */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

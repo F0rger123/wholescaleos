@@ -115,7 +115,7 @@ export function Team() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ backgroundColor: 'var(--t-bg)' }}>
       {/* Team Header — Current Team + Switcher */}
       <div
         className="rounded-2xl border p-5"
