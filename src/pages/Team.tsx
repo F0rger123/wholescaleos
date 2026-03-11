@@ -17,13 +17,6 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { switchToTeam } from '../lib/team-utils';
 
 const ROLE_ICONS: Record<TeamRole, React.ElementType> = { admin: Crown, member: Shield, viewer: Eye };
-const ROLE_COLORS: Record<TeamRole, string> = {
-  admin: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  member: 'bg-brand-500/15 text-brand-400 border-brand-500/30',
-  viewer: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
-};
-
-const inputClass = 'w-full px-3 py-2.5 text-sm rounded-xl bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-brand-500/50';
 
 interface UserTeam {
   teamId: string;
@@ -127,36 +120,36 @@ export function Team() {
       <div
         className="rounded-2xl border p-5"
         style={{
-          background: 'var(--t-surface, #1e293b)',
-          borderColor: 'var(--t-border, #334155)',
+          backgroundColor: 'var(--t-surface)',
+          borderColor: 'var(--t-border)',
         }}
       >
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ background: 'var(--t-primary-dim, rgba(59,130,246,0.15))' }}
+              style={{ backgroundColor: 'var(--t-primary-dim)' }}
             >
-              <Building2 size={24} style={{ color: 'var(--t-primary, #3b82f6)' }} />
+              <Building2 size={24} style={{ color: 'var(--t-primary)' }} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold" style={{ color: 'var(--t-text, #fff)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>
                   {teamConfig.name}
                 </h2>
                 {userTeams.length > 1 && (
                   <span
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                     style={{
-                      background: 'var(--t-primary-dim, rgba(59,130,246,0.15))',
-                      color: 'var(--t-primary, #3b82f6)',
+                      backgroundColor: 'var(--t-primary-dim)',
+                      color: 'var(--t-primary)',
                     }}
                   >
                     {userTeams.length} teams
                   </span>
                 )}
               </div>
-              <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
                 {team.length} member{team.length !== 1 ? 's' : ''} · {onlineCount} online
               </p>
             </div>
@@ -168,10 +161,17 @@ export function Team() {
               <div className="relative">
                 <button
                   onClick={() => setShowTeamSwitcher(!showTeamSwitcher)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border transition-colors hover:bg-white/5"
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border transition-colors"
                   style={{
-                    borderColor: 'var(--t-border, #334155)',
-                    color: 'var(--t-text-secondary, #cbd5e1)',
+                    borderColor: 'var(--t-border)',
+                    color: 'var(--t-text-secondary)',
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
                   <ArrowRightLeft size={14} /> Switch Team
@@ -183,13 +183,13 @@ export function Team() {
                     <div
                       className="absolute right-0 top-full mt-2 w-64 rounded-xl border shadow-xl z-20 overflow-hidden"
                       style={{
-                        background: 'var(--t-surface, #1e293b)',
-                        borderColor: 'var(--t-border, #334155)',
+                        backgroundColor: 'var(--t-surface)',
+                        borderColor: 'var(--t-border)',
                       }}
                     >
                       <div className="p-2">
                         <p className="text-[10px] uppercase tracking-wider font-semibold px-2 py-1.5"
-                          style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+                          style={{ color: 'var(--t-text-muted)' }}>
                           Your Teams
                         </p>
                         {userTeams.map(t => (
@@ -199,32 +199,44 @@ export function Team() {
                               if (!t.isCurrent) switchToTeam(t.teamId);
                               setShowTeamSwitcher(false);
                             }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-white/5 text-left"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left"
+                            style={{
+                              backgroundColor: 'transparent',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }}
                           >
                             <div
                               className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                               style={{
-                                background: t.isCurrent
-                                  ? 'var(--t-primary-dim, rgba(59,130,246,0.15))'
-                                  : 'rgba(255,255,255,0.05)',
+                                backgroundColor: t.isCurrent
+                                  ? 'var(--t-primary-dim)'
+                                  : 'var(--t-surface)',
                               }}
                             >
                               <Building2 size={14} style={{
-                                color: t.isCurrent ? 'var(--t-primary, #3b82f6)' : 'var(--t-text-muted, #94a3b8)'
+                                color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text-muted)'
                               }} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium truncate" style={{
-                                color: t.isCurrent ? 'var(--t-primary, #3b82f6)' : 'var(--t-text, #fff)'
+                                color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text)'
                               }}>
                                 {t.teamName}
                               </p>
-                              <p className="text-[10px] capitalize" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+                              <p className="text-[10px] capitalize" style={{ color: 'var(--t-text-muted)' }}>
                                 {t.role}
                               </p>
                             </div>
                             {t.isCurrent && (
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{
+                                backgroundColor: 'var(--t-success-dim)',
+                                color: 'var(--t-success)',
+                              }}>
                                 Active
                               </span>
                             )}
@@ -240,10 +252,17 @@ export function Team() {
             {/* Join Team */}
             <button
               onClick={() => setShowJoinModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border transition-colors hover:bg-white/5"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border transition-colors"
               style={{
-                borderColor: 'var(--t-border, #334155)',
-                color: 'var(--t-text-secondary, #cbd5e1)',
+                borderColor: 'var(--t-border)',
+                color: 'var(--t-text-secondary)',
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
               <Users size={14} /> Join Team
@@ -252,8 +271,19 @@ export function Team() {
             {/* Create Team */}
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl font-medium text-white transition-colors"
-              style={{ background: 'var(--t-primary, #3b82f6)' }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl font-medium transition-colors"
+              style={{
+                backgroundColor: 'var(--t-primary)',
+                color: 'var(--t-on-primary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--t-primary-dim)';
+                e.currentTarget.style.color = 'var(--t-primary-text)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--t-primary)';
+                e.currentTarget.style.color = 'var(--t-on-primary)';
+              }}
             >
               <Plus size={14} /> Create Team
             </button>
@@ -264,28 +294,46 @@ export function Team() {
       {/* Action buttons */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text, #fff)' }}>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>
             Team Members
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+          <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
             Manage roles, presence, and collaboration
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border transition-colors hover:bg-white/5"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border transition-colors"
             style={{
-              borderColor: 'var(--t-border, #334155)',
-              color: 'var(--t-text-secondary, #cbd5e1)',
+              borderColor: 'var(--t-border)',
+              color: 'var(--t-text-secondary)',
+              backgroundColor: 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
             <Copy size={14} /> Invite Code
           </button>
           <button
             onClick={() => { setShowAddMember(true); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-white text-sm font-medium rounded-xl transition-colors"
-            style={{ background: 'var(--t-primary, #3b82f6)' }}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-xl transition-colors"
+            style={{
+              backgroundColor: 'var(--t-primary)',
+              color: 'var(--t-on-primary)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--t-primary-dim)';
+              e.currentTarget.style.color = 'var(--t-primary-text)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--t-primary)';
+              e.currentTarget.style.color = 'var(--t-on-primary)';
+            }}
           >
             <Plus size={16} /> Add Member
           </button>
@@ -297,65 +345,97 @@ export function Team() {
         <div
           className="rounded-2xl border p-5"
           style={{
-            background: 'var(--t-surface, #1e293b)',
-            borderColor: 'var(--t-border, #334155)',
+            backgroundColor: 'var(--t-surface)',
+            borderColor: 'var(--t-border)',
           }}
         >
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text, #fff)' }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>
               Team Invite Code
             </h3>
-            <button onClick={() => setShowInvite(false)} style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+            <button onClick={() => setShowInvite(false)} style={{ color: 'var(--t-text-muted)' }}>
               <X size={16} />
             </button>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
-              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Team Name</label>
+              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted)' }}>Team Name</label>
               <div className="flex gap-2">
                 <input
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                  className={`${inputClass} flex-1`}
+                  className="w-full px-3 py-2 text-sm rounded-xl flex-1"
+                  style={{
+                    backgroundColor: 'var(--t-input-bg)',
+                    borderColor: 'var(--t-input-border)',
+                    color: 'var(--t-text)',
+                    border: '1px solid',
+                  }}
                 />
                 <button
                   onClick={() => updateTeamConfig({ name: teamName })}
-                  className="px-3 py-2 text-white text-sm rounded-xl"
-                  style={{ background: 'var(--t-primary, #3b82f6)' }}
+                  className="px-3 py-2 text-sm rounded-xl transition-colors"
+                  style={{
+                    backgroundColor: 'var(--t-primary)',
+                    color: 'var(--t-on-primary)',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--t-primary-dim)';
+                    e.currentTarget.style.color = 'var(--t-primary-text)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--t-primary)';
+                    e.currentTarget.style.color = 'var(--t-on-primary)';
+                  }}
                 >
                   <Check size={14} />
                 </button>
               </div>
             </div>
             <div>
-              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Invite Code</label>
+              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted)' }}>Invite Code</label>
               <div className="flex gap-2">
                 <div
                   className="px-4 py-2.5 border rounded-xl text-sm font-mono tracking-wider select-all"
                   style={{
-                    background: 'var(--t-input-bg, #0f172a)',
-                    borderColor: 'var(--t-input-border, #334155)',
-                    color: 'var(--t-primary, #3b82f6)',
+                    backgroundColor: 'var(--t-input-bg)',
+                    borderColor: 'var(--t-input-border)',
+                    color: 'var(--t-primary)',
+                    border: '1px solid',
                   }}
                 >
                   {teamConfig.inviteCode}
                 </div>
                 <button
                   onClick={copyInviteCode}
-                  className="px-3 py-2 rounded-xl border transition-colors hover:bg-white/5"
+                  className="px-3 py-2 rounded-xl border transition-colors"
                   style={{
-                    borderColor: 'var(--t-border, #334155)',
-                    color: 'var(--t-text-secondary, #cbd5e1)',
+                    borderColor: 'var(--t-border)',
+                    color: 'var(--t-text-secondary)',
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  {copiedCode ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  {copiedCode ? <Check size={14} style={{ color: 'var(--t-success)' }} /> : <Copy size={14} />}
                 </button>
                 <button
                   onClick={regenerateInviteCode}
-                  className="px-3 py-2 rounded-xl border transition-colors hover:bg-white/5"
+                  className="px-3 py-2 rounded-xl border transition-colors"
                   style={{
-                    borderColor: 'var(--t-border, #334155)',
-                    color: 'var(--t-text-secondary, #cbd5e1)',
+                    borderColor: 'var(--t-border)',
+                    color: 'var(--t-text-secondary)',
+                    backgroundColor: 'transparent',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                   title="Regenerate code"
                 >
@@ -367,14 +447,14 @@ export function Team() {
           <div
             className="mt-3 p-3 rounded-xl border"
             style={{
-              background: 'rgba(59,130,246,0.05)',
-              borderColor: 'rgba(59,130,246,0.15)',
+              backgroundColor: 'var(--t-primary-dim)',
+              borderColor: 'var(--t-primary)',
             }}
           >
-            <p className="text-xs font-medium mb-1" style={{ color: 'var(--t-primary, #3b82f6)' }}>
+            <p className="text-xs font-medium mb-1" style={{ color: 'var(--t-primary)' }}>
               📋 How to invite teammates:
             </p>
-            <ol className="text-xs space-y-1 list-decimal list-inside" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+            <ol className="text-xs space-y-1 list-decimal list-inside" style={{ color: 'var(--t-text-muted)' }}>
               <li>Copy the invite code above</li>
               <li>Share it with your teammate</li>
               <li>They can enter it when <strong>signing up</strong> (in the invite code field)</li>
@@ -390,35 +470,79 @@ export function Team() {
         <div
           className="rounded-2xl border p-5 space-y-4"
           style={{
-            background: 'var(--t-surface, #1e293b)',
-            borderColor: 'var(--t-border, #334155)',
+            backgroundColor: 'var(--t-surface)',
+            borderColor: 'var(--t-border)',
           }}
         >
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text, #fff)' }}>Add Team Member</h3>
-            <button onClick={() => setShowAddMember(false)} style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>Add Team Member</h3>
+            <button onClick={() => setShowAddMember(false)} style={{ color: 'var(--t-text-muted)' }}>
               <X size={16} />
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Name *</label>
-              <input value={newMember.name} onChange={(e) => setNewMember(f => ({ ...f, name: e.target.value }))} className={inputClass} placeholder="Full name" />
+              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted)' }}>Name *</label>
+              <input
+                value={newMember.name}
+                onChange={(e) => setNewMember(f => ({ ...f, name: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm rounded-xl"
+                style={{
+                  backgroundColor: 'var(--t-input-bg)',
+                  borderColor: 'var(--t-input-border)',
+                  color: 'var(--t-text)',
+                  border: '1px solid',
+                }}
+                placeholder="Full name"
+              />
             </div>
             <div>
-              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Job Title</label>
-              <input value={newMember.role} onChange={(e) => setNewMember(f => ({ ...f, role: e.target.value }))} className={inputClass} placeholder="e.g. Acquisitions Manager" />
+              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted)' }}>Job Title</label>
+              <input
+                value={newMember.role}
+                onChange={(e) => setNewMember(f => ({ ...f, role: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm rounded-xl"
+                style={{
+                  backgroundColor: 'var(--t-input-bg)',
+                  borderColor: 'var(--t-input-border)',
+                  color: 'var(--t-text)',
+                  border: '1px solid',
+                }}
+                placeholder="e.g. Acquisitions Manager"
+              />
             </div>
             <div>
-              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Email *</label>
-              <input value={newMember.email} onChange={(e) => setNewMember(f => ({ ...f, email: e.target.value }))} className={inputClass} placeholder="email@example.com" />
+              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted)' }}>Email *</label>
+              <input
+                value={newMember.email}
+                onChange={(e) => setNewMember(f => ({ ...f, email: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm rounded-xl"
+                style={{
+                  backgroundColor: 'var(--t-input-bg)',
+                  borderColor: 'var(--t-input-border)',
+                  color: 'var(--t-text)',
+                  border: '1px solid',
+                }}
+                placeholder="email@example.com"
+              />
             </div>
             <div>
-              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Phone</label>
-              <input value={newMember.phone} onChange={(e) => setNewMember(f => ({ ...f, phone: e.target.value }))} className={inputClass} placeholder="(555) 000-0000" />
+              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted)' }}>Phone</label>
+              <input
+                value={newMember.phone}
+                onChange={(e) => setNewMember(f => ({ ...f, phone: e.target.value }))}
+                className="w-full px-3 py-2.5 text-sm rounded-xl"
+                style={{
+                  backgroundColor: 'var(--t-input-bg)',
+                  borderColor: 'var(--t-input-border)',
+                  color: 'var(--t-text)',
+                  border: '1px solid',
+                }}
+                placeholder="(555) 000-0000"
+              />
             </div>
             <div>
-              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Team Role</label>
+              <label className="text-xs mb-1 block" style={{ color: 'var(--t-text-muted)' }}>Team Role</label>
               <div className="flex gap-2">
                 {(['admin', 'member', 'viewer'] as TeamRole[]).map(r => {
                   const Icon = ROLE_ICONS[r];
@@ -426,9 +550,12 @@ export function Team() {
                     <button
                       key={r}
                       onClick={() => setNewMember(f => ({ ...f, teamRole: r }))}
-                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs rounded-xl border font-medium transition-colors ${
-                        newMember.teamRole === r ? ROLE_COLORS[r] : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
-                      }`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs rounded-xl border font-medium transition-colors"
+                      style={{
+                        backgroundColor: newMember.teamRole === r ? 'var(--t-primary-dim)' : 'var(--t-surface)',
+                        borderColor: newMember.teamRole === r ? 'var(--t-primary)' : 'var(--t-border)',
+                        color: newMember.teamRole === r ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                      }}
                     >
                       <Icon size={13} /> {r.charAt(0).toUpperCase() + r.slice(1)}
                     </button>
@@ -438,15 +565,37 @@ export function Team() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={handleAddMember} className="flex items-center gap-1 px-4 py-2 text-white text-sm rounded-xl font-medium" style={{ background: 'var(--t-primary, #3b82f6)' }}>
+            <button
+              onClick={handleAddMember}
+              className="flex items-center gap-1 px-4 py-2 text-sm rounded-xl font-medium transition-colors"
+              style={{
+                backgroundColor: 'var(--t-primary)',
+                color: 'var(--t-on-primary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--t-primary-dim)';
+                e.currentTarget.style.color = 'var(--t-primary-text)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--t-primary)';
+                e.currentTarget.style.color = 'var(--t-on-primary)';
+              }}
+            >
               <Plus size={14} /> Add Member
             </button>
             <button
               onClick={() => setShowAddMember(false)}
-              className="px-4 py-2 text-sm rounded-xl border hover:bg-white/5"
+              className="px-4 py-2 text-sm rounded-xl border transition-colors"
               style={{
-                borderColor: 'var(--t-border, #334155)',
-                color: 'var(--t-text-secondary, #cbd5e1)',
+                borderColor: 'var(--t-border)',
+                color: 'var(--t-text-secondary)',
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
               }}
             >
               Cancel
@@ -458,18 +607,25 @@ export function Team() {
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { icon: Award, color: 'var(--t-primary, #3b82f6)', bg: 'var(--t-primary-dim, rgba(59,130,246,0.15))', value: team.length, label: 'Members' },
-          { icon: Users, color: 'var(--t-success, #10b981)', bg: 'rgba(16,185,129,0.15)', value: onlineCount, label: 'Online' },
-          { icon: DollarSign, color: 'var(--t-success, #10b981)', bg: 'rgba(16,185,129,0.15)', value: `$${(totalRevenue / 1_000_000).toFixed(1)}M`, label: 'Revenue' },
-          { icon: TrendingUp, color: '#a855f7', bg: 'rgba(168,85,247,0.15)', value: totalDeals, label: 'Deals' },
-        ].map(({ icon: Icon, color, bg, value, label }) => (
+          { icon: Award, value: team.length, label: 'Members' },
+          { icon: Users, value: onlineCount, label: 'Online' },
+          { icon: DollarSign, value: `$${(totalRevenue / 1_000_000).toFixed(1)}M`, label: 'Revenue' },
+          { icon: TrendingUp, value: totalDeals, label: 'Deals' },
+        ].map(({ icon: Icon, value, label }) => (
           <div key={label} className="rounded-2xl border p-5 text-center"
-            style={{ background: 'var(--t-surface, #1e293b)', borderColor: 'var(--t-border, #334155)' }}>
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3" style={{ background: bg }}>
-              <Icon size={22} style={{ color }} />
+            style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+            <div
+              className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3"
+              style={{ backgroundColor: 'var(--t-primary-dim)' }}
+            >
+              <Icon size={22} style={{ color: 'var(--t-primary)' }} />
             </div>
-            <p className="text-2xl font-bold" style={{ color: label === 'Online' ? color : 'var(--t-text, #fff)' }}>{value}</p>
-            <p className="text-sm" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>{label}</p>
+            <p className="text-2xl font-bold" style={{
+              color: label === 'Online' ? 'var(--t-success)' : 'var(--t-text)'
+            }}>
+              {value}
+            </p>
+            <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>{label}</p>
           </div>
         ))}
       </div>
@@ -491,30 +647,48 @@ export function Team() {
           <div
             className="rounded-2xl border p-12 text-center"
             style={{
-              background: 'var(--t-surface, #1e293b)',
-              borderColor: 'var(--t-border, #334155)',
+              backgroundColor: 'var(--t-surface)',
+              borderColor: 'var(--t-border)',
             }}
           >
-            <Users size={48} className="mx-auto mb-4" style={{ color: 'var(--t-text-muted, #94a3b8)' }} />
-            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--t-text, #fff)' }}>No team members yet</h3>
-            <p className="text-sm mb-4" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+            <Users size={48} className="mx-auto mb-4" style={{ color: 'var(--t-text-muted)' }} />
+            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--t-text)' }}>No team members yet</h3>
+            <p className="text-sm mb-4" style={{ color: 'var(--t-text-muted)' }}>
               Share your invite code or add members manually to get started.
             </p>
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => setShowInvite(true)}
-                className="px-4 py-2 text-sm rounded-xl border hover:bg-white/5"
+                className="px-4 py-2 text-sm rounded-xl border transition-colors"
                 style={{
-                  borderColor: 'var(--t-border, #334155)',
-                  color: 'var(--t-text-secondary, #cbd5e1)',
+                  borderColor: 'var(--t-border)',
+                  color: 'var(--t-text-secondary)',
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
                 <Copy size={14} className="inline mr-1.5" /> Show Invite Code
               </button>
               <button
                 onClick={() => setShowAddMember(true)}
-                className="px-4 py-2 text-sm rounded-xl text-white font-medium"
-                style={{ background: 'var(--t-primary, #3b82f6)' }}
+                className="px-4 py-2 text-sm rounded-xl font-medium transition-colors"
+                style={{
+                  backgroundColor: 'var(--t-primary)',
+                  color: 'var(--t-on-primary)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--t-primary-dim)';
+                  e.currentTarget.style.color = 'var(--t-primary-text)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--t-primary)';
+                  e.currentTarget.style.color = 'var(--t-on-primary)';
+                }}
               >
                 <Plus size={14} className="inline mr-1.5" /> Add Member
               </button>
@@ -535,10 +709,16 @@ export function Team() {
           return (
             <div
               key={member.id}
-              className="rounded-2xl border transition-colors overflow-hidden hover:border-opacity-70"
+              className="rounded-2xl border transition-colors overflow-hidden"
               style={{
-                background: 'var(--t-surface, #1e293b)',
-                borderColor: 'var(--t-border, #334155)',
+                backgroundColor: 'var(--t-surface)',
+                borderColor: 'var(--t-border)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--t-border-light)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--t-border)';
               }}
             >
               <div className="p-6">
@@ -546,8 +726,11 @@ export function Team() {
                   {/* Avatar with status */}
                   <div className="relative shrink-0">
                     <div
-                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold text-white"
-                      style={{ background: 'linear-gradient(135deg, var(--t-avatar-from, #3b82f6), var(--t-avatar-to, #8b5cf6))' }}
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold"
+                      style={{
+                        background: 'linear-gradient(135deg, var(--t-avatar-from), var(--t-avatar-to))',
+                        color: 'var(--t-on-primary)',
+                      }}
                     >
                       {member.avatar}
                     </div>
@@ -558,28 +741,35 @@ export function Team() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-lg font-semibold" style={{ color: 'var(--t-text, #fff)' }}>{member.name}</h3>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${ROLE_COLORS[member.teamRole]}`}>
+                      <h3 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>{member.name}</h3>
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border"
+                        style={{
+                          backgroundColor: 'var(--t-primary-dim)',
+                          borderColor: 'var(--t-primary)',
+                          color: 'var(--t-primary)',
+                        }}
+                      >
                         <RoleIcon size={10} />
                         {member.teamRole.charAt(0).toUpperCase() + member.teamRole.slice(1)}
                       </span>
                     </div>
-                    <p className="text-sm font-medium" style={{ color: 'var(--t-primary, #3b82f6)' }}>{member.role}</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--t-primary)' }}>{member.role}</p>
 
                     <div className="flex items-center gap-4 mt-2 flex-wrap">
                       <StatusBadge status={member.presenceStatus} customStatus={member.customStatus} />
                       {member.presenceStatus === 'offline' && (
-                        <span className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+                        <span className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
                           Last seen {formatDistanceToNow(new Date(member.lastSeen), { addSuffix: true })}
                         </span>
                       )}
                     </div>
 
                     <div className="flex flex-col gap-1 mt-3">
-                      <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+                      <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--t-text-muted)' }}>
                         <Mail size={14} /> {member.email}
                       </div>
-                      <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+                      <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--t-text-muted)' }}>
                         <Phone size={14} /> {member.phone}
                       </div>
                     </div>
@@ -592,10 +782,10 @@ export function Team() {
                       onChange={(e) => updateMemberStatus(member.id, e.target.value as PresenceStatus)}
                       className="text-xs rounded-lg px-2 py-1.5 focus:outline-none"
                       style={{
-                        background: 'var(--t-input-bg, #0f172a)',
-                        borderColor: 'var(--t-input-border, #334155)',
-                        color: 'var(--t-text-secondary, #cbd5e1)',
-                        border: '1px solid var(--t-input-border, #334155)',
+                        backgroundColor: 'var(--t-input-bg)',
+                        borderColor: 'var(--t-input-border)',
+                        color: 'var(--t-text-secondary)',
+                        border: '1px solid',
                       }}
                     >
                       {Object.entries(PRESENCE_LABELS).map(([k, v]) => (
@@ -608,10 +798,10 @@ export function Team() {
                       onChange={(e) => updateMemberRole(member.id, e.target.value as TeamRole)}
                       className="text-xs rounded-lg px-2 py-1.5 focus:outline-none"
                       style={{
-                        background: 'var(--t-input-bg, #0f172a)',
-                        borderColor: 'var(--t-input-border, #334155)',
-                        color: 'var(--t-text-secondary, #cbd5e1)',
-                        border: '1px solid var(--t-input-border, #334155)',
+                        backgroundColor: 'var(--t-input-bg)',
+                        borderColor: 'var(--t-input-border)',
+                        color: 'var(--t-text-secondary)',
+                        border: '1px solid',
                       }}
                     >
                       <option value="admin">Admin</option>
@@ -622,44 +812,45 @@ export function Team() {
                 </div>
 
                 {/* Quick stats */}
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5 pt-5" style={{ borderTop: '1px solid var(--t-border, #334155)' }}>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5 pt-5" style={{ borderTop: '1px solid var(--t-border)' }}>
                   <div className="text-center">
-                    <p className="text-lg font-bold" style={{ color: 'var(--t-text, #fff)' }}>{member.dealsCount}</p>
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Deals</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>{member.dealsCount}</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Deals</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-emerald-400">${(member.revenue / 1000).toFixed(0)}k</p>
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Revenue</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-success)' }}>${(member.revenue / 1000).toFixed(0)}k</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Revenue</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold" style={{ color: 'var(--t-primary, #3b82f6)' }}>{activeLeads}</p>
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Active Leads</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-primary)' }}>{activeLeads}</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Active Leads</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-amber-400">{pendingTasks.length}</p>
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Tasks</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-warning)' }}>{pendingTasks.length}</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Tasks</p>
                   </div>
                   <div className="text-center">
-                    <p className={`text-lg font-bold ${overdueTasks.length > 0 ? 'text-red-400' : ''}`}
-                      style={{ color: overdueTasks.length > 0 ? undefined : 'var(--t-text-muted, #94a3b8)' }}>
+                    <p className={`text-lg font-bold`} style={{
+                      color: overdueTasks.length > 0 ? 'var(--t-error)' : 'var(--t-text-muted)'
+                    }}>
                       {overdueTasks.length}
                     </p>
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Overdue</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Overdue</p>
                   </div>
                 </div>
 
                 {/* Pipeline progress */}
                 <div className="mt-4">
-                  <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
+                  <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>
                     <span>Pipeline progress</span>
                     <span>{totalRevenue > 0 ? Math.round((member.revenue / totalRevenue) * 100) : 0}% of total</span>
                   </div>
-                  <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--t-input-bg, #0f172a)' }}>
+                  <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--t-input-bg)' }}>
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
                         width: `${totalRevenue > 0 ? (member.revenue / totalRevenue) * 100 : 0}%`,
-                        background: 'linear-gradient(90deg, var(--t-primary, #3b82f6), #8b5cf6)',
+                        background: 'linear-gradient(90deg, var(--t-primary), var(--t-accent))',
                       }}
                     />
                   </div>
@@ -669,39 +860,74 @@ export function Team() {
                 <button
                   onClick={() => setExpandedMember(isExpanded ? null : member.id)}
                   className="flex items-center gap-1 mt-3 text-xs transition-colors hover:opacity-80"
-                  style={{ color: 'var(--t-text-muted, #94a3b8)' }}
+                  style={{ color: 'var(--t-text-muted)' }}
                 >
                   <ListTodo size={13} />
                   {pendingTasks.length} pending task{pendingTasks.length !== 1 ? 's' : ''}
-                  {todayTasks.length > 0 && <span className="text-amber-400">({todayTasks.length} due today)</span>}
+                  {todayTasks.length > 0 && (
+                    <span className="text-amber-400">({todayTasks.length} due today)</span>
+                  )}
                   <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 </button>
               </div>
 
               {/* Expanded: Tasks & Status */}
               {isExpanded && (
-                <div className="p-5 space-y-4" style={{ borderTop: '1px solid var(--t-border, #334155)', background: 'rgba(0,0,0,0.15)' }}>
+                <div className="p-5 space-y-4" style={{
+                  borderTop: '1px solid var(--t-border)',
+                  backgroundColor: 'var(--t-bg)',
+                }}>
                   {/* Custom status editor */}
                   <div>
-                    <h4 className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Custom Status</h4>
+                    <h4 className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted)' }}>Custom Status</h4>
                     {editingStatus === member.id ? (
                       <div className="flex items-center gap-2">
                         <input
                           value={customMsg}
                           onChange={(e) => setCustomMsg(e.target.value)}
                           placeholder="What are you working on?"
-                          className={`${inputClass} flex-1 !py-2`}
+                          className="flex-1 px-3 py-2 text-sm rounded-xl"
+                          style={{
+                            backgroundColor: 'var(--t-input-bg)',
+                            borderColor: 'var(--t-input-border)',
+                            color: 'var(--t-text)',
+                            border: '1px solid',
+                          }}
                           autoFocus
                           onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCustomStatus(member.id); }}
                         />
-                        <button onClick={() => handleSaveCustomStatus(member.id)} className="px-2 py-2 text-emerald-400 hover:bg-slate-800 rounded-lg"><Check size={14} /></button>
-                        <button onClick={() => { setEditingStatus(null); setCustomMsg(''); }} className="px-2 py-2 hover:bg-slate-800 rounded-lg" style={{ color: 'var(--t-text-muted, #94a3b8)' }}><X size={14} /></button>
+                        <button
+                          onClick={() => handleSaveCustomStatus(member.id)}
+                          className="px-2 py-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--t-success)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={() => { setEditingStatus(null); setCustomMsg(''); }}
+                          className="px-2 py-2 rounded-lg transition-colors"
+                          style={{ color: 'var(--t-text-muted)' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
                       </div>
                     ) : (
                       <button
                         onClick={() => { setEditingStatus(member.id); setCustomMsg(member.customStatus); }}
                         className="text-sm transition-colors hover:opacity-80"
-                        style={{ color: 'var(--t-text-muted, #94a3b8)' }}
+                        style={{ color: 'var(--t-text-muted)' }}
                       >
                         {member.customStatus || 'Set a status...'}
                       </button>
@@ -710,9 +936,9 @@ export function Team() {
 
                   {/* Tasks list */}
                   <div>
-                    <h4 className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>Assigned Tasks</h4>
+                    <h4 className="text-xs uppercase tracking-wider mb-2" style={{ color: 'var(--t-text-muted)' }}>Assigned Tasks</h4>
                     {pendingTasks.length === 0 ? (
-                      <p className="text-sm" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>No pending tasks</p>
+                      <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>No pending tasks</p>
                     ) : (
                       <div className="space-y-2">
                         {pendingTasks.map(task => {
@@ -721,22 +947,32 @@ export function Team() {
                           const leadName = task.leadId ? leads.find(l => l.id === task.leadId)?.name : undefined;
                           return (
                             <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl border"
-                              style={{ background: 'var(--t-surface, #1e293b)', borderColor: 'var(--t-border, #334155)' }}>
-                              <span className={`w-2 h-2 rounded-full ${pc.dot} shrink-0`} />
+                              style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+                              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: pc.dot }} />
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate" style={{ color: 'var(--t-text, #fff)' }}>{task.title}</p>
+                                <p className="text-sm font-medium truncate" style={{ color: 'var(--t-text)' }}>{task.title}</p>
                                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                  <span className={`text-[10px] font-bold ${pc.text}`}>{task.priority.toUpperCase()}</span>
-                                  <span className={`text-[10px] ${isOverdue ? 'text-red-400' : ''}`} style={{ color: isOverdue ? undefined : 'var(--t-text-muted, #94a3b8)' }}>
+                                  <span className="text-[10px] font-bold" style={{ color: pc.text }}>{task.priority.toUpperCase()}</span>
+                                  <span className="text-[10px]" style={{
+                                    color: isOverdue ? 'var(--t-error)' : 'var(--t-text-muted)'
+                                  }}>
                                     Due {formatDistanceToNow(parseISO(task.dueDate), { addSuffix: true })}
                                   </span>
-                                  {isOverdue && <AlertTriangle size={10} className="text-red-400" />}
-                                  {leadName && <span className="text-[10px]" style={{ color: 'var(--t-primary, #3b82f6)' }}>🔗 {leadName}</span>}
+                                  {isOverdue && <AlertTriangle size={10} style={{ color: 'var(--t-error)' }} />}
+                                  {leadName && (
+                                    <span className="text-[10px]" style={{ color: 'var(--t-primary)' }}>
+                                      🔗 {leadName}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                                task.status === 'in-progress' ? 'bg-brand-500/15 text-brand-400' : 'bg-slate-500/15 text-slate-400'
-                              }`}>
+                              <span
+                                className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{
+                                  backgroundColor: task.status === 'in-progress' ? 'var(--t-primary-dim)' : 'var(--t-surface)',
+                                  color: task.status === 'in-progress' ? 'var(--t-primary)' : 'var(--t-text-muted)',
+                                }}
+                              >
                                 {task.status === 'in-progress' ? 'In Progress' : 'To Do'}
                               </span>
                             </div>
@@ -746,7 +982,7 @@ export function Team() {
                     )}
 
                     {memberTasks.filter(t => t.status === 'done').length > 0 && (
-                      <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-400">
+                      <div className="flex items-center gap-1.5 mt-3 text-xs" style={{ color: 'var(--t-success)' }}>
                         <CheckCircle2 size={13} />
                         {memberTasks.filter(t => t.status === 'done').length} task{memberTasks.filter(t => t.status === 'done').length !== 1 ? 's' : ''} completed
                       </div>
@@ -754,10 +990,17 @@ export function Team() {
                   </div>
 
                   {/* Remove member */}
-                  <div className="pt-3" style={{ borderTop: '1px solid var(--t-border, #334155)' }}>
+                  <div className="pt-3" style={{ borderTop: '1px solid var(--t-border)' }}>
                     <button
                       onClick={() => { if (confirm(`Remove ${member.name} from the team?`)) removeTeamMember(member.id); }}
-                      className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                      className="flex items-center gap-1.5 text-xs transition-colors"
+                      style={{ color: 'var(--t-error)' }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.color = 'var(--t-error-dim)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'var(--t-error)';
+                      }}
                     >
                       <UserMinus size={13} /> Remove from team
                     </button>
