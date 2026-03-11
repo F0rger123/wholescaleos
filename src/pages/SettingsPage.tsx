@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { themes } from '../styles/themes';
@@ -42,7 +43,7 @@ export default function SettingsPage() {
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left"
                 style={{
                   background: activeTab === tab.id ? 'var(--t-primary)' : 'transparent',
-                  color: activeTab === tab.id ? 'var(--t-primary-text)' : 'var(--t-text-secondary)',
+                  color: activeTab === tab.id ? '#fff' : 'var(--t-text-secondary)',
                 }}
               >
                 <tab.icon size={16} />
@@ -182,15 +183,15 @@ function GeneralTab() {
 
         {/* Save Result Banner */}
         {saveResult === 'success' && (
-          <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ background: 'var(--t-success-bg)', border: '1px solid var(--t-success-border)' }}>
-            <Check size={16} style={{ color: 'var(--t-success)' }} />
-            <span style={{ color: 'var(--t-success)', fontSize: '0.875rem', fontWeight: '500' }}>Settings saved successfully!</span>
+          <div className="mb-4 p-3 rounded-lg bg-green-500/20 border border-green-500/30 flex items-center gap-2">
+            <Check size={16} className="text-green-400" />
+            <span className="text-green-400 text-sm font-medium">Settings saved successfully!</span>
           </div>
         )}
         {saveResult === 'error' && (
-          <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ background: 'var(--t-error-bg)', border: '1px solid var(--t-error-border)' }}>
-            <AlertTriangle size={16} style={{ color: 'var(--t-error)' }} />
-            <span style={{ color: 'var(--t-error)', fontSize: '0.875rem', fontWeight: '500' }}>Save failed: {errorMsg}</span>
+          <div className="mb-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 flex items-center gap-2">
+            <AlertTriangle size={16} className="text-red-400" />
+            <span className="text-red-400 text-sm font-medium">Save failed: {errorMsg}</span>
           </div>
         )}
 
@@ -278,8 +279,8 @@ function GeneralTab() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
-            style={{ background: saving ? 'var(--t-disabled)' : 'var(--t-primary)', color: 'var(--t-primary-text)' }}
+            className="px-6 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2 transition-all"
+            style={{ background: saving ? '#666' : 'var(--t-primary)' }}
           >
             {saving ? (
               <>
@@ -353,9 +354,9 @@ const user = data?.user;
             <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Choose your workspace appearance</p>
           </div>
           {themeSaved && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--t-success-bg)', border: '1px solid var(--t-success-border)' }}>
-              <Check size={14} style={{ color: 'var(--t-success)' }} />
-              <span style={{ color: 'var(--t-success)', fontSize: '0.875rem' }}>Theme saved!</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 border border-green-500/30">
+              <Check size={14} className="text-green-400" />
+              <span className="text-green-400 text-sm">Theme saved!</span>
             </div>
           )}
         </div>
@@ -376,7 +377,7 @@ const user = data?.user;
               >
                 {isActive && (
                   <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'var(--t-primary)' }}>
-                    <Check size={12} style={{ color: 'var(--t-primary-text)' }} />
+                    <Check size={12} className="text-white" />
                   </div>
                 )}
                 {/* Mini preview */}
@@ -421,7 +422,7 @@ function NotificationsTab() {
 
   const ToggleSwitch = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
     <button onClick={onToggle} className="relative w-10 h-5 rounded-full transition-colors" style={{ background: enabled ? 'var(--t-primary)' : 'var(--t-border)' }}>
-      <div className="absolute top-0.5 w-4 h-4 rounded-full" style={{ background: 'var(--t-primary-text)', left: enabled ? '22px' : '2px', transition: 'left 0.2s' }} />
+      <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform" style={{ left: enabled ? '22px' : '2px' }} />
     </button>
   );
 
@@ -518,7 +519,7 @@ function SecurityTab() {
               </div>
             </div>
           ))}
-          <button className="px-4 py-2 rounded-lg text-sm font-medium" style={{ background: 'var(--t-primary)', color: 'var(--t-primary-text)' }}>
+          <button className="px-4 py-2 rounded-lg text-sm font-medium text-white" style={{ background: 'var(--t-primary)' }}>
             <Lock size={14} className="inline mr-1" /> Update Password
           </button>
         </div>
@@ -535,7 +536,7 @@ function SecurityTab() {
             className="relative w-10 h-5 rounded-full transition-colors"
             style={{ background: twoFA ? 'var(--t-primary)' : 'var(--t-border)' }}
           >
-            <div className="absolute top-0.5 w-4 h-4 rounded-full" style={{ background: 'var(--t-primary-text)', left: twoFA ? '22px' : '2px', transition: 'left 0.2s' }} />
+            <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform" style={{ left: twoFA ? '22px' : '2px' }} />
           </button>
         </div>
         {twoFA && (
@@ -559,7 +560,7 @@ function SecurityTab() {
               <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Active now</p>
             </div>
           </div>
-          <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'var(--t-success-bg)', color: 'var(--t-success)' }}>Active</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">Active</span>
         </div>
       </div>
     </div>
@@ -605,8 +606,8 @@ function TeamTab() {
                   <option value="member">Member</option>
                   <option value="viewer">Viewer</option>
                 </select>
-                <button onClick={() => removeTeamMember(member.id)} className="p-1 rounded hover:opacity-80" style={{ color: 'var(--t-error)' }}>
-                  <UserMinus size={14} />
+                <button onClick={() => removeTeamMember(member.id)} className="p-1 rounded hover:bg-red-500/20">
+                  <UserMinus size={14} className="text-red-400" />
                 </button>
               </div>
             </div>
@@ -677,7 +678,7 @@ function EmailTab() {
             className="flex-1 px-3 py-2 rounded-lg text-sm"
             style={{ background: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
           />
-          <button className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2" style={{ background: 'var(--t-primary)', color: 'var(--t-primary-text)' }}>
+          <button className="px-4 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2" style={{ background: 'var(--t-primary)' }}>
             <Send size={14} /> Send Test
           </button>
         </div>
@@ -747,17 +748,17 @@ function BackupTab() {
         </div>
 
         {backupResult && (
-          <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ background: 'var(--t-success-bg)', border: '1px solid var(--t-success-border)' }}>
-            <Check size={16} style={{ color: 'var(--t-success)' }} />
-            <span style={{ color: 'var(--t-success)', fontSize: '0.875rem' }}>{backupResult}</span>
+          <div className="mb-4 p-3 rounded-lg bg-green-500/20 border border-green-500/30 flex items-center gap-2">
+            <Check size={16} className="text-green-400" />
+            <span className="text-green-400 text-sm">{backupResult}</span>
           </div>
         )}
 
         <button
           onClick={handleBackup}
           disabled={backingUp}
-          className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-          style={{ background: 'var(--t-primary)', color: 'var(--t-primary-text)' }}
+          className="px-6 py-2 rounded-lg text-sm font-medium text-white flex items-center gap-2"
+          style={{ background: 'var(--t-primary)' }}
         >
           {backingUp ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           {backingUp ? 'Creating Backup...' : 'Download Backup'}
@@ -780,13 +781,13 @@ function DataTab() {
         <div className="flex items-center gap-2 mb-4">
           {isSupabaseConfigured ? (
             <>
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--t-success)' }} />
-              <span className="text-sm" style={{ color: 'var(--t-success)' }}>Connected to Supabase</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+              <span className="text-sm text-green-400">Connected to Supabase</span>
             </>
           ) : (
             <>
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--t-warning)' }} />
-              <span className="text-sm" style={{ color: 'var(--t-warning)' }}>Demo Mode (Local Storage)</span>
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
+              <span className="text-sm text-yellow-400">Demo Mode (Local Storage)</span>
             </>
           )}
         </div>
@@ -807,14 +808,14 @@ function DataTab() {
       </div>
 
       <div className="rounded-xl p-6" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-error)' }}>Danger Zone</h2>
+        <h2 className="text-lg font-semibold mb-2 text-red-400">Danger Zone</h2>
         <p className="text-sm mb-4" style={{ color: 'var(--t-text-secondary)' }}>These actions are irreversible</p>
         <div className="flex gap-3">
-          <button className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: 'var(--t-error)', border: '1px solid var(--t-error-border)' }} onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--t-error-bg)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
-            <Trash2 size={14} className="inline mr-1" /> Delete All Leads
+          <button className="px-4 py-2 rounded-lg text-sm font-medium text-red-400 border border-red-500/30 hover:bg-red-500/10 flex items-center gap-2">
+            <Trash2 size={14} /> Delete All Leads
           </button>
-          <button className="px-4 py-2 rounded-lg text-sm font-medium" style={{ color: 'var(--t-error)', border: '1px solid var(--t-error-border)' }} onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--t-error-bg)')} onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}>
-            <AlertTriangle size={14} className="inline mr-1" /> Reset Workspace
+          <button className="px-4 py-2 rounded-lg text-sm font-medium text-red-400 border border-red-500/30 hover:bg-red-500/10 flex items-center gap-2">
+            <AlertTriangle size={14} /> Reset Workspace
           </button>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import {
   Bell, Check, CheckCheck, Trash2, X,
   UserPlus, MessageSquare, Target, AlertTriangle,
@@ -7,16 +8,16 @@ import { useStore, type AppNotification } from '../store/useStore';
 import { formatDistanceToNow } from 'date-fns';
 
 const NOTIF_ICONS: Record<AppNotification['type'], { icon: React.ElementType; color: string; bg: string }> = {
-  'lead-assigned': { icon: UserPlus, color: 'var(--t-notif-lead-assigned-icon)', bg: 'var(--t-notif-lead-assigned-bg)' },
-  'status-change': { icon: Target, color: 'var(--t-notif-status-change-icon)', bg: 'var(--t-notif-status-change-bg)' },
-  'deal-closed': { icon: TrendingUp, color: 'var(--t-notif-deal-closed-icon)', bg: 'var(--t-notif-deal-closed-bg)' },
-  'task-assigned': { icon: Calendar, color: 'var(--t-notif-task-assigned-icon)', bg: 'var(--t-notif-task-assigned-bg)' },
-  'task-due': { icon: AlertTriangle, color: 'var(--t-notif-task-due-icon)', bg: 'var(--t-notif-task-due-bg)' },
-  'mention': { icon: MessageSquare, color: 'var(--t-notif-mention-icon)', bg: 'var(--t-notif-mention-bg)' },
-  'call-recorded': { icon: Phone, color: 'var(--t-notif-call-recorded-icon)', bg: 'var(--t-notif-call-recorded-bg)' },
-  'team-join': { icon: UserPlus, color: 'var(--t-notif-team-join-icon)', bg: 'var(--t-notif-team-join-bg)' },
-  'message': { icon: Mail, color: 'var(--t-notif-message-icon)', bg: 'var(--t-notif-message-bg)' },
-  'system': { icon: Bell, color: 'var(--t-notif-system-icon)', bg: 'var(--t-notif-system-bg)' },
+  'lead-assigned': { icon: UserPlus, color: 'text-blue-400', bg: 'bg-blue-500/15' },
+  'status-change': { icon: Target, color: 'text-purple-400', bg: 'bg-purple-500/15' },
+  'deal-closed': { icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+  'task-assigned': { icon: Calendar, color: 'text-amber-400', bg: 'bg-amber-500/15' },
+  'task-due': { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/15' },
+  'mention': { icon: MessageSquare, color: 'text-cyan-400', bg: 'bg-cyan-500/15' },
+  'call-recorded': { icon: Phone, color: 'text-green-400', bg: 'bg-green-500/15' },
+  'team-join': { icon: UserPlus, color: 'text-indigo-400', bg: 'bg-indigo-500/15' },
+  'message': { icon: Mail, color: 'text-sky-400', bg: 'bg-sky-500/15' },
+  'system': { icon: Bell, color: 'text-slate-400', bg: 'bg-slate-500/15' },
 };
 
 export function NotificationPanel() {
@@ -47,8 +48,8 @@ export function NotificationPanel() {
         <Bell size={20} />
         {unreadCount > 0 && (
           <span
-            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full px-1"
-            style={{ background: 'var(--t-primary)', color: 'var(--t-text-on-primary)' }}
+            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1"
+            style={{ background: 'var(--t-primary)' }}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
@@ -75,8 +76,8 @@ export function NotificationPanel() {
               </h3>
               {unreadCount > 0 && (
                 <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: 'var(--t-primary)', color: 'var(--t-text-on-primary)' }}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
+                  style={{ background: 'var(--t-primary)' }}
                 >
                   {unreadCount} new
                 </span>
@@ -138,8 +139,8 @@ export function NotificationPanel() {
                     style={{ borderColor: 'var(--t-border)' }}
                   >
                     {/* Icon */}
-                    <div className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5" style={{ background: config.bg }}>
-                      <Icon size={16} style={{ color: config.color }} />
+                    <div className={`shrink-0 w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center mt-0.5`}>
+                      <Icon size={16} className={config.color} />
                     </div>
 
                     {/* Content */}

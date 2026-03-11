@@ -67,7 +67,7 @@ export function UserMenu() {
         >
           <div className="relative">
             <div 
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-[var(--t-on-primary)] shadow-[var(--t-glow-shadow)]"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-[var(--t-glow-shadow)]"
               style={{ background: 'var(--t-gradient)' }}
             >
               {currentUser.avatar}
@@ -192,7 +192,7 @@ export function UserMenu() {
 
       {/* Profile Modal */}
       {showProfile && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm" style={{ backgroundColor: 'var(--t-backdrop)' }} onClick={() => setShowProfile(false)}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowProfile(false)}>
           <div className="bg-[var(--t-surface)] border border-[var(--t-border-strong)] rounded-2xl w-full max-w-md p-6 shadow-2xl theme-transition" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold text-[var(--t-on-surface)]">Edit Profile</h2>
