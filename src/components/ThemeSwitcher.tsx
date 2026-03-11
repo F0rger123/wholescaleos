@@ -8,7 +8,6 @@ export function ThemeSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'presets' | 'customizer'>('presets');
   const [hoveredTheme, setHoveredTheme] = useState<string | null>(null);
-  const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const currentThemeData = themes[currentTheme] || themes.dark;
@@ -47,26 +46,19 @@ export function ThemeSwitcher() {
     };
   }, [isOpen]);
 
-  const handleOpen = () => {
-    if (buttonRef.current) {
-      setButtonRect(buttonRef.current.getBoundingClientRect());
-      setIsOpen(true);
-    }
-  };
-
   return (
     <>
       {/* Theme Switcher Button */}
       <button
         ref={buttonRef}
-        onClick={handleOpen}
+        onClick={() => setIsOpen(true)}
         className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
         style={{
           backgroundColor: 'var(--t-surface)',
           color: 'var(--t-text)',
           border: '1px solid var(--t-border)',
           position: 'relative',
-          zIndex: isOpen ? 2147483647 : 1,
+          zIndex: 9999,
         }}
       >
         <span className="text-xl">{getThemeIcon(currentTheme)}</span>
@@ -81,9 +73,20 @@ export function ThemeSwitcher() {
         </svg>
       </button>
 
-      {/* Portal Dropdown */}
-      {isOpen && buttonRect && (
-        <>
+      {/* Portal Dropdown - Rendered at body level */}
+      {isOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999999, // 7 nines - should be above everything
+          pointerEvents: 'none',
+        }}>
           {/* Backdrop */}
           <div 
             style={{
@@ -92,19 +95,18 @@ export function ThemeSwitcher() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
               backdropFilter: 'blur(4px)',
-              zIndex: 2147483647,
+              pointerEvents: 'auto',
+              zIndex: 9999999,
             }}
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Theme Picker */}
+          {/* Theme Picker - Centered Modal */}
           <div 
             style={{
-              position: 'fixed',
-              top: buttonRect.bottom + 8,
-              right: window.innerWidth - buttonRect.right,
+              position: 'relative',
               width: '384px',
               maxHeight: '80vh',
               overflow: 'hidden',
@@ -112,7 +114,8 @@ export function ThemeSwitcher() {
               border: '1px solid var(--t-border)',
               backgroundColor: 'var(--t-surface)',
               boxShadow: 'var(--t-glow-shadow)',
-              zIndex: 2147483647,
+              pointerEvents: 'auto',
+              zIndex: 10000000, // 8 nines - even higher
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -383,7 +386,7 @@ export function ThemeSwitcher() {
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
     </>
   );
