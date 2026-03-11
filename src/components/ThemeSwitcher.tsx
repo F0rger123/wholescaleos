@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { themes } from '../styles/themes';
 import { Palette, Sparkles, RotateCcw, X } from 'lucide-react';
@@ -8,6 +8,7 @@ export function ThemeSwitcher() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'presets' | 'customizer'>('presets');
   const [hoveredTheme, setHoveredTheme] = useState<string | null>(null);
+  const [buttonPosition, setButtonPosition] = useState<{ top: number; right: number } | null>(null);
 
   const currentThemeData = themes[currentTheme] || themes.dark;
 
@@ -44,18 +45,41 @@ export function ThemeSwitcher() {
     return icons[themeId] || '🎨';
   };
 
+  // Get button position when opening
+  const handleOpen = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setButtonPosition({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    });
+    setIsOpen(true);
+  };
+
+  // Close on escape key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    if (isOpen) {
+      document.addEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   return (
     <>
       {/* Theme Switcher Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleOpen}
         className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
         style={{
           backgroundColor: 'var(--t-surface)',
           color: 'var(--t-text)',
           border: '1px solid var(--t-border)',
-          position: 'relative',
-          zIndex: 9999,
         }}
       >
         <span className="text-xl">{getThemeIcon(currentTheme)}</span>
@@ -70,9 +94,9 @@ export function ThemeSwitcher() {
         </svg>
       </button>
 
-      {/* Dropdown Panel - Portaled to body to avoid any parent z-index issues */}
-      {isOpen && (
-        <>
+      {/* Portal Dropdown */}
+      {isOpen && buttonPosition && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 999999 }}>
           {/* Backdrop */}
           <div 
             style={{
@@ -83,6 +107,7 @@ export function ThemeSwitcher() {
               bottom: 0,
               backgroundColor: 'rgba(0, 0, 0, 0.5)',
               backdropFilter: 'blur(4px)',
+              pointerEvents: 'auto',
               zIndex: 999999,
             }}
             onClick={() => setIsOpen(false)}
@@ -92,9 +117,8 @@ export function ThemeSwitcher() {
           <div 
             style={{
               position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
+              top: buttonPosition.top,
+              right: buttonPosition.right,
               width: '384px',
               maxHeight: '80vh',
               overflow: 'hidden',
@@ -102,6 +126,7 @@ export function ThemeSwitcher() {
               border: '1px solid var(--t-border)',
               backgroundColor: 'var(--t-surface)',
               boxShadow: 'var(--t-glow-shadow)',
+              pointerEvents: 'auto',
               zIndex: 1000000,
             }}
           >
@@ -390,7 +415,7 @@ export function ThemeSwitcher() {
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
     </>
   );
