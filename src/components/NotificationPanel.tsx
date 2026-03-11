@@ -7,17 +7,17 @@ import {
 import { useStore, type AppNotification } from '../store/useStore';
 import { formatDistanceToNow } from 'date-fns';
 
-const NOTIF_ICONS: Record<AppNotification['type'], { icon: React.ElementType; color: string; bg: string }> = {
-  'lead-assigned': { icon: UserPlus, color: 'text-blue-400', bg: 'bg-blue-500/15' },
-  'status-change': { icon: Target, color: 'text-purple-400', bg: 'bg-purple-500/15' },
-  'deal-closed': { icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
-  'task-assigned': { icon: Calendar, color: 'text-amber-400', bg: 'bg-amber-500/15' },
-  'task-due': { icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-500/15' },
-  'mention': { icon: MessageSquare, color: 'text-cyan-400', bg: 'bg-cyan-500/15' },
-  'call-recorded': { icon: Phone, color: 'text-green-400', bg: 'bg-green-500/15' },
-  'team-join': { icon: UserPlus, color: 'text-indigo-400', bg: 'bg-indigo-500/15' },
-  'message': { icon: Mail, color: 'text-sky-400', bg: 'bg-sky-500/15' },
-  'system': { icon: Bell, color: 'text-slate-400', bg: 'bg-slate-500/15' },
+const NOTIF_ICONS: Record<AppNotification['type'], { icon: React.ElementType }> = {
+  'lead-assigned': { icon: UserPlus },
+  'status-change': { icon: Target },
+  'deal-closed': { icon: TrendingUp },
+  'task-assigned': { icon: Calendar },
+  'task-due': { icon: AlertTriangle },
+  'mention': { icon: MessageSquare },
+  'call-recorded': { icon: Phone },
+  'team-join': { icon: UserPlus },
+  'message': { icon: Mail },
+  'system': { icon: Bell },
 };
 
 export function NotificationPanel() {
@@ -42,14 +42,26 @@ export function NotificationPanel() {
       {/* Bell button */}
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors"
-        style={{ color: 'var(--t-text-secondary)' }}
+        className="relative p-2 rounded-lg transition-colors"
+        style={{
+          color: 'var(--t-text-secondary)',
+          backgroundColor: 'transparent',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }}
       >
         <Bell size={20} />
         {unreadCount > 0 && (
           <span
-            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1"
-            style={{ background: 'var(--t-primary)' }}
+            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold rounded-full px-1"
+            style={{
+              backgroundColor: 'var(--t-primary)',
+              color: 'var(--t-on-primary)',
+            }}
           >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
@@ -61,7 +73,7 @@ export function NotificationPanel() {
         <div
           className="absolute right-0 top-12 w-96 max-h-[32rem] rounded-xl border shadow-2xl z-50 flex flex-col overflow-hidden"
           style={{
-            background: 'var(--t-surface)',
+            backgroundColor: 'var(--t-surface)',
             borderColor: 'var(--t-border)',
           }}
         >
@@ -76,8 +88,11 @@ export function NotificationPanel() {
               </h3>
               {unreadCount > 0 && (
                 <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white"
-                  style={{ background: 'var(--t-primary)' }}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  style={{
+                    backgroundColor: 'var(--t-primary)',
+                    color: 'var(--t-on-primary)',
+                  }}
                 >
                   {unreadCount} new
                 </span>
@@ -87,8 +102,14 @@ export function NotificationPanel() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllNotificationsRead}
-                  className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors"
+                  className="p-1.5 rounded-lg transition-colors"
                   style={{ color: 'var(--t-text-muted)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
                   title="Mark all as read"
                 >
                   <CheckCheck size={16} />
@@ -96,16 +117,28 @@ export function NotificationPanel() {
               )}
               <button
                 onClick={clearAllNotifications}
-                className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors"
+                className="p-1.5 rounded-lg transition-colors"
                 style={{ color: 'var(--t-text-muted)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
                 title="Clear all"
               >
                 <Trash2 size={16} />
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors"
+                className="p-1.5 rounded-lg transition-colors"
                 style={{ color: 'var(--t-text-muted)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
                 <X size={16} />
               </button>
@@ -116,7 +149,7 @@ export function NotificationPanel() {
           <div className="flex-1 overflow-y-auto">
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-4">
-                <Bell size={32} className="mb-3" style={{ color: 'var(--t-text-muted)' }} />
+                <Bell size={32} style={{ color: 'var(--t-text-muted)' }} />
                 <p className="text-sm font-medium" style={{ color: 'var(--t-text-secondary)' }}>
                   No notifications
                 </p>
@@ -126,21 +159,33 @@ export function NotificationPanel() {
               </div>
             ) : (
               notifications.map((notif) => {
-                const config = NOTIF_ICONS[notif.type];
-                const Icon = config.icon;
+                const Icon = NOTIF_ICONS[notif.type].icon;
 
                 return (
                   <div
                     key={notif.id}
                     onClick={() => { if (!notif.read) markNotificationRead(notif.id); }}
-                    className={`flex items-start gap-3 px-4 py-3 border-b cursor-pointer transition-colors hover:bg-[var(--t-surface-hover)] ${
-                      !notif.read ? 'bg-[var(--t-primary-dim)]' : ''
-                    }`}
-                    style={{ borderColor: 'var(--t-border)' }}
+                    className="flex items-start gap-3 px-4 py-3 border-b cursor-pointer transition-colors"
+                    style={{
+                      borderColor: 'var(--t-border)',
+                      backgroundColor: !notif.read ? 'var(--t-primary-dim)' : 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = !notif.read ? 'var(--t-primary-dim)' : 'var(--t-surface-hover)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = !notif.read ? 'var(--t-primary-dim)' : 'transparent';
+                    }}
                   >
                     {/* Icon */}
-                    <div className={`shrink-0 w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center mt-0.5`}>
-                      <Icon size={16} className={config.color} />
+                    <div
+                      className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
+                      style={{
+                        backgroundColor: 'var(--t-surface)',
+                        color: 'var(--t-primary-text)',
+                      }}
+                    >
+                      <Icon size={16} />
                     </div>
 
                     {/* Content */}
@@ -159,7 +204,7 @@ export function NotificationPanel() {
                     {/* Read indicator */}
                     {!notif.read && (
                       <div className="shrink-0 mt-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ background: 'var(--t-primary)' }} />
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: 'var(--t-primary)' }} />
                       </div>
                     )}
                     {notif.read && (

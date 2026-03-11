@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { LogOut, User, Settings, ChevronDown, Moon, Sun, Palette } from 'lucide-react';
+import { LogOut, User, Settings, ChevronDown, Moon, Sun } from 'lucide-react';
 
 export function UserMenu() {
   const { currentUser, logout, currentTheme, setTheme } = useStore();
