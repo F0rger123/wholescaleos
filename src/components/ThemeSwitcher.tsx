@@ -80,6 +80,8 @@ export function ThemeSwitcher() {
           backgroundColor: 'var(--t-surface)',
           color: 'var(--t-text)',
           border: '1px solid var(--t-border)',
+          position: 'relative',
+          zIndex: isOpen ? 1000001 : 1,
         }}
       >
         <span className="text-xl">{getThemeIcon(currentTheme)}</span>
@@ -96,7 +98,15 @@ export function ThemeSwitcher() {
 
       {/* Portal Dropdown */}
       {isOpen && buttonPosition && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 999999 }}>
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          pointerEvents: 'none',
+          zIndex: 2147483647, // Maximum 32-bit integer
+        }}>
           {/* Backdrop */}
           <div 
             style={{
@@ -108,7 +118,7 @@ export function ThemeSwitcher() {
               backgroundColor: 'rgba(0, 0, 0, 0.5)',
               backdropFilter: 'blur(4px)',
               pointerEvents: 'auto',
-              zIndex: 999999,
+              zIndex: 2147483647,
             }}
             onClick={() => setIsOpen(false)}
           />
@@ -127,7 +137,7 @@ export function ThemeSwitcher() {
               backgroundColor: 'var(--t-surface)',
               boxShadow: 'var(--t-glow-shadow)',
               pointerEvents: 'auto',
-              zIndex: 1000000,
+              zIndex: 2147483647,
             }}
           >
             <div className="flex flex-col h-full">
