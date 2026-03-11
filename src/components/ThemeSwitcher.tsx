@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { themes } from '../styles/themes';
-import { Palette, Sparkles, RotateCcw, X } from 'lucide-react'; // Removed 'Check'
+import { Palette, Sparkles, RotateCcw, X } from 'lucide-react';
 
 export function ThemeSwitcher() {
   const { currentTheme, setTheme, customColors, setCustomColor, resetCustomColors } = useStore();
@@ -187,6 +187,7 @@ export function ThemeSwitcher() {
                                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.accent }} />
                                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.background }} />
                                 <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.surface }} />
+                                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.sidebarBg || theme.colors.background }} />
                               </div>
                               
                               {/* Active Indicator */}
@@ -234,14 +235,17 @@ export function ThemeSwitcher() {
                     Customize colors for the current theme ({currentThemeData.name})
                   </p>
 
-                  {/* Color Pickers */}
-                  <div className="space-y-3">
+                  {/* Color Pickers - Expanded with more options */}
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
                     {[
                       { key: 'primary', label: 'Primary Color', default: themes[currentTheme]?.colors.primary || '#3b82f6' },
                       { key: 'accent', label: 'Accent Color', default: themes[currentTheme]?.colors.accent || '#8b5cf6' },
-                      { key: 'background', label: 'Background', default: themes[currentTheme]?.colors.background || '#0f172a' },
-                      { key: 'surface', label: 'Surface/Cards', default: themes[currentTheme]?.colors.surface || '#1e293b' },
-                      { key: 'text', label: 'Text Color', default: themes[currentTheme]?.colors.text || '#f1f5f9' },
+                      { key: 'background', label: 'Main Background', default: themes[currentTheme]?.colors.background || '#0f172a' },
+                      { key: 'surface', label: 'Card/Surface Background', default: themes[currentTheme]?.colors.surface || '#1e293b' },
+                      { key: 'sidebarBg', label: 'Sidebar Background', default: themes[currentTheme]?.colors.sidebarBg || '#0f172a' },
+                      { key: 'text', label: 'Primary Text', default: themes[currentTheme]?.colors.text || '#f1f5f9' },
+                      { key: 'textSecondary', label: 'Secondary Text', default: themes[currentTheme]?.colors.textSecondary || '#94a3b8' },
+                      { key: 'border', label: 'Border Color', default: themes[currentTheme]?.colors.border || '#334155' },
                     ].map(({ key, label, default: defaultColor }) => (
                       <div key={key} className="space-y-1">
                         <label className="text-xs font-medium" style={{ color: 'var(--t-text-secondary)' }}>
@@ -252,7 +256,7 @@ export function ThemeSwitcher() {
                             type="color"
                             value={customColors[key] || defaultColor}
                             onChange={(e) => setCustomColor(key, e.target.value)}
-                            className="w-10 h-10 rounded cursor-pointer"
+                            className="w-10 h-10 rounded cursor-pointer shrink-0"
                             style={{
                               background: 'var(--t-input-bg)',
                               border: '1px solid var(--t-input-border)',
@@ -273,8 +277,9 @@ export function ThemeSwitcher() {
                           {customColors[key] && (
                             <button
                               onClick={() => setCustomColor(key, defaultColor)}
-                              className="px-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
+                              className="px-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)] shrink-0"
                               style={{ color: 'var(--t-text-muted)' }}
+                              title="Reset to default"
                             >
                               <X size={16} />
                             </button>
@@ -284,7 +289,7 @@ export function ThemeSwitcher() {
                     ))}
                   </div>
 
-                  {/* Live Preview */}
+                  {/* Live Preview - Enhanced */}
                   <div 
                     className="mt-4 p-4 rounded-lg space-y-3"
                     style={{
@@ -295,11 +300,31 @@ export function ThemeSwitcher() {
                     <p className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>Live Preview</p>
                     
                     {/* Color Swatches */}
-                    <div className="flex gap-2">
-                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-primary)' }} />
-                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-accent)' }} />
-                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-bg)' }} />
-                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-surface)' }} />
+                    <div className="flex flex-wrap gap-2">
+                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-primary)' }} title="Primary" />
+                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-accent)' }} title="Accent" />
+                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-bg)' }} title="Background" />
+                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-surface)' }} title="Surface" />
+                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-sidebar-bg, var(--t-bg))' }} title="Sidebar" />
+                      <div className="w-8 h-8 rounded" style={{ background: 'var(--t-border)' }} title="Border" />
+                    </div>
+
+                    {/* Sample Layout Preview */}
+                    <div className="flex gap-2 p-2 rounded-lg" style={{ background: 'var(--t-bg)' }}>
+                      {/* Sidebar preview */}
+                      <div className="w-12 h-24 rounded" style={{ background: 'var(--t-sidebar-bg, var(--t-bg))' }} />
+                      
+                      {/* Main content preview */}
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 rounded" style={{ background: 'var(--t-surface)' }} />
+                        <div className="h-8 rounded" style={{ background: 'var(--t-surface)' }}>
+                          <div className="flex gap-1 p-1">
+                            <div className="w-6 h-6 rounded" style={{ background: 'var(--t-primary)' }} />
+                            <div className="w-6 h-6 rounded" style={{ background: 'var(--t-accent)' }} />
+                          </div>
+                        </div>
+                        <div className="h-3 rounded w-3/4" style={{ background: 'var(--t-surface)' }} />
+                      </div>
                     </div>
 
                     {/* Sample Card */}
