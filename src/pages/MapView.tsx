@@ -1,3 +1,4 @@
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   MapContainer, TileLayer, Marker, Popup, Polygon, Polyline, CircleMarker,
   useMapEvents, useMap,
@@ -326,7 +327,7 @@ export function MapView() {
                 value={saveForm.name}
                 onChange={(e) => setSaveForm((f) => ({ ...f, name: e.target.value }))}
                 className="w-full px-3 py-2 text-sm rounded-lg focus:outline-none focus:ring-2"
-                style={{ backgroundColor: 'var(--t-surface)', border: `1px solid var(--t-border-secondary)`, color: 'var(--t-text)', focusRing: 'var(--t-brand)' }}
+                style={{ backgroundColor: 'var(--t-surface)', border: `1px solid var(--t-border-secondary)`, color: 'var(--t-text)' }}
               />
               <div className="flex items-center gap-2">
                 <span className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Color:</span>
@@ -391,7 +392,7 @@ export function MapView() {
                   className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
                     key === 'showDrivingRoute' ? 'opacity-40 cursor-not-allowed' : ''
                   }`}
-                  style={mapFilters[key] ? { backgroundColor: 'var(--t-brand, #3b82f6)', backgroundOpacity: 0.2, color: 'var(--t-brand-light, #93c5fd)' } : { color: 'var(--t-text-secondary)' }}
+                  style={mapFilters[key] ? { backgroundColor: 'var(--t-brand, #3b82f6)', opacity: 0.2, color: 'var(--t-brand-light, #93c5fd)' } as React.CSSProperties : { color: 'var(--t-text-secondary)' }}
                   disabled={key === 'showDrivingRoute'}
                 >
                   <span className="flex items-center gap-2">
@@ -459,7 +460,7 @@ export function MapView() {
 
         {/* ── Ungeocoded Leads Banner ── */}
         {ungeocodedLeads.length > 0 && (
-          <div className="absolute top-3 right-3 z-[999] rounded-xl px-3 py-2 text-xs max-w-[250px]" style={{ backgroundColor: 'var(--t-warning)', backgroundOpacity: 0.1, border: `1px solid var(--t-warning)`, backgroundOpacity: 0.3, color: 'var(--t-warning)', backdropFilter: 'blur(2px)', display: selectedLead || selectedBuyer || selectedArea ? 'none' : 'block' }}>
+          <div className="absolute top-3 right-3 z-[999] rounded-xl px-3 py-2 text-xs max-w-[250px]" style={{ backgroundColor: 'var(--t-warning)', border: `1px solid var(--t-warning)`, color: 'var(--t-warning)', backdropFilter: 'blur(2px)', display: selectedLead || selectedBuyer || selectedArea ? 'none' : 'block' } as React.CSSProperties}>
             <div className="flex items-center gap-2 mb-1">
               <MapPinOff size={12} />
               <span className="font-semibold">{ungeocodedLeads.length} leads not on map</span>
@@ -483,7 +484,7 @@ export function MapView() {
               }}
               disabled={!!geocodingLeadId}
               className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors disabled:opacity-50"
-              style={{ backgroundColor: 'var(--t-warning)', backgroundOpacity: 0.2, color: 'var(--t-warning)' }}
+              style={{ backgroundColor: 'var(--t-warning)', color: 'var(--t-warning)' }}
             >
               {geocodingLeadId ? (
                 <><Loader2 size={10} className="animate-spin" /> Geocoding...</>
@@ -506,7 +507,7 @@ export function MapView() {
             <span className="w-2.5 h-2.5 rounded-sm bg-cyan-500 rotate-45 inline-block" /> Buyer
           </span>
           <span className="flex items-center gap-1">
-            <span className="w-4 h-2 rounded-sm inline-block" style={{ backgroundColor: 'var(--t-brand)', backgroundOpacity: 0.4, border: `1px solid var(--t-brand)`, borderOpacity: 0.6 }} /> Zone
+            <span className="w-4 h-2 rounded-sm inline-block" style={{ backgroundColor: 'var(--t-brand)', border: `1px solid var(--t-brand)` }} /> Zone
           </span>
         </div>
 
@@ -802,7 +803,7 @@ function AreaDetail({ area }: { area: CoverageArea }) {
       <button
         onClick={() => deleteCoverageArea(area.id)}
         className="w-full flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg transition-opacity"
-        style={{ backgroundColor: 'var(--t-error)', backgroundOpacity: 0.2, color: 'var(--t-error)' }}
+        style={{ backgroundColor: 'var(--t-error)', color: 'var(--t-error)' }}
         onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
         onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
       >

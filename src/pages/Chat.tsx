@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
 import {
   Hash, Lock, Search, Plus, Send, Smile, Paperclip, Mic, Play, Pause, X,
@@ -78,7 +79,7 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (attachment: ChatAttachme
           <div key={i} className="w-1 rounded-full" style={{ height: `${Math.random() * 16 + 4}px`, backgroundColor: 'rgba(239, 68, 68, 0.6)' }} />
         ))}
       </div>
-      <button onClick={onCancel} className="p-1.5 rounded-lg hover:transition-colors" style={{ color: 'var(--t-text-muted)', hover: { backgroundColor: 'var(--t-surface-hover)' } }}>
+      <button onClick={onCancel} className="p-1.5 rounded-lg hover:transition-colors" style={{ color: 'var(--t-text-muted)' }}>
         <Trash2 size={16} />
       </button>
       <button onClick={stopAndSend} className="p-2 rounded-xl text-white hover:transition-colors" style={{ backgroundColor: 'var(--t-error)' }}>
@@ -415,8 +416,6 @@ function MessageBubble({
   return (
     <div
       className={`group flex gap-3 px-6 py-0.5 transition-colors relative ${isGrouped ? '' : 'mt-3'}`}
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => { setShowActions(false); setShowReactionPicker(false); }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
         setShowActions(true);
@@ -551,7 +550,7 @@ function MessageBubble({
                 onClick={() => deleteMessage(channelId, message.id)}
                 className="p-1.5 transition-colors"
                 style={{ color: 'var(--t-error)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'; e.currentTarget.style.color: '#dc2626'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'; e.currentTarget.style.color = '#dc2626'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--t-error)'; }}
               >
                 <Trash2 size={14} />
@@ -1195,7 +1194,6 @@ function ChatSidebar({
               borderColor: 'var(--t-border)',
               border: '1px solid',
               color: 'var(--t-text)',
-              focusRingColor: 'var(--t-primary)',
             }}
           />
         </div>
@@ -1452,7 +1450,7 @@ function MessageInput({
         />
       )}
 
-      <div className="flex items-end gap-2 rounded-2xl px-3 py-2 focus-within:ring-1" style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', border: '1px solid', focusWithinRingColor: 'rgba(59, 130, 246, 0.5)' }}>
+      <div className="flex items-end gap-2 rounded-2xl px-3 py-2 focus-within:ring-1" style={{ backgroundColor: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', border: '1px solid' }}>
         <button onClick={() => setShowEmojis(!showEmojis)} className="p-1.5 rounded-lg transition-colors shrink-0 mb-0.5" style={{ color: 'var(--t-text-muted)' }}>
           <Smile size={18} />
         </button>
@@ -1530,7 +1528,7 @@ function SearchResultsPanel({
         {results.length === 0 && (
           <div className="p-6 text-center text-sm" style={{ color: 'var(--t-text-muted)' }}>No messages found</div>
         )}
-        {results.map(msg => (
+        {results.map((msg: ChatMessage) => (
           <button
             key={msg.id}
             onClick={() => onGoTo(msg.channelId)}
@@ -1547,7 +1545,7 @@ function SearchResultsPanel({
               <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>in {getChannelName(msg.channelId)}</span>
             </div>
             <p className="text-xs line-clamp-2" style={{ color: 'var(--t-text-muted)' }}>
-              {msg.content.split(new RegExp(`(${query})`, 'gi')).map((part, i) =>
+              {msg.content.split(new RegExp(`(${query})`, 'gi')).map((part: string, i: number) =>
                 part.toLowerCase() === query.toLowerCase()
                   ? <mark key={i} className="rounded px-0.5" style={{ backgroundColor: 'rgba(245, 158, 11, 0.3)', color: '#fbbf24' }}>{part}</mark>
                   : part
