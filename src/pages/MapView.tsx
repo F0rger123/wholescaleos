@@ -810,3 +810,4 @@ function AreaDetail({ area }: { area: CoverageArea }) {
       </button>
     </>
   );
+}

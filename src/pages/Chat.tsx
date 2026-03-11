@@ -1986,3 +1986,4 @@ export function Chat() {
       {showNewChannel && <NewChannelModal onClose={() => setShowNewChannel(false)} />}
     </div>
   );
+}

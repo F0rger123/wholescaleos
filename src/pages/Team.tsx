@@ -856,3 +856,4 @@ export function Team() {
       <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
     </div>
   );
+}
