@@ -45,7 +45,7 @@ export function ThemeSwitcher() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative" style={{ zIndex: 1 }}>
       {/* Theme Switcher Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -73,17 +73,19 @@ export function ThemeSwitcher() {
         <>
           {/* Backdrop */}
           <div 
-            className="fixed inset-0 z-[9998]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            style={{ zIndex: 99999 }}
             onClick={() => setIsOpen(false)}
           />
           
           {/* Theme Picker */}
           <div 
-            className="absolute right-0 mt-2 w-96 max-h-[80vh] overflow-hidden rounded-xl shadow-2xl z-[9999] border flex flex-col"
+            className="fixed right-4 top-16 w-96 max-h-[80vh] overflow-hidden rounded-xl shadow-2xl border flex flex-col"
             style={{
               backgroundColor: 'var(--t-surface)',
               borderColor: 'var(--t-border)',
               boxShadow: 'var(--t-glow-shadow)',
+              zIndex: 100000,
             }}
           >
             {/* Header with Tabs */}
