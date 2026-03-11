@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { themes } from '../styles/themes';
 import { Palette, Sparkles, RotateCcw, X } from 'lucide-react';
@@ -54,32 +54,6 @@ export function ThemeSwitcher() {
     }
   };
 
-  // Portal component to render at body level
-  const Portal = ({ children }: { children: React.ReactNode }) => {
-    const [mounted, setMounted] = useState(false);
-    
-    useEffect(() => {
-      setMounted(true);
-      return () => setMounted(false);
-    }, []);
-    
-    if (!mounted) return null;
-    
-    return (
-      <div style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        width: '100%', 
-        height: '100%', 
-        pointerEvents: 'none',
-        zIndex: 2147483647,
-      }}>
-        {children}
-      </div>
-    );
-  };
-
   return (
     <>
       {/* Theme Switcher Button */}
@@ -109,7 +83,7 @@ export function ThemeSwitcher() {
 
       {/* Portal Dropdown */}
       {isOpen && buttonRect && (
-        <Portal>
+        <>
           {/* Backdrop */}
           <div 
             style={{
@@ -120,7 +94,6 @@ export function ThemeSwitcher() {
               bottom: 0,
               backgroundColor: 'rgba(0, 0, 0, 0.5)',
               backdropFilter: 'blur(4px)',
-              pointerEvents: 'auto',
               zIndex: 2147483647,
             }}
             onClick={() => setIsOpen(false)}
@@ -139,7 +112,6 @@ export function ThemeSwitcher() {
               border: '1px solid var(--t-border)',
               backgroundColor: 'var(--t-surface)',
               boxShadow: 'var(--t-glow-shadow)',
-              pointerEvents: 'auto',
               zIndex: 2147483647,
             }}
             onClick={(e) => e.stopPropagation()}
@@ -411,7 +383,7 @@ export function ThemeSwitcher() {
               </div>
             </div>
           </div>
-        </Portal>
+        </>
       )}
     </>
   );
