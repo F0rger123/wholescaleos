@@ -349,6 +349,22 @@ export interface AppNotification {
   link?: string;
 }
 
+// ─── Calculator Types ────────────────────────────────────────────────────────
+
+export type CalculatorType = 'wholesale' | 'fixnflip' | 'rental' | 'brrrr';
+
+export interface CalculatorScenario {
+  id: string;
+  name: string;
+  type: CalculatorType;
+  date: string;
+  lastModified: string;
+  leadId?: string;
+  inputs: Record<string, any>;
+  results: Record<string, any>;
+  notes?: string;
+}
+
 // ─── AI Types ────────────────────────────────────────────────────────────────
 
 export type AIPriorityLevel = 'high' | 'medium' | 'low';
@@ -1190,6 +1206,13 @@ interface AppState {
   deleteTask: (id: string) => void;
   completeTask: (id: string) => void;
 
+  // Calculator Scenarios
+  calculatorScenarios: CalculatorScenario[];
+  addCalculatorScenario: (scenario: Omit<CalculatorScenario, 'id' | 'date' | 'lastModified'>) => string;
+  updateCalculatorScenario: (id: string, updates: Partial<CalculatorScenario>) => void;
+  deleteCalculatorScenario: (id: string) => void;
+  getScenariosByLead: (leadId: string) => CalculatorScenario[];
+
   // UI
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -1585,6 +1608,77 @@ export const useStore = create<AppState>((set, get) => ({
     const now = new Date().toISOString();
     set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'done' as TaskStatus, completedAt: now } : t) }));
     if (isSupabaseConfigured && supabase) tasksService.complete(id).catch(() => {});
+  },
+
+  // ── Calculator Scenarios ─────────────────────────────────
+  calculatorScenarios: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        return JSON.parse(localStorage.getItem('wholescale-calculator-scenarios') || '[]');
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  })(),
+
+  addCalculatorScenario: (scenario) => {
+    const now = new Date().toISOString();
+    const newScenario = {
+      ...scenario,
+      id: uuidv4(),
+      date: now,
+      lastModified: now,
+    };
+    
+    set((state) => {
+      const updated = [newScenario, ...state.calculatorScenarios];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wholescale-calculator-scenarios', JSON.stringify(updated));
+      }
+      return { calculatorScenarios: updated };
+    });
+
+    if (scenario.leadId) {
+      const lead = get().leads.find(l => l.id === scenario.leadId);
+      if (lead) {
+        get().addTimelineEntry(scenario.leadId, {
+          type: 'note',
+          content: `📊 Added calculator scenario: ${scenario.name || scenario.type}`,
+          timestamp: now,
+          user: 'System',
+          metadata: { scenarioId: newScenario.id, scenarioType: scenario.type }
+        });
+      }
+    }
+
+    return newScenario.id;
+  },
+
+  updateCalculatorScenario: (id, updates) => {
+    set((state) => {
+      const updated = state.calculatorScenarios.map(s =>
+        s.id === id ? { ...s, ...updates, lastModified: new Date().toISOString() } : s
+      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wholescale-calculator-scenarios', JSON.stringify(updated));
+      }
+      return { calculatorScenarios: updated };
+    });
+  },
+
+  deleteCalculatorScenario: (id) => {
+    set((state) => {
+      const updated = state.calculatorScenarios.filter(s => s.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wholescale-calculator-scenarios', JSON.stringify(updated));
+      }
+      return { calculatorScenarios: updated };
+    });
+  },
+
+  getScenariosByLead: (leadId) => {
+    return get().calculatorScenarios.filter(s => s.leadId === leadId);
   },
 
   // ── UI ────────────────────────────────────────────────────

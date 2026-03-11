@@ -39,12 +39,3 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
-
-// Initialize theme from localStorage on module load
-export function getInitialTheme(): string {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('wholescale-theme');
-    if (saved && themes[saved]) return saved;
-  }
-  return 'dark';
-}

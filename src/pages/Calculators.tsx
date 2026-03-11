@@ -1,15 +1,29 @@
 import { useState } from 'react';
 import { 
   Home, TrendingUp, DollarSign, PieChart, 
-  RefreshCw, Save, ChevronDown, ChevronUp, Download
+  RefreshCw, Save, ChevronDown, ChevronUp, Download,
+  Edit2, Trash2, Link2, X
 } from 'lucide-react';
-
-type CalculatorType = 'wholesale' | 'fixnflip' | 'rental' | 'brrrr';
+import { useStore } from '../store/useStore';
+import type { CalculatorType, CalculatorScenario } from '../store/useStore';
 
 export function Calculators() {
+  const { 
+    calculatorScenarios, 
+    addCalculatorScenario, 
+    updateCalculatorScenario, 
+    deleteCalculatorScenario,
+    leads 
+  } = useStore();
+  
   const [activeCalculator, setActiveCalculator] = useState<CalculatorType>('wholesale');
   const [showDetails, setShowDetails] = useState(false);
-  const [savedScenarios, setSavedScenarios] = useState<any[]>([]);
+  const [scenarioName, setScenarioName] = useState('');
+  const [scenarioNotes, setScenarioNotes] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState<string>('');
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [editingScenario, setEditingScenario] = useState<CalculatorScenario | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   // State for each calculator
   const [wholesaleInputs, setWholesaleInputs] = useState({
@@ -26,7 +40,7 @@ export function Calculators() {
     holdingCosts: 8000,
     closingCosts: 12000,
     arv: 320000,
-    sellingCosts: 19200, // 6% of ARV
+    sellingCosts: 19200,
   });
 
   const [rentalInputs, setRentalInputs] = useState({
@@ -38,8 +52,8 @@ export function Calculators() {
     propertyTaxes: 3000,
     insurance: 1200,
     maintenance: 1500,
-    propertyManagement: 8, // percent
-    vacancyRate: 5, // percent
+    propertyManagement: 8,
+    vacancyRate: 5,
   });
 
   const [brrrrInputs, setBrrrrInputs] = useState({
@@ -47,7 +61,7 @@ export function Calculators() {
     renovationCosts: 35000,
     holdingCosts: 5000,
     afterRepairValue: 250000,
-    refiLtv: 75, // percent
+    refiLtv: 75,
     refiInterestRate: 6.75,
     monthlyRent: 2000,
   });
@@ -55,7 +69,6 @@ export function Calculators() {
   // Calculations
   const calculateWholesale = () => {
     const { arv, repairs, desiredProfit, holdingCosts, closingCosts } = wholesaleInputs;
-    
     const maxOffer = arv - repairs - desiredProfit - holdingCosts - closingCosts;
     const roi = (desiredProfit / (maxOffer + repairs + holdingCosts + closingCosts)) * 100;
     
@@ -71,11 +84,10 @@ export function Calculators() {
 
   const calculateFlip = () => {
     const { purchasePrice, renovationCosts, holdingCosts, closingCosts, arv, sellingCosts } = flipInputs;
-    
     const totalInvestment = purchasePrice + renovationCosts + holdingCosts + closingCosts;
     const netProfit = arv - totalInvestment - sellingCosts;
     const roi = (netProfit / totalInvestment) * 100;
-    const cashOnCash = (netProfit / (purchasePrice * 0.2)) * 100; // Assuming 20% down
+    const cashOnCash = (netProfit / (purchasePrice * 0.2)) * 100;
     
     return {
       netProfit: netProfit.toFixed(0),
@@ -95,12 +107,10 @@ export function Calculators() {
     const monthlyRate = interestRate / 100 / 12;
     const numberOfPayments = loanTerm * 12;
     
-    // Monthly mortgage payment
     const mortgagePayment = loanAmount * 
       (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) / 
       (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
     
-    // Monthly expenses
     const monthlyTaxes = propertyTaxes / 12;
     const monthlyInsurance = insurance / 12;
     const monthlyMaintenance = maintenance / 12;
@@ -133,7 +143,6 @@ export function Calculators() {
     const refiLoanAmount = afterRepairValue * (refiLtv / 100);
     const cashOut = refiLoanAmount - totalInvestment;
     
-    // New mortgage payment after refi
     const monthlyRate = refiInterestRate / 100 / 12;
     const numberOfPayments = 30 * 12;
     const newMortgagePayment = refiLoanAmount * 
@@ -159,21 +168,77 @@ export function Calculators() {
   const rentalResult = calculateRental();
   const brrrrResult = calculateBrrrr();
 
-  const saveScenario = () => {
-    const scenario = {
-      id: Date.now(),
+  const getCurrentInputs = () => {
+    switch (activeCalculator) {
+      case 'wholesale': return wholesaleInputs;
+      case 'fixnflip': return flipInputs;
+      case 'rental': return rentalInputs;
+      case 'brrrr': return brrrrInputs;
+    }
+  };
+
+  const getCurrentResults = () => {
+    switch (activeCalculator) {
+      case 'wholesale': return wholesaleResult;
+      case 'fixnflip': return flipResult;
+      case 'rental': return rentalResult;
+      case 'brrrr': return brrrrResult;
+    }
+  };
+
+  const handleSaveScenario = () => {
+    if (!scenarioName.trim()) {
+      alert('Please enter a name for this scenario');
+      return;
+    }
+
+    addCalculatorScenario({
+      name: scenarioName,
       type: activeCalculator,
-      date: new Date().toISOString(),
-      inputs: activeCalculator === 'wholesale' ? wholesaleInputs :
-              activeCalculator === 'fixnflip' ? flipInputs :
-              activeCalculator === 'rental' ? rentalInputs :
-              brrrrInputs,
-      results: activeCalculator === 'wholesale' ? wholesaleResult :
-               activeCalculator === 'fixnflip' ? flipResult :
-               activeCalculator === 'rental' ? rentalResult :
-               brrrrResult,
-    };
-    setSavedScenarios([scenario, ...savedScenarios.slice(0, 9)]);
+      leadId: selectedLeadId || undefined,
+      inputs: getCurrentInputs(),
+      results: getCurrentResults(),
+      notes: scenarioNotes,
+    });
+
+    setScenarioName('');
+    setScenarioNotes('');
+    setSelectedLeadId('');
+    setShowSaveModal(false);
+  };
+
+  const handleEditScenario = (scenario: CalculatorScenario) => {
+    setEditingScenario(scenario);
+    setScenarioName(scenario.name);
+    setScenarioNotes(scenario.notes || '');
+    setSelectedLeadId(scenario.leadId || '');
+    setActiveCalculator(scenario.type);
+    
+    // Load the inputs
+    if (scenario.type === 'wholesale') setWholesaleInputs(scenario.inputs as any);
+    if (scenario.type === 'fixnflip') setFlipInputs(scenario.inputs as any);
+    if (scenario.type === 'rental') setRentalInputs(scenario.inputs as any);
+    if (scenario.type === 'brrrr') setBrrrrInputs(scenario.inputs as any);
+    
+    setShowSaveModal(true);
+  };
+
+  const handleUpdateScenario = () => {
+    if (!editingScenario || !scenarioName.trim()) return;
+    
+    updateCalculatorScenario(editingScenario.id, {
+      name: scenarioName,
+      leadId: selectedLeadId || undefined,
+      inputs: getCurrentInputs(),
+      results: getCurrentResults(),
+      notes: scenarioNotes,
+    });
+
+    setEditingScenario(null);
+    setScenarioName('');
+    setScenarioNotes('');
+    setSelectedLeadId('');
+    setShowSaveModal(false);
   };
 
   return (
@@ -597,11 +662,11 @@ export function Calculators() {
           {/* Action Buttons */}
           <div className="flex items-center gap-3 mt-6 pt-4 border-t border-slate-800">
             <button
-              onClick={saveScenario}
+              onClick={() => setShowSaveModal(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <Save size={16} />
-              Save Scenario
+              {editingScenario ? 'Update Scenario' : 'Save Scenario'}
             </button>
             <button
               onClick={() => {
@@ -673,7 +738,6 @@ export function Calculators() {
                 <p className="text-4xl font-bold text-white">${wholesaleResult.maxOffer}</p>
                 <p className="text-xs text-slate-500 mt-2">Based on ARV - Repairs - Profit - Costs</p>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-800 rounded-xl p-4">
                   <p className="text-xs text-slate-400">ARV</p>
@@ -702,7 +766,6 @@ export function Calculators() {
                 <p className="text-4xl font-bold text-white">${flipResult.netProfit}</p>
                 <p className="text-xs text-slate-500 mt-2">ARV - Total Investment - Selling Costs</p>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-800 rounded-xl p-4">
                   <p className="text-xs text-slate-400">Total Investment</p>
@@ -731,7 +794,6 @@ export function Calculators() {
                 <p className="text-4xl font-bold text-white">${rentalResult.monthlyCashFlow}</p>
                 <p className="text-xs text-slate-500 mt-2">Rent - Mortgage - Expenses</p>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-800 rounded-xl p-4">
                   <p className="text-xs text-slate-400">Annual Cash Flow</p>
@@ -760,7 +822,6 @@ export function Calculators() {
                 <p className="text-4xl font-bold text-white">${brrrrResult.cashOut}</p>
                 <p className="text-xs text-slate-500 mt-2">New Loan Amount - Total Investment</p>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-800 rounded-xl p-4">
                   <p className="text-xs text-slate-400">New Loan</p>
@@ -784,52 +845,200 @@ export function Calculators() {
         </div>
       </div>
 
-      {/* Saved Scenarios */}
-      {savedScenarios.length > 0 && (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Download className="text-blue-400" />
-            Saved Scenarios
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {savedScenarios.map((scenario) => (
-              <div key={scenario.id} className="bg-slate-800 rounded-xl p-4 hover:border-slate-600 border border-slate-700 transition-all">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
-                    {scenario.type === 'wholesale' ? 'Wholesale' :
-                     scenario.type === 'fixnflip' ? 'Fix & Flip' :
-                     scenario.type === 'rental' ? 'Rental' : 'BRRRR'}
-                  </span>
-                  <span className="text-[10px] text-slate-500">
-                    {new Date(scenario.date).toLocaleDateString()}
-                  </span>
-                </div>
-                {scenario.type === 'wholesale' && (
-                  <div>
-                    <p className="text-sm text-white font-medium">Max Offer: ${scenario.results.maxOffer}</p>
-                    <p className="text-xs text-slate-400">ARV: ${scenario.results.arv} | ROI: {scenario.results.roi}%</p>
-                  </div>
-                )}
-                {scenario.type === 'fixnflip' && (
-                  <div>
-                    <p className="text-sm text-white font-medium">Profit: ${scenario.results.netProfit}</p>
-                    <p className="text-xs text-slate-400">ROI: {scenario.results.roi}% | CoC: {scenario.results.cashOnCash}%</p>
-                  </div>
-                )}
-                {scenario.type === 'rental' && (
-                  <div>
-                    <p className="text-sm text-white font-medium">Monthly: ${scenario.results.monthlyCashFlow}</p>
-                    <p className="text-xs text-slate-400">CoC: {scenario.results.cashOnCashROI}% | Cap: {scenario.results.capRate}%</p>
-                  </div>
-                )}
-                {scenario.type === 'brrrr' && (
-                  <div>
-                    <p className="text-sm text-white font-medium">Cash Out: ${scenario.results.cashOut}</p>
-                    <p className="text-xs text-slate-400">Monthly: ${scenario.results.monthlyCashFlow} | ROI: {scenario.results.cocROI}%</p>
-                  </div>
-                )}
+      {/* Save/Edit Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                {editingScenario ? 'Edit Scenario' : 'Save Scenario'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowSaveModal(false);
+                  setEditingScenario(null);
+                  setScenarioName('');
+                  setScenarioNotes('');
+                  setSelectedLeadId('');
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">Scenario Name *</label>
+                <input
+                  type="text"
+                  value={scenarioName}
+                  onChange={(e) => setScenarioName(e.target.value)}
+                  placeholder="e.g., Downtown Flip, Rental #1"
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                  autoFocus
+                />
               </div>
-            ))}
+
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">Link to Lead (Optional)</label>
+                <select
+                  value={selectedLeadId}
+                  onChange={(e) => setSelectedLeadId(e.target.value)}
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                >
+                  <option value="">No lead linked</option>
+                  {leads.map(lead => (
+                    <option key={lead.id} value={lead.id}>
+                      {lead.name} - {lead.propertyAddress}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">Notes</label>
+                <textarea
+                  value={scenarioNotes}
+                  onChange={(e) => setScenarioNotes(e.target.value)}
+                  placeholder="Add any notes about this scenario..."
+                  rows={3}
+                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  onClick={editingScenario ? handleUpdateScenario : handleSaveScenario}
+                  disabled={!scenarioName.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-medium transition-colors"
+                >
+                  {editingScenario ? 'Update' : 'Save'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSaveModal(false);
+                    setEditingScenario(null);
+                    setScenarioName('');
+                    setScenarioNotes('');
+                    setSelectedLeadId('');
+                  }}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-white mb-2">Delete Scenario</h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Are you sure you want to delete this scenario? This action cannot be undone.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  deleteCalculatorScenario(showDeleteConfirm);
+                  setShowDeleteConfirm(null);
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saved Scenarios */}
+      {calculatorScenarios.length > 0 && (
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Download className="text-blue-400" />
+              Saved Scenarios ({calculatorScenarios.length})
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {calculatorScenarios.map((scenario) => {
+              const linkedLead = leads.find(l => l.id === scenario.leadId);
+              return (
+                <div key={scenario.id} className="bg-slate-800 rounded-xl p-4 hover:border-slate-600 border border-slate-700 transition-all group">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                        {scenario.type === 'wholesale' ? 'Wholesale' :
+                         scenario.type === 'fixnflip' ? 'Fix & Flip' :
+                         scenario.type === 'rental' ? 'Rental' : 'BRRRR'}
+                      </span>
+                      {linkedLead && (
+                        <span className="ml-2 text-xs text-purple-400 inline-flex items-center gap-1">
+                          <Link2 size={10} />
+                          {linkedLead.name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleEditScenario(scenario)}
+                        className="p-1 text-slate-400 hover:text-blue-400 transition-colors"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(scenario.id)}
+                        className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-white mb-1">{scenario.name}</p>
+                  <p className="text-xs text-slate-400 mb-2">
+                    {new Date(scenario.lastModified).toLocaleDateString()}
+                  </p>
+                  {scenario.type === 'wholesale' && (
+                    <div>
+                      <p className="text-sm text-white font-medium">Max Offer: ${scenario.results.maxOffer}</p>
+                      <p className="text-xs text-slate-400">ARV: ${scenario.results.arv} | ROI: {scenario.results.roi}%</p>
+                    </div>
+                  )}
+                  {scenario.type === 'fixnflip' && (
+                    <div>
+                      <p className="text-sm text-white font-medium">Profit: ${scenario.results.netProfit}</p>
+                      <p className="text-xs text-slate-400">ROI: {scenario.results.roi}% | CoC: {scenario.results.cashOnCash}%</p>
+                    </div>
+                  )}
+                  {scenario.type === 'rental' && (
+                    <div>
+                      <p className="text-sm text-white font-medium">Monthly: ${scenario.results.monthlyCashFlow}</p>
+                      <p className="text-xs text-slate-400">CoC: {scenario.results.cashOnCashROI}% | Cap: {scenario.results.capRate}%</p>
+                    </div>
+                  )}
+                  {scenario.type === 'brrrr' && (
+                    <div>
+                      <p className="text-sm text-white font-medium">Cash Out: ${scenario.results.cashOut}</p>
+                      <p className="text-xs text-slate-400">Monthly: ${scenario.results.monthlyCashFlow} | ROI: {scenario.results.cocROI}%</p>
+                    </div>
+                  )}
+                  {scenario.notes && (
+                    <p className="text-xs text-slate-500 mt-2 line-clamp-2">{scenario.notes}</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
