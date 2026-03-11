@@ -72,10 +72,10 @@ function DrawingTool({
   }, [map]);
 
   useMapEvents({
-    click(e) {
-      onAddPoint([e.latlng.lat, e.latlng.lng]);
-    },
-  });
+  click: (e: { latlng: { lat: number; lng: number; }; }) => {
+    onAddPoint([e.latlng.lat, e.latlng.lng]);
+  },
+});
 
   if (points.length === 0) return null;
 
