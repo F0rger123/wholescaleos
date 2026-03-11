@@ -1,3 +1,4 @@
+// Theme Provider v2 - Fixed background mapping
 import { useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { themes } from '../styles/themes';
