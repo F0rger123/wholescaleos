@@ -17,7 +17,7 @@ import { TeamSelection } from './pages/TeamSelection';
 import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
-import { Calendar } from './pages/Calendar';
+import Calendar from './pages/Calendar';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
