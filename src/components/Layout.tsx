@@ -22,7 +22,7 @@ const navItems = [
   { to: '/tasks', label: 'Tasks', icon: ListTodo },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
   { to: '/imports', label: 'Imports', icon: Download },
-  { to: '/calendar', label: 'Calendar', icon: Calendar },
+  { to: '/calendar', label: 'Calendar', icon: Calendar }, // Calendar view for team events
   { to: '/calculators', label: 'Calculators', icon: Calculator },
   { to: '/team', label: 'Team', icon: UserCog },
   { to: '/settings', label: 'Settings', icon: Settings },
