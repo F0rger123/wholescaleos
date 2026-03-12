@@ -1,8 +1,14 @@
 name = "wholescaleos"
+main = "dist/index.html"  # Add this line
 compatibility_date = "2025-09-27"
 
 [site]
 bucket = "./dist"
 
-[env.production]
-vars = { VITE_SUPABASE_URL = "https://jdneeubmkgefhrfcurji.supabase.co", VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkbmVldWJta2dlZmhyZmN1cmppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMzIxMzcsImV4cCI6MjA4NzkwODEzN30.rGDhcvEghiV-k7QStFV4Jc3TiaTPpYNQ_9td23k3Wx4", VITE_APP_URL = "https://wholescaleos.drummerforger.workers.dev", VITE_GOOGLE_CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com" }
+# Remove the [env.production] section entirely since you're using the main environment
+vars = { 
+  VITE_SUPABASE_URL = "https://jdneeubmkgefhrfcurji.supabase.co", 
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpkbmVldWJta2dlZmhyZmN1cmppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzMzIxMzcsImV4cCI6MjA4NzkwODEzN30.rGDhcvEghiV-k7QStFV4Jc3TiaTPpYNQ_9td23k3Wx4", 
+  VITE_APP_URL = "https://wholescaleos.drummerforger.workers.dev", 
+  VITE_GOOGLE_CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com" 
+}
