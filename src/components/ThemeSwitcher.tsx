@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
 import { NotificationPanel } from './NotificationPanel';
-import { ThemeSwitcher } from './ThemeSwitcher';
+import ThemeSwitcher from './ThemeSwitcher';
 import { StatusIndicator } from './StatusIndicator';
 import { JoinTeamModal } from './JoinTeamModal';
 import { CreateTeamModal } from './CreateTeamModal';
