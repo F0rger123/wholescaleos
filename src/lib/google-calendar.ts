@@ -33,22 +33,27 @@ export class GoogleCalendarService {
   }
 
   getAuthUrl(): string {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = `${import.meta.env.VITE_APP_URL}/auth/callback`;
-    
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
-      access_type: 'offline',
-      prompt: 'consent',
-      include_granted_scopes: 'true',
-      state: 'calendar-sync',
-    });
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const redirectUri = `${import.meta.env.VITE_APP_URL}/auth/callback`;
+  
+  const params = {
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+    access_type: 'offline',
+    prompt: 'consent',
+    include_granted_scopes: 'true',
+    state: 'calendar-sync',
+  };
+  
+  const urlParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    urlParams.append(key, value);
+  });
 
-    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  }
+  return `https://accounts.google.com/o/oauth2/v2/auth?${urlParams.toString()}`;
+}
 
   async storeUserTokens(userId: string, code: string): Promise<boolean> {
     try {
