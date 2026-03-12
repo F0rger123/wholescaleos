@@ -109,10 +109,10 @@ export function Layout() {
           )}
         </div>
 
-        {/* Team Switcher */}
+        {/* Team Switcher - Fixed with smooth scrolling dropdown */}
         {sidebarOpen && (
           <div
-            className="mx-3 mt-3 rounded-xl border overflow-hidden"
+            className="mx-3 mt-3 rounded-xl border overflow-visible relative"
             style={{
               background: 'var(--t-input-bg, rgba(0,0,0,0.2))',
               borderColor: 'var(--t-sidebar-border)',
@@ -143,62 +143,88 @@ export function Layout() {
               />
             </button>
 
+            {/* Dropdown Menu - Fixed with smooth scrolling */}
             {showTeamDropdown && (
-              <div
-                className="border-t"
-                style={{ borderColor: 'var(--t-sidebar-border)' }}
-              >
-                {/* Team list */}
-                {userTeams.length > 1 && (
-                  <div className="p-1.5">
-                    <p className="text-[9px] uppercase tracking-wider font-semibold px-2 py-1"
-                      style={{ color: 'var(--t-text-muted)' }}>
-                      Switch Team
-                    </p>
-                    {userTeams.map(t => (
-                      <button
-                        key={t.teamId}
-                        onClick={() => {
-                          if (!t.isCurrent) switchToTeam(t.teamId);
-                          setShowTeamDropdown(false);
+              <>
+                {/* Backdrop to close when clicking outside */}
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowTeamDropdown(false)}
+                />
+                
+                {/* Dropdown menu - positioned absolutely with smooth scroll */}
+                <div
+                  className="absolute left-0 right-0 mt-1 z-50 rounded-xl border shadow-lg max-h-[320px] overflow-y-auto scroll-smooth"
+                  style={{
+                    background: 'var(--t-sidebar-bg)',
+                    borderColor: 'var(--t-sidebar-border)',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                  }}
+                >
+                  {/* Team list */}
+                  {userTeams.length > 1 && (
+                    <div className="p-2">
+                      <p className="text-[9px] uppercase tracking-wider font-semibold px-2 py-1.5 sticky top-0 z-10"
+                        style={{ 
+                          color: 'var(--t-text-muted)',
+                          background: 'var(--t-sidebar-bg)',
+                          borderBottom: '1px solid var(--t-sidebar-border)',
                         }}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors hover:bg-white/5"
                       >
-                        <div
-                          className={`w-2 h-2 rounded-full shrink-0 ${t.isCurrent ? 'bg-emerald-400' : ''}`}
-                          style={{ background: t.isCurrent ? undefined : 'var(--t-text-muted)' }}
-                        />
-                        <span className="text-xs truncate flex-1" style={{
-                          color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text-secondary)',
-                        }}>
-                          {t.teamName}
-                        </span>
-                        {t.isCurrent && (
-                          <span className="text-[9px] text-emerald-400">✓</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                        Switch Team
+                      </p>
+                      <div className="max-h-[180px] overflow-y-auto scroll-smooth pt-1">
+                        {userTeams.map(t => (
+                          <button
+                            key={t.teamId}
+                            onClick={() => {
+                              if (!t.isCurrent) switchToTeam(t.teamId);
+                              setShowTeamDropdown(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left transition-colors hover:bg-white/5"
+                          >
+                            <div
+                              className={`w-2 h-2 rounded-full shrink-0 ${t.isCurrent ? 'bg-emerald-400' : ''}`}
+                              style={{ background: t.isCurrent ? undefined : 'var(--t-text-muted)' }}
+                            />
+                            <span className="text-xs truncate flex-1" style={{
+                              color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                            }}>
+                              {t.teamName}
+                            </span>
+                            {t.isCurrent && (
+                              <span className="text-[9px] text-emerald-400">✓</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                {/* Actions */}
-                <div className="p-1.5 space-y-0.5" style={{ borderTop: userTeams.length > 1 ? `1px solid var(--t-sidebar-border)` : 'none' }}>
-                  <button
-                    onClick={() => { setShowJoinModal(true); setShowTeamDropdown(false); }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5"
-                    style={{ color: 'var(--t-text-secondary)' }}
+                  {/* Actions */}
+                  <div className="p-2 space-y-1 sticky bottom-0" 
+                    style={{ 
+                      borderTop: `1px solid var(--t-sidebar-border)`,
+                      background: 'var(--t-sidebar-bg)',
+                    }}
                   >
-                    <ArrowRightLeft size={12} /> Join Team
-                  </button>
-                  <button
-                    onClick={() => { setShowCreateModal(true); setShowTeamDropdown(false); }}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5"
-                    style={{ color: 'var(--t-text-secondary)' }}
-                  >
-                    <Plus size={12} /> Create Team
-                  </button>
+                    <button
+                      onClick={() => { setShowJoinModal(true); setShowTeamDropdown(false); }}
+                      className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5"
+                      style={{ color: 'var(--t-text-secondary)' }}
+                    >
+                      <ArrowRightLeft size={14} /> Join Team
+                    </button>
+                    <button
+                      onClick={() => { setShowCreateModal(true); setShowTeamDropdown(false); }}
+                      className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5"
+                      style={{ color: 'var(--t-text-secondary)' }}
+                    >
+                      <Plus size={14} /> Create Team
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         )}
