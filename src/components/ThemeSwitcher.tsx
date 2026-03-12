@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../store/useStore';
 import { themes } from '../styles/themes';
 import { Palette, Sparkles, RotateCcw, X } from 'lucide-react';
@@ -64,43 +65,6 @@ export function ThemeSwitcher() {
     }
   };
 
-  // Create a portal element
-  useEffect(() => {
-    if (isOpen) {
-      // Disable pointer events on the body to ensure nothing interferes
-      document.body.style.pointerEvents = 'none';
-    }
-    return () => {
-      document.body.style.pointerEvents = '';
-    };
-  }, [isOpen]);
-
-  if (!isOpen) {
-    return (
-      <button
-        ref={buttonRef}
-        onClick={handleOpen}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
-        style={{
-          backgroundColor: 'var(--t-surface)',
-          color: 'var(--t-text)',
-          border: '1px solid var(--t-border)',
-        }}
-      >
-        <span className="text-xl">{getThemeIcon(currentTheme)}</span>
-        <span className="text-sm font-medium hidden sm:inline">{currentThemeData.name}</span>
-        <svg 
-          className="w-4 h-4" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-    );
-  }
-
   // Calculate position based on button
   const buttonRect = buttonRef.current?.getBoundingClientRect();
   const modalTop = buttonRect ? (
@@ -110,25 +74,28 @@ export function ThemeSwitcher() {
   ) : 0;
   const modalRight = buttonRect ? window.innerWidth - buttonRect.right : 16;
 
+  // Get portal root
+  const portalRoot = document.getElementById('portal-root');
+
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Button (still visible but disabled) */}
+    <>
+      {/* Theme Switcher Button */}
       <button
         ref={buttonRef}
         onClick={handleOpen}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg opacity-50"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
         style={{
           backgroundColor: 'var(--t-surface)',
           color: 'var(--t-text)',
           border: '1px solid var(--t-border)',
-          cursor: 'default',
+          position: 'relative',
+          zIndex: isOpen ? 2147483646 : 1,
         }}
-        disabled
       >
         <span className="text-xl">{getThemeIcon(currentTheme)}</span>
         <span className="text-sm font-medium hidden sm:inline">{currentThemeData.name}</span>
         <svg 
-          className="w-4 h-4 rotate-180" 
+          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -137,21 +104,21 @@ export function ThemeSwitcher() {
         </svg>
       </button>
 
-      {/* Portal to body */}
-      {isOpen && (
+      {/* Portal to dedicated root */}
+      {isOpen && portalRoot && createPortal(
         <div style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          zIndex: 2147483647, // Maximum 32-bit integer
+          zIndex: 2147483647,
           pointerEvents: 'none',
         }}>
           {/* Backdrop */}
           <div 
             style={{
-              position: 'absolute',
+              position: 'fixed',
               top: 0,
               left: 0,
               right: 0,
@@ -167,7 +134,7 @@ export function ThemeSwitcher() {
           {/* Modal */}
           <div 
             style={{
-              position: 'absolute',
+              position: 'fixed',
               top: modalTop,
               right: modalRight,
               width: '384px',
@@ -449,8 +416,9 @@ export function ThemeSwitcher() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        portalRoot
       )}
-    </div>
+    </>
   );
 }
