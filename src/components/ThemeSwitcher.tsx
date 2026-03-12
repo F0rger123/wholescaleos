@@ -1,397 +1,408 @@
-import { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '../store/useStore';
-import { UserMenu } from './UserMenu';
-import { NotificationPanel } from './NotificationPanel';
-import ThemeSwitcher from './ThemeSwitcher';
-import { StatusIndicator } from './StatusIndicator';
-import { JoinTeamModal } from './JoinTeamModal';
-import { CreateTeamModal } from './CreateTeamModal';
-import { switchToTeam } from '../lib/team-utils';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import {
-  LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
-  ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
-  Calculator, Calendar,
-} from 'lucide-react';
+import { themes } from '../styles/themes';
+import { Palette, Sparkles, RotateCcw, X } from 'lucide-react';
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/leads', label: 'Leads', icon: Users },
-  { to: '/map', label: 'Map', icon: Map },
-  { to: '/tasks', label: 'Tasks', icon: ListTodo },
-  { to: '/chat', label: 'Chat', icon: MessageSquare },
-  { to: '/imports', label: 'Imports', icon: Download },
-  { to: '/calendar', label: 'Calendar', icon: Calendar },
-  { to: '/calculators', label: 'Calculators', icon: Calculator },
-  { to: '/team', label: 'Team', icon: UserCog },
-  { to: '/settings', label: 'Settings', icon: Settings },
-];
+export function ThemeSwitcher() {
+  const { currentTheme, setTheme, customColors, setCustomColor, resetCustomColors } = useStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'presets' | 'customizer'>('presets');
+  const [hoveredTheme, setHoveredTheme] = useState<string | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [modalPosition, setModalPosition] = useState<'bottom' | 'top'>('bottom');
 
-interface UserTeam {
-  teamId: string;
-  teamName: string;
-  role: string;
-  isCurrent: boolean;
-}
+  const currentThemeData = themes[currentTheme] || themes.dark;
 
-export function Layout() {
-  const { sidebarOpen, toggleSidebar, team, tasks, unreadCounts, teamConfig, currentUser } = useStore();
+  const themeCategories = {
+    'Default': ['dark', 'light'],
+    'Premium': ['glass', 'oled', 'midnight', 'black-marble', 'white-marble'],
+    'Neon & Creative': ['neon', 'moon', 'aurora', 'cyberpunk'],
+    'Luxury': ['platinum', 'rose-gold', 'charcoal'],
+    'Minimalist': ['slate', 'ivory', 'winter-frost'],
+  };
 
-  const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
-  const pendingTaskCount = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
-  const totalUnread = Object.values(unreadCounts).reduce((sum, c) => sum + c, 0);
+  const getThemeIcon = (themeId: string) => {
+    const icons: Record<string, string> = {
+      'dark': '🌙', 'light': '☀️', 'glass': '✨', 'oled': '⬛',
+      'midnight': '🌃', 'black-marble': '⚫', 'white-marble': '⚪',
+      'neon': '💚', 'moon': '🌕', 'platinum': '💎', 'rose-gold': '✨',
+      'charcoal': '⚙️', 'aurora': '✨', 'cyberpunk': '🌃', 'slate': '📱',
+      'ivory': '🤍', 'winter-frost': '❄️',
+    };
+    return icons[themeId] || '🎨';
+  };
 
-  const [showTeamDropdown, setShowTeamDropdown] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
-
-  // Fetch all teams user belongs to
+  // Close on escape key
   useEffect(() => {
-    async function fetchTeams() {
-      if (!isSupabaseConfigured || !supabase || !currentUser?.id) return;
-      try {
-        const { data } = await supabase
-          .from('team_members')
-          .select('team_id, role, teams(name)')
-          .eq('user_id', currentUser.id);
-
-        if (data) {
-          const currentTeamId = useStore.getState().teamId;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const teams: UserTeam[] = data.map((row: any) => ({
-            teamId: row.team_id,
-            teamName: row.teams?.name || 'Unnamed Team',
-            role: row.role || 'member',
-            isCurrent: row.team_id === currentTeamId,
-          }));
-          setUserTeams(teams);
-        }
-      } catch { /* ignore */ }
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    if (isOpen) {
+      document.addEventListener('keydown', handleEsc);
+      document.body.style.overflow = 'hidden';
     }
-    fetchTeams();
-  }, [currentUser?.id]);
+    return () => {
+      document.removeEventListener('keydown', handleEsc);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const modalHeight = 500;
+      
+      if (spaceBelow < modalHeight && spaceAbove > spaceBelow) {
+        setModalPosition('top');
+      } else {
+        setModalPosition('bottom');
+      }
+      
+      setIsOpen(true);
+    }
+  };
+
+  // Calculate position based on button
+  const buttonRect = buttonRef.current?.getBoundingClientRect();
+  const modalTop = buttonRect ? (
+    modalPosition === 'bottom' 
+      ? buttonRect.bottom + 8 
+      : buttonRect.top - 8 - 500
+  ) : 0;
+  const modalRight = buttonRect ? window.innerWidth - buttonRect.right : 16;
+
+  // Get portal root
+  const portalRoot = document.getElementById('portal-root');
 
   return (
-    <div className="flex h-full" style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}>
-      {/* Sidebar */}
-      <aside
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} flex flex-col border-r transition-all duration-300 shrink-0`}
-        style={{
-          background: 'var(--t-sidebar-bg)',
-          borderColor: 'var(--t-sidebar-border)',
-        }}
+    <>
+      <button
+        ref={buttonRef}
+        onClick={handleOpen}
+        className="p-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
+        style={{ color: 'var(--t-text-secondary)' }}
       >
-        {/* Logo */}
-        <div
-          className="flex items-center gap-3 px-5 py-5 border-b"
-          style={{ borderColor: 'var(--t-sidebar-border)' }}
-        >
-          <div
-            className="flex items-center justify-center w-10 h-10 rounded-xl text-white shrink-0"
-            style={{ background: 'var(--t-primary)' }}
-          >
-            <Building2 size={22} />
-          </div>
-          {sidebarOpen && (
-            <div className="overflow-hidden">
-              <h1 className="text-lg font-bold leading-tight tracking-tight" style={{ color: 'var(--t-text)' }}>
-                WholeScale
-              </h1>
-              <p
-                className="text-[10px] uppercase tracking-widest font-semibold"
-                style={{ color: 'var(--t-primary-text)' }}
-              >
-                OS
-              </p>
-            </div>
-          )}
-        </div>
+        <Palette size={20} />
+      </button>
 
-        {/* Team Switcher - Fixed spacious dropdown */}
-        {sidebarOpen && (
-          <div
-            className="mx-3 mt-3 rounded-xl border relative"
+      {/* Portal to dedicated root */}
+      {isOpen && portalRoot && createPortal(
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 2147483647,
+          pointerEvents: 'none',
+        }}>
+          {/* Backdrop */}
+          <div 
             style={{
-              background: 'var(--t-input-bg, rgba(0,0,0,0.2))',
-              borderColor: 'var(--t-sidebar-border)',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(4px)',
+              pointerEvents: 'auto',
+              zIndex: 2147483647,
             }}
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Modal */}
+          <div 
+            style={{
+              position: 'fixed',
+              top: modalTop,
+              right: modalRight,
+              width: '384px',
+              maxHeight: 'min(80vh, 600px)',
+              overflow: 'hidden',
+              borderRadius: '1rem',
+              border: '1px solid var(--t-border)',
+              backgroundColor: 'var(--t-surface)',
+              boxShadow: 'var(--t-glow-shadow)',
+              pointerEvents: 'auto',
+              zIndex: 2147483647,
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5"
-            >
-              <div
-                className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: 'var(--t-primary-dim, rgba(59,130,246,0.15))' }}
-              >
-                <Building2 size={16} style={{ color: 'var(--t-primary)' }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate" style={{ color: 'var(--t-text)' }}>
-                  {teamConfig.name || 'My Team'}
-                </p>
-                <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
-                  {team.length} member{team.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
-                style={{ color: 'var(--t-text-muted)' }}
-              />
-            </button>
-
-            {/* Dropdown Menu - Large and spacious */}
-            {showTeamDropdown && (
-              <>
-                {/* Backdrop to close when clicking outside */}
-                <div 
-                  className="fixed inset-0 z-40" 
-                  onClick={() => setShowTeamDropdown(false)}
-                />
-                
-                {/* Dropdown menu -宽敞设计 */}
-                <div
-                  className="absolute left-0 right-0 mt-2 z-50 rounded-xl border shadow-2xl min-w-[280px]"
+            <div className="flex flex-col h-full">
+              {/* Header with Tabs */}
+              <div className="flex border-b" style={{ borderColor: 'var(--t-border)' }}>
+                <button
+                  onClick={() => setActiveTab('presets')}
+                  className="flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative"
                   style={{
-                    background: 'var(--t-sidebar-bg)',
-                    borderColor: 'var(--t-sidebar-border)',
-                    boxShadow: '0 20px 30px -10px rgba(0, 0, 0, 0.4)',
+                    color: activeTab === 'presets' ? 'var(--t-primary)' : 'var(--t-text-muted)',
                   }}
                 >
-                  {/* Current team indicator */}
-                  <div className="p-5 border-b" style={{ borderColor: 'var(--t-sidebar-border)' }}>
-                    <p className="text-xs font-medium uppercase tracking-wider mb-3" style={{ color: 'var(--t-text-muted)' }}>
-                      Current Team
-                    </p>
-                    <div className="flex items-center gap-4">
-                      <div
-                        className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ background: 'var(--t-primary)' }}
-                      >
-                        <Building2 size={22} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-base" style={{ color: 'var(--t-text)' }}>{teamConfig.name}</p>
-                        <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>{team.length} members</p>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Palette size={16} />
+                    Preset Themes
                   </div>
-
-                  {/* Team list - Only show if user has multiple teams */}
-                  {userTeams.length > 1 && (
-                    <div className="p-3">
-                      <p className="text-xs font-medium uppercase tracking-wider px-3 py-2" style={{ color: 'var(--t-text-muted)' }}>
-                        Switch to another team
-                      </p>
-                      <div className="space-y-1 max-h-64 overflow-y-auto scroll-smooth">
-                        {userTeams.filter(t => !t.isCurrent).map(t => (
-                          <button
-                            key={t.teamId}
-                            onClick={() => {
-                              switchToTeam(t.teamId);
-                              setShowTeamDropdown(false);
-                            }}
-                            className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-left transition-all hover:bg-white/5"
-                          >
-                            <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                              style={{ background: 'var(--t-primary-dim, rgba(59,130,246,0.15))' }}
-                            >
-                              <Building2 size={16} style={{ color: 'var(--t-primary)' }} />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{t.teamName}</p>
-                              <p className="text-xs mt-1" style={{ color: 'var(--t-text-muted)' }}>{t.role}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  {activeTab === 'presets' && (
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 h-0.5"
+                      style={{ background: 'var(--t-primary)' }}
+                    />
                   )}
-
-                  {/* Actions - Large buttons */}
-                  <div className="p-4 border-t space-y-3" style={{ borderColor: 'var(--t-sidebar-border)' }}>
-                    <button
-                      onClick={() => { setShowJoinModal(true); setShowTeamDropdown(false); }}
-                      className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-left transition-colors hover:bg-white/5"
-                    >
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-500">
-                        <ArrowRightLeft size={18} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Join a Team</p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--t-text-muted)' }}>Enter team code to join</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => { setShowCreateModal(true); setShowTeamDropdown(false); }}
-                      className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-left transition-colors hover:bg-white/5"
-                    >
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500">
-                        <Plus size={18} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Create New Team</p>
-                        <p className="text-xs mt-1" style={{ color: 'var(--t-text-muted)' }}>Start a new team from scratch</p>
-                      </div>
-                    </button>
+                </button>
+                <button
+                  onClick={() => setActiveTab('customizer')}
+                  className="flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 relative"
+                  style={{
+                    color: activeTab === 'customizer' ? 'var(--t-primary)' : 'var(--t-text-muted)',
+                  }}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Sparkles size={16} />
+                    Custom Colors
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                  {activeTab === 'customizer' && (
+                    <div 
+                      className="absolute bottom-0 left-0 right-0 h-0.5"
+                      style={{ background: 'var(--t-primary)' }}
+                    />
+                  )}
+                </button>
+              </div>
 
-        {/* Nav */}
-        <nav className="flex-1 flex flex-col gap-1 p-3 mt-2">
-          {navItems.map(({ to, label, icon: Icon }) => {
-            const badge =
-              label === 'Tasks' ? pendingTaskCount :
-              label === 'Team' ? onlineCount :
-              label === 'Chat' ? totalUnread : 0;
-
-            return (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative ${
-                    isActive ? 'active-nav-item' : 'inactive-nav-item'
-                  }`
-                }
-                style={({ isActive }) => ({
-                  borderRadius: 'var(--t-radius)',
-                  background: isActive ? 'var(--t-primary-dim)' : 'transparent',
-                  color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
-                  boxShadow: isActive ? 'var(--t-glow-shadow)' : 'none',
-                })}
-              >
-                <Icon size={20} className="shrink-0" />
-                {sidebarOpen && <span className="flex-1">{label}</span>}
-                {sidebarOpen && badge > 0 && (
-                  <span
-                    className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
-                    style={{
-                      background: label === 'Tasks' ? 'var(--t-warning)' :
-                                  label === 'Chat' ? 'var(--t-primary)' :
-                                  'var(--t-success)',
-                    }}
-                  >
-                    {badge}
-                  </span>
-                )}
-                {!sidebarOpen && badge > 0 && (
-                  <span
-                    className="absolute right-2 w-2 h-2 rounded-full"
-                    style={{
-                      background: label === 'Tasks' ? 'var(--t-warning)' :
-                                  label === 'Chat' ? 'var(--t-primary)' :
-                                  'var(--t-success)',
-                    }}
-                  />
-                )}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        {/* Online Team Members */}
-        {sidebarOpen && (
-          <div
-            className="px-4 py-3 border-t"
-            style={{ borderColor: 'var(--t-sidebar-border)' }}
-          >
-            <p className="text-[10px] uppercase tracking-wider font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>
-              Online Now
-            </p>
-            <div className="space-y-1.5">
-              {team
-                .filter(m => m.presenceStatus !== 'offline')
-                .slice(0, 4)
-                .map(m => (
-                  <div key={m.id} className="flex items-center gap-2">
-                    <div className="relative">
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                        style={{ background: `linear-gradient(135deg, var(--t-avatar-from), var(--t-avatar-to))` }}
-                      >
-                        {m.avatar}
-                      </div>
-                      <span className="absolute -bottom-0.5 -right-0.5">
-                        <StatusIndicator status={m.presenceStatus} size="sm" />
+              {/* Content Area */}
+              <div className="overflow-y-auto p-4" style={{ maxHeight: '500px' }}>
+                {activeTab === 'presets' ? (
+                  /* PRESET THEMES TAB */
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>
+                        Theme Gallery
+                      </h3>
+                      <span className="text-xs px-2 py-1 rounded" style={{ 
+                        backgroundColor: 'var(--t-primary-dim)',
+                        color: 'var(--t-primary-text)'
+                      }}>
+                        {Object.keys(themes).length} themes
                       </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs truncate" style={{ color: 'var(--t-text-secondary)' }}>
-                        {m.name.split(' ')[0]}
-                      </p>
-                    </div>
+                    
+                    {/* Categories */}
+                    {Object.entries(themeCategories).map(([category, themeIds]) => (
+                      <div key={category} className="space-y-2">
+                        <h4 className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>
+                          {category}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {themeIds.map((themeId) => {
+                            const theme = themes[themeId];
+                            if (!theme) return null;
+                            
+                            const isActive = currentTheme === themeId;
+                            const isHovered = hoveredTheme === themeId;
+                            
+                            return (
+                              <button
+                                key={themeId}
+                                onClick={() => {
+                                  setTheme(themeId);
+                                  setIsOpen(false);
+                                }}
+                                onMouseEnter={() => setHoveredTheme(themeId)}
+                                onMouseLeave={() => setHoveredTheme(null)}
+                                className="relative p-3 rounded-lg transition-all duration-200 text-left"
+                                style={{
+                                  backgroundColor: isActive ? 'var(--t-primary-dim)' : 'var(--t-surface-hover)',
+                                  border: `2px solid ${isActive ? 'var(--t-primary)' : 'transparent'}`,
+                                  transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+                                }}
+                              >
+                                {/* Theme Preview */}
+                                <div className="flex items-center gap-2 mb-2">
+                                  <span className="text-2xl">{getThemeIcon(themeId)}</span>
+                                  <span className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>
+                                    {theme.name}
+                                  </span>
+                                </div>
+                                
+                                {/* Color Preview Dots */}
+                                <div className="flex gap-1">
+                                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.primary }} />
+                                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.accent }} />
+                                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.background }} />
+                                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.surface }} />
+                                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: theme.colors.sidebarBg || theme.colors.background }} />
+                                </div>
+                                
+                                {/* Active Indicator */}
+                                {isActive && (
+                                  <div className="absolute top-1 right-1 w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--t-success)' }} />
+                                )}
+
+                                {/* Custom Indicator */}
+                                {Object.keys(customColors).length > 0 && isActive && (
+                                  <div className="absolute bottom-1 right-1 text-[8px] px-1 py-0.5 rounded" style={{ 
+                                    backgroundColor: 'var(--t-primary)',
+                                    color: 'var(--t-on-primary)'
+                                  }}>
+                                    Custom
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              {team.filter(m => m.presenceStatus !== 'offline').length === 0 && (
-                <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>No one online</p>
-              )}
+                ) : (
+                  /* CUSTOMIZER TAB */
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>
+                        Custom Colors
+                      </h3>
+                      <button
+                        onClick={resetCustomColors}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-all duration-200 hover:scale-105"
+                        style={{
+                          backgroundColor: 'var(--t-surface-hover)',
+                          color: 'var(--t-text-secondary)',
+                        }}
+                      >
+                        <RotateCcw size={12} />
+                        Reset All
+                      </button>
+                    </div>
+
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
+                      Customize colors for the current theme ({currentThemeData.name})
+                    </p>
+
+                    {/* Color Pickers */}
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                      {[
+                        { key: 'primary', label: 'Primary Color', default: themes[currentTheme]?.colors.primary || '#3b82f6' },
+                        { key: 'accent', label: 'Accent Color', default: themes[currentTheme]?.colors.accent || '#8b5cf6' },
+                        { key: 'background', label: 'Main Background', default: themes[currentTheme]?.colors.background || '#0f172a' },
+                        { key: 'surface', label: 'Card/Surface Background', default: themes[currentTheme]?.colors.surface || '#1e293b' },
+                        { key: 'sidebarBg', label: 'Sidebar Background', default: themes[currentTheme]?.colors.sidebarBg || '#0f172a' },
+                        { key: 'text', label: 'Primary Text', default: themes[currentTheme]?.colors.text || '#f1f5f9' },
+                        { key: 'textSecondary', label: 'Secondary Text', default: themes[currentTheme]?.colors.textSecondary || '#94a3b8' },
+                        { key: 'border', label: 'Border Color', default: themes[currentTheme]?.colors.border || '#334155' },
+                      ].map(({ key, label, default: defaultColor }) => (
+                        <div key={key} className="space-y-1">
+                          <label className="text-xs font-medium" style={{ color: 'var(--t-text-secondary)' }}>
+                            {label}
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="color"
+                              value={customColors[key] || defaultColor}
+                              onChange={(e) => setCustomColor(key, e.target.value)}
+                              className="w-10 h-10 rounded cursor-pointer shrink-0"
+                              style={{
+                                background: 'var(--t-input-bg)',
+                                border: '1px solid var(--t-input-border)',
+                              }}
+                            />
+                            <input
+                              type="text"
+                              value={customColors[key] || defaultColor}
+                              onChange={(e) => setCustomColor(key, e.target.value)}
+                              className="flex-1 px-3 py-2 rounded-lg text-sm"
+                              style={{
+                                background: 'var(--t-input-bg)',
+                                border: '1px solid var(--t-input-border)',
+                                color: 'var(--t-text)',
+                              }}
+                              placeholder="#HEX"
+                            />
+                            {customColors[key] && (
+                              <button
+                                onClick={() => setCustomColor(key, defaultColor)}
+                                className="px-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)] shrink-0"
+                                style={{ color: 'var(--t-text-muted)' }}
+                                title="Reset to default"
+                              >
+                                <X size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Live Preview */}
+                    <div 
+                      className="mt-4 p-4 rounded-lg space-y-3"
+                      style={{
+                        background: 'var(--t-surface)',
+                        border: '1px solid var(--t-border)',
+                      }}
+                    >
+                      <p className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>Live Preview</p>
+                      
+                      {/* Color Swatches */}
+                      <div className="flex flex-wrap gap-2">
+                        <div className="w-8 h-8 rounded" style={{ background: 'var(--t-primary)' }} />
+                        <div className="w-8 h-8 rounded" style={{ background: 'var(--t-accent)' }} />
+                        <div className="w-8 h-8 rounded" style={{ background: 'var(--t-bg)' }} />
+                        <div className="w-8 h-8 rounded" style={{ background: 'var(--t-surface)' }} />
+                        <div className="w-8 h-8 rounded" style={{ background: 'var(--t-sidebar-bg, var(--t-bg))' }} />
+                        <div className="w-8 h-8 rounded" style={{ background: 'var(--t-border)' }} />
+                      </div>
+
+                      {/* Sample Card */}
+                      <div 
+                        className="p-3 rounded-lg space-y-2"
+                        style={{ 
+                          background: 'var(--t-surface)',
+                          border: '1px solid var(--t-border)',
+                        }}
+                      >
+                        <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Sample Card</p>
+                        <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>This is how your colors will look</p>
+                        <div className="flex gap-2 pt-2">
+                          <button 
+                            className="px-3 py-1 rounded text-xs"
+                            style={{ 
+                              background: 'var(--t-primary)',
+                              color: 'var(--t-on-primary)'
+                            }}
+                          >
+                            Primary
+                          </button>
+                          <button 
+                            className="px-3 py-1 rounded text-xs"
+                            style={{ 
+                              background: 'var(--t-surface-hover)',
+                              color: 'var(--t-text)',
+                              border: '1px solid var(--t-border)'
+                            }}
+                          >
+                            Secondary
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Info Text */}
+                    <p className="text-xs text-center" style={{ color: 'var(--t-text-muted)' }}>
+                      Custom colors are saved automatically and will persist across sessions
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        )}
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header
-          className="flex items-center justify-between px-6 py-3 border-b shrink-0 backdrop-blur-sm"
-          style={{
-            background: 'color-mix(in srgb, var(--t-sidebar-bg) 80%, transparent)',
-            borderColor: 'var(--t-border)',
-          }}
-        >
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
-              style={{ color: 'var(--t-text-secondary)' }}
-            >
-              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
-              <input
-                type="text"
-                placeholder="Search leads, tasks, team..."
-                className="w-72 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2"
-                style={{
-                  borderRadius: 'var(--t-radius)',
-                  background: 'var(--t-input-bg)',
-                  border: '1px solid var(--t-input-border)',
-                  color: 'var(--t-text)',
-                  '--tw-ring-color': 'var(--t-input-focus)',
-                }}
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <ThemeSwitcher />
-            <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
-            <NotificationPanel />
-            <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
-            <UserMenu />
-          </div>
-        </header>
-
-        {/* Page */}
-        <main className="flex-1 overflow-auto p-6">
-          <Outlet />
-        </main>
-      </div>
-
-      {/* Modals */}
-      <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />
-      <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
-    </div>
+        </div>,
+        portalRoot
+      )}
+    </>
   );
 }
