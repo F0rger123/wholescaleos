@@ -1,12 +1,12 @@
 // @ts-nocheck
 import { useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';  // Change this line
+import { useNavigate } from 'react-router-dom';  // Change back to useNavigate
 import { useStore } from '../store/useStore';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { Building2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
 export function AuthCallback() {
-  const history = useHistory();  // Change this line
+  const navigate = useNavigate();  // Change back to navigate
   const { currentUser } = useStore();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Connecting to Google Calendar...');
@@ -16,7 +16,7 @@ export function AuthCallback() {
       if (!currentUser?.id) {
         setStatus('error');
         setMessage('Please log in first');
-        setTimeout(() => history.push('/login'), 2000);  // Change this
+        setTimeout(() => navigate('/login'), 2000);
         return;
       }
 
@@ -27,14 +27,14 @@ export function AuthCallback() {
       if (error) {
         setStatus('error');
         setMessage(`Google auth failed: ${error}`);
-        setTimeout(() => history.push('/calendar'), 2000);  // Change this
+        setTimeout(() => navigate('/calendar'), 2000);
         return;
       }
 
       if (!code) {
         setStatus('error');
         setMessage('No authorization code received');
-        setTimeout(() => history.push('/calendar'), 2000);  // Change this
+        setTimeout(() => navigate('/calendar'), 2000);
         return;
       }
 
@@ -45,7 +45,7 @@ export function AuthCallback() {
         if (success) {
           setStatus('success');
           setMessage('Google Calendar connected successfully!');
-          setTimeout(() => history.push('/calendar'), 1500);  // Change this
+          setTimeout(() => navigate('/calendar'), 1500);
         } else {
           throw new Error('Failed to store tokens');
         }
@@ -53,12 +53,12 @@ export function AuthCallback() {
         console.error('Auth callback error:', err);
         setStatus('error');
         setMessage('Failed to connect Google Calendar');
-        setTimeout(() => history.push('/calendar'), 2000);  // Change this
+        setTimeout(() => navigate('/calendar'), 2000);
       }
     }
 
     handleCallback();
-  }, [currentUser, history]);
+  }, [currentUser, navigate]);
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-6">
