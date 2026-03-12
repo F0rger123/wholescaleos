@@ -39,8 +39,11 @@ export function AuthCallback() {
       }
 
       try {
-        const service = GoogleCalendarService.getInstance();
-        const success = await service.storeUserTokens(currentUser.id, code);
+  const service = GoogleCalendarService.getInstance();
+  console.log('🔍 Testing Supabase connection before storing tokens...');
+  await service.testConnection();
+  console.log('📝 Now storing tokens...');
+  const success = await service.storeUserTokens(currentUser.id, code);
 
         if (success) {
           setStatus('success');

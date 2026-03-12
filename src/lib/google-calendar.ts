@@ -33,6 +33,35 @@ export class GoogleCalendarService {
     return GoogleCalendarService.instance;
   }
 
+  // NEW: Test Supabase connection
+  async testConnection(): Promise<void> {
+    console.log('🧪 Testing Supabase connection...');
+    try {
+      if (!supabase) {
+        console.error('❌ Supabase is null - check your initialization');
+        return;
+      }
+      
+      console.log('📊 Attempting to query user_connections table...');
+      
+      const { data, error } = await supabase
+        .from('user_connections')
+        .select('count')
+        .limit(1);
+      
+      if (error) {
+        console.error('❌ Supabase query failed:', error);
+        console.error('❌ Error code:', error.code);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error details:', error.details);
+      } else {
+        console.log('✅ Supabase connection successful!', data);
+      }
+    } catch (err) {
+      console.error('❌ Supabase test threw exception:', err);
+    }
+  }
+
   getAuthUrl(): string {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const redirectUri = `${import.meta.env.VITE_APP_URL}/auth/callback`;
