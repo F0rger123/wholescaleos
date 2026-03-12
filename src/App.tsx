@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { AuthCallback } from './pages/AuthCallback';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-// It should already work - these ARE exported. Try restarting TypeScript server
 import { Layout } from './components/Layout';
 import { SupabaseSync } from './lib/supabase-sync';
 import { Dashboard } from './pages/Dashboard';
@@ -139,37 +138,38 @@ export function App() {
 
   if (checking) return <LoadingScreen />;
 
-return (
-  <HashRouter>
-    <Routes>
-      {/* Public routes */}
-      <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-      
-      {/* Email confirmation — accessible with or without auth */}
-      <Route path="/email-confirmed" element={<EmailConfirmed />} />
+  return (
+    <HashRouter>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        
+        {/* Email confirmation — accessible with or without auth */}
+        <Route path="/email-confirmed" element={<EmailConfirmed />} />
 
-      {/* Team selection — after login, before main app */}
-      <Route path="/team-selection" element={<TeamSelection />} />
+        {/* Team selection — after login, before main app */}
+        <Route path="/team-selection" element={<TeamSelection />} />
 
-      {/* Google OAuth callback - ADD THIS LINE */}
-      <Route path="/auth/callback" element={<AuthCallback />} />
+        {/* Google OAuth callback */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Protected routes */}
-      <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/leads" element={<Leads />} />
-        <Route path="/map" element={<MapView />} />
-        <Route path="/team" element={<Team />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/chat" element={<Chat />} />
-        <Route path="/imports" element={<Imports />} />
-        <Route path="/calculators" element={<Calculators />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/calendar" element={<Calendar />} />
-      </Route>
-      
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  </HashRouter>
-);
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/leads" element={<Leads />} />
+          <Route path="/map" element={<MapView />} />
+          <Route path="/team" element={<Team />} />
+          <Route path="/tasks" element={<Tasks />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/imports" element={<Imports />} />
+          <Route path="/calculators" element={<Calculators />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/calendar" element={<Calendar />} />
+        </Route>
+        
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </HashRouter>
+  );
+}
