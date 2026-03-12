@@ -9,6 +9,8 @@ export function ThemeSwitcher() {
   const [activeTab, setActiveTab] = useState<'presets' | 'customizer'>('presets');
   const [hoveredTheme, setHoveredTheme] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [modalPosition, setModalPosition] = useState<'bottom' | 'top'>('bottom');
 
   const currentThemeData = themes[currentTheme] || themes.dark;
 
@@ -46,19 +48,37 @@ export function ThemeSwitcher() {
     };
   }, [isOpen]);
 
+  const handleOpen = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const modalHeight = 500; // Approximate height of modal
+      
+      // Decide whether to show above or below based on available space
+      if (spaceBelow < modalHeight && spaceAbove > spaceBelow) {
+        setModalPosition('top');
+      } else {
+        setModalPosition('bottom');
+      }
+      
+      setIsOpen(true);
+    }
+  };
+
   return (
     <>
       {/* Theme Switcher Button */}
       <button
         ref={buttonRef}
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
         className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 hover:scale-105"
         style={{
           backgroundColor: 'var(--t-surface)',
           color: 'var(--t-text)',
           border: '1px solid var(--t-border)',
           position: 'relative',
-          zIndex: 9999,
+          zIndex: isOpen ? 9999999 : 1,
         }}
       >
         <span className="text-xl">{getThemeIcon(currentTheme)}</span>
@@ -73,7 +93,7 @@ export function ThemeSwitcher() {
         </svg>
       </button>
 
-      {/* Portal Dropdown - Rendered at body level */}
+      {/* Portal Dropdown */}
       {isOpen && (
         <div style={{
           position: 'fixed',
@@ -82,9 +102,10 @@ export function ThemeSwitcher() {
           right: 0,
           bottom: 0,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999999, // 7 nines - should be above everything
+          alignItems: 'flex-start',
+          justifyContent: 'flex-end',
+          padding: '16px',
+          zIndex: 9999999,
           pointerEvents: 'none',
         }}>
           {/* Backdrop */}
@@ -103,19 +124,26 @@ export function ThemeSwitcher() {
             onClick={() => setIsOpen(false)}
           />
           
-          {/* Theme Picker - Centered Modal */}
+          {/* Theme Picker - Positioned near button */}
           <div 
+            ref={modalRef}
             style={{
               position: 'relative',
               width: '384px',
-              maxHeight: '80vh',
+              marginTop: buttonRef.current ? (
+                modalPosition === 'bottom' 
+                  ? buttonRef.current.getBoundingClientRect().bottom + 8 
+                  : buttonRef.current.getBoundingClientRect().top - 8 - 500
+              ) : 0,
+              marginRight: buttonRef.current ? window.innerWidth - buttonRef.current.getBoundingClientRect().right : 16,
               overflow: 'hidden',
               borderRadius: '1rem',
               border: '1px solid var(--t-border)',
               backgroundColor: 'var(--t-surface)',
               boxShadow: 'var(--t-glow-shadow)',
               pointerEvents: 'auto',
-              zIndex: 10000000, // 8 nines - even higher
+              zIndex: 10000000,
+              maxHeight: 'calc(100vh - 32px)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
