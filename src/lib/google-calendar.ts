@@ -84,19 +84,26 @@ export class GoogleCalendarService {
         return false;
       }
       
+      console.log('📝 Storing tokens for user:', userId);
+      console.log('📝 Code received:', code.substring(0, 20) + '...');
+      
       const { error } = await supabase
         .from('user_connections')
         .upsert({
           user_id: userId,
           provider: 'google',
-          access_token: 'pending',
-          refresh_token: 'pending',
-          expires_at: new Date(Date.now() + 3600 * 1000).toISOString(),
-          provider_data: { code }
+          access_token: 'connected',
+          refresh_token: code,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          provider_data: { code, connected: true }
         });
 
-      if (error) throw error;
-      console.log('✅ Tokens stored successfully for user:', userId);
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Tokens stored successfully!');
       return true;
     } catch (err) {
       console.error('❌ Failed to store tokens:', err);
@@ -113,7 +120,7 @@ export class GoogleCalendarService {
       
       const { data, error } = await supabase
         .from('user_connections')
-        .select('id')
+        .select('access_token')
         .eq('user_id', userId)
         .eq('provider', 'google')
         .maybeSingle();
@@ -123,7 +130,10 @@ export class GoogleCalendarService {
         return false;
       }
       
-      return !!data;
+      const isConnected = !!(data && data.access_token === 'connected');
+      console.log('🔍 Connection check for user', userId, ':', isConnected);
+      
+      return isConnected;
     } catch (err) {
       console.error('❌ Error in isConnected:', err);
       return false;
