@@ -1,11 +1,25 @@
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+    
     try {
-      // Just serve index.html for all requests
-      const url = new URL('/index.html', request.url);
-      return await env.ASSETS.fetch(url);
+      // Try to get the asset from the environment
+      let response = await env.ASSETS.fetch(request.url);
+      
+      // If we got a response, return it
+      if (response) {
+        return response;
+      }
+      
+      // Otherwise, try to serve index.html
+      response = await env.ASSETS.fetch(new URL('/index.html', request.url));
+      return response;
     } catch (error) {
-      return new Response('Application Error: ' + error.message, { status: 500 });
+      // If all else fails, return a simple error
+      return new Response(`Error: ${error.message}`, { 
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' }
+      });
     }
   }
-}
+};
