@@ -17,6 +17,7 @@ import { TeamSelection } from './pages/TeamSelection';
 import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
+import { Calendar } from './pages/Calendar';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -148,17 +149,19 @@ export function App() {
         <Route path="/team-selection" element={<TeamSelection />} />
 
         {/* Protected routes */}
-        <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/leads" element={<Leads />} />
-          <Route path="/map" element={<MapView />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/imports" element={<Imports />} />
-          <Route path="/calculators" element={<Calculators />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
+<Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
+  <Route path="/" element={<Dashboard />} />
+  <Route path="/leads" element={<Leads />} />
+  <Route path="/map" element={<MapView />} />
+  <Route path="/team" element={<Team />} />
+  <Route path="/tasks" element={<Tasks />} />
+  <Route path="/chat" element={<Chat />} />
+  <Route path="/imports" element={<Imports />} />
+  <Route path="/calculators" element={<Calculators />} />
+  <Route path="/settings" element={<SettingsPage />} />
+  {/* Add Calendar route here */}
+  <Route path="/calendar" element={<Calendar />} />
+</Route>
         
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
