@@ -1,6 +1,6 @@
 // src/pages/Calendar.tsx
 import { useState, useEffect } from 'react';
-import './Calendar.css'; // We'll create this next
+import { useStore } from '../store/useStore';
 
 interface CalendarEvent {
   id: number;
@@ -11,6 +11,8 @@ interface CalendarEvent {
 }
 
 export default function Calendar() {
+  const { theme } = useStore(); // Get theme from your store
+  
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
     const saved = localStorage.getItem('calendarEvents');
     return saved ? JSON.parse(saved) : [
@@ -110,49 +112,46 @@ export default function Calendar() {
     const startingDay = firstDay.getDay();
     const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     
-    const days = [];
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    
-    // Add day headers
-    days.push(
-      <div key="header" className="grid grid-cols-7 gap-2 mb-2">
-        {daysOfWeek.map(day => (
-          <div key={day} className="text-center font-semibold py-2">{day}</div>
-        ))}
-      </div>
-    );
-    
-    // Create calendar grid
     const cells = [];
     
     // Add empty cells
     for (let i = 0; i < startingDay; i++) {
-      cells.push(<div key={`empty-${i}`} className="h-24 p-1 bg-gray-50 text-gray-400 border"></div>);
+      cells.push(
+        <div 
+          key={`empty-${i}`} 
+          className="h-24 p-1 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500"
+        ></div>
+      );
     }
     
     // Add days
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
       
       cells.push(
         <div 
           key={day} 
-          className="h-24 p-1 border hover:bg-blue-50 cursor-pointer overflow-y-auto"
+          className={`h-24 p-1 border ${isToday ? 'border-brand-500 dark:border-brand-400' : 'border-slate-200 dark:border-slate-700'} hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer overflow-y-auto transition-colors`}
           onClick={() => {
             setFormData({...formData, startDate: dateStr, endDate: dateStr});
             setShowForm(true);
           }}
         >
-          <div className="font-medium">{day}</div>
+          <div className={`font-medium ${isToday ? 'text-brand-600 dark:text-brand-400' : 'text-slate-700 dark:text-slate-300'}`}>
+            {day}
+          </div>
           {dayEvents.map(event => (
             <div 
               key={event.id}
-              className="text-xs bg-blue-500 text-white rounded px-1 mt-1 truncate"
+              className="text-xs bg-brand-500 text-white rounded px-1 mt-1 truncate hover:bg-brand-600 transition-colors cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 editEvent(event);
               }}
+              style={{ backgroundColor: theme?.primary || '#3b82f6' }}
             >
               {event.title}
             </div>
@@ -163,56 +162,82 @@ export default function Calendar() {
     
     return (
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-6">
           <button 
             onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() - 1)))}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
             ← Previous
           </button>
-          <h2 className="text-2xl font-semibold">
+          <h2 className="text-2xl font-semibold text-slate-800 dark:text-white">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
           <button 
             onClick={() => setCurrentDate(new Date(currentDate.setMonth(currentDate.getMonth() + 1)))}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
             Next →
           </button>
         </div>
         <div className="grid grid-cols-7 gap-2">
+          {/* Day headers */}
+          {daysOfWeek.map(day => (
+            <div key={day} className="text-center font-semibold py-2 text-slate-600 dark:text-slate-400">
+              {day}
+            </div>
+          ))}
           {cells}
         </div>
       </div>
     );
   };
 
+  // Theme-based styling
+  const buttonClasses = {
+    primary: `bg-brand-500 hover:bg-brand-600 text-white transition-colors`,
+    secondary: `bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors`,
+    danger: `bg-red-500 hover:bg-red-600 text-white transition-colors`
+  };
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Calendar</h1>
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Calendar</h1>
         <div className="space-x-2">
           <button 
             onClick={() => { setCurrentView('month'); setShowForm(false); }}
-            className={`px-4 py-2 rounded ${currentView === 'month' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'month' 
+                ? buttonClasses.primary 
+                : buttonClasses.secondary
+            }`}
           >
             Month
           </button>
           <button 
             onClick={() => { setCurrentView('week'); setShowForm(false); }}
-            className={`px-4 py-2 rounded ${currentView === 'week' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'week' 
+                ? buttonClasses.primary 
+                : buttonClasses.secondary
+            }`}
           >
             Week
           </button>
           <button 
             onClick={() => { setCurrentView('day'); setShowForm(false); }}
-            className={`px-4 py-2 rounded ${currentView === 'day' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              currentView === 'day' 
+                ? buttonClasses.primary 
+                : buttonClasses.secondary
+            }`}
           >
             Day
           </button>
           <button 
             onClick={() => setShowForm(!showForm)}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
+            style={{ backgroundColor: theme?.primary }}
           >
             + New Event
           </button>
@@ -220,94 +245,115 @@ export default function Calendar() {
       </div>
 
       {/* Calendar View */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-800">
         {currentView === 'month' && renderMonthView()}
-        {currentView === 'week' && <div>Week view coming soon...</div>}
-        {currentView === 'day' && <div>Day view coming soon...</div>}
+        {currentView === 'week' && (
+          <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+            Week view coming soon...
+          </div>
+        )}
+        {currentView === 'day' && (
+          <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+            Day view coming soon...
+          </div>
+        )}
       </div>
 
       {/* Event Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-semibold mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-lg p-6 max-w-md w-full border border-slate-200 dark:border-slate-800">
+            <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
               {editingEvent ? 'Edit Event' : 'Create Event'}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Title</label>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                  Title
+                </label>
                 <input
                   type="text"
                   required
                   value={formData.title}
                   onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Start Date</label>
+                  <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    Start Date
+                  </label>
                   <input
                     type="date"
                     required
                     value={formData.startDate}
                     onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Start Time</label>
+                  <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    Start Time
+                  </label>
                   <input
                     type="time"
                     required
                     value={formData.startTime}
                     onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">End Date</label>
+                  <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    End Date
+                  </label>
                   <input
                     type="date"
                     required
                     value={formData.endDate}
                     onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">End Time</label>
+                  <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                    End Time
+                  </label>
                   <input
                     type="time"
                     required
                     value={formData.endTime}
                     onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                    className="w-full p-2 border rounded"
+                    className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
+                <label className="block text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                  Description
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({...formData, description: e.target.value})}
                   rows={3}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
                 />
               </div>
               <div className="flex justify-end space-x-2">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                  className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
+                  style={{ backgroundColor: theme?.primary }}
                 >
                   Save
                 </button>
@@ -318,33 +364,34 @@ export default function Calendar() {
       )}
 
       {/* Events List */}
-      <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Upcoming Events</h2>
+      <div className="mt-8 bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-800">
+        <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">Upcoming Events</h2>
         <div className="space-y-2">
           {events.length === 0 ? (
-            <p className="text-gray-500">No upcoming events</p>
+            <p className="text-slate-500 dark:text-slate-400">No upcoming events</p>
           ) : (
             events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
               .map(event => (
-                <div key={event.id} className="p-3 border rounded hover:bg-gray-50">
+                <div key={event.id} className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="font-semibold">{event.title}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-semibold text-slate-800 dark:text-white">{event.title}</div>
+                      <div className="text-sm text-slate-500 dark:text-slate-400">
                         {new Date(event.start).toLocaleString()} - {new Date(event.end).toLocaleString()}
                       </div>
-                      <div className="text-sm mt-1">{event.description}</div>
+                      <div className="text-sm mt-1 text-slate-600 dark:text-slate-300">{event.description}</div>
                     </div>
                     <div className="space-x-2">
                       <button
                         onClick={() => editEvent(event)}
-                        className="px-2 py-1 bg-blue-500 text-white text-sm rounded"
+                        className="px-2 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                        style={{ backgroundColor: theme?.primary }}
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => deleteEvent(event.id)}
-                        className="px-2 py-1 bg-red-500 text-white text-sm rounded"
+                        className="px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
                       >
                         Delete
                       </button>
