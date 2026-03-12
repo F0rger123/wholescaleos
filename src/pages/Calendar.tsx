@@ -1,6 +1,7 @@
 // src/pages/Calendar.tsx
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
+import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
 
 interface CalendarEvent {
   id: number;
@@ -11,7 +12,7 @@ interface CalendarEvent {
 }
 
 export default function Calendar() {
-  const { theme } = useStore(); // Get theme from your store
+  const { theme } = useStore();
   
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
     const saved = localStorage.getItem('calendarEvents');
@@ -38,7 +39,6 @@ export default function Calendar() {
   const [showForm, setShowForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     startDate: '',
@@ -115,7 +115,6 @@ export default function Calendar() {
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const cells = [];
     
-    // Add empty cells
     for (let i = 0; i < startingDay; i++) {
       cells.push(
         <div 
@@ -125,7 +124,6 @@ export default function Calendar() {
       );
     }
     
-    // Add days
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayEvents = events.filter(e => e.start.startsWith(dateStr));
@@ -180,7 +178,6 @@ export default function Calendar() {
           </button>
         </div>
         <div className="grid grid-cols-7 gap-2">
-          {/* Day headers */}
           {daysOfWeek.map(day => (
             <div key={day} className="text-center font-semibold py-2 text-slate-600 dark:text-slate-400">
               {day}
@@ -192,7 +189,6 @@ export default function Calendar() {
     );
   };
 
-  // Theme-based styling
   const buttonClasses = {
     primary: `bg-brand-500 hover:bg-brand-600 text-white transition-colors`,
     secondary: `bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors`,
@@ -203,48 +199,44 @@ export default function Calendar() {
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Calendar</h1>
-        <div className="space-x-2">
-          <button 
-            onClick={() => { setCurrentView('month'); setShowForm(false); }}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              currentView === 'month' 
-                ? buttonClasses.primary 
-                : buttonClasses.secondary
-            }`}
-          >
-            Month
-          </button>
-          <button 
-            onClick={() => { setCurrentView('week'); setShowForm(false); }}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              currentView === 'week' 
-                ? buttonClasses.primary 
-                : buttonClasses.secondary
-            }`}
-          >
-            Week
-          </button>
-          <button 
-            onClick={() => { setCurrentView('day'); setShowForm(false); }}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              currentView === 'day' 
-                ? buttonClasses.primary 
-                : buttonClasses.secondary
-            }`}
-          >
-            Day
-          </button>
-          <button 
-            onClick={() => setShowForm(!showForm)}
-            className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
-            style={{ backgroundColor: theme?.primary }}
-          >
-            + New Event
-          </button>
+        <div className="flex items-center gap-4">
+          <GoogleCalendarConnect />
+          <div className="space-x-2">
+            <button 
+              onClick={() => { setCurrentView('month'); setShowForm(false); }}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                currentView === 'month' ? buttonClasses.primary : buttonClasses.secondary
+              }`}
+            >
+              Month
+            </button>
+            <button 
+              onClick={() => { setCurrentView('week'); setShowForm(false); }}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                currentView === 'week' ? buttonClasses.primary : buttonClasses.secondary
+              }`}
+            >
+              Week
+            </button>
+            <button 
+              onClick={() => { setCurrentView('day'); setShowForm(false); }}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                currentView === 'day' ? buttonClasses.primary : buttonClasses.secondary
+              }`}
+            >
+              Day
+            </button>
+            <button 
+              onClick={() => setShowForm(!showForm)}
+              className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
+              style={{ backgroundColor: theme?.primary }}
+            >
+              + New Event
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Calendar View */}
       <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-800">
         {currentView === 'month' && renderMonthView()}
         {currentView === 'week' && (
@@ -259,7 +251,6 @@ export default function Calendar() {
         )}
       </div>
 
-      {/* Event Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-900 rounded-lg p-6 max-w-md w-full border border-slate-200 dark:border-slate-800">
@@ -363,7 +354,6 @@ export default function Calendar() {
         </div>
       )}
 
-      {/* Events List */}
       <div className="mt-8 bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-800">
         <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">Upcoming Events</h2>
         <div className="space-y-2">
