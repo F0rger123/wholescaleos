@@ -2,37 +2,48 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
+import { GoogleCalendarService, GoogleCalendarEvent } from '../lib/google-calendar';
 
 interface CalendarEvent {
-  id: number;
+  id: string;
   title: string;
   start: string;
   end: string;
   description: string;
+  source?: 'local' | 'google';
+  googleId?: string;
 }
 
 export default function Calendar() {
-  const { theme } = useStore();
+  const { theme, currentUser } = useStore();
+  const googleService = GoogleCalendarService.getInstance();
   
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
     const saved = localStorage.getItem('calendarEvents');
     return saved ? JSON.parse(saved) : [
       {
-        id: 1,
+        id: '1',
         title: 'Sample Event',
         start: '2026-03-15T10:00',
         end: '2026-03-15T12:00',
-        description: 'This is a sample event'
+        description: 'This is a sample event',
+        source: 'local'
       },
       {
-        id: 2,
+        id: '2',
         title: 'Another Event',
         start: '2026-03-16T14:00',
         end: '2026-03-16T15:30',
-        description: 'Another test event'
+        description: 'Another test event',
+        source: 'local'
       }
     ];
   });
+
+  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedCalendar, setSelectedCalendar] = useState('primary');
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1));
   const [currentView, setCurrentView] = useState('month');
@@ -49,24 +60,121 @@ export default function Calendar() {
   });
 
   useEffect(() => {
-    localStorage.setItem('calendarEvents', JSON.stringify(events));
+    if (currentUser?.id) {
+      checkGoogleConnection();
+    }
+  }, [currentUser]);
+
+  const checkGoogleConnection = async () => {
+    const connected = await googleService.isConnected(currentUser?.id || '');
+    setIsGoogleConnected(connected);
+    if (connected) {
+      loadGoogleEvents();
+    }
+  };
+
+  const loadGoogleEvents = async () => {
+    if (!currentUser?.id || !isGoogleConnected) return;
+    
+    setIsLoading(true);
+    try {
+      const events = await googleService.fetchEvents(
+        currentUser.id,
+        selectedCalendar,
+        new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
+        new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+      );
+      setGoogleEvents(events);
+    } catch (err) {
+      console.error('Failed to load Google events:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isGoogleConnected) {
+      loadGoogleEvents();
+    }
+  }, [currentDate, selectedCalendar, isGoogleConnected]);
+
+  useEffect(() => {
+    const localEvents = events.filter(e => e.source === 'local');
+    localStorage.setItem('calendarEvents', JSON.stringify(localEvents));
   }, [events]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const allEvents = [
+    ...events,
+    ...googleEvents.map(ge => ({
+      id: `google-${ge.id}`,
+      title: ge.summary,
+      start: ge.start?.dateTime || ge.start?.date || '',
+      end: ge.end?.dateTime || ge.end?.date || '',
+      description: ge.description || '',
+      source: 'google' as const,
+      googleId: ge.id
+    }))
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const newEvent = {
-      id: editingEvent?.id || Date.now(),
-      title: formData.title,
-      start: `${formData.startDate}T${formData.startTime}`,
-      end: `${formData.endDate}T${formData.endTime}`,
-      description: formData.description
-    };
-
+    const startDateTime = `${formData.startDate}T${formData.startTime}`;
+    const endDateTime = `${formData.endDate}T${formData.endTime}`;
+    
     if (editingEvent) {
-      setEvents(events.map(e => e.id === editingEvent.id ? newEvent : e));
+      if (editingEvent.source === 'google' && editingEvent.googleId && currentUser?.id) {
+        try {
+          await googleService.updateEvent(
+            currentUser.id,
+            selectedCalendar,
+            editingEvent.googleId,
+            {
+              summary: formData.title,
+              description: formData.description,
+              start: { dateTime: startDateTime },
+              end: { dateTime: endDateTime }
+            }
+          );
+          await loadGoogleEvents();
+        } catch (err) {
+          alert('Failed to update Google Calendar event');
+        }
+      } else {
+        setEvents(events.map(e => 
+          e.id === editingEvent.id 
+            ? { ...e, title: formData.title, start: startDateTime, end: endDateTime, description: formData.description }
+            : e
+        ));
+      }
     } else {
-      setEvents([...events, newEvent]);
+      if (isGoogleConnected && currentUser?.id) {
+        try {
+          await googleService.createEvent(
+            currentUser.id,
+            selectedCalendar,
+            {
+              summary: formData.title,
+              description: formData.description,
+              start: { dateTime: startDateTime },
+              end: { dateTime: endDateTime }
+            }
+          );
+          await loadGoogleEvents();
+        } catch (err) {
+          alert('Failed to create Google Calendar event');
+        }
+      } else {
+        const newEvent: CalendarEvent = {
+          id: Date.now().toString(),
+          title: formData.title,
+          start: startDateTime,
+          end: endDateTime,
+          description: formData.description,
+          source: 'local'
+        };
+        setEvents([...events, newEvent]);
+      }
     }
 
     resetForm();
@@ -90,16 +198,25 @@ export default function Calendar() {
     setFormData({
       title: event.title,
       startDate: event.start.split('T')[0],
-      startTime: event.start.split('T')[1].slice(0, 5),
+      startTime: event.start.split('T')[1]?.slice(0, 5) || '09:00',
       endDate: event.end.split('T')[0],
-      endTime: event.end.split('T')[1].slice(0, 5),
+      endTime: event.end.split('T')[1]?.slice(0, 5) || '10:00',
       description: event.description
     });
     setShowForm(true);
   };
 
-  const deleteEvent = (id: number) => {
-    if (confirm('Are you sure?')) {
+  const deleteEvent = async (id: string, source?: string, googleId?: string) => {
+    if (!confirm('Are you sure?')) return;
+    
+    if (source === 'google' && googleId && currentUser?.id) {
+      try {
+        await googleService.deleteEvent(currentUser.id, selectedCalendar, googleId);
+        await loadGoogleEvents();
+      } catch (err) {
+        alert('Failed to delete Google Calendar event');
+      }
+    } else {
       setEvents(events.filter(e => e.id !== id));
     }
   };
@@ -126,7 +243,7 @@ export default function Calendar() {
     
     for (let day = 1; day <= lastDay.getDate(); day++) {
       const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayEvents = events.filter(e => e.start.startsWith(dateStr));
+      const dayEvents = allEvents.filter(e => e.start.startsWith(dateStr));
       const isToday = new Date().toDateString() === new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
       
       cells.push(
@@ -140,18 +257,23 @@ export default function Calendar() {
         >
           <div className={`font-medium ${isToday ? 'text-brand-600 dark:text-brand-400' : 'text-slate-700 dark:text-slate-300'}`}>
             {day}
+            {isLoading && day === 1 && <span className="ml-1 text-xs text-slate-400">⟳</span>}
           </div>
           {dayEvents.map(event => (
             <div 
               key={event.id}
-              className="text-xs bg-brand-500 text-white rounded px-1 mt-1 truncate hover:bg-brand-600 transition-colors cursor-pointer"
+              className={`text-xs rounded px-1 mt-1 truncate transition-colors cursor-pointer ${
+                event.source === 'google' 
+                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                  : 'bg-brand-500 text-white hover:bg-brand-600'
+              }`}
               onClick={(e) => {
                 e.stopPropagation();
                 editEvent(event);
               }}
-              style={{ backgroundColor: theme?.primary || '#3b82f6' }}
+              style={event.source === 'local' ? { backgroundColor: theme?.primary || '#3b82f6' } : {}}
             >
-              {event.title}
+              {event.source === 'google' ? '📅 ' : ''}{event.title}
             </div>
           ))}
         </div>
@@ -256,6 +378,7 @@ export default function Calendar() {
           <div className="bg-white dark:bg-slate-900 rounded-lg p-6 max-w-md w-full border border-slate-200 dark:border-slate-800">
             <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
               {editingEvent ? 'Edit Event' : 'Create Event'}
+              {editingEvent?.source === 'google' && <span className="ml-2 text-xs text-green-500">(Google Calendar)</span>}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -346,7 +469,7 @@ export default function Calendar() {
                   className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
                   style={{ backgroundColor: theme?.primary }}
                 >
-                  Save
+                  {editingEvent ? 'Update' : 'Create'}
                 </button>
               </div>
             </form>
@@ -355,17 +478,24 @@ export default function Calendar() {
       )}
 
       <div className="mt-8 bg-white dark:bg-slate-900 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-800">
-        <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">Upcoming Events</h2>
+        <h2 className="text-xl font-semibold mb-4 text-slate-800 dark:text-white">
+          Upcoming Events
+          {isGoogleConnected && <span className="ml-2 text-xs text-green-500">(Google Calendar synced)</span>}
+        </h2>
         <div className="space-y-2">
-          {events.length === 0 ? (
+          {allEvents.length === 0 ? (
             <p className="text-slate-500 dark:text-slate-400">No upcoming events</p>
           ) : (
-            events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+            allEvents
+              .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
               .map(event => (
                 <div key={event.id} className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <div className="flex justify-between items-start">
                     <div>
-                      <div className="font-semibold text-slate-800 dark:text-white">{event.title}</div>
+                      <div className="font-semibold text-slate-800 dark:text-white">
+                        {event.title}
+                        {event.source === 'google' && <span className="ml-2 text-xs text-green-500">📅 Google</span>}
+                      </div>
                       <div className="text-sm text-slate-500 dark:text-slate-400">
                         {new Date(event.start).toLocaleString()} - {new Date(event.end).toLocaleString()}
                       </div>
@@ -380,7 +510,7 @@ export default function Calendar() {
                         Edit
                       </button>
                       <button
-                        onClick={() => deleteEvent(event.id)}
+                        onClick={() => deleteEvent(event.id, event.source, event.googleId)}
                         className="px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
                       >
                         Delete
