@@ -41,9 +41,6 @@ export class GoogleCalendarService {
         return;
       }
       
-      console.log('📊 Attempting to query user_connections table...');
-      console.log('🔑 Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-      
       const { data, error } = await supabase
         .from('user_connections')
         .select('count')
@@ -51,9 +48,6 @@ export class GoogleCalendarService {
       
       if (error) {
         console.error('❌ Supabase query failed:', error);
-        console.error('❌ Error code:', error.code);
-        console.error('❌ Error message:', error.message);
-        console.error('❌ Error details:', error.details);
       } else {
         console.log('✅ Supabase connection successful!', data);
       }
@@ -63,13 +57,8 @@ export class GoogleCalendarService {
   }
 
   getAuthUrl(): string {
-    // Using path-based URL for BrowserRouter (no #!)
     const clientId = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
     const redirectUri = "https://wholescaleos.pages.dev/auth/callback";
-    
-    console.log('🔍 OAuth Configuration:');
-    console.log('Client ID:', clientId);
-    console.log('Redirect URI:', redirectUri);
     
     const params = {
       client_id: clientId,
@@ -90,9 +79,57 @@ export class GoogleCalendarService {
     }
     url = url.slice(0, -1);
     
-    console.log('🔗 Generated Auth URL:', url);
-    
     return url;
+  }
+
+  async getAccessToken(userId: string): Promise<string | null> {
+    try {
+      const { data, error } = await supabase
+        .from('user_connections')
+        .select('refresh_token, provider_data')
+        .eq('user_id', userId)
+        .eq('provider', 'google')
+        .single();
+
+      if (error || !data) {
+        console.error('❌ No stored connection found:', error);
+        return null;
+      }
+
+      const code = data.refresh_token || data.provider_data?.code;
+      
+      if (!code) {
+        console.error('❌ No auth code found');
+        return null;
+      }
+
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          code: code,
+          client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
+          client_secret: "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",
+          redirect_uri: "https://wholescaleos.pages.dev/auth/callback",
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      const tokens = await tokenResponse.json();
+      
+      if (tokens.error) {
+        console.error('❌ Token exchange error:', tokens);
+        return null;
+      }
+
+      return tokens.access_token;
+      
+    } catch (err) {
+      console.error('❌ Error getting access token:', err);
+      return null;
+    }
   }
 
   async storeUserTokens(userId: string, code: string): Promise<boolean> {
@@ -102,158 +139,64 @@ export class GoogleCalendarService {
         return false;
       }
       
-      console.log('📝 Starting token storage for user:', userId);
-      console.log('📝 Code length:', code.length);
-      console.log('📝 Code preview:', code.substring(0, 30) + '...');
+      const { data: { user } } = await supabase.auth.getUser();
       
-      // Check if user is authenticated with Supabase
-      console.log('🔐 Checking Supabase auth status...');
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      console.log('👤 Auth user result:', { 
-        user: user ? { id: user.id, email: user.email } : 'none',
-        error: userError || 'none'
-      });
-      
-      if (userError) {
-        console.error('❌ Auth error details:', {
-          message: userError.message,
-          status: userError.status,
-          name: userError.name
-        });
+      if (!user || user.id !== userId) {
+        console.error('❌ User authentication failed');
         return false;
       }
       
-      if (!user) {
-        console.error('❌ No authenticated Supabase user found - user is null');
-        console.log('🔍 Attempting to get session...');
-        
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        console.log('📊 Session check:', { 
-          session: sessionData?.session ? 'exists' : 'none',
-          error: sessionError || 'none'
-        });
-        
-        return false;
-      }
-      
-      console.log('✅ User authenticated successfully:', user.id);
-      console.log('📝 User email:', user.email);
-      
-      // Verify user ID matches
-      if (user.id !== userId) {
-        console.error('❌ User ID mismatch:', {
-          tokenUserId: userId,
-          authUserId: user.id
-        });
-        return false;
-      }
-      
-      console.log('✅ User ID matches, proceeding with upsert');
-      
-      // Prepare the insert data
-      const insertData = {
-        user_id: userId,
-        provider: 'google',
-        access_token: 'connected',
-        refresh_token: code,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        provider_data: { 
-          code: code.substring(0, 50) + '...',
-          connected: true, 
-          created_at: new Date().toISOString(),
-          email: user.email
-        }
-      };
-      
-      console.log('📦 Insert data prepared:', {
-        user_id: insertData.user_id,
-        provider: insertData.provider,
-        expires_at: insertData.expires_at,
-        provider_data_keys: Object.keys(insertData.provider_data)
-      });
-      
-      // Perform the upsert
-      console.log('💾 Executing upsert...');
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('user_connections')
-        .upsert(insertData, { onConflict: 'user_id,provider' })
-        .select();
+        .upsert({
+          user_id: userId,
+          provider: 'google',
+          access_token: 'connected',
+          refresh_token: code,
+          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          provider_data: { 
+            code: code,
+            connected: true, 
+            created_at: new Date().toISOString(),
+            email: user.email
+          }
+        });
 
       if (error) {
-        console.error('❌ Supabase error details:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint
-        });
-        
-        // Check if it's an RLS error
-        if (error.code === '42501') {
-          console.error('🚫 RLS policy is blocking the insert');
-        }
-        
+        console.error('❌ Supabase error:', error);
         return false;
       }
       
-      console.log('✅ Tokens stored successfully!', data ? `Inserted ${data.length} row(s)` : 'No data returned');
       return true;
       
     } catch (err) {
       console.error('❌ Exception in storeUserTokens:', err);
-      if (err instanceof Error) {
-        console.error('❌ Error name:', err.name);
-        console.error('❌ Error message:', err.message);
-        console.error('❌ Error stack:', err.stack);
-      }
       return false;
     }
   }
 
   async isConnected(userId: string): Promise<boolean> {
     try {
-      if (!supabase) {
-        console.error('❌ Supabase client is null');
-        return false;
-      }
-      
-      console.log('🔍 Checking connection for user:', userId);
+      if (!supabase) return false;
       
       const { data, error } = await supabase
         .from('user_connections')
-        .select('access_token, provider_data')
+        .select('access_token')
         .eq('user_id', userId)
         .eq('provider', 'google')
         .maybeSingle();
 
-      if (error) {
-        console.error('❌ Error checking connection:', error);
-        return false;
-      }
+      if (error) return false;
       
-      const isConnected = !!(data && data.access_token === 'connected');
-      console.log('🔍 Connection check result:', { 
-        userId, 
-        isConnected, 
-        hasData: !!data,
-        providerData: data?.provider_data ? 'exists' : 'none'
-      });
-      
-      return isConnected;
+      return !!(data && data.access_token === 'connected');
     } catch (err) {
-      console.error('❌ Error in isConnected:', err);
       return false;
     }
   }
 
   async disconnect(userId: string): Promise<boolean> {
     try {
-      if (!supabase) {
-        console.error('❌ Supabase client is null');
-        return false;
-      }
-      
-      console.log('🗑️ Disconnecting user:', userId);
+      if (!supabase) return false;
       
       const { error } = await supabase
         .from('user_connections')
@@ -261,45 +204,154 @@ export class GoogleCalendarService {
         .eq('user_id', userId)
         .eq('provider', 'google');
 
-      if (error) {
-        console.error('❌ Disconnect error:', error);
-        throw error;
-      }
-      
-      console.log('✅ Disconnected successfully for user:', userId);
-      return true;
+      return !error;
     } catch (err) {
-      console.error('❌ Failed to disconnect:', err);
       return false;
     }
   }
 
   async fetchCalendars(userId: string): Promise<any[]> {
-    console.log('📅 Fetching calendars for user:', userId);
-    return [
-      { id: 'primary', summary: 'Primary Calendar', description: 'Your main Google Calendar' },
-      { id: 'work', summary: 'Work Calendar', description: 'Work events' },
-    ];
+    try {
+      const accessToken = await this.getAccessToken(userId);
+      if (!accessToken) return [];
+
+      const response = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList', {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      return (data.items || []).map(cal => ({
+        id: cal.id,
+        summary: cal.summary,
+        description: cal.description || '',
+        backgroundColor: cal.backgroundColor,
+        foregroundColor: cal.foregroundColor,
+        primary: cal.primary || false,
+      }));
+      
+    } catch (err) {
+      console.error('❌ Error fetching calendars:', err);
+      return [];
+    }
   }
 
   async fetchEvents(userId: string, calendarId: string = 'primary', timeMin?: Date, timeMax?: Date): Promise<GoogleCalendarEvent[]> {
-    console.log('📅 Fetching events for user:', userId, 'calendar:', calendarId);
-    return [
-      {
-        id: '1',
-        summary: 'Sample Google Event',
-        description: 'This is a sample event from Google Calendar',
-        start: { dateTime: new Date(Date.now() + 86400000).toISOString() },
-        end: { dateTime: new Date(Date.now() + 90000000).toISOString() },
-      }
-    ];
+    try {
+      const accessToken = await this.getAccessToken(userId);
+      if (!accessToken) return [];
+
+      const timeMinStr = (timeMin || new Date()).toISOString();
+      const timeMaxStr = (timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).toISOString();
+
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?` +
+        `timeMin=${encodeURIComponent(timeMinStr)}&` +
+        `timeMax=${encodeURIComponent(timeMaxStr)}&` +
+        `singleEvents=true&orderBy=startTime`,
+        {
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        }
+      );
+
+      if (!response.ok) return [];
+
+      const events = await response.json();
+      return events.items || [];
+      
+    } catch (err) {
+      console.error('❌ Error fetching events:', err);
+      return [];
+    }
   }
 
   async createEvent(userId: string, calendarId: string = 'primary', event: Partial<GoogleCalendarEvent>): Promise<GoogleCalendarEvent> {
-    console.log('📅 Creating event for user:', userId, 'calendar:', calendarId, event);
-    return {
-      id: Date.now().toString(),
-      ...event,
-    } as GoogleCalendarEvent;
+    try {
+      const accessToken = await this.getAccessToken(userId);
+      if (!accessToken) throw new Error('No access token');
+
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Create event error:', errorText);
+        throw new Error('Failed to create event');
+      }
+
+      return await response.json();
+      
+    } catch (err) {
+      console.error('❌ Failed to create event:', err);
+      throw err;
+    }
+  }
+
+  // ✅ FIX 1: Add updateEvent method
+  async updateEvent(userId: string, calendarId: string = 'primary', eventId: string, event: Partial<GoogleCalendarEvent>): Promise<GoogleCalendarEvent> {
+    try {
+      const accessToken = await this.getAccessToken(userId);
+      if (!accessToken) throw new Error('No access token');
+
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(event),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Update event error:', errorText);
+        throw new Error('Failed to update event');
+      }
+
+      return await response.json();
+      
+    } catch (err) {
+      console.error('❌ Failed to update event:', err);
+      throw err;
+    }
+  }
+
+  // ✅ FIX 2: Add deleteEvent method
+  async deleteEvent(userId: string, calendarId: string = 'primary', eventId: string): Promise<void> {
+    try {
+      const accessToken = await this.getAccessToken(userId);
+      if (!accessToken) throw new Error('No access token');
+
+      const response = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${eventId}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${accessToken}` },
+        }
+      );
+
+      if (!response.ok && response.status !== 404) {
+        const errorText = await response.text();
+        console.error('❌ Delete event error:', errorText);
+        throw new Error('Failed to delete event');
+      }
+      
+    } catch (err) {
+      console.error('❌ Failed to delete event:', err);
+      throw err;
+    }
   }
 }
