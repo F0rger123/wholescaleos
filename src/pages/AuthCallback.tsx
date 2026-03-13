@@ -5,6 +5,8 @@ import { useStore } from '../store/useStore';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { Building2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 
+console.log('🚀 AuthCallback component mounted!');
+
 export function AuthCallback() {
   const navigate = useNavigate();
   const { currentUser } = useStore();
@@ -18,10 +20,12 @@ export function AuthCallback() {
   };
 
   useEffect(() => {
+    addDebug('AuthCallback mounted');
+    addDebug(`URL: ${window.location.href}`);
+    addDebug(`Search: ${window.location.search}`);
+    
     async function handleCallback() {
-      addDebug('AuthCallback mounted');
       addDebug(`Current user: ${currentUser?.id || 'none'}`);
-      addDebug(`URL: ${window.location.href}`);
       
       if (!currentUser?.id) {
         addDebug('❌ No user logged in');
