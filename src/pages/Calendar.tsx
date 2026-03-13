@@ -15,7 +15,10 @@ interface CalendarEvent {
 }
 
 export default function Calendar() {
-  const { theme, currentUser } = useStore();
+  const { currentUser } = useStore();
+  // Theme fallback since it doesn't exist in AppState
+  const theme = { primary: '#3b82f6' };
+  
   const googleService = GoogleCalendarService.getInstance();
   
   const [events, setEvents] = useState<CalendarEvent[]>(() => {
@@ -59,6 +62,14 @@ export default function Calendar() {
     description: ''
   });
 
+  // Use selectedCalendar to fetch events when it changes
+  useEffect(() => {
+    if (isGoogleConnected && selectedCalendar) {
+      console.log('📅 Switching to calendar:', selectedCalendar);
+      loadGoogleEvents();
+    }
+  }, [selectedCalendar]);
+
   useEffect(() => {
     if (currentUser?.id) {
       checkGoogleConnection();
@@ -85,6 +96,7 @@ export default function Calendar() {
         new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
       );
       setGoogleEvents(events);
+      console.log('✅ Loaded Google events:', events.length);
     } catch (err) {
       console.error('Failed to load Google events:', err);
     } finally {
@@ -96,7 +108,7 @@ export default function Calendar() {
     if (isGoogleConnected) {
       loadGoogleEvents();
     }
-  }, [currentDate, selectedCalendar, isGoogleConnected]);
+  }, [currentDate, isGoogleConnected]);
 
   useEffect(() => {
     const localEvents = events.filter(e => e.source === 'local');
@@ -119,6 +131,8 @@ export default function Calendar() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('📝 handleSubmit called', { formData, editingEvent, isGoogleConnected });
+    
     const startDateTime = `${formData.startDate}T${formData.startTime}`;
     const endDateTime = `${formData.endDate}T${formData.endTime}`;
     
@@ -137,7 +151,9 @@ export default function Calendar() {
             }
           );
           await loadGoogleEvents();
+          console.log('✅ Google event updated');
         } catch (err) {
+          console.error('Failed to update Google event:', err);
           alert('Failed to update Google Calendar event');
         }
       } else {
@@ -146,11 +162,12 @@ export default function Calendar() {
             ? { ...e, title: formData.title, start: startDateTime, end: endDateTime, description: formData.description }
             : e
         ));
+        console.log('✅ Local event updated');
       }
     } else {
       if (isGoogleConnected && currentUser?.id) {
         try {
-          await googleService.createEvent(
+          const newEvent = await googleService.createEvent(
             currentUser.id,
             selectedCalendar,
             {
@@ -161,7 +178,9 @@ export default function Calendar() {
             }
           );
           await loadGoogleEvents();
+          console.log('✅ Google event created:', newEvent);
         } catch (err) {
+          console.error('Failed to create Google event:', err);
           alert('Failed to create Google Calendar event');
         }
       } else {
@@ -174,6 +193,7 @@ export default function Calendar() {
           source: 'local'
         };
         setEvents([...events, newEvent]);
+        console.log('✅ Local event created:', newEvent);
       }
     }
 
@@ -213,11 +233,14 @@ export default function Calendar() {
       try {
         await googleService.deleteEvent(currentUser.id, selectedCalendar, googleId);
         await loadGoogleEvents();
+        console.log('✅ Google event deleted');
       } catch (err) {
+        console.error('Failed to delete Google event:', err);
         alert('Failed to delete Google Calendar event');
       }
     } else {
       setEvents(events.filter(e => e.id !== id));
+      console.log('✅ Local event deleted');
     }
   };
 
@@ -271,7 +294,7 @@ export default function Calendar() {
                 e.stopPropagation();
                 editEvent(event);
               }}
-              style={event.source === 'local' ? { backgroundColor: theme?.primary || '#3b82f6' } : {}}
+              style={event.source === 'local' ? { backgroundColor: theme.primary } : {}}
             >
               {event.source === 'google' ? '📅 ' : ''}{event.title}
             </div>
@@ -323,6 +346,19 @@ export default function Calendar() {
         <h1 className="text-3xl font-bold text-slate-800 dark:text-white">Calendar</h1>
         <div className="flex items-center gap-4">
           <GoogleCalendarConnect />
+          
+          {/* Calendar selector dropdown - fixes the warning and adds functionality */}
+          {isGoogleConnected && (
+            <select
+              value={selectedCalendar}
+              onChange={(e) => setSelectedCalendar(e.target.value)}
+              className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-sm"
+            >
+              <option value="primary">Primary Calendar</option>
+              <option value="drummerforger@gmail.com">Your Email</option>
+            </select>
+          )}
+          
           <div className="space-x-2">
             <button 
               onClick={() => { setCurrentView('month'); setShowForm(false); }}
@@ -351,7 +387,7 @@ export default function Calendar() {
             <button 
               onClick={() => setShowForm(!showForm)}
               className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
-              style={{ backgroundColor: theme?.primary }}
+              style={{ backgroundColor: theme.primary }}
             >
               + New Event
             </button>
@@ -467,7 +503,7 @@ export default function Calendar() {
                 <button
                   type="submit"
                   className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
-                  style={{ backgroundColor: theme?.primary }}
+                  style={{ backgroundColor: theme.primary }}
                 >
                   {editingEvent ? 'Update' : 'Create'}
                 </button>
@@ -505,7 +541,7 @@ export default function Calendar() {
                       <button
                         onClick={() => editEvent(event)}
                         className="px-2 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-                        style={{ backgroundColor: theme?.primary }}
+                        style={{ backgroundColor: theme.primary }}
                       >
                         Edit
                       </button>
