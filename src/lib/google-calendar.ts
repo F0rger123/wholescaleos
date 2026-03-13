@@ -62,13 +62,12 @@ export class GoogleCalendarService {
     }
   }
 
-  // 🔧 HARDCODED FOR TESTING - REMOVE AFTER FIXED
   getAuthUrl(): string {
-    // These values are hardcoded to eliminate environment variable issues
+    // Using path-based URL for BrowserRouter (no #!)
     const clientId = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
-    const redirectUri = "https://wholescaleos.pages.dev/#/auth/callback";
-
-    console.log('🔍 HARDCODED Values:');
+    const redirectUri = "https://wholescaleos.pages.dev/auth/callback";
+    
+    console.log('🔍 OAuth Configuration:');
     console.log('Client ID:', clientId);
     console.log('Redirect URI:', redirectUri);
     

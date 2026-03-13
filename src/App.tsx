@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useEffect, useState } from 'react';
 import { AuthCallback } from './pages/AuthCallback';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { SupabaseSync } from './lib/supabase-sync';
 import { Dashboard } from './pages/Dashboard';
@@ -70,17 +70,11 @@ export function App() {
     async function checkSession() {
       if (isSupabaseConfigured && supabase) {
         try {
-          // First, check if there's an auth callback in the URL hash
-          // Supabase email confirmations redirect with #access_token=...&type=signup
+          // Check for Supabase auth callback in URL (for email confirmations)
           const hash = window.location.hash;
           if (hash.includes('access_token') && (hash.includes('type=signup') || hash.includes('type=magiclink') || hash.includes('type=recovery'))) {
-            // Don't auto-process here — let EmailConfirmed page handle it
-            // But if we're not on the email-confirmed page, redirect there
             if (!hash.includes('/email-confirmed')) {
-              // The hash router makes this tricky — Supabase puts tokens in the hash
-              // We need to extract them and redirect to our confirmation page
               const tokenHash = hash.startsWith('#/') ? hash : hash;
-              // Store tokens temporarily so EmailConfirmed page can pick them up
               sessionStorage.setItem('supabase-auth-callback', tokenHash);
               setChecking(false);
               return;
@@ -89,7 +83,6 @@ export function App() {
 
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            // User has an active Supabase session — restore auth state
             const user = session.user;
             login(user.email || '', '');
             updateProfile({
@@ -100,7 +93,6 @@ export function App() {
                 .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
             });
             incrementLoginStreak();
-            // Session restored — ProtectedRoute will check for team selection
           }
         } catch {
           // Session check failed — stay logged out
@@ -110,13 +102,11 @@ export function App() {
     }
     checkSession();
 
-    // Listen for auth state changes (e.g., token refresh, sign out from another tab)
     if (isSupabaseConfigured && supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
           useStore.getState().logout();
         } else if (event === 'SIGNED_IN' && session?.user) {
-          // Auto-login when session is established (e.g., after email confirmation)
           const user = session.user;
           const store = useStore.getState();
           if (!store.isAuthenticated) {
@@ -139,7 +129,7 @@ export function App() {
   if (checking) return <LoadingScreen />;
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -170,6 +160,6 @@ export function App() {
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
