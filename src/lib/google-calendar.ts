@@ -33,7 +33,6 @@ export class GoogleCalendarService {
     return GoogleCalendarService.instance;
   }
 
-  // NEW: Test Supabase connection
   async testConnection(): Promise<void> {
     console.log('🧪 Testing Supabase connection...');
     try {
@@ -43,6 +42,7 @@ export class GoogleCalendarService {
       }
       
       console.log('📊 Attempting to query user_connections table...');
+      console.log('🔑 Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
       
       const { data, error } = await supabase
         .from('user_connections')
@@ -66,13 +66,11 @@ export class GoogleCalendarService {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     const redirectUri = `${import.meta.env.VITE_APP_URL}/auth/callback`;
     
-    // Debug logging
     console.log('🔍 Environment Variables:');
     console.log('VITE_GOOGLE_CLIENT_ID:', clientId);
     console.log('VITE_APP_URL:', import.meta.env.VITE_APP_URL);
     console.log('Redirect URI:', redirectUri);
     
-    // Check if variables exist
     if (!clientId) {
       console.error('❌ VITE_GOOGLE_CLIENT_ID is missing!');
     }
@@ -91,14 +89,12 @@ export class GoogleCalendarService {
       state: 'calendar-sync',
     };
     
-    // Build URL manually to avoid any URLSearchParams issues
     let url = 'https://accounts.google.com/o/oauth2/v2/auth?';
     for (const [key, value] of Object.entries(params)) {
       if (value) {
         url += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
       }
     }
-    // Remove trailing &
     url = url.slice(0, -1);
     
     console.log('🔗 Generated Auth URL:', url);
@@ -113,10 +109,40 @@ export class GoogleCalendarService {
         return false;
       }
       
-      console.log('📝 Storing tokens for user:', userId);
-      console.log('📝 Code received:', code.substring(0, 20) + '...');
+      console.log('📝 Attempting to store tokens for user:', userId);
+      console.log('📝 Code received (first 20 chars):', code.substring(0, 20) + '...');
+      console.log('📝 Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+      console.log('📝 User ID being saved:', userId);
       
-      const { error } = await supabase
+      // First, check if we can query the table
+      const { error: testError } = await supabase
+        .from('user_connections')
+        .select('count')
+        .limit(1);
+      
+      if (testError) {
+        console.error('❌ Cannot access user_connections table:', testError);
+        console.error('❌ This might be an RLS policy issue');
+        return false;
+      }
+      
+      // Check if user is authenticated with Supabase
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      console.log('👤 Current Supabase user:', user?.id || 'none');
+      console.log('👤 User error:', userError || 'none');
+      
+      if (userError) {
+        console.error('❌ Error getting current user:', userError);
+      }
+      
+      if (!user) {
+        console.error('❌ No authenticated Supabase user found');
+        return false;
+      }
+      
+      console.log('📝 Attempting upsert with user_id:', userId);
+      
+      const { data, error } = await supabase
         .from('user_connections')
         .upsert({
           user_id: userId,
@@ -124,18 +150,24 @@ export class GoogleCalendarService {
           access_token: 'connected',
           refresh_token: code,
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          provider_data: { code, connected: true }
-        });
+          provider_data: { code, connected: true, created_at: new Date().toISOString() }
+        })
+        .select();
 
       if (error) {
-        console.error('❌ Supabase error:', error);
+        console.error('❌ Supabase error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
         throw error;
       }
       
-      console.log('✅ Tokens stored successfully!');
+      console.log('✅ Tokens stored successfully! Inserted data:', data);
       return true;
     } catch (err) {
-      console.error('❌ Failed to store tokens:', err);
+      console.error('❌ Failed to store tokens - full error:', err);
       return false;
     }
   }
@@ -161,6 +193,11 @@ export class GoogleCalendarService {
       
       const isConnected = !!(data && data.access_token === 'connected');
       console.log('🔍 Connection check for user', userId, ':', isConnected);
+      if (data) {
+        console.log('🔍 Data found:', data);
+      } else {
+        console.log('🔍 No data found for user');
+      }
       
       return isConnected;
     } catch (err) {
