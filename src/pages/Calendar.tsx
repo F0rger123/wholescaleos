@@ -16,7 +16,6 @@ interface CalendarEvent {
 
 export default function Calendar() {
   const { currentUser } = useStore();
-  // Theme fallback since it doesn't exist in AppState
   const theme = { primary: '#3b82f6' };
   
   const googleService = GoogleCalendarService.getInstance();
@@ -47,7 +46,6 @@ export default function Calendar() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedCalendar, setSelectedCalendar] = useState('primary');
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
-
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2, 1));
   const [currentView, setCurrentView] = useState('month');
   const [showForm, setShowForm] = useState(false);
@@ -62,7 +60,10 @@ export default function Calendar() {
     description: ''
   });
 
-  // Use selectedCalendar to fetch events when it changes
+  // Debug logs
+  console.log('🔥 Calendar component mounted!');
+  console.log('🎯 Current user:', currentUser);
+
   useEffect(() => {
     if (isGoogleConnected && selectedCalendar) {
       console.log('📅 Switching to calendar:', selectedCalendar);
@@ -72,6 +73,7 @@ export default function Calendar() {
 
   useEffect(() => {
     if (currentUser?.id) {
+      console.log('🔍 Checking Google connection for user:', currentUser.id);
       checkGoogleConnection();
     }
   }, [currentUser]);
@@ -88,6 +90,8 @@ export default function Calendar() {
     if (!currentUser?.id || !isGoogleConnected) return;
     
     setIsLoading(true);
+    console.log('🔍 Loading Google events for calendar:', selectedCalendar);
+    
     try {
       const events = await googleService.fetchEvents(
         currentUser.id,
@@ -95,10 +99,10 @@ export default function Calendar() {
         new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
         new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
       );
-      setGoogleEvents(events);
       console.log('✅ Loaded Google events:', events.length);
+      setGoogleEvents(events);
     } catch (err) {
-      console.error('Failed to load Google events:', err);
+      console.error('❌ Failed to load Google events:', err);
     } finally {
       setIsLoading(false);
     }
@@ -347,7 +351,6 @@ export default function Calendar() {
         <div className="flex items-center gap-4">
           <GoogleCalendarConnect />
           
-          {/* Calendar selector dropdown - fixes the warning and adds functionality */}
           {isGoogleConnected && (
             <select
               value={selectedCalendar}
