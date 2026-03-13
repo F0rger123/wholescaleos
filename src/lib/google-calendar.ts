@@ -1,3 +1,4 @@
+// This file exists
 // @ts-nocheck
 import { supabase } from './supabase';
 
@@ -84,9 +85,11 @@ export class GoogleCalendarService {
 
   async getAccessToken(userId: string): Promise<string | null> {
     try {
+      console.log('🔑 Getting access token for user:', userId);
+      
       const { data, error } = await supabase
         .from('user_connections')
-        .select('refresh_token, provider_data')
+        .select('access_token, refresh_token, expires_at')
         .eq('user_id', userId)
         .eq('provider', 'google')
         .single();
@@ -96,13 +99,70 @@ export class GoogleCalendarService {
         return null;
       }
 
-      const code = data.refresh_token || data.provider_data?.code;
-      
-      if (!code) {
-        console.error('❌ No auth code found');
-        return null;
+      // Check if token is still valid (with 5 minute buffer)
+      if (data.expires_at && new Date(data.expires_at) > new Date(Date.now() + 300000)) {
+        console.log('✅ Using existing access token');
+        return data.access_token;
       }
 
+      // Token expired, try to refresh
+      if (data.refresh_token) {
+        console.log('🔄 Refreshing expired token...');
+        
+        const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            refresh_token: data.refresh_token,
+            client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
+            client_secret: "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",
+            grant_type: 'refresh_token',
+          }),
+        });
+
+        const tokens = await refreshResponse.json();
+        
+        if (tokens.error) {
+          console.error('❌ Refresh failed:', tokens);
+          return null;
+        }
+
+        console.log('✅ Token refreshed successfully');
+
+        // Update the stored tokens
+        await supabase
+          .from('user_connections')
+          .update({
+            access_token: tokens.access_token,
+            expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          })
+          .eq('user_id', userId)
+          .eq('provider', 'google');
+
+        return tokens.access_token;
+      }
+
+      console.error('❌ No refresh token available and access token expired');
+      return null;
+      
+    } catch (err) {
+      console.error('❌ Error getting access token:', err);
+      return null;
+    }
+  }
+
+  async storeUserTokens(userId: string, code: string): Promise<boolean> {
+    try {
+      if (!supabase) {
+        console.error('❌ Supabase client is null');
+        return false;
+      }
+      
+      console.log('📝 Exchanging code for tokens...');
+      
+      // Exchange the code for tokens immediately
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
         headers: {
@@ -118,27 +178,13 @@ export class GoogleCalendarService {
       });
 
       const tokens = await tokenResponse.json();
-      
+      console.log('🔑 Token exchange result:', tokens);
+
       if (tokens.error) {
-        console.error('❌ Token exchange error:', tokens);
-        return null;
-      }
-
-      return tokens.access_token;
-      
-    } catch (err) {
-      console.error('❌ Error getting access token:', err);
-      return null;
-    }
-  }
-
-  async storeUserTokens(userId: string, code: string): Promise<boolean> {
-    try {
-      if (!supabase) {
-        console.error('❌ Supabase client is null');
+        console.error('❌ Token exchange failed:', tokens);
         return false;
       }
-      
+
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user || user.id !== userId) {
@@ -146,19 +192,21 @@ export class GoogleCalendarService {
         return false;
       }
       
+      // Store the refresh token and access token
       const { error } = await supabase
         .from('user_connections')
         .upsert({
           user_id: userId,
           provider: 'google',
-          access_token: 'connected',
-          refresh_token: code,
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token || code,
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
           provider_data: { 
             code: code,
             connected: true, 
             created_at: new Date().toISOString(),
-            email: user.email
+            email: user.email,
+            has_refresh_token: !!tokens.refresh_token
           }
         });
 
@@ -167,6 +215,7 @@ export class GoogleCalendarService {
         return false;
       }
       
+      console.log('✅ Tokens stored successfully with refresh token:', !!tokens.refresh_token);
       return true;
       
     } catch (err) {
@@ -188,7 +237,7 @@ export class GoogleCalendarService {
 
       if (error) return false;
       
-      return !!(data && data.access_token === 'connected');
+      return !!data;
     } catch (err) {
       return false;
     }
@@ -255,7 +304,10 @@ export class GoogleCalendarService {
         }
       );
 
-      if (!response.ok) return [];
+      if (!response.ok) {
+        console.error('❌ Failed to fetch events:', await response.text());
+        return [];
+      }
 
       const events = await response.json();
       return events.items || [];
@@ -297,7 +349,6 @@ export class GoogleCalendarService {
     }
   }
 
-  // ✅ FIX 1: Add updateEvent method
   async updateEvent(userId: string, calendarId: string = 'primary', eventId: string, event: Partial<GoogleCalendarEvent>): Promise<GoogleCalendarEvent> {
     try {
       const accessToken = await this.getAccessToken(userId);
@@ -329,7 +380,6 @@ export class GoogleCalendarService {
     }
   }
 
-  // ✅ FIX 2: Add deleteEvent method
   async deleteEvent(userId: string, calendarId: string = 'primary', eventId: string): Promise<void> {
     try {
       const accessToken = await this.getAccessToken(userId);

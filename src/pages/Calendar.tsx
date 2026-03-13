@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
-import { GoogleCalendarService, GoogleCalendarEvent } from '../lib/google-calendar';
+import { GoogleCalendarService, GoogleCalendarEvent } from '../lib/google-calendar.js';
 
 interface CalendarEvent {
   id: string;
