@@ -109,49 +109,82 @@ export class GoogleCalendarService {
         return false;
       }
       
-      console.log('📝 Attempting to store tokens for user:', userId);
-      console.log('📝 Code received (first 20 chars):', code.substring(0, 20) + '...');
-      console.log('📝 Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-      console.log('📝 User ID being saved:', userId);
-      
-      // First, check if we can query the table
-      const { error: testError } = await supabase
-        .from('user_connections')
-        .select('count')
-        .limit(1);
-      
-      if (testError) {
-        console.error('❌ Cannot access user_connections table:', testError);
-        console.error('❌ This might be an RLS policy issue');
-        return false;
-      }
+      console.log('📝 Starting token storage for user:', userId);
+      console.log('📝 Code length:', code.length);
+      console.log('📝 Code preview:', code.substring(0, 30) + '...');
       
       // Check if user is authenticated with Supabase
+      console.log('🔐 Checking Supabase auth status...');
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      console.log('👤 Current Supabase user:', user?.id || 'none');
-      console.log('👤 User error:', userError || 'none');
+      
+      console.log('👤 Auth user result:', { 
+        user: user ? { id: user.id, email: user.email } : 'none',
+        error: userError || 'none'
+      });
       
       if (userError) {
-        console.error('❌ Error getting current user:', userError);
+        console.error('❌ Auth error details:', {
+          message: userError.message,
+          status: userError.status,
+          name: userError.name
+        });
+        return false;
       }
       
       if (!user) {
-        console.error('❌ No authenticated Supabase user found');
+        console.error('❌ No authenticated Supabase user found - user is null');
+        console.log('🔍 Attempting to get session...');
+        
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        console.log('📊 Session check:', { 
+          session: sessionData?.session ? 'exists' : 'none',
+          error: sessionError || 'none'
+        });
+        
         return false;
       }
       
-      console.log('📝 Attempting upsert with user_id:', userId);
+      console.log('✅ User authenticated successfully:', user.id);
+      console.log('📝 User email:', user.email);
       
+      // Verify user ID matches
+      if (user.id !== userId) {
+        console.error('❌ User ID mismatch:', {
+          tokenUserId: userId,
+          authUserId: user.id
+        });
+        return false;
+      }
+      
+      console.log('✅ User ID matches, proceeding with upsert');
+      
+      // Prepare the insert data
+      const insertData = {
+        user_id: userId,
+        provider: 'google',
+        access_token: 'connected',
+        refresh_token: code,
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        provider_data: { 
+          code: code.substring(0, 50) + '...',
+          connected: true, 
+          created_at: new Date().toISOString(),
+          email: user.email
+        }
+      };
+      
+      console.log('📦 Insert data prepared:', {
+        user_id: insertData.user_id,
+        provider: insertData.provider,
+        expires_at: insertData.expires_at,
+        provider_data_keys: Object.keys(insertData.provider_data)
+      });
+      
+      // Perform the upsert
+      console.log('💾 Executing upsert...');
       const { data, error } = await supabase
         .from('user_connections')
-        .upsert({
-          user_id: userId,
-          provider: 'google',
-          access_token: 'connected',
-          refresh_token: code,
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          provider_data: { code, connected: true, created_at: new Date().toISOString() }
-        })
+        .upsert(insertData, { onConflict: 'user_id,provider' })
         .select();
 
       if (error) {
@@ -161,13 +194,25 @@ export class GoogleCalendarService {
           details: error.details,
           hint: error.hint
         });
-        throw error;
+        
+        // Check if it's an RLS error
+        if (error.code === '42501') {
+          console.error('🚫 RLS policy is blocking the insert');
+        }
+        
+        return false;
       }
       
-      console.log('✅ Tokens stored successfully! Inserted data:', data);
+      console.log('✅ Tokens stored successfully!', data ? `Inserted ${data.length} row(s)` : 'No data returned');
       return true;
+      
     } catch (err) {
-      console.error('❌ Failed to store tokens - full error:', err);
+      console.error('❌ Exception in storeUserTokens:', err);
+      if (err instanceof Error) {
+        console.error('❌ Error name:', err.name);
+        console.error('❌ Error message:', err.message);
+        console.error('❌ Error stack:', err.stack);
+      }
       return false;
     }
   }
@@ -179,9 +224,11 @@ export class GoogleCalendarService {
         return false;
       }
       
+      console.log('🔍 Checking connection for user:', userId);
+      
       const { data, error } = await supabase
         .from('user_connections')
-        .select('access_token')
+        .select('access_token, provider_data')
         .eq('user_id', userId)
         .eq('provider', 'google')
         .maybeSingle();
@@ -192,12 +239,12 @@ export class GoogleCalendarService {
       }
       
       const isConnected = !!(data && data.access_token === 'connected');
-      console.log('🔍 Connection check for user', userId, ':', isConnected);
-      if (data) {
-        console.log('🔍 Data found:', data);
-      } else {
-        console.log('🔍 No data found for user');
-      }
+      console.log('🔍 Connection check result:', { 
+        userId, 
+        isConnected, 
+        hasData: !!data,
+        providerData: data?.provider_data ? 'exists' : 'none'
+      });
       
       return isConnected;
     } catch (err) {
@@ -213,13 +260,19 @@ export class GoogleCalendarService {
         return false;
       }
       
+      console.log('🗑️ Disconnecting user:', userId);
+      
       const { error } = await supabase
         .from('user_connections')
         .delete()
         .eq('user_id', userId)
         .eq('provider', 'google');
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Disconnect error:', error);
+        throw error;
+      }
+      
       console.log('✅ Disconnected successfully for user:', userId);
       return true;
     } catch (err) {
