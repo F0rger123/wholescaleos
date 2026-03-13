@@ -62,21 +62,15 @@ export class GoogleCalendarService {
     }
   }
 
+  // 🔧 HARDCODED FOR TESTING - REMOVE AFTER FIXED
   getAuthUrl(): string {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = `${import.meta.env.VITE_APP_URL}/auth/callback`;
-    
-    console.log('🔍 Environment Variables:');
-    console.log('VITE_GOOGLE_CLIENT_ID:', clientId);
-    console.log('VITE_APP_URL:', import.meta.env.VITE_APP_URL);
+    // These values are hardcoded to eliminate environment variable issues
+    const clientId = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
+    const redirectUri = "https://wholescaleos.pages.dev/#/auth/callback";
+
+    console.log('🔍 HARDCODED Values:');
+    console.log('Client ID:', clientId);
     console.log('Redirect URI:', redirectUri);
-    
-    if (!clientId) {
-      console.error('❌ VITE_GOOGLE_CLIENT_ID is missing!');
-    }
-    if (!import.meta.env.VITE_APP_URL) {
-      console.error('❌ VITE_APP_URL is missing!');
-    }
     
     const params = {
       client_id: clientId,
