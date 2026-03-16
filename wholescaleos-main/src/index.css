@@ -1,0 +1,626 @@
+@import "tailwindcss";
+
+/* @theme - Tailwind CSS directive */
+@theme {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand-950: #172554;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-slate-750: #293548;
+  --color-slate-850: #162032;
+}
+
+/* ─── Theme CSS Variables (defaults = dark theme) ───────────────────────── */
+
+:root {
+  --t-primary: #3b82f6;
+  --t-primary-dim: rgba(59, 130, 246, 0.2);
+  --t-primary-text: #60a5fa;
+  --t-secondary: #6366f1;
+  --t-accent: #8b5cf6;
+  --t-bg: #0f172a;
+  --t-surface: #1e293b;
+  --t-surface-hover: #334155;
+  --t-surface-active: #3b4d6b;
+  --t-text: #f1f5f9;
+  --t-text-secondary: #94a3b8;
+  --t-text-muted: #64748b;
+  --t-border: #334155;
+  --t-border-light: #475569;
+  --t-success: #10b981;
+  --t-warning: #f59e0b;
+  --t-error: #ef4444;
+  --t-info: #3b82f6;
+  --t-sidebar-bg: #0f172a;
+  --t-sidebar-border: #1e293b;
+  --t-sidebar-hover: #1e293b;
+  --t-input-bg: #1e293b;
+  --t-input-border: #334155;
+  --t-input-focus: #3b82f6;
+  --t-avatar-from: #3b82f6;
+  --t-avatar-to: #8b5cf6;
+  --t-glow: none;
+  --t-radius: 0.75rem;
+  --t-card-radius: 1rem;
+  --t-glow-shadow: none;
+  --t-gradient: linear-gradient(135deg, #3b82f6, #6366f1);
+  --t-backdrop-blur: none; /* Added for glass theme */
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  --t-primary: #2563eb;
+  --t-primary-dim: rgba(37, 99, 235, 0.1);
+  --t-primary-text: #2563eb;
+  --t-secondary: #6b7280;
+  --t-accent: #7c3aed;
+  --t-bg: #f8fafc;
+  --t-surface: #ffffff;
+  --t-surface-hover: #f1f5f9;
+  --t-surface-active: #e2e8f0;
+  --t-text: #0f172a;
+  --t-text-secondary: #475569;
+  --t-text-muted: #94a3b8;
+  --t-border: #e2e8f0;
+  --t-border-light: #cbd5e1;
+  --t-success: #059669;
+  --t-warning: #d97706;
+  --t-error: #dc2626;
+  --t-info: #2563eb;
+  --t-sidebar-bg: #ffffff;
+  --t-sidebar-border: #e2e8f0;
+  --t-sidebar-hover: #f1f5f9;
+  --t-input-bg: #f8fafc;
+  --t-input-border: #d1d5db;
+  --t-input-focus: #2563eb;
+  --t-avatar-from: #2563eb;
+  --t-avatar-to: #7c3aed;
+  --t-glow: 0 1px 3px rgba(0,0,0,0.1);
+  --t-glow-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  --t-gradient: linear-gradient(135deg, #2563eb, #7c3aed);
+}
+
+/* ===== iOS GLASSMORPHISM ===== */
+[data-theme="glass"] {
+  --t-primary: rgba(59, 130, 246, 0.9);
+  --t-primary-dim: rgba(59, 130, 246, 0.2);
+  --t-primary-text: #60a5fa;
+  --t-secondary: rgba(99, 102, 241, 0.9);
+  --t-accent: rgba(139, 92, 246, 0.9);
+  --t-bg: rgba(15, 23, 42, 0.8);
+  --t-surface: rgba(30, 41, 59, 0.7);
+  --t-surface-hover: rgba(51, 65, 85, 0.8);
+  --t-surface-active: rgba(59, 77, 107, 0.8);
+  --t-text: #f1f5f9;
+  --t-text-secondary: #cbd5e1;
+  --t-text-muted: #94a3b8;
+  --t-border: rgba(255, 255, 255, 0.1);
+  --t-border-light: rgba(255, 255, 255, 0.05);
+  --t-success: rgba(16, 185, 129, 0.9);
+  --t-warning: rgba(245, 158, 11, 0.9);
+  --t-error: rgba(239, 68, 68, 0.9);
+  --t-info: rgba(59, 130, 246, 0.9);
+  --t-sidebar-bg: rgba(15, 23, 42, 0.7);
+  --t-sidebar-border: rgba(255, 255, 255, 0.05);
+  --t-sidebar-hover: rgba(30, 41, 59, 0.8);
+  --t-input-bg: rgba(30, 41, 59, 0.6);
+  --t-input-border: rgba(255, 255, 255, 0.1);
+  --t-input-focus: #3b82f6;
+  --t-avatar-from: rgba(59, 130, 246, 0.9);
+  --t-avatar-to: rgba(139, 92, 246, 0.9);
+  --t-glow: 0 0 20px rgba(59, 130, 246, 0.2);
+  --t-glow-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  --t-gradient: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(139, 92, 246, 0.8));
+  --t-backdrop-blur: blur(12px);
+}
+
+/* ===== BLACK MARBLE ===== */
+[data-theme="black-marble"] {
+  --t-primary: #ffffff;
+  --t-primary-dim: rgba(255, 255, 255, 0.1);
+  --t-primary-text: #ffffff;
+  --t-secondary: #cccccc;
+  --t-accent: #e0e0e0;
+  --t-bg: #0a0a0a;
+  --t-surface: #1a1a1a;
+  --t-surface-hover: #252525;
+  --t-surface-active: #303030;
+  --t-text: #ffffff;
+  --t-text-secondary: #cccccc;
+  --t-text-muted: #999999;
+  --t-border: #333333;
+  --t-border-light: #2a2a2a;
+  --t-success: #10b981;
+  --t-warning: #f59e0b;
+  --t-error: #ef4444;
+  --t-info: #ffffff;
+  --t-sidebar-bg: #0a0a0a;
+  --t-sidebar-border: #1a1a1a;
+  --t-sidebar-hover: #1a1a1a;
+  --t-input-bg: #1a1a1a;
+  --t-input-border: #333333;
+  --t-input-focus: #ffffff;
+  --t-avatar-from: #ffffff;
+  --t-avatar-to: #cccccc;
+  --t-glow: 0 0 20px rgba(255, 255, 255, 0.05);
+  --t-glow-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --t-gradient: linear-gradient(135deg, #ffffff, #cccccc);
+}
+
+[data-theme="black-marble"] body {
+  background-image: radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.02) 0%, transparent 20%);
+  background-size: 60px 60px;
+}
+
+/* ===== WHITE MARBLE ===== */
+[data-theme="white-marble"] {
+  --t-primary: #1a1a1a;
+  --t-primary-dim: rgba(26, 26, 26, 0.1);
+  --t-primary-text: #1a1a1a;
+  --t-secondary: #4a4a4a;
+  --t-accent: #6b6b6b;
+  --t-bg: #f5f5f5;
+  --t-surface: #ffffff;
+  --t-surface-hover: #f0f0f0;
+  --t-surface-active: #e8e8e8;
+  --t-text: #1a1a1a;
+  --t-text-secondary: #4a4a4a;
+  --t-text-muted: #6b6b6b;
+  --t-border: #d4d4d4;
+  --t-border-light: #e8e8e8;
+  --t-success: #059669;
+  --t-warning: #d97706;
+  --t-error: #dc2626;
+  --t-info: #1a1a1a;
+  --t-sidebar-bg: #f5f5f5;
+  --t-sidebar-border: #e0e0e0;
+  --t-sidebar-hover: #f0f0f0;
+  --t-input-bg: #fafafa;
+  --t-input-border: #e0e0e0;
+  --t-input-focus: #1a1a1a;
+  --t-avatar-from: #1a1a1a;
+  --t-avatar-to: #4a4a4a;
+  --t-glow: 0 1px 3px rgba(0,0,0,0.05);
+  --t-glow-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  --t-gradient: linear-gradient(135deg, #1a1a1a, #4a4a4a);
+}
+
+[data-theme="white-marble"] body {
+  background-image: radial-gradient(circle at 20% 30%, rgba(0, 0, 0, 0.02) 0%, transparent 25%);
+  background-size: 80px 80px;
+}
+
+/* ===== OLED BLACK ===== */
+[data-theme="oled"] {
+  --t-primary: #3b82f6;
+  --t-primary-dim: rgba(59, 130, 246, 0.2);
+  --t-primary-text: #60a5fa;
+  --t-secondary: #6b7280;
+  --t-accent: #8b5cf6;
+  --t-bg: #000000;
+  --t-surface: #0a0a0a;
+  --t-surface-hover: #121212;
+  --t-surface-active: #1a1a1a;
+  --t-text: #ffffff;
+  --t-text-secondary: #bbbbbb;
+  --t-text-muted: #777777;
+  --t-border: #1a1a1a;
+  --t-border-light: #0f0f0f;
+  --t-success: #10b981;
+  --t-warning: #f59e0b;
+  --t-error: #ef4444;
+  --t-info: #3b82f6;
+  --t-sidebar-bg: #000000;
+  --t-sidebar-border: #0a0a0a;
+  --t-sidebar-hover: #0a0a0a;
+  --t-input-bg: #0a0a0a;
+  --t-input-border: #1a1a1a;
+  --t-input-focus: #3b82f6;
+  --t-avatar-from: #3b82f6;
+  --t-avatar-to: #8b5cf6;
+  --t-glow: 0 0 10px rgba(59, 130, 246, 0.2);
+  --t-glow-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  --t-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+}
+
+/* ===== MIDNIGHT BLUE ===== */
+[data-theme="midnight"] {
+  --t-primary: #4299e1;
+  --t-primary-dim: rgba(66, 153, 225, 0.2);
+  --t-primary-text: #63b3ed;
+  --t-secondary: #9f7aea;
+  --t-accent: #ed64a6;
+  --t-bg: #0b1120;
+  --t-surface: #141b2b;
+  --t-surface-hover: #1e293b;
+  --t-surface-active: #2d3748;
+  --t-text: #e2e8f0;
+  --t-text-secondary: #a0aec0;
+  --t-text-muted: #718096;
+  --t-border: #2d3748;
+  --t-border-light: #1e2937;
+  --t-success: #48bb78;
+  --t-warning: #ed8936;
+  --t-error: #f56565;
+  --t-info: #4299e1;
+  --t-sidebar-bg: #0b1120;
+  --t-sidebar-border: #1a2635;
+  --t-sidebar-hover: #141b2b;
+  --t-input-bg: #141b2b;
+  --t-input-border: #2d3748;
+  --t-input-focus: #4299e1;
+  --t-avatar-from: #4299e1;
+  --t-avatar-to: #9f7aea;
+  --t-glow: 0 0 20px rgba(66, 153, 225, 0.15);
+  --t-glow-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  --t-gradient: linear-gradient(135deg, #4299e1, #9f7aea);
+}
+
+/* ===== GLASS THEME SPECIAL STYLES ===== */
+[data-theme="glass"] .card,
+[data-theme="glass"] .bg-slate-900,
+[data-theme="glass"] .bg-slate-800,
+[data-theme="glass"] .rounded-2xl {
+  backdrop-filter: var(--t-backdrop-blur);
+  -webkit-backdrop-filter: var(--t-backdrop-blur);
+  background-color: var(--t-surface) !important;
+  border: 1px solid var(--t-border);
+}
+
+[data-theme="glass"] .bg-slate-700,
+[data-theme="glass"] .bg-slate-600 {
+  backdrop-filter: var(--t-backdrop-blur);
+  -webkit-backdrop-filter: var(--t-backdrop-blur);
+  background-color: rgba(51, 65, 85, 0.4) !important;
+}
+
+/* ─── Navigation hover styles ───────────────────────────────────────────── */
+
+.inactive-nav-item:hover {
+  background: var(--t-sidebar-hover) !important;
+  color: var(--t-text) !important;
+}
+
+/* ─── Leaflet container fix ─────────────────────────────────────────────── */
+
+.leaflet-container {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--t-radius);
+}
+
+/* ─── Custom scrollbar ──────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--t-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--t-border-light);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--t-text-muted);
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--t-bg);
+  color: var(--t-text);
+}
+
+/* ─── Custom marker overrides ───────────────────────────────────────────── */
+
+.custom-marker {
+  background: none !important;
+  border: none !important;
+}
+
+.buyer-marker {
+  background: none !important;
+  border: none !important;
+}
+
+/* ─── Leaflet popup dark overrides ──────────────────────────────────────── */
+
+.leaflet-popup-content {
+  margin: 10px 12px;
+}
+
+/* ─── Range slider styling ──────────────────────────────────────────────── */
+
+input[type="range"] {
+  -webkit-appearance: none;
+appearance: none;
+  height: 6px;
+  background: var(--t-border);
+  border-radius: 3px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--t-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid white;
+}
+
+/* ─── Theme preview animations ──────────────────────────────────────────── */
+
+@keyframes theme-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.theme-card-glow {
+  transition: all 0.3s ease;
+}
+.theme-card-glow:hover {
+  transform: translateY(-2px);
+}
+
+/* ─── Notification slide-in animation ───────────────────────────────────── */
+
+@keyframes notif-slide {
+  from { opacity: 0; transform: translateY(-8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notif-panel-enter {
+  animation: notif-slide 0.2s ease-out;
+}
+
+/* ===== ANIMATIONS & EFFECTS ===== */
+
+/* Pulse animations */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes pulse-medium {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.01); }
+}
+
+@keyframes pulse-strong {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* Apply pulse animations based on theme */
+[data-theme] .pulse-effect {
+  animation: var(--t-pulse-animation, none);
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Glow effects */
+.glow-text {
+  text-shadow: var(--t-glow);
+}
+
+.glow-border {
+  box-shadow: 0 0 0 2px var(--t-primary-dim), var(--t-glow);
+}
+
+.glow-card {
+  transition: box-shadow 0.3s ease;
+}
+
+.glow-card:hover {
+  box-shadow: var(--t-card-glow, var(--t-glow));
+}
+
+/* Hover scale */
+.hover-scale {
+  transition: transform var(--t-transition-duration, 0.2s) var(--t-transition-timing, ease);
+}
+
+.hover-scale:hover {
+  transform: scale(var(--t-hover-scale, 1.02));
+}
+
+/* Particle effect containers */
+.particle-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.particle-effect::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: rotate 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Glass intensity */
+.glass-light {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.glass-medium {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.glass-heavy {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Card entrance animations */
+@keyframes card-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-entrance {
+  animation: card-entrance 0.3s ease-out forwards;
+}
+
+/* Staggered children animations */
+.stagger-children > * {
+  opacity: 0;
+  animation: card-entrance 0.3s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.3s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.4s; }
+
+/* Ripple effect for buttons */
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+.ripple-effect:focus:not(:active)::after {
+  animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  20% {
+    transform: scale(25, 25);
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(40, 40);
+  }
+}
+
+/* Loading shimmer effect */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--t-surface) 0%,
+    var(--t-surface-hover) 50%,
+    var(--t-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: loadingShimmer 1.5s infinite;
+}
+
+@keyframes loadingShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Notification slide */
+@keyframes notif-slide {
+  from { 
+    opacity: 0; 
+    transform: translateX(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+.notif-enter {
+  animation: notif-slide 0.2s ease-out;
+}
+
+/* Theme transition */
+.theme-transition {
+  transition: background-color 0.3s ease, 
+              color 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+/* Apply to common elements */
+body, 
+.bg-theme-surface,
+.bg-theme-bg,
+button,
+input,
+.card {
+  transition: background-color 0.2s ease,
+              color 0.2s ease,
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+}
