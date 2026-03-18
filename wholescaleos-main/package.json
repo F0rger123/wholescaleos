@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cp _routes.json dist/ && cp _redirects dist/",
+    "build": "vite build && node -e \"require('fs').copyFileSync('_routes.json', 'dist/_routes.json'); require('fs').copyFileSync('_redirects', 'dist/_redirects')\"",
     "preview": "vite preview"
   },
   "dependencies": {

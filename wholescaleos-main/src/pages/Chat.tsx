@@ -1523,7 +1523,6 @@ export function Chat() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [loadingChannels, setLoadingChannels] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1532,69 +1531,12 @@ export function Chat() {
   const channelMessages = currentChannelId ? (messages[currentChannelId] || []) : [];
   const sortedMessages = [...channelMessages].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-  // Load channels from Supabase when component mounts
+  // Set first channel as active if none selected
   useEffect(() => {
-    const loadChannels = async () => {
-      setLoadingChannels(true);
-      console.log('Loading channels from Supabase...');
-      
-      if (!isSupabaseConfigured || !supabase) {
-        console.log('Supabase not configured');
-        setLoadingChannels(false);
-        return;
-      }
-      
-      try {
-        const { data, error } = await supabase
-          .from('channels')
-          .select('*, channel_members(user_id)')
-          .order('last_message_at', { ascending: false });
-
-        if (error) {
-          console.error('Error loading channels:', error);
-          setLoadingChannels(false);
-          return;
-        }
-
-        console.log('Loaded channels from Supabase:', data);
-
-        if (data && data.length > 0) {
-          // Convert to your ChatChannel format
-          const loadedChannels = data.map((ch: any) => ({
-            id: ch.id,
-            name: ch.name,
-            type: ch.type,
-            members: (ch.channel_members || []).map((cm: any) => cm.user_id),
-            description: ch.description || '',
-            avatar: ch.avatar || (ch.type === 'group' ? '💬' : ch.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)),
-            createdAt: ch.created_at,
-            createdBy: ch.created_by,
-            lastMessageAt: ch.last_message_at,
-            pinnedMessageIds: [],
-          }));
-
-          console.log('Converted channels:', loadedChannels);
-
-          // Update store with loaded channels
-          setBulkData({ channels: loadedChannels });
-          
-          // Set first channel as active if none selected
-          if (!currentChannelId && loadedChannels.length > 0) {
-            console.log('Setting current channel to:', loadedChannels[0].id);
-            setCurrentChannel(loadedChannels[0].id);
-          }
-        } else {
-          console.log('No channels found in Supabase');
-        }
-      } catch (error) {
-        console.error('Failed to load channels:', error);
-      } finally {
-        setLoadingChannels(false);
-      }
-    };
-
-    loadChannels();
-  }, [setBulkData, setCurrentChannel, currentChannelId]);
+    if (!currentChannelId && channels.length > 0) {
+      setCurrentChannel(channels[0].id);
+    }
+  }, [currentChannelId, channels, setCurrentChannel]);
 
   // Load messages when channel changes
   useEffect(() => {
@@ -1670,21 +1612,7 @@ export function Chat() {
   const teamForMentions = team.map(m => ({ id: m.id, name: m.name, avatar: m.avatar, presenceStatus: m.presenceStatus }));
   const teamForBubble = team.map(m => ({ id: m.id, name: m.name }));
 
-  // Show loading indicator while channels are loading
-  if (loadingChannels) {
-    return (
-      <div className="flex h-[calc(100vh-73px)] -m-6 items-center justify-center" style={{ backgroundColor: 'var(--t-bg)' }}>
-        <div className="text-center">
-          <div className="flex gap-2 justify-center mb-4">
-            <div className="w-3 h-3 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-3 h-3 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-3 h-3 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-          <p className="text-sm text-slate-400">Loading conversations...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="flex h-[calc(100vh-73px)] -m-6" style={{ backgroundColor: 'var(--t-bg)' }}>

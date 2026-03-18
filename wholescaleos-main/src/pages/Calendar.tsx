@@ -138,13 +138,14 @@ function Calendar() {
     if (!currentUser?.id) return;
     
     try {
-      const { data, error } = await supabase
+      if (!supabase) return;
+      const { data } = await supabase
         .from('event_enrichments')
         .select('*')
         .eq('user_id', currentUser.id);
         
       if (data) {
-        const enrichMap = {};
+        const enrichMap: Record<string, any> = {};
         data.forEach(item => {
           enrichMap[item.google_event_id] = item;
         });
@@ -301,7 +302,7 @@ function Calendar() {
 
   // Save enrichment for Google event
   const saveEnrichment = async (googleEventId: string, data: any) => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || !supabase) return;
     
     const { error } = await supabase
       .from('event_enrichments')
@@ -412,6 +413,7 @@ function Calendar() {
     } else {
       if (isGoogleConnected) {
         try {
+          if (!currentUser) throw new Error('User not logged in');
           const newEvent = await googleService.createEvent(
             currentUser.id,
             selectedCalendars[0],
@@ -494,10 +496,12 @@ function Calendar() {
       try {
         await googleService.deleteEvent(currentUser.id, selectedCalendars[0], googleId);
         
-        await supabase
-          .from('event_enrichments')
-          .delete()
-          .eq('google_event_id', googleId);
+        if (supabase) {
+          await supabase
+            .from('event_enrichments')
+            .delete()
+            .eq('google_event_id', googleId);
+        }
           
         await loadAllEvents();
         alert('Google Calendar event deleted!');

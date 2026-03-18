@@ -477,31 +477,61 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
       unsubscribe: () => supabase!.removeChannel(leadsChannel),
     });
 
-    // 2. Messages — real-time INSERT
+    // 2. Messages — real-time INSERT/DELETE
     const messagesChannel = supabase.channel(`sync-messages-${teamId}`)
       .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'messages',
+        event: '*', schema: 'public', table: 'messages',
       }, (payload) => {
-        const newRow = payload.new;
-        if (!newRow) return;
+        const { eventType, new: newRow, old: oldRow } = payload;
         const state = useStore.getState();
-        const channelId = newRow.channel_id as string;
-        const existingMsgs = state.messages[channelId] || [];
 
-        // Don't add if we already have it (local optimistic update)
-        if (existingMsgs.find(m => m.id === newRow.id)) return;
+        if (eventType === 'INSERT' && newRow) {
+          const channelId = newRow.channel_id as string;
+          const existingMsgs = state.messages[channelId] || [];
 
-        // Don't add if it's from us (already added locally)
-        if (newRow.user_id === userId) return;
+          // Don't add if we already have it (local optimistic update)
+          if (existingMsgs.find(m => m.id === newRow.id)) return;
 
-        const msg = dbMessageToStore(newRow as Record<string, unknown>);
-        useStore.setState({
-          messages: { ...state.messages, [channelId]: [...existingMsgs, msg] },
-          unreadCounts: {
-            ...state.unreadCounts,
-            [channelId]: (state.unreadCounts[channelId] || 0) + (state.currentChannelId === channelId ? 0 : 1),
-          },
-        });
+          // Don't add if it's from us (already added locally)
+          if (newRow.user_id === userId) return;
+
+          const msg = dbMessageToStore(newRow as Record<string, unknown>);
+          useStore.setState({
+            messages: { ...state.messages, [channelId]: [...existingMsgs, msg] },
+            unreadCounts: {
+              ...state.unreadCounts,
+              [channelId]: (state.unreadCounts[channelId] || 0) + (state.currentChannelId === channelId ? 0 : 1),
+            },
+          });
+        } 
+        else if (eventType === 'DELETE' && oldRow) {
+          // Get current state fresh inside the callback
+          const currentState = useStore.getState();
+          const messageId = oldRow.id as string;
+          
+          // Find which channel this message belongs to by searching all channels
+          let channelId = oldRow.channel_id as string;
+          
+          // If channel_id isn't in the payload, search for it
+          if (!channelId) {
+            for (const [chId, msgs] of Object.entries(currentState.messages)) {
+              if (msgs.some(m => m.id === messageId)) {
+                channelId = chId;
+                break;
+              }
+            }
+          }
+          
+          if (channelId) {
+            const channelMessages = currentState.messages[channelId] || [];
+            useStore.setState({
+              messages: {
+                ...currentState.messages,
+                [channelId]: channelMessages.filter(m => m.id !== messageId)
+              }
+            });
+          }
+        }
       })
       .subscribe();
 

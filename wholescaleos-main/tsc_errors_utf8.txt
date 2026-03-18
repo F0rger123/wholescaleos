@@ -1,0 +1,6 @@
+﻿src/pages/Calendar.tsx(141,21): error TS6133: 'error' is declared but its value is never read.
+src/pages/Calendar.tsx(141,37): error TS18047: 'supabase' is possibly 'null'.
+src/pages/Calendar.tsx(149,11): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
+src/pages/Calendar.tsx(306,29): error TS18047: 'supabase' is possibly 'null'.
+src/pages/Calendar.tsx(416,13): error TS18047: 'currentUser' is possibly 'null'.
+src/pages/Calendar.tsx(497,15): error TS18047: 'supabase' is possibly 'null'.
