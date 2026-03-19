@@ -346,6 +346,9 @@ Specific Intent Data Requirements:
 - 'delete_lead': include 'data' object with 'leadId' (MUST extract from availableLeads).
 - 'send_sms': include 'data' object with 'target' (lead name, team member name, or phone number) and 'message' (the text content).`;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
   try {
     // We utilize the gemini-2.0-flash model via the REST API for simplicity
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
@@ -353,6 +356,7 @@ Specific Intent Data Requirements:
       headers: { 
         'Content-Type': 'application/json' 
       },
+      signal: controller.signal,
       body: JSON.stringify({
         contents: [
           {
@@ -366,6 +370,8 @@ Specific Intent Data Requirements:
       })
     });
 
+    clearTimeout(timeoutId);
+
     if (!res.ok) {
       if (res.status === 429) {
         return {
@@ -374,7 +380,14 @@ Specific Intent Data Requirements:
           data: { retryAfter: 60 } // Default fallback for free tier
         };
       }
+      
       const errorData = await res.json().catch(() => null);
+      console.error('Gemini API Error Response:', {
+        status: res.status,
+        statusText: res.statusText,
+        error: errorData?.error
+      });
+      
       throw new Error(`Gemini API Error [${res.status}]: ${errorData?.error?.message || res.statusText}`);
     }
 
@@ -401,8 +414,17 @@ Specific Intent Data Requirements:
       };
     }
 
-  } catch (error) {
+  } catch (error: any) {
+    clearTimeout(timeoutId);
     console.error('Error processing prompt with Gemini:', error);
+    
+    if (error.name === 'AbortError') {
+      return {
+        intent: 'error',
+        response: 'AI request timed out after 30 seconds. This might be a network issue or the model is overloaded. Please try again.'
+      };
+    }
+
     return {
       intent: 'error',
       response: error instanceof Error ? error.message : 'An unexpected error occurred while communicating with Gemini.'
