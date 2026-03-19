@@ -13,12 +13,7 @@ import {
 import { 
   Bot, User, Send, Target, Sparkles, Check, Trash2, 
   UserPlus, Key, Loader2, AlertTriangle, ExternalLink, 
-  RefreshCw, Smartphone,### AI Reliability & Debugging
-- **Configurable Models**: You can now choose between Gemini 1.5 Flash, 1.5 Pro, and 2.0 Flash in the AI Settings page.
-- **Debug Mode**: Added a hidden debug panel in the AI Bot page. Press `Ctrl + Shift + D` to toggle it. It shows your User ID, active rate limits, and the current model. It also includes a **"Force Clear Rate Limit"** button if the timer ever gets stuck.
-- **30-Second Timeout**: Added a 30-second timeout to AI requests to prevent the chat from hanging indefinitely.
-- **Enhanced Error Handling**: Improved error surfacing to show specific API errors and added detailed console logs for debugging.
-- **Diagnostic Tool**: Added a **"Test Connection"** button in the AI Bot header to verify API connectivity with a simple ping (no context). 
+  RefreshCw, Smartphone, Search, X, ArrowDown 
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
