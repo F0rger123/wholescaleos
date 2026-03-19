@@ -1,8 +1,36 @@
-import { useStore } from '../store/useStore';
+import { useStore, TaskPriority } from '../store/useStore';
 
 export interface GeminiResponse {
   intent: string;
   response: string;
+  data?: any;
+}
+
+export function getTodaysTasks() {
+  const store = useStore.getState();
+  const today = new Date().toISOString().split('T')[0];
+  return store.tasks.filter(t => t.dueDate && t.dueDate.startsWith(today));
+}
+
+export function getUserTasks(userId: string) {
+  const store = useStore.getState();
+  return store.tasks.filter(t => t.assignedTo === userId);
+}
+
+export function createTask(taskData: { title: string, dueDate?: string, priority?: TaskPriority, leadId?: string }) {
+  const store = useStore.getState();
+  const currentUser = store.currentUser?.id || 'system';
+  store.addTask({
+    title: taskData.title,
+    description: '',
+    assignedTo: currentUser,
+    dueDate: taskData.dueDate || new Date().toISOString().split('T')[0],
+    priority: taskData.priority || 'medium',
+    status: 'todo',
+    createdBy: currentUser,
+    leadId: taskData.leadId
+  });
+  return true;
 }
 
 /**
@@ -79,9 +107,14 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
   const schedule = getTodaysSchedule();
   const leads = lookupLeads();
+  const todaysTasks = getTodaysTasks();
+  const allTasks = useStore.getState().tasks;
+  
   const enhancedContext = {
     ...context,
     todaysSchedule: schedule,
+    todaysTasks: todaysTasks,
+    allTasks: allTasks,
     availableLeads: leads.length > 50 
       ? `Total Leads: ${leads.length}. Showing first 50: ${JSON.stringify(leads.slice(0, 50))}` 
       : leads
@@ -91,9 +124,12 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 Analyze the user's prompt and the provided application context to determine their intent and generate a helpful response.
 You MUST reply strictly with a seamless JSON object matching the following structure exactly (no markdown formatting, just raw JSON):
 {
-  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal'>",
-  "response": "<your helpful response, explanation, or generated content>"
-}`;
+  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks'>",
+  "response": "<your helpful response, explanation, or generated content>",
+  "data": <optional object containing extracted parameters, e.g. {"title": "Call John", "dueDate": "2026-03-20", "priority": "high", "leadId": "123"} for create_task>
+}
+
+If the user wants to create a task, set the intent to 'create_task' and include the 'data' object with 'title', 'dueDate' (YYYY-MM-DD), 'priority' (low/medium/high/urgent), and 'leadId' (if applicable based on availableLeads).`;
 
   try {
     // We utilize the gemini-2.5-flash model via the REST API for simplicity
@@ -136,7 +172,8 @@ You MUST reply strictly with a seamless JSON object matching the following struc
       const parsed = JSON.parse(textData);
       return {
         intent: parsed.intent || 'unknown',
-        response: parsed.response || textData
+        response: parsed.response || textData,
+        data: parsed.data
       };
     } catch (parseError) {
       console.error('Failed to parse Gemini response as JSON:', textData);

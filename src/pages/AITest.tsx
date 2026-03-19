@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { processPrompt, GeminiResponse } from '../lib/gemini';
+import { processPrompt, GeminiResponse, createTask } from '../lib/gemini';
 
 export function AITest() {
   const [prompt, setPrompt] = useState('');
@@ -20,6 +20,11 @@ export function AITest() {
         userRole: 'admin',
         currentTime: new Date().toISOString()
       });
+      
+      if (response.intent === 'create_task' && response.data) {
+        createTask(response.data);
+      }
+      
       setResult(response);
     } catch (error) {
       console.error(error);
@@ -50,13 +55,15 @@ export function AITest() {
 
         {/* Quick Test Prompts */}
         <div>
-          <p className="text-xs font-medium text-slate-500 mb-2">Try a Lead Lookup example:</p>
+          <p className="text-xs font-medium text-slate-500 mb-2">Try a Task & Lead example:</p>
           <div className="flex flex-wrap gap-2">
             {[
               "Show me John Smith",
-              "Find lead at 123 Main St",
               "What leads do I have?",
-              "What does my schedule look like today?"
+              "What tasks do I have today?",
+              "Show me my overdue tasks",
+              "Create a task to call John Smith tomorrow",
+              "Remind me to follow up with the lead at 123 Main St"
             ].map(example => (
               <button
                 key={example}
@@ -103,6 +110,14 @@ export function AITest() {
                 {result.response}
               </p>
             </div>
+            {result.data && (
+              <div className="mt-4 p-4 rounded-xl bg-slate-900/50 border border-slate-700/50">
+                <h4 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Extracted Data Payload</h4>
+                <pre className="text-xs text-brand-300 overflow-x-auto">
+                  {JSON.stringify(result.data, null, 2)}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       )}
