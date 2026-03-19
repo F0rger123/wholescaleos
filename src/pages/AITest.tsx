@@ -45,7 +45,47 @@ export function AITest() {
     response: string;
   } | null>(null);
   const [leadSearch, setLeadSearch] = useState('');
+  const [aiName, setAiName] = useState('AI Assistant');
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
+
+  // Reset rate limit if model changes
+  useEffect(() => {
+    if (rateLimit) {
+      setRateLimit(null);
+      localStorage.removeItem('ai_rate_limit_expiry');
+      localStorage.removeItem('ai_rate_limit_prompt');
+      console.log(`🔄 Model switched to ${currentModel}. Resetting rate limit state.`);
+    }
+  }, [currentModel]);
+
+  // Load AI personality settings
+  useEffect(() => {
+    async function loadPersonality() {
+      if (!currentUser?.id) return;
+      
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('settings')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+          
+          if (profile?.settings?.ai_name) {
+            setAiName(profile.settings.ai_name);
+          }
+        } catch (err) {}
+      }
+      
+      const localAiName = localStorage.getItem('user_ai_name');
+      if (localAiName) setAiName(localAiName);
+    }
+    
+    loadPersonality();
+
+    window.addEventListener('ai-settings-updated', loadPersonality);
+    return () => window.removeEventListener('ai-settings-updated', loadPersonality);
+  }, [currentUser]);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem('ai_chat_history');
@@ -463,7 +503,7 @@ export function AITest() {
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-brand-400" />
-            AI Assistant
+            {aiName}
           </h1>
           <p className="text-sm text-slate-400">Conversational interface with context awareness</p>
         </div>

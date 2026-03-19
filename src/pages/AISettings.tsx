@@ -163,6 +163,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
         if (profileError) throw profileError;
 
         setSaveResult({ success: true, message: 'API key and AI personality saved successfully.' });
+        window.dispatchEvent(new CustomEvent('ai-settings-updated'));
       } catch (err: any) {
         setSaveResult({ success: false, message: `Failed to save: ${err.message}` });
       }
@@ -173,6 +174,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
       localStorage.setItem('user_ai_tone', aiTone);
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
       setSaveResult({ success: true, message: 'API key and AI personality saved locally.' });
+      window.dispatchEvent(new CustomEvent('ai-settings-updated'));
     }
     setSaving(false);
   };
