@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Key, ExternalLink, Loader2, Check, AlertCircle, Save } from 'lucide-react';
+import { Key, ExternalLink, Loader2, Check, AlertCircle, Save, Sparkles } from 'lucide-react';
 
 export function AISettings() {
   const [apiKey, setApiKey] = useState('');
@@ -145,23 +145,42 @@ export function AISettings() {
         </div>
       </div>
 
+      {/* Model Selection Card */}
+      <div className="bg-slate-900 rounded-2xl border border-brand-500/20 shadow-lg shadow-brand-500/5 p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-brand-400" />
+          General AI Settings
+        </h2>
+        <div>
+          <label className="block text-sm font-medium text-slate-400 mb-3">Preferred AI Model</label>
+          <div className="grid grid-cols-1 gap-3">
+            {[
+              { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Fast, high limits, best for general chat' },
+              { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Smartest, very low limits, best for complex logic' },
+              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Balanced, experimental next-gen performance' }
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setModel(m.id)}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${
+                  model === m.id 
+                    ? 'bg-brand-500/10 border-brand-500 ring-1 ring-brand-500' 
+                    : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-brand-400' : 'bg-slate-600'}`} />
+                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-slate-300'}`}>{m.label}</span>
+                </div>
+                <span className="text-xs text-slate-500">{m.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Configuration Card */}
       <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-400 mb-2">Preferred AI Model</label>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all appearance-none cursor-pointer"
-          >
-            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast, Lower Limits)</option>
-            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful, Very Low Limits)</option>
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Balanced, Experimental)</option>
-          </select>
-          <p className="mt-2 text-[10px] text-slate-500">
-            Note: Flash models are usually free or lower cost. Pro models have higher capability but much tighter rate limits.
-          </p>
-        </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-400 mb-2">Gemini API Key</label>
