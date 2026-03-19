@@ -57,7 +57,8 @@ export function AISettings() {
     setTestResult(null);
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      const apiVersion = (model.includes('2.0') || model.includes('exp')) ? 'v1beta' : 'v1';
+      const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

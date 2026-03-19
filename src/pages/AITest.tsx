@@ -730,9 +730,23 @@ export function AITest() {
             <div className="pt-2 flex flex-col gap-2 border-t border-slate-700/50 mt-2">
               <button 
                 onClick={async () => {
-                  const key = localStorage.getItem('user_gemini_api_key');
+                  let key = localStorage.getItem('user_gemini_api_key');
+                  
+                  // Try Supabase if not in local storage
+                  if (!key && isSupabaseConfigured && supabase && currentUser?.id) {
+                    try {
+                      const { data } = await supabase
+                        .from('user_connections')
+                        .select('refresh_token')
+                        .eq('user_id', currentUser.id)
+                        .eq('provider', 'gemini')
+                        .maybeSingle();
+                      if (data?.refresh_token) key = data.refresh_token;
+                    } catch (err) {}
+                  }
+
                   if (!key) {
-                    alert('No API key found in local storage.');
+                    alert('No API key found. Please configure it in Settings first.');
                     return;
                   }
                   const models = await listAvailableModels(key);
