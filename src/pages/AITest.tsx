@@ -30,7 +30,7 @@ interface ChatMessage {
 export function AITest() {
   const navigate = useNavigate();
   const leads = useStore(state => state.leads);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(() => localStorage.getItem('ai_pending_prompt') || '');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [pendingAction, setPendingAction] = useState<{
@@ -99,17 +99,17 @@ export function AITest() {
         });
       }, 1000);
     } else if (rateLimit && rateLimit.seconds <= 0) {
-      const p = rateLimit.originalPrompt;
       setRateLimit(null);
       localStorage.removeItem('ai_rate_limit_expiry');
       localStorage.removeItem('ai_rate_limit_prompt');
-      if (p) {
-        console.log('🔄 Auto-retrying rate limited prompt...');
-        handleSubmit(undefined, p);
-      }
+      console.log('✅ Rate limit cooldown finished.');
     }
     return () => clearInterval(interval);
   }, [rateLimit?.seconds]);
+
+  useEffect(() => {
+    localStorage.setItem('ai_pending_prompt', prompt);
+  }, [prompt]);
 
   useEffect(() => {
     const handleInitialScroll = () => {
@@ -168,7 +168,6 @@ export function AITest() {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setPrompt('');
     setLoading(true);
 
     try {
@@ -180,12 +179,15 @@ export function AITest() {
       
       if (response.intent === 'redirect_setup') {
         setTimeout(() => navigate('/settings/ai'), 1500);
-      } else if (response.intent === 'rate_limit') {
         const retrySeconds = response.data?.retryAfter || 60;
         setRateLimit({ seconds: retrySeconds, originalPrompt: textToSubmit });
         const expiry = Date.now() + (retrySeconds * 1000);
         localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
         localStorage.setItem('ai_rate_limit_prompt', textToSubmit);
+      } else {
+        // Success case - clear the prompt
+        setPrompt('');
+        localStorage.removeItem('ai_pending_prompt');
       }
       
       if (response.intent !== 'rate_limit') {
@@ -438,8 +440,8 @@ export function AITest() {
             disabled 
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-xl text-xs text-slate-400 opacity-50"
           >
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            Queued
+            <RefreshCw className="w-3 h-3" />
+            Cooldown active
           </button>
         </div>
       )}
@@ -482,17 +484,17 @@ export function AITest() {
                 handleSubmit();
               }
             }}
-            placeholder={rateLimit && rateLimit.originalPrompt ? "Your message is queued..." : "Type your message..."}
-            className={`flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none text-slate-200 resize-none min-h-[50px] max-h-[150px] transition-all ${rateLimit && rateLimit.originalPrompt ? 'bg-brand-500/5 italic' : ''}`}
+            placeholder={rateLimit && rateLimit.seconds > 0 ? `Rate limit active... wait ${rateLimit.seconds}s` : "Type your message..."}
+            className={`flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none text-slate-200 resize-none min-h-[50px] max-h-[150px] transition-all ${rateLimit && rateLimit.seconds > 0 ? 'bg-brand-500/5' : ''}`}
             rows={1}
-            disabled={loading || !!(rateLimit && rateLimit.originalPrompt)}
+            disabled={loading}
           />
           <button
             type="submit"
-            disabled={loading || !prompt.trim() || !!(rateLimit && rateLimit.originalPrompt)}
+            disabled={loading || !prompt.trim() || !!(rateLimit && rateLimit.seconds > 0)}
             className="w-12 h-12 shrink-0 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:bg-slate-700 text-white rounded-xl flex items-center justify-center transition-colors group relative overflow-hidden"
           >
-            {rateLimit && rateLimit.originalPrompt ? (
+            {loading ? (
               <RefreshCw className="w-5 h-5 animate-spin text-brand-400" />
             ) : (
               <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
