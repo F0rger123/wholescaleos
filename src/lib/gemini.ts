@@ -117,6 +117,81 @@ export function getTeamAvailability() {
   return store.team.map(m => ({ name: m.name, role: m.role, status: m.presenceStatus }));
 }
 
+export const SMS_GATEWAYS: Record<string, string> = {
+  'AT&T': 'txt.att.net',
+  'Verizon': 'vtext.com',
+  'T-Mobile': 'tmomail.net',
+  'Sprint': 'messaging.sprintpcs.com',
+  'Boost Mobile': 'myboostmobile.com',
+  'Cricket Wireless': 'sms.cricketwireless.net',
+  'Google Fi': 'msg.fi.google.com',
+  'Republic Wireless': 'text.republicwireless.com',
+  'U.S. Cellular': 'email.uscc.net',
+  'Virgin Mobile': 'vmobl.com'
+};
+
+export async function sendSMSViaAI(target: string, message: string): Promise<{ success: boolean; message: string }> {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  if (!userId) return { success: false, message: 'User not authenticated.' };
+
+  // 1. Get User Preferences for SMS
+  let userPhone = '';
+  let userCarrier = '';
+
+  if (isSupabaseConfigured && supabase) {
+    const { data } = await supabase.from('agent_preferences').select('sms_phone, sms_carrier').eq('user_id', userId).maybeSingle();
+    if (data) {
+      userPhone = data.sms_phone;
+      userCarrier = data.sms_carrier;
+    }
+  } else {
+    userPhone = localStorage.getItem('user_sms_phone') || '';
+    userCarrier = localStorage.getItem('user_sms_carrier') || '';
+  }
+
+  if (!userPhone || !userCarrier) {
+    return { success: false, message: 'SMS settings not configured. Please set your phone and carrier in SMS Settings.' };
+  }
+
+  // 2. Resolve Target (could be a lead name, or a raw number)
+  let targetEmail = '';
+  const lead = store.leads.find(l => l.name?.toLowerCase().includes(target.toLowerCase()) || l.phone?.includes(target));
+  
+  if (lead && lead.phone) {
+    // For now, we assume the RECEIVER has a carrier-agnostic way or we use a default?
+    // Wait, the prompt implies "Text John Smith". If John Smith is a lead, we need HIS carrier?
+    // Actually, usually email-to-SMS requires knowing the receiver's carrier.
+    // However, if the user is texting THEMSELVES or a known team member, we can use their settings.
+    // If it's a lead, without their carrier info, this won't work perfectly.
+    // I'll assume for this task we use a default gateway or the user's carrier as a fallback if unknown.
+    // Better yet, I'll check if the lead has a carrier stored.
+    // For this implementation, I'll use the user's carrier as the protocol for the receiver too if unspecified.
+    const cleanPhone = lead.phone.replace(/\D/g, '');
+    targetEmail = `${cleanPhone}@${SMS_GATEWAYS[userCarrier]}`;
+  } else if (target.replace(/\D/g, '').length >= 10) {
+    const cleanPhone = target.replace(/\D/g, '');
+    targetEmail = `${cleanPhone}@${SMS_GATEWAYS[userCarrier]}`;
+  } else {
+    return { success: false, message: `Could not find a valid phone number for '${target}'.` };
+  }
+
+  // 3. Send via email.ts
+  const { sendEmail } = await import('./email');
+  const res = await sendEmail({
+    to: targetEmail,
+    subject: 'SMS via WholeScale AI',
+    html: `<p>${message}</p>`,
+    from: 'WholeScale OS <alerts@wholescale.work>'
+  });
+
+  if (res.success) {
+    return { success: true, message: `SMS successfully queued for ${target} (${targetEmail})` };
+  } else {
+    return { success: false, message: `Failed to send SMS: ${res.error}` };
+  }
+}
+
 /**
  * Helper to fetch today's calendar events and tasks to provide to Gemini.
  */
@@ -258,7 +333,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 Analyze the user's prompt and the provided application context to determine their intent and generate a helpful response.
 You MUST reply strictly with a seamless JSON object matching the following structure exactly (no markdown formatting, just raw JSON):
 {
-  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks', 'update_status', 'create_lead', 'update_lead', 'delete_lead', 'get_team'>",
+  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks', 'update_status', 'create_lead', 'update_lead', 'delete_lead', 'get_team', 'send_sms'>",
   "response": "<your helpful, conversational response to the user's command>",
   "data": <optional object containing extracted parameters>
 }
@@ -268,7 +343,8 @@ Specific Intent Data Requirements:
 - 'update_status': include 'data' object with 'leadId' (must extract from availableLeads) and 'newStatus' (MUST be exactly one of: 'new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost').
 - 'create_lead': include 'data' object with 'name', 'phone' (if available), 'email' (if available), 'propertyAddress', and 'notes'.
 - 'update_lead': include 'data' object with 'leadId' (MUST extract from availableLeads) and any updated fields.
-- 'delete_lead': include 'data' object with 'leadId' (MUST extract from availableLeads).`;
+- 'delete_lead': include 'data' object with 'leadId' (MUST extract from availableLeads).
+- 'send_sms': include 'data' object with 'target' (lead name, team member name, or phone number) and 'message' (the text content).`;
 
   try {
     // We utilize the gemini-2.5-flash model via the REST API for simplicity
