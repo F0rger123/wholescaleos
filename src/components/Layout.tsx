@@ -19,25 +19,21 @@ import {
 const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
   Core: [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/calendar', label: 'Calendar', icon: Calendar },
     { to: '/map', label: 'Map', icon: Map },
-    { to: '/sms', label: 'SMS', icon: MessageSquare },
-    { to: '/chat', label: 'Chat', icon: MessageSquare },
-  ],
-  Management: [
     { to: '/leads', label: 'Leads', icon: Users },
     { to: '/tasks', label: 'Tasks', icon: ListTodo },
-    { to: '/team', label: 'Team', icon: UserCog },
+    { to: '/calendar', label: 'Calendar', icon: Calendar },
+  ],
+  Messages: [
+    { to: '/sms', label: 'SMS', icon: Smartphone },
+    { to: '/chat', label: 'Team Chat', icon: MessageSquare },
+    { to: '/ai-test', label: 'AI Bot', icon: Bot },
   ],
   Tools: [
     { to: '/imports', label: 'Imports', icon: Download },
     { to: '/calculators', label: 'Calculators', icon: Calculator },
-    { to: '/ai-test', label: 'AI Assistant', icon: Bot },
-  ],
-  Settings: [
+    { to: '/team', label: 'Team', icon: UserCog },
     { to: '/settings', label: 'Settings', icon: Settings },
-    { to: '/settings/ai', label: 'AI Configuration', icon: Bot },
-    { to: '/settings/sms', label: 'SMS & Notifications', icon: Smartphone },
   ],
 };
 
@@ -292,7 +288,7 @@ export function Layout() {
                       const badge =
                         label === 'Tasks' ? pendingTaskCount :
                         label === 'Team' ? onlineCount :
-                        label === 'Chat' ? totalUnread : 
+                        label === 'Team Chat' ? totalUnread : 
                         label === 'SMS' ? 0 : 0; // Placeholder for SMS unread count
 
                       return (
