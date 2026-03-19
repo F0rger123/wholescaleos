@@ -38,13 +38,13 @@ export function SMSSettings() {
         try {
           const { data } = await supabase
             .from('agent_preferences')
-            .select('sms_phone, sms_carrier')
+            .select('phone_number, carrier, sms_gateway')
             .eq('user_id', currentUser.id)
             .maybeSingle();
 
           if (data) {
-            setPhone(data.sms_phone || '');
-            setCarrier(data.sms_carrier || '');
+            setPhone(data.phone_number || '');
+            setCarrier(data.carrier || '');
           }
         } catch (err) {
           console.error('Failed to load SMS preferences:', err);
@@ -101,14 +101,17 @@ export function SMSSettings() {
     setSaving(true);
     setSaveResult(null);
 
+    const gateway = SMS_GATEWAYS[carrier] || '';
+
     if (isSupabaseConfigured && supabase) {
       try {
         const { error } = await supabase
           .from('agent_preferences')
           .upsert({
             user_id: currentUser.id,
-            sms_phone: phone,
-            sms_carrier: carrier,
+            phone_number: phone,
+            carrier: carrier,
+            sms_gateway: gateway,
             updated_at: new Date().toISOString(),
           });
 
