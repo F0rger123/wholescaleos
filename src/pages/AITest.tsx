@@ -254,11 +254,20 @@ export function AITest() {
         const leadIntents = ['update_status', 'update_lead', 'delete_lead', 'send_sms'];
         const needsLead = leadIntents.includes(response.intent);
         
+        // Clean JSON from response if needed
+        let cleanResponse = response.response || '';
+        if (typeof cleanResponse === 'string' && cleanResponse.trim().startsWith('{')) {
+          try {
+            const parsed = JSON.parse(cleanResponse);
+            if (parsed.response) cleanResponse = parsed.response;
+          } catch (e) {}
+        }
+
         if (needsLead) {
           setPendingAction({
             intent: response.intent,
             data: response.data,
-            response: response.response || ''
+            response: cleanResponse
           });
           // Pre-populate search with target if available
           if (response.data?.target) setLeadSearch(response.data.target);
@@ -267,7 +276,7 @@ export function AITest() {
             if (l) setLeadSearch(l.name || '');
           }
         } else {
-          executeAction(response.intent, response.data, response.response);
+          executeAction(response.intent, response.data, cleanResponse);
         }
       }
     } catch (error: any) {
@@ -286,6 +295,16 @@ export function AITest() {
 
   const executeAction = async (intent: string, data: any, aiResponse: string, confirmedLeadId?: string) => {
     let systemLog = undefined;
+    
+    // Final safety check for JSON in aiResponse
+    let finalAiResponse = aiResponse;
+    if (typeof finalAiResponse === 'string' && finalAiResponse.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(finalAiResponse);
+        if (parsed.response) finalAiResponse = parsed.response;
+      } catch (e) {}
+    }
+
     const finalData = confirmedLeadId ? { ...data, leadId: confirmedLeadId } : data;
 
     try {
@@ -314,7 +333,7 @@ export function AITest() {
       const aiMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'ai',
-        content: aiResponse || "Action completed.",
+        content: finalAiResponse || "Action completed.",
         timestamp: new Date().toISOString(),
         intent: intent,
         data: finalData,
