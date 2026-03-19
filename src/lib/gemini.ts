@@ -176,19 +176,87 @@ export async function sendSMSViaAI(target: string, message: string): Promise<{ s
     return { success: false, message: `Could not find a valid phone number for '${target}'.` };
   }
 
-  // 3. Send via email.ts
-  const { sendEmail } = await import('./email');
-  const res = await sendEmail({
-    to: targetEmail,
-    subject: 'SMS via WholeScale AI',
-    html: `<p>${message}</p>`,
-    from: 'WholeScale OS <alerts@wholescale.work>'
-  });
+  // 3. Send via Gmail API directly
+  try {
+    // A. Get Google OAuth tokens for Gmail
+    let refreshToken = '';
+    if (isSupabaseConfigured && supabase) {
+      const { data } = await supabase
+        .from('user_connections')
+        .select('refresh_token')
+        .eq('user_id', userId)
+        .eq('provider', 'google')
+        .maybeSingle();
+      refreshToken = data?.refresh_token || '';
+    } else {
+      refreshToken = localStorage.getItem('google_refresh_token') || '';
+    }
 
-  if (res.success) {
-    return { success: true, message: `SMS successfully queued for ${target} (${targetEmail})` };
-  } else {
-    return { success: false, message: `Failed to send SMS: ${res.error}` };
+    if (!refreshToken) {
+      return { success: false, message: 'Google/Gmail account not connected. Please connect your Google account in Settings.' };
+    }
+
+    // B. Refresh Access Token
+    const CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
+    const CLIENT_SECRET = "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";
+
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: refreshToken,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!refreshResponse.ok) {
+      const errData = await refreshResponse.json();
+      throw new Error(`Failed to refresh Google token: ${errData.error_description || refreshResponse.statusText}`);
+    }
+
+    const { access_token } = await refreshResponse.json();
+
+    // C. Construct RFC 2822 message
+    // Note: btoa/unescape is a common way to handle base64 in browser
+    const strMessage = [
+      `To: ${targetEmail}`,
+      `Subject: SMS via WholeScale AI`,
+      `Content-Type: text/plain; charset="UTF-8"`,
+      `MIME-Version: 1.0`,
+      `Content-Transfer-Encoding: 7bit`,
+      '',
+      message
+    ].join('\n');
+
+    const encodedMessage = btoa(unescape(encodeURIComponent(strMessage)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    // D. Send via Gmail API
+    const gmailResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        raw: encodedMessage
+      }),
+    });
+
+    if (!gmailResponse.ok) {
+      const errData = await gmailResponse.json();
+      throw new Error(`Gmail API Error: ${errData.error?.message || gmailResponse.statusText}`);
+    }
+
+    return { success: true, message: `SMS successfully sent via Gmail to ${target} (${targetEmail})` };
+
+  } catch (err: any) {
+    console.error('SMS Send Error (Gmail):', err);
+    return { success: false, message: `Failed to send SMS via Gmail: ${err.message}` };
   }
 }
 
