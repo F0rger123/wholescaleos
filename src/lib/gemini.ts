@@ -1,4 +1,6 @@
 import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '../store/useStore';
+import type { Lead } from '../store/useStore';
+import { supabase, isSupabaseConfigured } from './supabase';
 
 export interface GeminiResponse {
   intent: string;
@@ -57,6 +59,62 @@ export function updateLeadStatusViaAI(leadId: string, newStatus: LeadStatus): { 
   store.updateLeadStatus(leadId, newStatus, currentUser);
   
   return { success: true, message: `Successfully updated lead status to '${STATUS_LABELS[newStatus] || newStatus}'` };
+}
+
+export function createLeadViaAI(leadData: Partial<Lead>): { success: boolean; message: string; leadId?: string } {
+  const store = useStore.getState();
+  const currentUser = store.currentUser?.id || 'system';
+  
+  if (!leadData.name && !leadData.propertyAddress) {
+    return { success: false, message: 'A lead requires at least a name or property address.' };
+  }
+  
+  store.addLead({
+    name: leadData.name || 'Unknown',
+    email: leadData.email || '',
+    phone: leadData.phone || '',
+    status: 'new',
+    source: 'other',
+    propertyAddress: leadData.propertyAddress || '',
+    propertyType: 'single-family',
+    estimatedValue: 0,
+    offerAmount: 0,
+    lat: 30.2672,
+    lng: -97.7431,
+    notes: leadData.notes || 'Created via AI Assistant',
+    assignedTo: currentUser,
+    probability: 50,
+    engagementLevel: 1,
+    timelineUrgency: 1,
+    competitionLevel: 1,
+  });
+  
+  return { success: true, message: `Successfully created new lead: ${leadData.name || leadData.propertyAddress}` };
+}
+
+export function updateLeadViaAI(leadId: string, updates: Partial<Lead>): { success: boolean; message: string } {
+  const store = useStore.getState();
+  const lead = store.leads.find(l => l.id === leadId);
+  
+  if (!lead) return { success: false, message: `Lead with ID ${leadId} not found.` };
+  
+  store.updateLead(leadId, updates);
+  return { success: true, message: `Successfully updated lead: ${lead.name || lead.propertyAddress}` };
+}
+
+export function deleteLeadViaAI(leadId: string): { success: boolean; message: string } {
+  const store = useStore.getState();
+  const lead = store.leads.find(l => l.id === leadId);
+  
+  if (!lead) return { success: false, message: `Lead with ID ${leadId} not found.` };
+  
+  store.deleteLead(leadId);
+  return { success: true, message: `Successfully deleted lead: ${lead.name || lead.propertyAddress}` };
+}
+
+export function getTeamAvailability() {
+  const store = useStore.getState();
+  return store.team.map(m => ({ name: m.name, role: m.role, status: m.presenceStatus }));
 }
 
 /**
@@ -120,14 +178,37 @@ export function lookupLeads(query?: string) {
  * Expects VITE_GEMINI_API_KEY to be set in your .env file.
  */
 export async function processPrompt(prompt: string, context: Record<string, any> = {}): Promise<GeminiResponse> {
-  // Use Vite's environment variable loading
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+  // Try to get user-specific key
+  if (userId) {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase
+          .from('user_connections')
+          .select('refresh_token')
+          .eq('user_id', userId)
+          .eq('provider', 'gemini')
+          .maybeSingle();
+        if (data?.refresh_token) {
+          apiKey = data.refresh_token;
+        }
+      } catch (err) {
+        console.error('Error fetching user API key:', err);
+      }
+    } else {
+      const localKey = localStorage.getItem('user_gemini_api_key');
+      if (localKey) apiKey = localKey;
+    }
+  }
   
   if (!apiKey) {
-    console.warn('VITE_GEMINI_API_KEY is missing. Using fallback response.');
+    console.warn('Gemini API key is missing.');
     return {
-      intent: 'error',
-      response: 'Gemini API key is missing. Please configure VITE_GEMINI_API_KEY in your .env file.'
+      intent: 'redirect_setup',
+      response: 'Gemini API key is missing. Please configure your API key in the AI Settings page.'
     };
   }
 
@@ -141,6 +222,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     todaysSchedule: schedule,
     todaysTasks: todaysTasks,
     allTasks: allTasks,
+    teamAvailability: getTeamAvailability(),
     availableLeads: leads.length > 50 
       ? `Total Leads: ${leads.length}. Showing first 50: ${JSON.stringify(leads.slice(0, 50))}` 
       : leads
@@ -150,13 +232,17 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 Analyze the user's prompt and the provided application context to determine their intent and generate a helpful response.
 You MUST reply strictly with a seamless JSON object matching the following structure exactly (no markdown formatting, just raw JSON):
 {
-  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks', 'update_status'>",
-  "response": "<your helpful response, explanation, or generated content>",
-  "data": <optional object containing extracted parameters, e.g. {"title": "Call John", "dueDate": "2026-03-20", "priority": "high", "leadId": "123"} for create_task>
+  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks', 'update_status', 'create_lead', 'update_lead', 'delete_lead', 'get_team'>",
+  "response": "<your helpful, conversational response to the user's command>",
+  "data": <optional object containing extracted parameters>
 }
 
-If the user wants to create a task, set the intent to 'create_task' and include the 'data' object with 'title', 'dueDate' (YYYY-MM-DD), 'priority' (low/medium/high/urgent), and 'leadId' (if applicable based on availableLeads).
-If the user wants to update a lead's status, set the intent to 'update_status' and include the 'data' object with 'leadId' (must extract from availableLeads) and 'newStatus' (MUST be exactly one of: 'new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost').`;
+Specific Intent Data Requirements:
+- 'create_task': include 'data' object with 'title', 'dueDate' (YYYY-MM-DD), 'priority' (low/medium/high/urgent), and 'leadId' (if applicable based on availableLeads).
+- 'update_status': include 'data' object with 'leadId' (must extract from availableLeads) and 'newStatus' (MUST be exactly one of: 'new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost').
+- 'create_lead': include 'data' object with 'name', 'phone' (if available), 'email' (if available), 'propertyAddress', and 'notes'.
+- 'update_lead': include 'data' object with 'leadId' (MUST extract from availableLeads) and any updated fields.
+- 'delete_lead': include 'data' object with 'leadId' (MUST extract from availableLeads).`;
 
   try {
     // We utilize the gemini-2.5-flash model via the REST API for simplicity
