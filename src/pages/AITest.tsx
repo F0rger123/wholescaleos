@@ -179,6 +179,7 @@ export function AITest() {
       
       if (response.intent === 'redirect_setup') {
         setTimeout(() => navigate('/settings/ai'), 1500);
+      } else if (response.intent === 'rate_limit') {
         const retrySeconds = response.data?.retryAfter || 60;
         setRateLimit({ seconds: retrySeconds, originalPrompt: textToSubmit });
         const expiry = Date.now() + (retrySeconds * 1000);
@@ -210,12 +211,12 @@ export function AITest() {
           executeAction(response.intent, response.data, response.response);
         }
       }
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error('Gemini Submission Error:', error);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        content: "Sorry, I encountered an error communicating with the API.",
+        content: error instanceof Error ? `Error: ${error.message}` : "Sorry, I encountered an error communicating with the API.",
         timestamp: new Date().toISOString(),
         intent: 'error'
       }]);
@@ -285,15 +286,43 @@ export function AITest() {
     setLoading(true);
     try {
       const response = await processPrompt('ping', { test: true });
+      
+      if (response.intent === 'rate_limit') {
+        const retrySeconds = response.data?.retryAfter || 60;
+        setRateLimit({ seconds: retrySeconds, originalPrompt: '' }); // Don't queue the ping
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'ai',
+          content: `Test failed: Rate limit reached. Try again in ${retrySeconds}s.`,
+          timestamp: new Date().toISOString(),
+          intent: 'error'
+        }]);
+      } else if (response.intent === 'error') {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'ai',
+          content: `Test failed: ${response.response}`,
+          timestamp: new Date().toISOString(),
+          intent: 'error'
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'ai',
+          content: `Connection Test Success: ${response.response}`,
+          timestamp: new Date().toISOString(),
+          intent: 'test'
+        }]);
+      }
+    } catch (err: any) {
+      console.error('Test connection failed:', err);
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'ai',
-        content: `Connection Test: ${response.response}`,
+        content: `Test failed with exception: ${err.message}`,
         timestamp: new Date().toISOString(),
-        intent: 'test'
+        intent: 'error'
       }]);
-    } catch (err) {
-      console.error('Test connection failed:', err);
     } finally {
       setLoading(false);
     }
