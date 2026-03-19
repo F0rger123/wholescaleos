@@ -1,4 +1,4 @@
-import { useStore, TaskPriority } from '../store/useStore';
+import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '../store/useStore';
 
 export interface GeminiResponse {
   intent: string;
@@ -31,6 +31,32 @@ export function createTask(taskData: { title: string, dueDate?: string, priority
     leadId: taskData.leadId
   });
   return true;
+}
+
+export function updateLeadStatusViaAI(leadId: string, newStatus: LeadStatus): { success: boolean; message: string } {
+  const store = useStore.getState();
+  const lead = store.leads.find(l => l.id === leadId);
+  
+  if (!lead) {
+    return { success: false, message: `Lead with ID ${leadId} not found.` };
+  }
+  
+  if (lead.status === newStatus) {
+    return { success: true, message: `Lead is already marked as ${STATUS_LABELS[newStatus] || newStatus}.` };
+  }
+  
+  const allowedNextSteps = STATUS_FLOW[lead.status] || [];
+  if (!allowedNextSteps.includes(newStatus)) {
+    return { 
+      success: false, 
+      message: `Invalid status transition. Cannot move from '${STATUS_LABELS[lead.status]}' to '${STATUS_LABELS[newStatus]}'. Allowed next steps: ${allowedNextSteps.map(s => STATUS_LABELS[s]).join(', ')}` 
+    };
+  }
+  
+  const currentUser = store.currentUser?.id || 'system';
+  store.updateLeadStatus(leadId, newStatus, currentUser);
+  
+  return { success: true, message: `Successfully updated lead status to '${STATUS_LABELS[newStatus] || newStatus}'` };
 }
 
 /**
@@ -124,12 +150,13 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 Analyze the user's prompt and the provided application context to determine their intent and generate a helpful response.
 You MUST reply strictly with a seamless JSON object matching the following structure exactly (no markdown formatting, just raw JSON):
 {
-  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks'>",
+  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks', 'update_status'>",
   "response": "<your helpful response, explanation, or generated content>",
   "data": <optional object containing extracted parameters, e.g. {"title": "Call John", "dueDate": "2026-03-20", "priority": "high", "leadId": "123"} for create_task>
 }
 
-If the user wants to create a task, set the intent to 'create_task' and include the 'data' object with 'title', 'dueDate' (YYYY-MM-DD), 'priority' (low/medium/high/urgent), and 'leadId' (if applicable based on availableLeads).`;
+If the user wants to create a task, set the intent to 'create_task' and include the 'data' object with 'title', 'dueDate' (YYYY-MM-DD), 'priority' (low/medium/high/urgent), and 'leadId' (if applicable based on availableLeads).
+If the user wants to update a lead's status, set the intent to 'update_status' and include the 'data' object with 'leadId' (must extract from availableLeads) and 'newStatus' (MUST be exactly one of: 'new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost').`;
 
   try {
     // We utilize the gemini-2.5-flash model via the REST API for simplicity
