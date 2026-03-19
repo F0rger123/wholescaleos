@@ -1,6 +1,36 @@
+import { useStore } from '../store/useStore';
+
 export interface GeminiResponse {
   intent: string;
   response: string;
+}
+
+/**
+ * Helper to fetch today's calendar events and tasks to provide to Gemini.
+ */
+export function getTodaysSchedule() {
+  const today = new Date().toISOString().split('T')[0];
+  
+  // 1. Get tasks due today from useStore
+  const store = useStore.getState();
+  const tasksToday = store.tasks.filter(t => t.dueDate && t.dueDate.startsWith(today));
+  
+  // 2. Get local calendar events (Calendar.tsx stores these in localStorage)
+  let eventsToday = [];
+  try {
+    const saved = localStorage.getItem('calendarEvents');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      eventsToday = parsed.filter((e: any) => e.start && e.start.startsWith(today));
+    }
+  } catch (err) {
+    console.error('Could not parse calendarEvents from localStorage', err);
+  }
+
+  return {
+    tasksDueToday: tasksToday.map(t => ({ title: t.title, status: t.status, priority: t.priority })),
+    calendarEventsToday: eventsToday.map((e: any) => ({ title: e.title, start: e.start, end: e.end }))
+  };
 }
 
 /**
@@ -18,6 +48,12 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       response: 'Gemini API key is missing. Please configure VITE_GEMINI_API_KEY in your .env file.'
     };
   }
+
+  const schedule = getTodaysSchedule();
+  const enhancedContext = {
+    ...context,
+    todaysSchedule: schedule
+  };
 
   const systemInstruction = `You are an AI assistant for the WholeScale OS wholesale real estate application. 
 Analyze the user's prompt and the provided application context to determine their intent and generate a helpful response.
@@ -41,7 +77,7 @@ You MUST reply strictly with a seamless JSON object matching the following struc
         contents: [
           {
             role: 'user',
-            parts: [{ text: `Context: ${JSON.stringify(context)}\n\nUser Prompt: ${prompt}` }]
+            parts: [{ text: `Context: ${JSON.stringify(enhancedContext)}\n\nUser Prompt: ${prompt}` }]
           }
         ],
         generationConfig: {
