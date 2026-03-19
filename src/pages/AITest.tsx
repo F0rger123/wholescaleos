@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   processPrompt, 
   hasUserApiKey,
+  listAvailableModels,
   createTask, 
   updateLeadStatusViaAI, 
   createLeadViaAI, 
@@ -31,8 +32,9 @@ interface ChatMessage {
 export function AITest() {
   const navigate = useNavigate();
   const leads = useStore(state => state.leads);
-  const currentUser = useStore(state => state.currentUser);
+  const [currentUser] = useState(useStore.getState().currentUser);
   const [debug, setDebug] = useState(false);
+  const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [currentModel, setCurrentModel] = useState('gemini-1.5-flash');
   const [prompt, setPrompt] = useState(() => localStorage.getItem('ai_pending_prompt') || '');
   const [loading, setLoading] = useState(false);
@@ -725,7 +727,33 @@ export function AITest() {
             <div><span className="text-slate-500">Rate Limit Active:</span> {rateLimit ? 'Yes' : 'No'}</div>
             <div><span className="text-slate-500">Timer:</span> {rateLimit ? `${rateLimit.seconds}s` : 'None'}</div>
             <div><span className="text-slate-500">Model:</span> <span className="text-brand-400">{currentModel}</span></div>
-            <div className="pt-2 border-t border-slate-700/50 mt-2">
+            <div className="pt-2 flex flex-col gap-2 border-t border-slate-700/50 mt-2">
+              <button 
+                onClick={async () => {
+                  const key = localStorage.getItem('user_gemini_api_key');
+                  if (!key) {
+                    alert('No API key found in local storage.');
+                    return;
+                  }
+                  const models = await listAvailableModels(key);
+                  setAvailableModels(models);
+                  console.log('Available Models:', models);
+                }}
+                className="text-[10px] bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 px-2 py-1 rounded transition-colors text-center"
+              >
+                Fetch Available Models (Check Console)
+              </button>
+              
+              {availableModels.length > 0 && (
+                <div className="max-h-32 overflow-y-auto bg-black/20 rounded p-1 text-[9px] text-slate-400">
+                  {availableModels.map(m => (
+                    <div key={m.name} className="border-b border-white/5 py-0.5 last:border-0">
+                      {m.name.split('/').pop()}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <button 
                 onClick={() => {
                   localStorage.removeItem('ai_rate_limit_expiry');
