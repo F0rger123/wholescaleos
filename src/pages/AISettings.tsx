@@ -156,9 +156,10 @@ export function AISettings() {
           <label className="block text-sm font-medium text-slate-400 mb-3">Preferred AI Model</label>
           <div className="grid grid-cols-1 gap-3">
             {[
-              { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Fast, high limits, best for general chat' },
-              { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Smartest, very low limits, best for complex logic' },
-              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Balanced, experimental next-gen performance' }
+              { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'The newest model identified in your project. Fastest performance.' },
+              { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Powerful advanced reasoning model identified in your project.' },
+              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Balanced experimental next-gen performance.' },
+              { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Standard model (Note: May not be available in your project)' }
             ].map((m) => (
               <button
                 key={m.id}
