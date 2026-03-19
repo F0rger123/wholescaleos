@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { processPrompt, GeminiResponse, createTask } from '../lib/gemini';
+import { processPrompt, GeminiResponse, createTask, updateLeadStatusViaAI } from '../lib/gemini';
 
 export function AITest() {
   const [prompt, setPrompt] = useState('');
@@ -23,6 +23,9 @@ export function AITest() {
       
       if (response.intent === 'create_task' && response.data) {
         createTask(response.data);
+      } else if (response.intent === 'update_status' && response.data?.leadId && response.data?.newStatus) {
+        const result = updateLeadStatusViaAI(response.data.leadId, response.data.newStatus);
+        response.response += `\n\n[System Execution]: ${result.message}`;
       }
       
       setResult(response);
@@ -59,11 +62,12 @@ export function AITest() {
           <div className="flex flex-wrap gap-2">
             {[
               "Show me John Smith",
-              "What leads do I have?",
               "What tasks do I have today?",
-              "Show me my overdue tasks",
               "Create a task to call John Smith tomorrow",
-              "Remind me to follow up with the lead at 123 Main St"
+              "Mark John Smith as contacted",
+              "Move the lead at 123 Main St to negotiating",
+              "Close the deal with Sarah Jones as won",
+              "What's the status of the Smith property?"
             ].map(example => (
               <button
                 key={example}
