@@ -348,7 +348,7 @@ Specific Intent Data Requirements:
 
   try {
     // We utilize the gemini-1.5-flash model via the REST API for simplicity
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json' 
