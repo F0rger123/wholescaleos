@@ -344,9 +344,9 @@ export async function processPrompt(prompt: string, context: Record<string, any>
         if (data?.access_token && data.access_token !== 'active') model = data.access_token;
       } catch (err) {}
     }
-    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-1.5-flash';
+    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash';
   } else {
-    model = 'gemini-1.5-flash';
+    model = 'gemini-2.5-flash';
   }
   
   const enhancedContext = {
@@ -381,8 +381,8 @@ Specific Intent Data Requirements:
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
   try {
-    // Determine the correct API version (v1 for stable models, v1beta for experimental)
-    const apiVersion = (model.includes('2.0') || model.includes('exp')) ? 'v1beta' : 'v1';
+    // Determine the correct API version (v1 for stable 1.5 models, v1beta for 2.x/3.x experimental)
+    const apiVersion = (model.includes('2.0') || model.includes('2.5') || model.includes('3.') || model.includes('exp')) ? 'v1beta' : 'v1';
     const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 

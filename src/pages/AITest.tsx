@@ -35,7 +35,7 @@ export function AITest() {
   const [currentUser] = useState(useStore.getState().currentUser);
   const [debug, setDebug] = useState(false);
   const [availableModels, setAvailableModels] = useState<any[]>([]);
-  const [currentModel, setCurrentModel] = useState('gemini-1.5-flash');
+  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash');
   const [prompt, setPrompt] = useState(() => localStorage.getItem('ai_pending_prompt') || '');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
