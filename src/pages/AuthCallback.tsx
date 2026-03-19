@@ -29,30 +29,56 @@ export function AuthCallback() {
       addDebug(`📍 Hash: ${window.location.hash}`);
       addDebug(`📍 Search: ${window.location.search}`);
 
-      // Try to restore session if missing
-      if (!currentUser?.id) {
-        addDebug('🔄 No current user, attempting to restore session...');
-        const { data: { session } } = await supabase.auth.getSession();
+      // 1. First check for existing Supabase session
+      addDebug('🔄 Checking for existing Supabase session...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        addDebug(`⚠️ Session error: ${sessionError.message}`);
+      }
+
+      let userId = currentUser?.id;
+
+      if (session?.user) {
+        addDebug(`✅ Session found for user: ${session.user.id}`);
+        userId = session.user.id;
         
-        if (session?.user && mounted) {
-          addDebug(`✅ Session restored for user: ${session.user.id}`);
-          // Restore user to store
+        // Ensure store is updated
+        if (!currentUser?.id) {
+          addDebug('🔄 Synchronizing user store...');
           login(session.user.email || '', '');
-          // Wait a moment for store to update
-          await new Promise(r => setTimeout(r, 500));
+          // Give the store a moment to propagate
+          await new Promise(r => setTimeout(r, 100));
         }
       }
 
-      // Double-check user after potential restore
-      const store = useStore.getState();
-      const userId = store.currentUser?.id;
-      addDebug(`👤 Final user check: ${userId || 'none'}`);
-
+      // 2. If no session, wait a brief moment for any background refresh
       if (!userId) {
-        addDebug('❌ No authenticated user found');
+        addDebug('⏳ No session found immediately, waiting for refresh...');
+        await new Promise(r => setTimeout(r, 1000));
+        const { data: { session: secondCheck } } = await supabase.auth.getSession();
+        if (secondCheck?.user) {
+          userId = secondCheck.user.id;
+          login(secondCheck.user.email || '', '');
+        }
+      }
+
+      // 3. Fallback: Redirect to login with return_to parameter
+      if (!userId && mounted) {
+        addDebug('❌ No authenticated session found after retries');
         setStatus('error');
-        setMessage('Please log in first');
-        setTimeout(() => navigate('/login'), 3000);
+        setMessage('Your session has expired. Redirecting to login...');
+        
+        // Clear tokens/state if any
+        localStorage.removeItem('supabase.auth.token');
+        
+        // Preserve the current code for later if possible, but redirecting to login is safer
+        const currentUrl = new URL(window.location.href);
+        const returnUrl = encodeURIComponent('/settings/sms' + currentUrl.search + currentUrl.hash);
+        
+        setTimeout(() => {
+          navigate(`/login?return_to=${returnUrl}`);
+        }, 2000);
         return;
       }
 

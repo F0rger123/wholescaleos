@@ -364,6 +364,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
   // Helper: finalize login after successful auth
   const finalizeLogin = async (user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }, name?: string) => {
     const displayName = name || (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'User';
+    const returnTo = new URLSearchParams(window.location.search).get('return_to');
 
     // If signup had an invite code, join that team BEFORE navigating
     if (form.inviteCode.trim() && supabase) {
@@ -382,8 +383,14 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
       avatar: displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
     });
     sendWelcomeEmail(user.email || form.email, displayName).catch(() => {});
-    // Go to team selection so user can pick/create/join a team
-    navigate('/team-selection');
+    
+    // Redirect logic: return_to takes precedence, then team selection
+    if (returnTo) {
+      navigate(decodeURIComponent(returnTo));
+    } else {
+      // Go to team selection so user can pick/create/join a team
+      navigate('/team-selection');
+    }
   };
 
   // Helper: detect email-sending errors
