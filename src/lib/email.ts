@@ -576,18 +576,20 @@ export function mentionTemplate(
 // EMAIL SENDING SERVICE
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { useStore } from '../store/useStore';
+
 /**
- * Send an email via the Supabase Edge Function proxy.
+ * Send an email via the Gmail API directly.
  * 
- * The Edge Function (`send-email`) receives the payload and forwards it
- * to Resend using the server-side API key.
- * 
- * If Supabase isn't configured or the Edge Function isn't deployed,
- * it logs the email to console (dev mode) and returns success.
+ * Bypasses the need for a server-side Edge Function proxy by using the
+ * user's own Google OAuth token from the user_connections table.
  */
 export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
-  // Dev mode — log to console
-  if (!isSupabaseConfigured || !supabase) {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+
+  // Dev mode — log to console if no user or no Supabase
+  if (!isSupabaseConfigured || !supabase || !userId) {
     console.log('📧 [DEV] Email would be sent:', {
       to: payload.to,
       subject: payload.subject,
@@ -597,30 +599,86 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   }
 
   try {
-    const { data, error } = await supabase.functions.invoke('send-email', {
-      body: {
-        to: payload.to,
-        subject: payload.subject,
-        html: payload.html,
-        from: payload.from,
-        replyTo: payload.replyTo,
-      },
-    });
+    // 1. Get Google OAuth tokens for Gmail
+    let refreshToken = '';
+    const { data } = await supabase
+      .from('user_connections')
+      .select('refresh_token')
+      .eq('user_id', userId)
+      .eq('provider', 'google')
+      .maybeSingle();
+    
+    refreshToken = data?.refresh_token || '';
 
-    if (error) {
-      console.error('Email send failed:', error);
-      // Don't block the user flow — email is non-critical
-      return { success: false, error: error.message };
+    if (!refreshToken) {
+      console.warn('Google account not connected — email suppressed.');
+      return { success: false, error: 'Google account not connected. Please connect your Gmail in Settings.' };
     }
 
+    // 2. Refresh Access Token
+    const CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
+    const CLIENT_SECRET = "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";
+
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: refreshToken,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!refreshResponse.ok) {
+      const errData = await refreshResponse.json();
+      throw new Error(`Failed to refresh Google token: ${errData.error_description || refreshResponse.statusText}`);
+    }
+
+    const { access_token } = await refreshResponse.json();
+
+    // 3. Construct RFC 2822 message (supporting HTML)
+    const strMessage = [
+      `To: ${payload.to}`,
+      `Subject: ${payload.subject}`,
+      `Content-Type: text/html; charset="UTF-8"`,
+      `MIME-Version: 1.0`,
+      `Content-Transfer-Encoding: 7bit`,
+      '',
+      payload.html
+    ].join('\n');
+
+    const encodedMessage = btoa(unescape(encodeURIComponent(strMessage)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    // 4. Send via Gmail API
+    const gmailResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        raw: encodedMessage
+      }),
+    });
+
+    if (!gmailResponse.ok) {
+      const errData = await gmailResponse.json();
+      throw new Error(`Gmail API Error: ${errData.error?.message || gmailResponse.statusText}`);
+    }
+
+    const result = await gmailResponse.json();
     return {
       success: true,
-      messageId: data?.id || `msg-${Date.now()}`,
+      messageId: result.id || `msg-${Date.now()}`,
     };
+
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Email send error:', msg);
-    // Graceful fallback — never block the app
+    console.error('Email send error (Gmail API):', msg);
     return { success: false, error: msg };
   }
 }
