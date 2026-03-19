@@ -347,8 +347,8 @@ Specific Intent Data Requirements:
 - 'send_sms': include 'data' object with 'target' (lead name, team member name, or phone number) and 'message' (the text content).`;
 
   try {
-    // We utilize the gemini-1.5-flash model via the REST API for simplicity
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // We utilize the gemini-2.0-flash model via the REST API for simplicity
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json' 
