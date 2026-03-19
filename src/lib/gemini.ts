@@ -354,18 +354,14 @@ Specific Intent Data Requirements:
         'Content-Type': 'application/json' 
       },
       body: JSON.stringify({
-        system_instruction: {
-          parts: [{ text: systemInstruction }]
-        },
         contents: [
           {
             role: 'user',
-            parts: [{ text: `Context: ${JSON.stringify(enhancedContext)}\n\nUser Prompt: ${prompt}` }]
+            parts: [{ text: `${systemInstruction}\n\nContext: ${JSON.stringify(enhancedContext)}\n\nUser Prompt: ${prompt}` }]
           }
         ],
         generationConfig: {
-          response_mime_type: 'application/json',
-          temperature: 0.2, // Low temperature for more deterministic JSON intent parsing
+          temperature: 0.2,
         }
       })
     });
