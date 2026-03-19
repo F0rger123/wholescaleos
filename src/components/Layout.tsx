@@ -15,19 +15,27 @@ import {
   Calculator, Calendar, Bot,
 } from 'lucide-react';
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/leads', label: 'Leads', icon: Users },
-  { to: '/map', label: 'Map', icon: Map },
-  { to: '/tasks', label: 'Tasks', icon: ListTodo },
-  { to: '/chat', label: 'Chat', icon: MessageSquare },
-  { to: '/ai-test', label: 'AI Assistant', icon: Bot },
-  { to: '/imports', label: 'Imports', icon: Download },
-  { to: '/calendar', label: 'Calendar', icon: Calendar }, // Calendar view for team events
-  { to: '/calculators', label: 'Calculators', icon: Calculator },
-  { to: '/team', label: 'Team', icon: UserCog },
-  { to: '/settings', label: 'Settings', icon: Settings },
-];
+const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
+  Core: [
+    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/calendar', label: 'Calendar', icon: Calendar },
+    { to: '/map', label: 'Map', icon: Map },
+    { to: '/chat', label: 'Chat', icon: MessageSquare },
+  ],
+  Management: [
+    { to: '/leads', label: 'Leads', icon: Users },
+    { to: '/tasks', label: 'Tasks', icon: ListTodo },
+    { to: '/team', label: 'Team', icon: UserCog },
+  ],
+  Tools: [
+    { to: '/imports', label: 'Imports', icon: Download },
+    { to: '/calculators', label: 'Calculators', icon: Calculator },
+    { to: '/ai-test', label: 'AI Assistant', icon: Bot },
+  ],
+  Settings: [
+    { to: '/settings', label: 'Settings', icon: Settings },
+  ],
+};
 
 interface UserTeam {
   teamId: string;
@@ -47,6 +55,24 @@ export function Layout() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
+
+  // LocalStorage for collapsed sidebar sections
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('wholescale-nav-collapsed');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const toggleSection = (section: string) => {
+    const nextState = { ...collapsedSections, [section]: !collapsedSections[section] };
+    setCollapsedSections(nextState);
+    try {
+      localStorage.setItem('wholescale-nav-collapsed', JSON.stringify(nextState));
+    } catch { /* ignore */ }
+  };
 
   // Fetch all teams user belongs to
   useEffect(() => {
@@ -231,55 +257,90 @@ export function Layout() {
         )}
 
         {/* Nav */}
-        <nav className="flex-1 flex flex-col gap-1 p-3 mt-2">
-          {navItems.map(({ to, label, icon: Icon }) => {
-            const badge =
-              label === 'Tasks' ? pendingTaskCount :
-              label === 'Team' ? onlineCount :
-              label === 'Chat' ? totalUnread : 0;
+        <nav className="flex-1 flex flex-col p-3 mt-2 overflow-y-auto">
+          {Object.entries(navSections).map(([sectionName, items], sectionIndex) => {
+            const isCollapsed = collapsedSections[sectionName];
 
             return (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative ${
-                    isActive ? 'active-nav-item' : 'inactive-nav-item'
-                  }`
-                }
-                style={({ isActive }) => ({
-                  borderRadius: 'var(--t-radius)',
-                  background: isActive ? 'var(--t-primary-dim)' : 'transparent',
-                  color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
-                  boxShadow: isActive ? 'var(--t-glow-shadow)' : 'none',
-                })}
-              >
-                <Icon size={20} className="shrink-0" />
-                {sidebarOpen && <span className="flex-1">{label}</span>}
-                {sidebarOpen && badge > 0 && (
-                  <span
-                    className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
-                    style={{
-                      background: label === 'Tasks' ? 'var(--t-warning)' :
-                                  label === 'Chat' ? 'var(--t-primary)' :
-                                  'var(--t-success)',
-                    }}
+              <div key={sectionName} className={sectionIndex > 0 ? "pt-2 space-y-1" : "space-y-1"}>
+                {sidebarOpen && (
+                  <button
+                    onClick={() => toggleSection(sectionName)}
+                    className="w-full flex items-center justify-between px-3 py-1 mb-1 group"
                   >
-                    {badge}
-                  </span>
+                    <span 
+                      className="text-[10px] uppercase tracking-wider font-semibold transition-colors group-hover:text-current"
+                      style={{ color: 'var(--t-text-muted)' }}
+                    >
+                      {sectionName}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className={`transition-transform duration-200 group-hover:text-current ${isCollapsed ? '-rotate-90' : ''}`}
+                      style={{ color: 'var(--t-text-muted)' }}
+                    />
+                  </button>
                 )}
-                {!sidebarOpen && badge > 0 && (
-                  <span
-                    className="absolute right-2 w-2 h-2 rounded-full"
-                    style={{
-                      background: label === 'Tasks' ? 'var(--t-warning)' :
-                                  label === 'Chat' ? 'var(--t-primary)' :
-                                  'var(--t-success)',
-                    }}
-                  />
+                
+                {(!isCollapsed || !sidebarOpen) && (
+                  <div className="flex flex-col gap-1">
+                    {items.map(({ to, label, icon: Icon }) => {
+                      const badge =
+                        label === 'Tasks' ? pendingTaskCount :
+                        label === 'Team' ? onlineCount :
+                        label === 'Chat' ? totalUnread : 0;
+
+                      return (
+                        <NavLink
+                          key={to}
+                          to={to}
+                          end={to === '/'}
+                          className={({ isActive }) =>
+                            `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative ${
+                              isActive ? 'active-nav-item' : 'inactive-nav-item'
+                            }`
+                          }
+                          style={({ isActive }) => ({
+                            borderRadius: 'var(--t-radius)',
+                            background: isActive ? 'var(--t-primary-dim)' : 'transparent',
+                            color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
+                            boxShadow: isActive ? 'var(--t-glow-shadow)' : 'none',
+                          })}
+                        >
+                          <Icon size={20} className="shrink-0" />
+                          {sidebarOpen && <span className="flex-1">{label}</span>}
+                          {sidebarOpen && badge > 0 && (
+                            <span
+                              className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                              style={{
+                                background: label === 'Tasks' ? 'var(--t-warning)' :
+                                            label === 'Chat' ? 'var(--t-primary)' :
+                                            'var(--t-success)',
+                              }}
+                            >
+                              {badge}
+                            </span>
+                          )}
+                          {!sidebarOpen && badge > 0 && (
+                            <span
+                              className="absolute right-2 w-2 h-2 rounded-full"
+                              style={{
+                                background: label === 'Tasks' ? 'var(--t-warning)' :
+                                            label === 'Chat' ? 'var(--t-primary)' :
+                                            'var(--t-success)',
+                              }}
+                            />
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
                 )}
-              </NavLink>
+                
+                {!sidebarOpen && sectionIndex < Object.keys(navSections).length - 1 && (
+                  <div className="mx-3 my-2 border-b" style={{ borderColor: 'var(--t-sidebar-border)' }} />
+                )}
+              </div>
             );
           })}
         </nav>
