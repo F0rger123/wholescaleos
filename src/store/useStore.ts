@@ -150,6 +150,18 @@ export interface Task {
   leadId?: string;
 }
 
+export interface SMSMessage {
+  id: string;
+  user_id: string;
+  lead_id?: string;
+  phone_number: string;
+  content: string;
+  direction: 'inbound' | 'outbound';
+  gmail_message_id?: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export interface TeamConfig {
   id: string;
   name: string;
@@ -1243,7 +1255,7 @@ interface AppState {
   currentChannelId: string | null;
   typingUsers: Record<string, string[]>;
   chatSearchQuery: string;
-  unreadCounts: Record<string, number>;
+  unreadCounts: Record<string, number> & { sms: number };
 
   setCurrentChannel: (channelId: string) => void;
   sendMessage: (channelId: string, content: string, type?: MessageType, mentions?: string[], replyToId?: string | null, attachments?: ChatAttachment[]) => void;
@@ -1316,12 +1328,19 @@ interface AppState {
   addLeadPhoto: (leadId: string, photoId: string) => void;
   removeLeadPhoto: (leadId: string, photoId: string) => void;
   reorderLeadPhotos: (leadId: string, photos: string[]) => void;
+
+  // SMS
+  smsMessages: SMSMessage[];
+  setSMSMessages: (messages: SMSMessage[]) => void;
+  addSMSMessage: (message: SMSMessage) => void;
+  markSMSAsRead: (phoneNumber: string) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
   // ── Auth ──────────────────────────────────────────────────
   isAuthenticated: false,
   currentUser: null,
+  smsMessages: [],
   authLoading: false,
   authError: null,
 
@@ -1364,7 +1383,9 @@ export const useStore = create<AppState>((set, get) => ({
     coverageAreas: [],
     notifications: [],
     callRecordings: [],
-    unreadCounts: {},
+    smsMessages: [],
+    unreadCounts: { sms: 0 },
+    chatSearchQuery: '',
     currentChannelId: null,
     dataLoaded: false,
     teamId: null,
@@ -1762,7 +1783,7 @@ export const useStore = create<AppState>((set, get) => ({
   currentChannelId: null,
   typingUsers: {},
   chatSearchQuery: '',
-  unreadCounts: {},
+  unreadCounts: { sms: 0 },
 
   setCurrentChannel: (channelId) => set({ currentChannelId: channelId }),
 
@@ -2651,4 +2672,40 @@ deleteChannel: (channelId) => {
         l.id === leadId ? { ...l, photos, updatedAt: new Date().toISOString() } : l
       ),
     })),
+
+  // ── SMS ──────────────────────────────────────────────────
+  setSMSMessages: (messages) => {
+    const unreadCount = messages.filter(m => !m.is_read && m.direction === 'inbound').length;
+    set((state: any) => ({ 
+      smsMessages: messages,
+      unreadCounts: { ...state.unreadCounts, sms: unreadCount }
+    }));
+  },
+
+  addSMSMessage: (message) => {
+    set((state: any) => {
+      const exists = state.smsMessages.some((m: any) => m.id === message.id || (m.gmail_message_id && m.gmail_message_id === message.gmail_message_id));
+      if (exists) return state;
+
+      const newMessages = [message, ...state.smsMessages];
+      const unreadCount = newMessages.filter((m: any) => !m.is_read && m.direction === 'inbound').length;
+      return {
+        smsMessages: newMessages,
+        unreadCounts: { ...state.unreadCounts, sms: unreadCount }
+      };
+    });
+  },
+
+  markSMSAsRead: (phone) => {
+    set((state: any) => {
+      const nextMessages = state.smsMessages.map((m: any) => 
+        m.phone_number === phone && m.direction === 'inbound' ? { ...m, is_read: true } : m
+      );
+      const unreadCount = nextMessages.filter((m: any) => !m.is_read && m.direction === 'inbound').length;
+      return {
+        smsMessages: nextMessages,
+        unreadCounts: { ...state.unreadCounts, sms: unreadCount }
+      };
+    });
+  }
 }));

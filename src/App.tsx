@@ -23,6 +23,8 @@ import Calendar from './pages/Calendar';
 import { AITest } from './pages/AITest';
 import { AISettings } from './pages/AISettings';
 import { SMSSettings } from './pages/SMSSettings';
+import { SMSInbox } from './pages/SMSInbox';
+import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -129,6 +131,17 @@ export function App() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Start/Stop SMS Polling based on auth status
+  const isAuthenticated = useStore(s => s.isAuthenticated);
+  useEffect(() => {
+    if (isAuthenticated) {
+      startSMSPolling();
+    } else {
+      stopSMSPolling();
+    }
+    return () => stopSMSPolling();
+  }, [isAuthenticated]);
+
   if (checking) return <LoadingScreen />;
 
   return (
@@ -161,6 +174,7 @@ export function App() {
           <Route path="/settings/sms" element={<SMSSettings />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/ai-test" element={<AITest />} />
+          <Route path="/sms" element={<SMSInbox />} />
         </Route>
         
         {/* Catch all */}
