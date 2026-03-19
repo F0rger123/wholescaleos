@@ -88,13 +88,16 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
       try {
         const { error } = await supabase
           .from('user_connections')
-          .upsert({
-            user_id: currentUser.id,
-            provider: 'gemini',
-            access_token: model, // Storing model here if we don't have a dedicated column
-            refresh_token: apiKey, // In production, this should be encrypted
-            updated_at: new Date().toISOString(),
-          });
+          .upsert(
+            {
+              user_id: currentUser.id,
+              provider: 'gemini',
+              access_token: model, // Storing model here if we don't have a dedicated column
+              refresh_token: apiKey, // In production, this should be encrypted
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,provider' }
+          );
 
         if (error) throw error;
         setSaveResult({ success: true, message: 'API key saved securely to your account.' });
