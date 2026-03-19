@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { AISettings } from './AISettings';
 import { SMSSettings } from './SMSSettings';
+import { ShortcutSettings } from './ShortcutSettings';
+import { Keyboard } from 'lucide-react';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Building },
@@ -22,6 +24,7 @@ const TABS = [
   { id: 'email', label: 'Email', icon: Mail },
   { id: 'ai', label: 'AI Assistant', icon: Sparkles },
   { id: 'sms', label: 'SMS Messaging', icon: Smartphone },
+  { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
   { id: 'backup', label: 'Backup', icon: HardDrive },
   { id: 'data', label: 'Data', icon: Database },
 ];
@@ -77,6 +80,7 @@ export default function SettingsPage() {
           {activeTab === 'email' && <EmailTab />}
           {activeTab === 'ai' && <AISettings hideHeader />}
           {activeTab === 'sms' && <SMSSettings />}
+          {activeTab === 'shortcuts' && <ShortcutSettings />}
           {activeTab === 'backup' && <BackupTab />}
           {activeTab === 'data' && <DataTab />}
         </div>

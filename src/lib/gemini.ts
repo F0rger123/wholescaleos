@@ -349,8 +349,26 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     model = 'gemini-2.5-flash-lite';
   }
   
+  // Get AI Personality from profiles.settings
+  let aiName = localStorage.getItem('user_ai_name') || 'AI Assistant';
+  let aiTone = localStorage.getItem('user_ai_tone') || 'friendly';
+
+  if (userId && isSupabaseConfigured && supabase) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('settings')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profile?.settings?.ai_name) aiName = profile.settings.ai_name;
+      if (profile?.settings?.ai_tone) aiTone = profile.settings.ai_tone;
+    } catch (err) {}
+  }
+
   const enhancedContext = {
     ...context,
+    userPreferences: { aiName, aiTone },
     todaysSchedule: schedule,
     todaysTasks: todaysTasks,
     allTasks: allTasks,
@@ -360,22 +378,38 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       : leadsRaw
   };
 
-  const systemInstruction = `You are an AI assistant for the WholeScale OS wholesale real estate application. 
-Analyze the user's prompt and the provided application context to determine their intent and generate a helpful response.
-You MUST reply strictly with a seamless JSON object matching the following structure exactly (no markdown formatting, just raw JSON):
+  const toneInstructions = {
+    friendly: "Use a warm, casual tone with occasional emojis. Be helpful and encouraging.",
+    professional: "Use a formal, business-like tone. Be concise, respectful, and authoritative.",
+    direct: "Be extremely concise and to the point. Minimal conversational filler.",
+    custom: localStorage.getItem('user_ai_custom_tone') || "Follow the user's specific tonal preferences."
+  };
+
+  const systemInstruction = `You are ${aiName}, a highly capable AI assistant for the WholeScale OS real estate platform. 
+Your personality: ${toneInstructions[aiTone as keyof typeof toneInstructions] || toneInstructions.friendly}
+
+Core Rules:
+1. RESPONSE FORMAT: Strictly return raw JSON matching the structure below. No markdown backticks.
+2. SMS RECOGNITION: If the user provides a raw phone number (e.g. 555-0199), use it DIRECTLY as the 'target' in 'send_sms'. 
+   Do NOT try to look up a name if a clear number is provided.
+3. GUARDRAILS: For intents 'create_lead', 'update_lead', 'delete_lead', and 'send_sms', you MUST ask for confirmation first if the user hasn't explicitly said "yes" or "proceed" to a specific plan. 
+   Use intent 'confirm_action' to summarize what you are about to do and ask for permission.
+4. CONFIRMATION UI: When returning 'confirm_action', provide a clear, detailed summary in the 'response' field and include the intended action data in the 'data' field.
+
+JSON Structure:
 {
-  "intent": "<a short string identifying the action, e.g., 'create_team', 'navigate', 'ask_question', 'analyze_deal', 'create_task', 'get_tasks', 'update_status', 'create_lead', 'update_lead', 'delete_lead', 'get_team', 'send_sms'>",
-  "response": "<your helpful, conversational response to the user's command>",
-  "data": <optional object containing extracted parameters>
+  "intent": "<intent_name | 'confirm_action' | 'ask_question' | 'navigate'>",
+  "response": "<conversational response in your specified ${aiTone} tone>",
+  "data": <object matching intent requirements>
 }
 
-Specific Intent Data Requirements:
-- 'create_task': include 'data' object with 'title', 'dueDate' (YYYY-MM-DD), 'priority' (low/medium/high/urgent), and 'leadId' (if applicable based on availableLeads).
-- 'update_status': include 'data' object with 'leadId' (must extract from availableLeads) and 'newStatus' (MUST be exactly one of: 'new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost').
-- 'create_lead': include 'data' object with 'name', 'phone' (if available), 'email' (if available), 'propertyAddress', and 'notes'.
-- 'update_lead': include 'data' object with 'leadId' (MUST extract from availableLeads) and any updated fields.
-- 'delete_lead': include 'data' object with 'leadId' (MUST extract from availableLeads).
-- 'send_sms': include 'data' object with 'target' (lead name, team member name, or phone number) and 'message' (the text content).`;
+Intent Requirements:
+- 'send_sms': data: { "target": "name or number", "message": "content" }
+- 'create_task': data: { "title": "string", "dueDate": "YYYY-MM-DD", "priority": "low/medium/high/urgent", "leadId": "id" }
+- 'update_status': data: { "leadId": "id", "newStatus": "new/contacted/qualified/negotiating/closed-won/closed-lost" }
+- 'create_lead': data: { "name": "...", "phone": "...", "email": "...", "propertyAddress": "...", "notes": "..." }
+- 'update_lead': data: { "leadId": "id", "any_field": "value" }
+- 'delete_lead': data: { "leadId": "id" }`;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
