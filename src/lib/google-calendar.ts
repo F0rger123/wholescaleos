@@ -44,7 +44,7 @@ export class GoogleCalendarService {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send',
       access_type: 'offline',
       prompt: 'consent',
       include_granted_scopes: 'true',
@@ -69,7 +69,7 @@ export class GoogleCalendarService {
         .select('refresh_token')
         .eq('user_id', userId)
         .eq('provider', 'google')
-        .single();
+        .maybeSingle();
 
       if (error || !data?.refresh_token) return null;
 
@@ -90,6 +90,22 @@ export class GoogleCalendarService {
     } catch (err) {
       console.error('Error getting access token:', err);
       return null;
+    }
+  }
+
+  async hasGmailPermission(userId: string): Promise<boolean> {
+    const token = await this.getAccessToken(userId);
+    if (!token) return false;
+
+    try {
+      const response = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${token}`);
+      if (!response.ok) return false;
+      const info = await response.json();
+      const scopes = info.scope || '';
+      return scopes.includes('https://www.googleapis.com/auth/gmail.send');
+    } catch (err) {
+      console.error('Error checking Gmail permission:', err);
+      return false;
     }
   }
 

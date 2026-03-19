@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Smartphone, Send, Loader2, Check, AlertCircle, Save, ExternalLink } from 'lucide-react';
+import { Smartphone, Send, Loader2, Check, AlertCircle, Save, ExternalLink, RefreshCw } from 'lucide-react';
 import { sendEmail } from '../lib/email';
+import { GoogleCalendarService } from '../lib/google-calendar';
 
 export const SMS_GATEWAYS: Record<string, string> = {
   'AT&T': 'txt.att.net',
@@ -23,6 +24,7 @@ export function SMSSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [hasGmailPerm, setHasGmailPerm] = useState<boolean | null>(null);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const { currentUser } = useStore();
@@ -33,6 +35,11 @@ export function SMSSettings() {
         setLoading(false);
         return;
       }
+
+      // Check Gmail Permission
+      const googleService = GoogleCalendarService.getInstance();
+      const hasPerm = await googleService.hasGmailPermission(currentUser.id);
+      setHasGmailPerm(hasPerm);
 
       if (isSupabaseConfigured && supabase) {
         try {
@@ -60,6 +67,11 @@ export function SMSSettings() {
 
     loadPreferences();
   }, [currentUser]);
+
+  const handleReconnectGoogle = () => {
+    const googleService = GoogleCalendarService.getInstance();
+    window.location.href = googleService.getAuthUrl();
+  };
 
   const handleTestSMS = async () => {
     if (!phone || !carrier) return;
@@ -153,6 +165,25 @@ export function SMSSettings() {
             <p className="text-xs text-slate-500">Uses email-to-SMS to send messages free of charge.</p>
           </div>
         </div>
+
+        {hasGmailPerm === false && (
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-3">
+            <div className="flex items-start gap-3 text-amber-400">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold">Gmail Send Permission Required</p>
+                <p className="text-xs opacity-80">You need to grant permission to send emails to use the SMS gateway.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleReconnectGoogle}
+              className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reconnect Google Account
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
