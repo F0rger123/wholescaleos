@@ -21,6 +21,7 @@ import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
 import Calendar from './pages/Calendar';
 import { AITest } from './pages/AITest';
+import { AISettings } from './pages/AISettings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -155,6 +156,7 @@ export function App() {
           <Route path="/imports" element={<Imports />} />
           <Route path="/calculators" element={<Calculators />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings/ai" element={<AISettings />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/ai-test" element={<AITest />} />
         </Route>

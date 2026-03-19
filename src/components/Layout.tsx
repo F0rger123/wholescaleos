@@ -34,6 +34,7 @@ const navSections: Record<string, { to: string; label: string; icon: any }[]> = 
   ],
   Settings: [
     { to: '/settings', label: 'Settings', icon: Settings },
+    { to: '/settings/ai', label: 'AI Configuration', icon: Bot },
   ],
 };
 
