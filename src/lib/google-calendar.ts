@@ -131,12 +131,16 @@ export class GoogleCalendarService {
 
       const { error } = await supabase
         .from('user_connections')
-        .upsert({
-          user_id: userId,
-          provider: 'google',
-          access_token: 'connected',
-          refresh_token: tokens.refresh_token || code,
-        });
+        .upsert(
+          {
+            user_id: userId,
+            provider: 'google',
+            access_token: 'connected',
+            refresh_token: tokens.refresh_token || code,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,provider' }
+        );
 
       return !error;
       
