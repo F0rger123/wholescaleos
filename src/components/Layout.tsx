@@ -12,7 +12,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
-  Calculator, Calendar,
+  Calculator, Calendar, Bot,
 } from 'lucide-react';
 
 const navItems = [
@@ -21,6 +21,7 @@ const navItems = [
   { to: '/map', label: 'Map', icon: Map },
   { to: '/tasks', label: 'Tasks', icon: ListTodo },
   { to: '/chat', label: 'Chat', icon: MessageSquare },
+  { to: '/ai-test', label: 'AI Assistant', icon: Bot },
   { to: '/imports', label: 'Imports', icon: Download },
   { to: '/calendar', label: 'Calendar', icon: Calendar }, // Calendar view for team events
   { to: '/calculators', label: 'Calculators', icon: Calculator },
