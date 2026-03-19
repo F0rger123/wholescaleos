@@ -268,4 +268,15 @@ export class GoogleCalendarService {
       { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }
     );
   }
+
+  async testConnection(): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.from('user_connections').select('id').limit(1);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      console.error('Service connection test failed:', err);
+      return false;
+    }
+  }
 }
