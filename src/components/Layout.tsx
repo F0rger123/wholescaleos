@@ -21,6 +21,7 @@ const navSections: Record<string, { to: string; label: string; icon: any }[]> = 
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/calendar', label: 'Calendar', icon: Calendar },
     { to: '/map', label: 'Map', icon: Map },
+    { to: '/sms', label: 'SMS', icon: MessageSquare },
     { to: '/chat', label: 'Chat', icon: MessageSquare },
   ],
   Management: [
@@ -291,7 +292,8 @@ export function Layout() {
                       const badge =
                         label === 'Tasks' ? pendingTaskCount :
                         label === 'Team' ? onlineCount :
-                        label === 'Chat' ? totalUnread : 0;
+                        label === 'Chat' ? totalUnread : 
+                        label === 'SMS' ? 0 : 0; // Placeholder for SMS unread count
 
                       return (
                         <NavLink

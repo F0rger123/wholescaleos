@@ -10,7 +10,12 @@ import {
   deleteLeadViaAI,
   sendSMSViaAI 
 } from '../lib/gemini';
-import { Bot, User, Send, Target, Sparkles, Check, Trash2, UserPlus, Key, Loader2, AlertTriangle, ExternalLink, RefreshCw, Smartphone } from 'lucide-react';
+import { 
+  Bot, User, Send, Target, Sparkles, Check, Trash2, 
+  UserPlus, Key, Loader2, AlertTriangle, ExternalLink, 
+  RefreshCw, Smartphone, Search, X 
+} from 'lucide-react';
+import { useStore } from '../store/useStore';
 
 interface ChatMessage {
   id: string;
@@ -24,9 +29,16 @@ interface ChatMessage {
 
 export function AITest() {
   const navigate = useNavigate();
+  const leads = useStore(state => state.leads);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    intent: string;
+    data: any;
+    response: string;
+  } | null>(null);
+  const [leadSearch, setLeadSearch] = useState('');
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
@@ -58,16 +70,34 @@ export function AITest() {
   }, [hasKey]);
 
   useEffect(() => {
+    // Check for persisted rate limit on mount
+    const savedExpiry = localStorage.getItem('ai_rate_limit_expiry');
+    if (savedExpiry) {
+      const expiry = parseInt(savedExpiry);
+      const now = Date.now();
+      if (expiry > now) {
+        const remaining = Math.ceil((expiry - now) / 1000);
+        setRateLimit({ seconds: remaining, originalPrompt: '' });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     let interval: any;
     if (rateLimit && rateLimit.seconds > 0) {
+      // Persist expiry whenever rateLimit is set/updated
+      const expiry = Date.now() + (rateLimit.seconds * 1000);
+      localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
+
       interval = setInterval(() => {
         setRateLimit(prev => prev ? { ...prev, seconds: prev.seconds - 1 } : null);
       }, 1000);
     } else if (rateLimit && rateLimit.seconds === 0) {
       // Auto-retry when reaches zero
+      localStorage.removeItem('ai_rate_limit_expiry');
       const p = rateLimit.originalPrompt;
       setRateLimit(null);
-      handleSubmit(undefined, p);
+      if (p) handleSubmit(undefined, p);
     }
     return () => clearInterval(interval);
   }, [rateLimit]);
@@ -101,49 +131,34 @@ export function AITest() {
         currentTime: new Date().toISOString()
       });
       
-      let systemLog = undefined;
-      
       if (response.intent === 'redirect_setup') {
         setTimeout(() => navigate('/settings/ai'), 1500);
       } else if (response.intent === 'rate_limit') {
-        setRateLimit({ seconds: response.data?.retryAfter || 60, originalPrompt: textToSubmit });
-      }
-      
-      // Execute UI commands silently behind the scenes
-      if (response.intent === 'create_task' && response.data) {
-        createTask(response.data);
-        systemLog = `System: Created task '${response.data.title}'`;
-      } else if (response.intent === 'update_status' && response.data?.leadId && response.data?.newStatus) {
-        const result = updateLeadStatusViaAI(response.data.leadId, response.data.newStatus);
-        systemLog = `System: ${result.message}`;
-      } else if (response.intent === 'create_lead' && response.data) {
-        const result = createLeadViaAI(response.data);
-        systemLog = `System: ${result.message}`;
-      } else if (response.intent === 'update_lead' && response.data?.leadId) {
-        const result = updateLeadViaAI(response.data.leadId, response.data);
-        systemLog = `System: ${result.message}`;
-      } else if (response.intent === 'delete_lead' && response.data?.leadId) {
-        const result = deleteLeadViaAI(response.data.leadId);
-        systemLog = `System: ${result.message}`;
-      } else if (response.intent === 'send_sms' && response.data?.target && response.data?.message) {
-        setLoading(true); // Re-flag for async operation
-        const result = await sendSMSViaAI(response.data.target, response.data.message);
-        systemLog = `System: ${result.message}`;
-        setLoading(false);
+        const retrySeconds = response.data?.retryAfter || 60;
+        setRateLimit({ seconds: retrySeconds, originalPrompt: textToSubmit });
+        const expiry = Date.now() + (retrySeconds * 1000);
+        localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
       }
       
       if (response.intent !== 'rate_limit') {
-        const aiMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'ai',
-          content: response.response || "I couldn't process that request.",
-          timestamp: new Date().toISOString(),
-          intent: response.intent,
-          data: response.data,
-          systemLog
-        };
+        const leadIntents = ['update_status', 'update_lead', 'delete_lead', 'send_sms'];
+        const needsLead = leadIntents.includes(response.intent);
         
-        setMessages(prev => [...prev, aiMessage]);
+        if (needsLead) {
+          setPendingAction({
+            intent: response.intent,
+            data: response.data,
+            response: response.response || ''
+          });
+          // Pre-populate search with target if available
+          if (response.data?.target) setLeadSearch(response.data.target);
+          else if (response.data?.leadId) {
+            const l = leads.find(lead => lead.id === response.data.leadId);
+            if (l) setLeadSearch(l.name || '');
+          }
+        } else {
+          executeAction(response.intent, response.data, response.response);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -155,7 +170,53 @@ export function AITest() {
         intent: 'error'
       }]);
     } finally {
+      if (!pendingAction) setLoading(false);
+    }
+  };
+
+  const executeAction = async (intent: string, data: any, aiResponse: string, confirmedLeadId?: string) => {
+    let systemLog = undefined;
+    const finalData = confirmedLeadId ? { ...data, leadId: confirmedLeadId } : data;
+
+    try {
+      if (intent === 'create_task' && finalData) {
+        createTask(finalData);
+        systemLog = `System: Created task '${finalData.title}'`;
+      } else if (intent === 'update_status' && finalData?.leadId && finalData?.newStatus) {
+        const result = updateLeadStatusViaAI(finalData.leadId, finalData.newStatus);
+        systemLog = `System: ${result.message}`;
+      } else if (intent === 'create_lead' && finalData) {
+        const result = createLeadViaAI(finalData);
+        systemLog = `System: ${result.message}`;
+      } else if (intent === 'update_lead' && finalData?.leadId) {
+        const result = updateLeadViaAI(finalData.leadId, finalData);
+        systemLog = `System: ${result.message}`;
+      } else if (intent === 'delete_lead' && finalData?.leadId) {
+        const result = deleteLeadViaAI(finalData.leadId);
+        systemLog = `System: ${result.message}`;
+      } else if (intent === 'send_sms' && (finalData?.target || finalData?.leadId) && finalData?.message) {
+        setLoading(true);
+        const target = confirmedLeadId || finalData.target;
+        const result = await sendSMSViaAI(target, finalData.message);
+        systemLog = `System: ${result.message}`;
+      }
+
+      const aiMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'ai',
+        content: aiResponse || "Action completed.",
+        timestamp: new Date().toISOString(),
+        intent: intent,
+        data: finalData,
+        systemLog
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (err) {
+      console.error('Action failed:', err);
+    } finally {
       setLoading(false);
+      setPendingAction(null);
     }
   };
 
@@ -321,22 +382,34 @@ export function AITest() {
       )}
 
       {/* Input Area */}
-      <div className={`bg-slate-800/50 p-3 rounded-2xl border border-slate-700 transition-opacity ${rateLimit ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x mb-2 px-1">
-          {quickPrompts.map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => handleSubmit(undefined, item.prompt)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-brand-500/20 text-slate-300 hover:text-brand-300 text-xs rounded-full border border-slate-700 transition-colors whitespace-nowrap snap-start"
-            >
-              <span className="text-brand-400">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+      <div className={`bg-slate-800/50 p-3 rounded-2xl border border-slate-700 transition-all ${rateLimit && !rateLimit.originalPrompt ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x px-1">
+            {quickPrompts.map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setPrompt(item.prompt);
+                  const ta = document.querySelector('textarea');
+                  if (ta) {
+                    ta.focus();
+                    ta.value = item.prompt; // force update for immediate focus
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-brand-500/20 text-slate-300 hover:text-brand-300 text-xs rounded-full border border-slate-700 transition-colors whitespace-nowrap snap-start group"
+              >
+                <span className="text-brand-400 group-hover:scale-110 transition-transform">{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-[10px] text-slate-500 font-medium whitespace-nowrap px-2">
+            (click to edit prompt)
+          </span>
         </div>
         
-        <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+        <form onSubmit={handleSubmit} className="flex gap-2 items-end relative">
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
@@ -346,19 +419,125 @@ export function AITest() {
                 handleSubmit();
               }
             }}
-            placeholder="Type your message..."
-            className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none text-slate-200 resize-none min-h-[50px] max-h-[150px]"
+            placeholder={rateLimit && rateLimit.originalPrompt ? "Your message is queued..." : "Type your message..."}
+            className={`flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none text-slate-200 resize-none min-h-[50px] max-h-[150px] transition-all ${rateLimit && rateLimit.originalPrompt ? 'bg-brand-500/5 italic' : ''}`}
             rows={1}
+            disabled={loading || !!(rateLimit && rateLimit.originalPrompt)}
           />
           <button
             type="submit"
-            disabled={loading || !prompt.trim()}
-            className="w-12 h-12 shrink-0 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:bg-slate-700 text-white rounded-xl flex items-center justify-center transition-colors"
+            disabled={loading || !prompt.trim() || !!(rateLimit && rateLimit.originalPrompt)}
+            className="w-12 h-12 shrink-0 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:bg-slate-700 text-white rounded-xl flex items-center justify-center transition-colors group relative overflow-hidden"
           >
-            <Send className="w-5 h-5" />
+            {rateLimit && rateLimit.originalPrompt ? (
+              <RefreshCw className="w-5 h-5 animate-spin text-brand-400" />
+            ) : (
+              <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+            )}
           </button>
         </form>
       </div>
+
+      {/* Lead Selection Modal */}
+      {pendingAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/50">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Target className="w-5 h-5 text-brand-400" />
+                  Confirm Lead for Action
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5 capitalize">Intent: {pendingAction.intent.replace('_', ' ')}</p>
+              </div>
+              <button 
+                onClick={() => { setPendingAction(null); setLoading(false); }}
+                className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-800/30 border-b border-slate-700">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                <input 
+                  autoFocus
+                  type="text"
+                  value={leadSearch}
+                  onChange={(e) => setLeadSearch(e.target.value)}
+                  placeholder="Search leads by name or address..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-1 focus:ring-brand-500 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {leads
+                .filter(l => 
+                  (l.name?.toLowerCase().includes(leadSearch.toLowerCase())) || 
+                  (l.propertyAddress?.toLowerCase().includes(leadSearch.toLowerCase()))
+                )
+                .slice(0, 50)
+                .map(lead => (
+                  <button
+                    key={lead.id}
+                    onClick={() => executeAction(pendingAction.intent, pendingAction.data, pendingAction.response, lead.id)}
+                    className="w-full flex items-center justify-between p-3 hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-slate-700 group text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-300 text-sm">
+                        {lead.name?.charAt(0) || 'U'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white group-hover:text-brand-400 transition-colors">
+                          {lead.name || 'Unknown Lead'}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate max-w-[200px]">{lead.propertyAddress || 'No address'}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
+                        lead.status === 'new' ? 'bg-blue-500/10 text-blue-400' :
+                        lead.status === 'closed-won' ? 'bg-emerald-500/10 text-emerald-400' :
+                        'bg-slate-700 text-slate-400'
+                      }`}>
+                        {lead.status}
+                      </span>
+                      <p className="text-[10px] text-slate-500">{lead.phone || 'No phone'}</p>
+                    </div>
+                  </button>
+                ))
+              }
+              {leads.filter(l => 
+                  (l.name?.toLowerCase().includes(leadSearch.toLowerCase())) || 
+                  (l.propertyAddress?.toLowerCase().includes(leadSearch.toLowerCase()))
+                ).length === 0 && (
+                <div className="p-8 text-center bg-slate-900/50 rounded-xl border border-dashed border-slate-700">
+                  <UserPlus className="w-10 h-10 text-slate-700 mx-auto mb-2" />
+                  <p className="text-sm text-slate-400">No matching leads found.</p>
+                  <p className="text-xs text-slate-600 mt-1">Try a different search term or add a new lead.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-slate-800 bg-slate-800/20 flex gap-3">
+              <button 
+                onClick={() => { setPendingAction(null); setLoading(false); }}
+                className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => executeAction(pendingAction.intent, pendingAction.data, pendingAction.response)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white transition-colors text-sm font-medium"
+              >
+                Execute Without Lead
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
