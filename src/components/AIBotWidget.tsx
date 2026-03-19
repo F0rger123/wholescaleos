@@ -6,7 +6,16 @@ import {
   User, Key
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { processPrompt, hasUserApiKey } from '../lib/gemini';
+import { 
+  processPrompt, 
+  hasUserApiKey,
+  createTask,
+  updateLeadStatusViaAI,
+  createLeadViaAI,
+  updateLeadViaAI,
+  deleteLeadViaAI,
+  sendSMSViaAI
+} from '../lib/gemini';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface ChatMessage {
@@ -145,15 +154,44 @@ export function AIBotWidget() {
     }
   };
 
-  const handleExecuteAction = (intent: string, _data: any) => {
-    // In the widget, we might just confirm and tell the user to check the specific page
-    // Or we use the same action executors if they are available in gemini.ts
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'ai',
-      content: `Confirmed! I'm ${intent.replace('_', ' ')}ing now.`,
-      timestamp: new Date().toISOString()
-    }]);
+  const handleExecuteAction = async (intent: string, data: any) => {
+    let result: { success: boolean; message: string } | null = null;
+    
+    try {
+      if (intent === 'create_task') {
+        createTask(data);
+        result = { success: true, message: `Successfully created task: ${data.title}` };
+      } else if (intent === 'update_status' && data?.leadId) {
+        result = updateLeadStatusViaAI(data.leadId, data.newStatus);
+      } else if (intent === 'create_lead') {
+        result = createLeadViaAI(data);
+      } else if (intent === 'update_lead' && data?.leadId) {
+        result = updateLeadViaAI(data.leadId, data);
+      } else if (intent === 'delete_lead' && data?.leadId) {
+        result = deleteLeadViaAI(data.leadId);
+      } else if (intent === 'send_sms' && (data?.target || data?.leadId) && data?.message) {
+        setLoading(true);
+        result = await sendSMSViaAI(data.target || data.leadId, data.message);
+        setLoading(false);
+      }
+
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'ai',
+        content: result?.message || "Action successfully completed.",
+        timestamp: new Date().toISOString(),
+        intent: intent
+      }]);
+    } catch (err) {
+      console.error('Widget action failed:', err);
+      setLoading(false);
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'ai',
+        content: "Sorry, I couldn't complete that action. Please check your settings and try again.",
+        timestamp: new Date().toISOString()
+      }]);
+    }
   };
 
   if (hasKey === false && isOpen) {
