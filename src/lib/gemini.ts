@@ -34,6 +34,34 @@ export function getTodaysSchedule() {
 }
 
 /**
+ * Look up leads by name or partial address from the useStore.
+ * Returns formatted details optimized for AI context.
+ */
+export function lookupLeads(query?: string) {
+  const store = useStore.getState();
+  const allLeads = store.leads || [];
+  
+  let filtered = allLeads;
+  if (query) {
+    const q = query.toLowerCase();
+    filtered = allLeads.filter(l => 
+      (l.name && l.name.toLowerCase().includes(q)) || 
+      (l.propertyAddress && l.propertyAddress.toLowerCase().includes(q))
+    );
+  }
+
+  // Format nicely for the AI to understand
+  return filtered.map(l => ({
+    name: l.name || 'Unknown',
+    status: l.status || 'new',
+    address: l.propertyAddress || 'No address',
+    estimatedValue: l.estimatedValue || 0,
+    phone: l.phone || 'No phone',
+    email: l.email || 'No email'
+  }));
+}
+
+/**
  * Sends a prompt and context to the Gemini API and returns a parsed intent and response.
  * Expects VITE_GEMINI_API_KEY to be set in your .env file.
  */
@@ -50,9 +78,13 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   }
 
   const schedule = getTodaysSchedule();
+  const leads = lookupLeads();
   const enhancedContext = {
     ...context,
-    todaysSchedule: schedule
+    todaysSchedule: schedule,
+    availableLeads: leads.length > 50 
+      ? `Total Leads: ${leads.length}. Showing first 50: ${JSON.stringify(leads.slice(0, 50))}` 
+      : leads
   };
 
   const systemInstruction = `You are an AI assistant for the WholeScale OS wholesale real estate application. 

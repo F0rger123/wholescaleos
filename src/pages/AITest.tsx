@@ -47,6 +47,28 @@ export function AITest() {
             placeholder="e.g., 'Delete the lead for 123 Main St' or 'What is the standard script for wholesale referrals?'"
           />
         </div>
+
+        {/* Quick Test Prompts */}
+        <div>
+          <p className="text-xs font-medium text-slate-500 mb-2">Try a Lead Lookup example:</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              "Show me John Smith",
+              "Find lead at 123 Main St",
+              "What leads do I have?",
+              "What does my schedule look like today?"
+            ].map(example => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => setPrompt(example)}
+                className="px-3 py-1.5 bg-slate-800/50 hover:bg-brand-500/20 text-slate-300 hover:text-brand-300 text-xs rounded-full border border-slate-700 hover:border-brand-500/50 transition-colors whitespace-nowrap"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </div>
         
         <button
           type="submit"
