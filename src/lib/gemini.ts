@@ -8,6 +8,18 @@ export interface GeminiResponse {
   data?: any;
 }
 
+export async function listAvailableModels(apiKey: string) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const data = await res.json();
+    return data.models || [];
+  } catch (err) {
+    console.error('Failed to list models:', err);
+    return [];
+  }
+}
+
 export function getTodaysTasks() {
   const store = useStore.getState();
   const today = new Date().toISOString().split('T')[0];
