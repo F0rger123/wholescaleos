@@ -86,18 +86,37 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
 
     if (isSupabaseConfigured && supabase) {
       try {
-        const { error } = await supabase
+        // Manual check-and-save to bypass flaky upsert issues
+        const { data: existing } = await supabase
           .from('user_connections')
-          .upsert(
-            {
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .eq('provider', 'gemini')
+          .maybeSingle();
+
+        let error;
+        if (existing) {
+          const { error: updateError } = await supabase
+            .from('user_connections')
+            .update({
+              access_token: model,
+              refresh_token: apiKey,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+          error = updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from('user_connections')
+            .insert({
               user_id: currentUser.id,
               provider: 'gemini',
               access_token: model, // Storing model here if we don't have a dedicated column
               refresh_token: apiKey, // In production, this should be encrypted
               updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'user_id,provider' }
-          );
+            });
+          error = insertError;
+        }
 
         if (error) throw error;
         setSaveResult({ success: true, message: 'API key saved securely to your account.' });
