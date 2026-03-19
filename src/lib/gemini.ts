@@ -260,7 +260,7 @@ export async function hasUserApiKey(): Promise<boolean> {
     try {
       const { data } = await supabase
         .from('user_connections')
-        .select('refresh_token')
+        .select('refresh_token, access_token')
         .eq('user_id', userId)
         .eq('provider', 'gemini')
         .maybeSingle();
@@ -318,6 +318,25 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   const todaysTasks = context.test ? [] : getTodaysTasks();
   const allTasks = context.test ? [] : useStore.getState().tasks;
   
+  // Get preferred model
+  let model = '';
+  if (userId) {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase
+          .from('user_connections')
+          .select('access_token')
+          .eq('user_id', userId)
+          .eq('provider', 'gemini')
+          .maybeSingle();
+        if (data?.access_token && data.access_token !== 'active') model = data.access_token;
+      } catch (err) {}
+    }
+    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-2.0-flash';
+  } else {
+    model = 'gemini-2.0-flash';
+  }
+  
   const enhancedContext = {
     ...context,
     todaysSchedule: schedule,
@@ -350,8 +369,8 @@ Specific Intent Data Requirements:
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
   try {
-    // We utilize the gemini-2.0-flash model via the REST API for simplicity
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    // We utilize the user-configured model or fallback to gemini-2.0-flash
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json' 
