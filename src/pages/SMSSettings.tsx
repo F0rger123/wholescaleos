@@ -119,13 +119,16 @@ export function SMSSettings() {
       try {
         const { error } = await supabase
           .from('agent_preferences')
-          .upsert({
-            user_id: currentUser.id,
-            phone_number: phone,
-            carrier: carrier,
-            sms_gateway: gateway,
-            updated_at: new Date().toISOString(),
-          });
+          .upsert(
+            {
+              user_id: currentUser.id,
+              phone_number: phone,
+              carrier: carrier,
+              sms_gateway: gateway,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: 'user_id' }
+          );
 
         if (error) throw error;
         setSaveResult({ success: true, message: 'SMS settings saved successfully.' });
