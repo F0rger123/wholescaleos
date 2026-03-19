@@ -72,12 +72,16 @@ export function AITest() {
   useEffect(() => {
     // Check for persisted rate limit on mount
     const savedExpiry = localStorage.getItem('ai_rate_limit_expiry');
+    const savedPrompt = localStorage.getItem('ai_rate_limit_prompt');
     if (savedExpiry) {
       const expiry = parseInt(savedExpiry);
       const now = Date.now();
       if (expiry > now) {
         const remaining = Math.ceil((expiry - now) / 1000);
-        setRateLimit({ seconds: remaining, originalPrompt: '' });
+        setRateLimit({ seconds: remaining, originalPrompt: savedPrompt || '' });
+      } else {
+        localStorage.removeItem('ai_rate_limit_expiry');
+        localStorage.removeItem('ai_rate_limit_prompt');
       }
     }
   }, []);
@@ -85,22 +89,24 @@ export function AITest() {
   useEffect(() => {
     let interval: any;
     if (rateLimit && rateLimit.seconds > 0) {
-      // Persist expiry whenever rateLimit is set/updated
-      const expiry = Date.now() + (rateLimit.seconds * 1000);
-      localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
-
       interval = setInterval(() => {
-        setRateLimit(prev => prev ? { ...prev, seconds: prev.seconds - 1 } : null);
+        setRateLimit(prev => {
+          if (!prev || prev.seconds <= 0) return null;
+          return { ...prev, seconds: prev.seconds - 1 };
+        });
       }, 1000);
-    } else if (rateLimit && rateLimit.seconds === 0) {
-      // Auto-retry when reaches zero
-      localStorage.removeItem('ai_rate_limit_expiry');
+    } else if (rateLimit && rateLimit.seconds <= 0) {
       const p = rateLimit.originalPrompt;
       setRateLimit(null);
-      if (p) handleSubmit(undefined, p);
+      localStorage.removeItem('ai_rate_limit_expiry');
+      localStorage.removeItem('ai_rate_limit_prompt');
+      if (p) {
+        console.log('🔄 Auto-retrying rate limited prompt...');
+        handleSubmit(undefined, p);
+      }
     }
     return () => clearInterval(interval);
-  }, [rateLimit]);
+  }, [rateLimit?.seconds]);
 
   useEffect(() => {
     localStorage.setItem('ai_chat_history', JSON.stringify(messages));
@@ -138,6 +144,7 @@ export function AITest() {
         setRateLimit({ seconds: retrySeconds, originalPrompt: textToSubmit });
         const expiry = Date.now() + (retrySeconds * 1000);
         localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
+        localStorage.setItem('ai_rate_limit_prompt', textToSubmit);
       }
       
       if (response.intent !== 'rate_limit') {
