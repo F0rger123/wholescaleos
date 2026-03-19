@@ -10,7 +10,7 @@ export interface GeminiResponse {
 
 export async function listAvailableModels(apiKey: string) {
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
     if (!res.ok) throw new Error(`Status ${res.status}`);
     const data = await res.json();
     return data.models || [];
@@ -381,8 +381,9 @@ Specific Intent Data Requirements:
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
   try {
-    // We utilize the user-configured model or fallback to gemini-2.0-flash
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+    // Determine the correct API version (v1 for stable models, v1beta for experimental)
+    const apiVersion = (model.includes('2.0') || model.includes('exp')) ? 'v1beta' : 'v1';
+    const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json' 
