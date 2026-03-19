@@ -5,7 +5,7 @@ import { Key, ExternalLink, Loader2, Check, AlertCircle, Save, Sparkles } from '
 
 export function AISettings() {
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('gemini-2.0-flash');
+  const [model, setModel] = useState('gemini-1.5-flash');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);

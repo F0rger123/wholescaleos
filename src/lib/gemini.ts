@@ -332,9 +332,9 @@ export async function processPrompt(prompt: string, context: Record<string, any>
         if (data?.access_token && data.access_token !== 'active') model = data.access_token;
       } catch (err) {}
     }
-    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-2.0-flash';
+    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-1.5-flash';
   } else {
-    model = 'gemini-2.0-flash';
+    model = 'gemini-1.5-flash';
   }
   
   const enhancedContext = {
@@ -393,10 +393,15 @@ Specific Intent Data Requirements:
 
     if (!res.ok) {
       if (res.status === 429) {
+        const errorData = await res.json().catch(() => null);
+        console.error('Gemini Rate Limit Hit [429]:', errorData?.error);
         return {
           intent: 'rate_limit',
-          response: "You've reached your rate limit for the Gemini API. Please wait a moment before trying again.",
-          data: { retryAfter: 60 } // Default fallback for free tier
+          response: errorData?.error?.message || "You've reached your rate limit for the Gemini API. Please wait a moment before trying again.",
+          data: { 
+            retryAfter: 60,
+            error: errorData?.error
+          }
         };
       }
       

@@ -33,7 +33,7 @@ export function AITest() {
   const leads = useStore(state => state.leads);
   const currentUser = useStore(state => state.currentUser);
   const [debug, setDebug] = useState(false);
-  const [currentModel, setCurrentModel] = useState('gemini-2.0-flash');
+  const [currentModel, setCurrentModel] = useState('gemini-1.5-flash');
   const [prompt, setPrompt] = useState(() => localStorage.getItem('ai_pending_prompt') || '');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -222,10 +222,20 @@ export function AITest() {
         setTimeout(() => navigate('/settings/ai'), 1500);
       } else if (response.intent === 'rate_limit') {
         const retrySeconds = response.data?.retryAfter || 60;
+        const errorMessage = response.response; // Use the specific error message if available
         setRateLimit({ seconds: retrySeconds, originalPrompt: textToSubmit });
         const expiry = Date.now() + (retrySeconds * 1000);
         localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
         localStorage.setItem('ai_rate_limit_prompt', textToSubmit);
+        
+        // Show the error message in chat too
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'ai',
+          content: `⚠️ Rate Limit Hit: ${errorMessage}`,
+          timestamp: new Date().toISOString(),
+          intent: 'error'
+        }]);
       } else {
         // Success case - clear the prompt
         setPrompt('');
