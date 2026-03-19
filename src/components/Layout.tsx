@@ -13,6 +13,7 @@ import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
+  Smartphone,
 } from 'lucide-react';
 
 const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
@@ -35,6 +36,7 @@ const navSections: Record<string, { to: string; label: string; icon: any }[]> = 
   Settings: [
     { to: '/settings', label: 'Settings', icon: Settings },
     { to: '/settings/ai', label: 'AI Configuration', icon: Bot },
+    { to: '/settings/sms', label: 'SMS & Notifications', icon: Smartphone },
   ],
 };
 

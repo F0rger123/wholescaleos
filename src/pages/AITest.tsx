@@ -7,9 +7,10 @@ import {
   updateLeadStatusViaAI, 
   createLeadViaAI, 
   updateLeadViaAI, 
-  deleteLeadViaAI 
+  deleteLeadViaAI,
+  sendSMSViaAI 
 } from '../lib/gemini';
-import { Bot, User, Send, Target, Sparkles, Check, Trash2, UserPlus, Key, Loader2, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
+import { Bot, User, Send, Target, Sparkles, Check, Trash2, UserPlus, Key, Loader2, AlertTriangle, ExternalLink, RefreshCw, Smartphone } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -124,6 +125,11 @@ export function AITest() {
       } else if (response.intent === 'delete_lead' && response.data?.leadId) {
         const result = deleteLeadViaAI(response.data.leadId);
         systemLog = `System: ${result.message}`;
+      } else if (response.intent === 'send_sms' && response.data?.target && response.data?.message) {
+        setLoading(true); // Re-flag for async operation
+        const result = await sendSMSViaAI(response.data.target, response.data.message);
+        systemLog = `System: ${result.message}`;
+        setLoading(false);
       }
       
       if (response.intent !== 'rate_limit') {
@@ -168,6 +174,7 @@ export function AITest() {
     { label: "Update Status", prompt: "Mark the lead at 123 Main St as negotiating", icon: <Target className="w-3 h-3"/> },
     { label: "Create Task", prompt: "Create a task to call Jessica Taylor tomorrow", icon: <Check className="w-3 h-3"/> },
     { label: "Delete Lead", prompt: "Delete the lead for 123 Main St", icon: <Trash2 className="w-3 h-3"/> },
+    { label: "Text Lead", prompt: "Text John Smith: I'm running 5 minutes late", icon: <Smartphone className="w-3 h-3"/> },
     { label: "Team Status", prompt: "Who on the team is online right now?", icon: <User className="w-3 h-3"/> }
   ];
 

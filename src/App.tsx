@@ -22,6 +22,7 @@ import { Building2, Loader2 } from 'lucide-react';
 import Calendar from './pages/Calendar';
 import { AITest } from './pages/AITest';
 import { AISettings } from './pages/AISettings';
+import { SMSSettings } from './pages/SMSSettings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -157,6 +158,7 @@ export function App() {
           <Route path="/calculators" element={<Calculators />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/ai" element={<AISettings />} />
+          <Route path="/settings/sms" element={<SMSSettings />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/ai-test" element={<AITest />} />
         </Route>
