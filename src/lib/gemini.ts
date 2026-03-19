@@ -435,12 +435,27 @@ Specific Intent Data Requirements:
       throw new Error('Received an empty valid response from Gemini API');
     }
 
-    // Attempt to parse the valid JSON
+    // Attempt to extract and parse the valid JSON
     try {
-      const parsed = JSON.parse(textData);
+      // Find the JSON-like structure (between { and })
+      // This handles triple backticks and other surrounding text
+      const jsonMatch = textData.match(/\{[\s\S]*\}/);
+      const jsonStr = jsonMatch ? jsonMatch[0] : textData;
+      
+      const parsed = JSON.parse(jsonStr);
+      
+      // If the parsed response is still an object-like string, clean it again
+      let finalResponse = parsed.response || textData;
+      if (typeof finalResponse === 'string' && finalResponse.trim().startsWith('{')) {
+        try {
+          const innerParsed = JSON.parse(finalResponse);
+          if (innerParsed.response) finalResponse = innerParsed.response;
+        } catch (e) {}
+      }
+
       return {
         intent: parsed.intent || 'unknown',
-        response: parsed.response || textData,
+        response: finalResponse,
         data: parsed.data
       };
     } catch (parseError) {
