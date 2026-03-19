@@ -8,8 +8,10 @@ import {
   Upload, Download, Trash2, RefreshCw, Smartphone, Lock,
   Monitor, AlertTriangle, Copy, Loader2,
   Users, UserMinus,
-  HardDrive, Send
+  HardDrive, Send, Sparkles
 } from 'lucide-react';
+import { AISettings } from './AISettings';
+import { SMSSettings } from './SMSSettings';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Building },
@@ -18,6 +20,8 @@ const TABS = [
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'team', label: 'Team', icon: Users },
   { id: 'email', label: 'Email', icon: Mail },
+  { id: 'ai', label: 'AI Assistant', icon: Sparkles },
+  { id: 'sms', label: 'SMS Messaging', icon: Smartphone },
   { id: 'backup', label: 'Backup', icon: HardDrive },
   { id: 'data', label: 'Data', icon: Database },
 ];
@@ -71,6 +75,8 @@ export default function SettingsPage() {
           {activeTab === 'appearance' && <AppearanceTab />}
           {activeTab === 'team' && <TeamTab />}
           {activeTab === 'email' && <EmailTab />}
+          {activeTab === 'ai' && <AISettings hideHeader />}
+          {activeTab === 'sms' && <SMSSettings />}
           {activeTab === 'backup' && <BackupTab />}
           {activeTab === 'data' && <DataTab />}
         </div>

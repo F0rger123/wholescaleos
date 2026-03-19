@@ -223,8 +223,13 @@ export function AITest() {
       if (response.intent === 'redirect_setup') {
         setTimeout(() => navigate('/settings/ai'), 1500);
       } else if (response.intent === 'rate_limit') {
-        const retrySeconds = response.data?.retryAfter || 60;
-        const errorMessage = response.response; // Use the specific error message if available
+        const errorMessage = response.response;
+        // Detect daily quota vs minute limit
+        const maybeDailyLimit = errorMessage.toLowerCase().includes('quota exceeded') || errorMessage.toLowerCase().includes('billing');
+        // If it's a daily limit, we set a very long timer or just show the error. 
+        // For now let's set it to 1 hour to prevent immediate spamming, but label it.
+        const retrySeconds = maybeDailyLimit ? 3600 : (response.data?.retryAfter || 60);
+        
         setRateLimit({ seconds: retrySeconds, originalPrompt: textToSubmit });
         const expiry = Date.now() + (retrySeconds * 1000);
         localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
@@ -234,9 +239,10 @@ export function AITest() {
         setMessages(prev => [...prev, {
           id: Date.now().toString(),
           role: 'ai',
-          content: `⚠️ Rate Limit Hit: ${errorMessage}`,
-          timestamp: new Date().toISOString(),
-          intent: 'error'
+          content: maybeDailyLimit 
+            ? `🛑 Daily Quota Exceeded: Your plan allows 20 requests/day for this model. Please try a "Lite" model or wait for your daily reset.`
+            : `⚠️ Rate Limit Hit: ${errorMessage}`,
+          timestamp: new Date().toISOString()
         }]);
       } else {
         // Success case - clear the prompt

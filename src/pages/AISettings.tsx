@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
 import { Key, ExternalLink, Loader2, Check, AlertCircle, Save, Sparkles } from 'lucide-react';
 
-export function AISettings() {
+export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('gemini-1.5-flash');
   const [loading, setLoading] = useState(true);
@@ -119,10 +119,12 @@ export function AISettings() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">AI Assistant Settings</h1>
-        <p className="text-slate-400">Configure your personal Gemini API key to enable AI-powered features.</p>
-      </div>
+      {!hideHeader && (
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-white mb-2">AI Assistant Settings</h1>
+          <p className="text-slate-400">Configure your personal Gemini API key to enable AI-powered features.</p>
+        </div>
+      )}
 
       {/* Guide Card */}
       <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6 space-y-4">
@@ -156,10 +158,11 @@ export function AISettings() {
           <label className="block text-sm font-medium text-slate-400 mb-3">Preferred AI Model</label>
           <div className="grid grid-cols-1 gap-3">
             {[
-              { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'The newest model identified in your project. Fastest performance.' },
+              { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Higher daily limits, best for continuous testing.' },
+              { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast performance, but very low daily limits (20 RPD).' },
               { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Powerful advanced reasoning model identified in your project.' },
-              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Balanced experimental next-gen performance.' },
-              { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Standard model (Note: May not be available in your project)' }
+              { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', desc: 'Balanced performance with better availability.' },
+              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Experimental next-gen performance.' }
             ].map((m) => (
               <button
                 key={m.id}

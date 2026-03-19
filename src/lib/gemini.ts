@@ -344,9 +344,9 @@ export async function processPrompt(prompt: string, context: Record<string, any>
         if (data?.access_token && data.access_token !== 'active') model = data.access_token;
       } catch (err) {}
     }
-    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash';
+    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash-lite';
   } else {
-    model = 'gemini-2.5-flash';
+    model = 'gemini-2.5-flash-lite';
   }
   
   const enhancedContext = {
