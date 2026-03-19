@@ -9,7 +9,7 @@ import {
   updateLeadViaAI, 
   deleteLeadViaAI 
 } from '../lib/gemini';
-import { Bot, User, Send, Target, Sparkles, Check, Trash2, UserPlus, Key, Loader2 } from 'lucide-react';
+import { Bot, User, Send, Target, Sparkles, Check, Trash2, UserPlus, Key, Loader2, AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -26,6 +26,7 @@ export function AITest() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem('ai_chat_history');
@@ -46,12 +47,29 @@ export function AITest() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    async function checkKey() {
-      const keyExists = await hasUserApiKey();
-      setHasKey(keyExists);
+    if (hasKey === null) {
+      async function checkKey() {
+        const keyExists = await hasUserApiKey();
+        setHasKey(keyExists);
+      }
+      checkKey();
     }
-    checkKey();
-  }, []);
+  }, [hasKey]);
+
+  useEffect(() => {
+    let interval: any;
+    if (rateLimit && rateLimit.seconds > 0) {
+      interval = setInterval(() => {
+        setRateLimit(prev => prev ? { ...prev, seconds: prev.seconds - 1 } : null);
+      }, 1000);
+    } else if (rateLimit && rateLimit.seconds === 0) {
+      // Auto-retry when reaches zero
+      const p = rateLimit.originalPrompt;
+      setRateLimit(null);
+      handleSubmit(undefined, p);
+    }
+    return () => clearInterval(interval);
+  }, [rateLimit]);
 
   useEffect(() => {
     localStorage.setItem('ai_chat_history', JSON.stringify(messages));
@@ -86,6 +104,8 @@ export function AITest() {
       
       if (response.intent === 'redirect_setup') {
         setTimeout(() => navigate('/settings/ai'), 1500);
+      } else if (response.intent === 'rate_limit') {
+        setRateLimit({ seconds: response.data?.retryAfter || 60, originalPrompt: textToSubmit });
       }
       
       // Execute UI commands silently behind the scenes
@@ -106,17 +126,19 @@ export function AITest() {
         systemLog = `System: ${result.message}`;
       }
       
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        content: response.response || "I couldn't process that request.",
-        timestamp: new Date().toISOString(),
-        intent: response.intent,
-        data: response.data,
-        systemLog
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
+      if (response.intent !== 'rate_limit') {
+        const aiMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: response.response || "I couldn't process that request.",
+          timestamp: new Date().toISOString(),
+          intent: response.intent,
+          data: response.data,
+          systemLog
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+      }
     } catch (error) {
       console.error(error);
       setMessages(prev => [...prev, {
@@ -256,8 +278,43 @@ export function AITest() {
         <div ref={bottomRef} />
       </div>
 
+      {/* Rate Limit Banner */}
+      {rateLimit && (
+        <div className="mb-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl p-4 flex gap-4 items-center animate-in fade-in slide-in-from-bottom-2">
+          <div className="w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-brand-400" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-white">Rate Limit Reached</h3>
+            <p className="text-xs text-slate-400 mt-1">
+              You've reached your rate limit for the Gemini API. 
+              Retrying in <span className="text-brand-400 font-bold">{rateLimit.seconds}s</span>...
+              <br />
+              <span className="text-[10px] mt-1 block">
+                Upgrade your Google Cloud/AI Studio plan for higher limits. 
+                <a 
+                  href="https://ai.google.dev/gemini-api/docs/rate-limits" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-brand-400 hover:text-brand-300 ml-1 inline-flex items-center gap-0.5 underline underline-offset-2"
+                >
+                  Increase Limits <ExternalLink size={10} />
+                </a>
+              </span>
+            </p>
+          </div>
+          <button 
+            disabled 
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-xl text-xs text-slate-400 opacity-50"
+          >
+            <RefreshCw className="w-3 h-3 animate-spin" />
+            Queued
+          </button>
+        </div>
+      )}
+
       {/* Input Area */}
-      <div className="bg-slate-800/50 p-3 rounded-2xl border border-slate-700">
+      <div className={`bg-slate-800/50 p-3 rounded-2xl border border-slate-700 transition-opacity ${rateLimit ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x mb-2 px-1">
           {quickPrompts.map((item, idx) => (
             <button
