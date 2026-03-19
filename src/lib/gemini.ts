@@ -174,15 +174,41 @@ export function lookupLeads(query?: string) {
 }
 
 /**
+ * Helper to check if the current user has a Gemini API key configured.
+ */
+export async function hasUserApiKey(): Promise<boolean> {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  if (!userId) return false;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data } = await supabase
+        .from('user_connections')
+        .select('refresh_token')
+        .eq('user_id', userId)
+        .eq('provider', 'gemini')
+        .maybeSingle();
+      return !!data?.refresh_token;
+    } catch (err) {
+      console.error('Error checking for user API key:', err);
+      return false;
+    }
+  } else {
+    return !!localStorage.getItem('user_gemini_api_key');
+  }
+}
+
+/**
  * Sends a prompt and context to the Gemini API and returns a parsed intent and response.
- * Expects VITE_GEMINI_API_KEY to be set in your .env file.
+ * Strictly requires a user-configured API key from settings.
  */
 export async function processPrompt(prompt: string, context: Record<string, any> = {}): Promise<GeminiResponse> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
-  let apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  let apiKey = '';
 
-  // Try to get user-specific key
+  // Only use user-specific key
   if (userId) {
     if (isSupabaseConfigured && supabase) {
       try {
@@ -208,7 +234,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     console.warn('Gemini API key is missing.');
     return {
       intent: 'redirect_setup',
-      response: 'Gemini API key is missing. Please configure your API key in the AI Settings page.'
+      response: 'Gemini API key is missing. Please configure your personal API key in the AI Settings page to use the assistant.'
     };
   }
 
