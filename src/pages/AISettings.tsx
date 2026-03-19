@@ -5,6 +5,7 @@ import { Key, ExternalLink, Loader2, Check, AlertCircle, Save } from 'lucide-rea
 
 export function AISettings() {
   const [apiKey, setApiKey] = useState('');
+  const [model, setModel] = useState('gemini-2.0-flash');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -23,14 +24,16 @@ export function AISettings() {
         try {
           const { data } = await supabase
             .from('user_connections')
-            .select('refresh_token')
+            .select('refresh_token, access_token')
             .eq('user_id', currentUser.id)
             .eq('provider', 'gemini')
             .maybeSingle();
 
           if (data?.refresh_token) {
-            // Decrypt/Decode if needed. For now, following requested pattern.
             setApiKey(data.refresh_token);
+          }
+          if (data?.access_token && data.access_token !== 'active') {
+            setModel(data.access_token);
           }
         } catch (err) {
           console.error('Failed to load API key:', err);
@@ -39,6 +42,8 @@ export function AISettings() {
         // Fallback to local storage for demo mode
         const localKey = localStorage.getItem('user_gemini_api_key');
         if (localKey) setApiKey(localKey);
+        const localModel = localStorage.getItem('user_gemini_model');
+        if (localModel) setModel(localModel);
       }
       setLoading(false);
     }
@@ -52,7 +57,7 @@ export function AISettings() {
     setTestResult(null);
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,7 +90,7 @@ export function AISettings() {
           .upsert({
             user_id: currentUser.id,
             provider: 'gemini',
-            access_token: 'active',
+            access_token: model, // Storing model here if we don't have a dedicated column
             refresh_token: apiKey, // In production, this should be encrypted
             updated_at: new Date().toISOString(),
           });
@@ -97,7 +102,8 @@ export function AISettings() {
       }
     } else {
       localStorage.setItem('user_gemini_api_key', apiKey);
-      setSaveResult({ success: true, message: 'API key saved locally to browser storage.' });
+      localStorage.setItem('user_gemini_model', model);
+      setSaveResult({ success: true, message: 'API key and model preference saved locally.' });
     }
     setSaving(false);
   };
@@ -141,6 +147,22 @@ export function AISettings() {
 
       {/* Configuration Card */}
       <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-slate-400 mb-2">Preferred AI Model</label>
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all appearance-none cursor-pointer"
+          >
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast, Lower Limits)</option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro (Powerful, Very Low Limits)</option>
+            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Balanced, Experimental)</option>
+          </select>
+          <p className="mt-2 text-[10px] text-slate-500">
+            Note: Flash models are usually free or lower cost. Pro models have higher capability but much tighter rate limits.
+          </p>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-400 mb-2">Gemini API Key</label>
           <div className="flex gap-2">

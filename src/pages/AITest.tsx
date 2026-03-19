@@ -13,7 +13,12 @@ import {
 import { 
   Bot, User, Send, Target, Sparkles, Check, Trash2, 
   UserPlus, Key, Loader2, AlertTriangle, ExternalLink, 
-  RefreshCw, Smartphone, Search, X, ArrowDown 
+  RefreshCw, Smartphone,### AI Reliability & Debugging
+- **Configurable Models**: You can now choose between Gemini 1.5 Flash, 1.5 Pro, and 2.0 Flash in the AI Settings page.
+- **Debug Mode**: Added a hidden debug panel in the AI Bot page. Press `Ctrl + Shift + D` to toggle it. It shows your User ID, active rate limits, and the current model. It also includes a **"Force Clear Rate Limit"** button if the timer ever gets stuck.
+- **30-Second Timeout**: Added a 30-second timeout to AI requests to prevent the chat from hanging indefinitely.
+- **Enhanced Error Handling**: Improved error surfacing to show specific API errors and added detailed console logs for debugging.
+- **Diagnostic Tool**: Added a **"Test Connection"** button in the AI Bot header to verify API connectivity with a simple ping (no context). 
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -30,6 +35,8 @@ interface ChatMessage {
 export function AITest() {
   const navigate = useNavigate();
   const leads = useStore(state => state.leads);
+  const currentUser = useStore(state => state.currentUser);
+  const [debug, setDebug] = useState(false);
   const [prompt, setPrompt] = useState(() => localStorage.getItem('ai_pending_prompt') || '');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -106,6 +113,17 @@ export function AITest() {
     }
     return () => clearInterval(interval);
   }, [rateLimit?.seconds]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setDebug(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('ai_pending_prompt', prompt);
@@ -656,6 +674,32 @@ export function AITest() {
                 className="flex-1 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white transition-colors text-sm font-medium"
               >
                 Execute Without Lead
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {debug && (
+        <div className="mt-8 p-4 bg-slate-800/80 border border-slate-700 rounded-2xl text-xs font-mono backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center gap-2 font-bold mb-3 text-brand-400">
+            <RefreshCw className="w-3 h-3" />
+            🔧 DEBUG MODE
+          </div>
+          <div className="space-y-1 text-slate-300">
+            <div><span className="text-slate-500">User ID:</span> {currentUser?.id || 'Not logged in'}</div>
+            <div><span className="text-slate-500">Rate Limit Active:</span> {rateLimit ? 'Yes' : 'No'}</div>
+            <div><span className="text-slate-500">Timer:</span> {rateLimit ? `${rateLimit.seconds}s` : 'None'}</div>
+            <div><span className="text-slate-500">Model:</span> gemini-2.0-flash (v1beta)</div>
+            <div className="pt-2 border-t border-slate-700/50 mt-2">
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('ai_rate_limit_expiry');
+                  localStorage.removeItem('ai_rate_limit_prompt');
+                  setRateLimit(null);
+                }}
+                className="text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-400 px-2 py-1 rounded transition-colors"
+              >
+                Force Clear Rate Limit
               </button>
             </div>
           </div>
