@@ -14,7 +14,12 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [aiName, setAiName] = useState('AI Assistant');
   const [aiTone, setAiTone] = useState('friendly');
   const [showWidget, setShowWidget] = useState(false);
-  const { currentUser } = useStore();
+  const { currentUser, setShowFloatingAIWidget } = useStore();
+
+  const handleToggleWidget = (val: boolean) => {
+    setShowWidget(val);
+    setShowFloatingAIWidget(val);
+  };
 
   useEffect(() => {
     async function loadKey() {
@@ -279,7 +284,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
               <p className="text-xs text-slate-500">Show a draggable AI bubble available on all pages</p>
             </div>
             <button
-              onClick={() => setShowWidget(!showWidget)}
+              onClick={() => handleToggleWidget(!showWidget)}
               className={`w-12 h-6 rounded-full transition-colors relative ${showWidget ? 'bg-brand-600' : 'bg-slate-700'}`}
             >
               <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showWidget ? 'left-7' : 'left-1'}`} />
@@ -332,7 +337,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
             className="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-brand-600/20 disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Save API Key
+            Save AI Settings
           </button>
         </div>
       </div>

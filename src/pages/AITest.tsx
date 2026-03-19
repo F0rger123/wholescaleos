@@ -285,7 +285,8 @@ export function AITest() {
             const l = leads.find(lead => lead.id === response.data.leadId);
             if (l) setLeadSearch(l.name || '');
           }
-        } else {
+        } else if (response.intent !== 'confirm_action' && response.intent !== 'rate_limit') {
+          // Only execute actions that aren't meta-intents
           executeAction(response.intent, response.data, cleanResponse);
         }
       }

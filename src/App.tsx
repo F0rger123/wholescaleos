@@ -29,13 +29,13 @@ import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  
+
   // If Supabase is configured but no team selected, redirect to team selection
   if (isSupabaseConfigured) {
     const hasTeam = localStorage.getItem('wholescale-preferred-team');
     if (!hasTeam) return <Navigate to="/team-selection" replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -149,7 +149,7 @@ export function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        
+
         {/* Email confirmation — accessible with or without auth */}
         <Route path="/email-confirmed" element={<EmailConfirmed />} />
 
@@ -176,7 +176,7 @@ export function App() {
           <Route path="/ai-test" element={<AITest />} />
           <Route path="/sms" element={<SMSInbox />} />
         </Route>
-        
+
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

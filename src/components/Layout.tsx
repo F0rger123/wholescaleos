@@ -46,7 +46,10 @@ interface UserTeam {
 }
 
 export function Layout() {
-  const { sidebarOpen, toggleSidebar, team, tasks, unreadCounts, teamConfig, currentUser } = useStore();
+  const { 
+    sidebarOpen, toggleSidebar, team, tasks, unreadCounts, 
+    teamConfig, currentUser, showFloatingAIWidget, setShowFloatingAIWidget 
+  } = useStore();
 
   const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
   const pendingTaskCount = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
@@ -67,7 +70,6 @@ export function Layout() {
     }
   });
 
-  const [showFloatingWidget, setShowFloatingWidget] = useState(false);
   const [userShortcuts, setUserShortcuts] = useState<any[]>([]);
   const navigate = useNavigate();
 
@@ -84,21 +86,21 @@ export function Layout() {
           .maybeSingle();
         
         if (profile?.settings?.show_floating_widget !== undefined) {
-          setShowFloatingWidget(profile.settings.show_floating_widget);
+          setShowFloatingAIWidget(profile.settings.show_floating_widget);
         }
         if (profile?.settings?.shortcuts) {
           setUserShortcuts(profile.settings.shortcuts);
         }
       } else {
         const localWidget = localStorage.getItem('user_show_floating_widget');
-        if (localWidget) setShowFloatingWidget(localWidget === 'true');
+        if (localWidget) setShowFloatingAIWidget(localWidget === 'true');
         
         const localShortcuts = localStorage.getItem('user_shortcuts');
         if (localShortcuts) setUserShortcuts(JSON.parse(localShortcuts));
       }
     }
     loadPrefs();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, setShowFloatingAIWidget]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -524,7 +526,7 @@ export function Layout() {
       </div>
 
       {/* Floating AI Widget */}
-      {showFloatingWidget && <AIBotWidget />}
+      {showFloatingAIWidget && <AIBotWidget />}
 
       {/* Modals */}
       <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />

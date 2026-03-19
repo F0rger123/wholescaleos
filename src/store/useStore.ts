@@ -1334,6 +1334,10 @@ interface AppState {
   setSMSMessages: (messages: SMSMessage[]) => void;
   addSMSMessage: (message: SMSMessage) => void;
   markSMSAsRead: (phoneNumber: string) => void;
+  
+  // Floating AI Widget
+  showFloatingAIWidget: boolean;
+  setShowFloatingAIWidget: (v: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1343,6 +1347,7 @@ export const useStore = create<AppState>((set, get) => ({
   smsMessages: [],
   authLoading: false,
   authError: null,
+  showFloatingAIWidget: false,
 
   login: (email, _password) =>
     set(() => {
@@ -2707,5 +2712,7 @@ deleteChannel: (channelId) => {
         unreadCounts: { ...state.unreadCounts, sms: unreadCount }
       };
     });
-  }
+  },
+
+  setShowFloatingAIWidget: (v) => set({ showFloatingAIWidget: v }),
 }));
