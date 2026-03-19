@@ -313,20 +313,20 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     };
   }
 
-  const schedule = getTodaysSchedule();
-  const leads = lookupLeads();
-  const todaysTasks = getTodaysTasks();
-  const allTasks = useStore.getState().tasks;
+  const schedule = context.test ? { tasksDueToday: [], calendarEventsToday: [] } : getTodaysSchedule();
+  const leadsRaw = context.test ? [] : lookupLeads();
+  const todaysTasks = context.test ? [] : getTodaysTasks();
+  const allTasks = context.test ? [] : useStore.getState().tasks;
   
   const enhancedContext = {
     ...context,
     todaysSchedule: schedule,
     todaysTasks: todaysTasks,
     allTasks: allTasks,
-    teamAvailability: getTeamAvailability(),
-    availableLeads: leads.length > 50 
-      ? `Total Leads: ${leads.length}. Showing first 50: ${JSON.stringify(leads.slice(0, 50))}` 
-      : leads
+    teamAvailability: context.test ? [] : getTeamAvailability(),
+    availableLeads: leadsRaw.length > 50 
+      ? `Total Leads: ${leadsRaw.length}. Showing first 50: ${JSON.stringify(leadsRaw.slice(0, 50))}` 
+      : leadsRaw
   };
 
   const systemInstruction = `You are an AI assistant for the WholeScale OS wholesale real estate application. 

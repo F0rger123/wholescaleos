@@ -280,6 +280,25 @@ export function AITest() {
     }]);
   };
 
+  const handleTestConnection = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const response = await processPrompt('ping', { test: true });
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'ai',
+        content: `Connection Test: ${response.response}`,
+        timestamp: new Date().toISOString(),
+        intent: 'test'
+      }]);
+    } catch (err) {
+      console.error('Test connection failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const quickPrompts = [
     { label: "New Lead", prompt: "Create a new lead for Jessica Taylor at 789 Pine Rd. Cell is 555-8888.", icon: <UserPlus className="w-3 h-3"/> },
     { label: "Update Status", prompt: "Mark the lead at 123 Main St as negotiating", icon: <Target className="w-3 h-3"/> },
@@ -330,12 +349,22 @@ export function AITest() {
           </h1>
           <p className="text-sm text-slate-400">Conversational interface with context awareness</p>
         </div>
-        <button 
-          onClick={clearHistory}
-          className="text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors"
-        >
-          Clear History
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleTestConnection}
+            disabled={loading}
+            className="text-xs text-brand-400 hover:text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Test Connection
+          </button>
+          <button 
+            onClick={clearHistory}
+            className="text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors"
+          >
+            Clear History
+          </button>
+        </div>
       </div>
       
       {/* Chat Messages */}
