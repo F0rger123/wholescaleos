@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   processPrompt, 
   hasUserApiKey,
@@ -32,6 +33,7 @@ export function AITest() {
   const leads = useStore(state => state.leads);
   const currentUser = useStore(state => state.currentUser);
   const [debug, setDebug] = useState(false);
+  const [currentModel, setCurrentModel] = useState('gemini-2.0-flash');
   const [prompt, setPrompt] = useState(() => localStorage.getItem('ai_pending_prompt') || '');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -63,6 +65,32 @@ export function AITest() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    async function fetchModel() {
+      if (!currentUser?.id) return;
+      
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data } = await supabase
+            .from('user_connections')
+            .select('access_token')
+            .eq('user_id', currentUser.id)
+            .eq('provider', 'gemini')
+            .maybeSingle();
+          if (data?.access_token && data.access_token !== 'active') {
+            setCurrentModel(data.access_token);
+            return;
+          }
+        } catch (err) {}
+      }
+      
+      const localModel = localStorage.getItem('user_gemini_model');
+      if (localModel) setCurrentModel(localModel);
+    }
+    
+    fetchModel();
+  }, [currentUser]);
 
   useEffect(() => {
     if (hasKey === null) {
@@ -682,9 +710,11 @@ export function AITest() {
           </div>
           <div className="space-y-1 text-slate-300">
             <div><span className="text-slate-500">User ID:</span> {currentUser?.id || 'Not logged in'}</div>
+            <div><span className="text-slate-500">Loading:</span> {loading ? 'Yes' : 'No'}</div>
+            <div><span className="text-slate-500">Has API Key:</span> {hasKey ? 'Yes' : 'No'}</div>
             <div><span className="text-slate-500">Rate Limit Active:</span> {rateLimit ? 'Yes' : 'No'}</div>
             <div><span className="text-slate-500">Timer:</span> {rateLimit ? `${rateLimit.seconds}s` : 'None'}</div>
-            <div><span className="text-slate-500">Model:</span> gemini-2.0-flash (v1beta)</div>
+            <div><span className="text-slate-500">Model:</span> <span className="text-brand-400">{currentModel}</span></div>
             <div className="pt-2 border-t border-slate-700/50 mt-2">
               <button 
                 onClick={() => {
