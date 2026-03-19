@@ -125,7 +125,7 @@ export async function pollSMSMessages() {
       if (!supabase) continue;
       // 3. Store in Supabase
       const { error: insertError } = await supabase.from('sms_messages').insert({
-        user_id: userId,
+        agent_id: userId,
         phone_number: phoneNumber,
         content: content.trim(),
         direction: 'inbound',
