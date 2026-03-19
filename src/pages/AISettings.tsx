@@ -11,6 +11,9 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [aiName, setAiName] = useState('AI Assistant');
+  const [aiTone, setAiTone] = useState('friendly');
+  const [showWidget, setShowWidget] = useState(false);
   const { currentUser } = useStore();
 
   useEffect(() => {
@@ -35,6 +38,17 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
           if (data?.access_token && data.access_token !== 'active') {
             setModel(data.access_token);
           }
+
+          // Load profile settings for personality
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('settings')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+          
+          if (profile?.settings?.ai_name) setAiName(profile.settings.ai_name);
+          if (profile?.settings?.ai_tone) setAiTone(profile.settings.ai_tone);
+          if (profile?.settings?.show_floating_widget !== undefined) setShowWidget(profile.settings.show_floating_widget);
         } catch (err) {
           console.error('Failed to load API key:', err);
         }
@@ -44,6 +58,13 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
         if (localKey) setApiKey(localKey);
         const localModel = localStorage.getItem('user_gemini_model');
         if (localModel) setModel(localModel);
+        
+        const localAiName = localStorage.getItem('user_ai_name');
+        if (localAiName) setAiName(localAiName);
+        const localAiTone = localStorage.getItem('user_ai_tone');
+        if (localAiTone) setAiTone(localAiTone);
+        const localShowWidget = localStorage.getItem('user_show_floating_widget');
+        if (localShowWidget) setShowWidget(localShowWidget === 'true');
       }
       setLoading(false);
     }
@@ -111,22 +132,42 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
             .insert({
               user_id: currentUser.id,
               provider: 'gemini',
-              access_token: model, // Storing model here if we don't have a dedicated column
-              refresh_token: apiKey, // In production, this should be encrypted
+              access_token: model, 
+              refresh_token: apiKey, 
               updated_at: new Date().toISOString(),
             });
           error = insertError;
         }
 
         if (error) throw error;
-        setSaveResult({ success: true, message: 'API key saved securely to your account.' });
+
+        // Save profile settings
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            settings: {
+              ...(await supabase.from('profiles').select('settings').eq('id', currentUser.id).maybeSingle()).data?.settings,
+              ai_name: aiName,
+              ai_tone: aiTone,
+              show_floating_widget: showWidget,
+              updated_at: new Date().toISOString()
+            }
+          })
+          .eq('id', currentUser.id);
+
+        if (profileError) throw profileError;
+
+        setSaveResult({ success: true, message: 'API key and AI personality saved successfully.' });
       } catch (err: any) {
         setSaveResult({ success: false, message: `Failed to save: ${err.message}` });
       }
     } else {
       localStorage.setItem('user_gemini_api_key', apiKey);
       localStorage.setItem('user_gemini_model', model);
-      setSaveResult({ success: true, message: 'API key and model preference saved locally.' });
+      localStorage.setItem('user_ai_name', aiName);
+      localStorage.setItem('user_ai_tone', aiTone);
+      localStorage.setItem('user_show_floating_widget', showWidget.toString());
+      setSaveResult({ success: true, message: 'API key and AI personality saved locally.' });
     }
     setSaving(false);
   };
@@ -202,6 +243,47 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
                 <span className="text-xs text-slate-500">{m.desc}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Personality Section */}
+        <div className="pt-6 border-t border-slate-800 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">Assistant Name</label>
+              <input
+                type="text"
+                value={aiName}
+                onChange={(e) => setAiName(e.target.value)}
+                placeholder="e.g., WholeScale Buddy"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-400 mb-2">Response Tone</label>
+              <select
+                value={aiTone}
+                onChange={(e) => setAiTone(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all appearance-none"
+              >
+                <option value="friendly">Friendly (Warm & Helpful)</option>
+                <option value="professional">Professional (Formal & Precise)</option>
+                <option value="direct">Direct (Concise & Efficient)</option>
+                <option value="custom">Custom (Follow Guidelines)</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+            <div>
+              <p className="text-white font-medium">Floating AI Widget</p>
+              <p className="text-xs text-slate-500">Show a draggable AI bubble available on all pages</p>
+            </div>
+            <button
+              onClick={() => setShowWidget(!showWidget)}
+              className={`w-12 h-6 rounded-full transition-colors relative ${showWidget ? 'bg-brand-600' : 'bg-slate-700'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showWidget ? 'left-7' : 'left-1'}`} />
+            </button>
           </div>
         </div>
       </div>

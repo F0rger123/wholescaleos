@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
 import { NotificationPanel } from './NotificationPanel';
@@ -13,8 +13,9 @@ import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
-  Smartphone,
+  Smartphone
 } from 'lucide-react';
+import { AIBotWidget } from './AIBotWidget';
 
 const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
   Core: [
@@ -65,6 +66,91 @@ export function Layout() {
       return {};
     }
   });
+
+  const [showFloatingWidget, setShowFloatingWidget] = useState(false);
+  const [userShortcuts, setUserShortcuts] = useState<any[]>([]);
+  const navigate = useNavigate();
+
+  // Load Preferences
+  useEffect(() => {
+    async function loadPrefs() {
+      if (!currentUser?.id) return;
+      
+      if (isSupabaseConfigured && supabase) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('settings')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+        
+        if (profile?.settings?.show_floating_widget !== undefined) {
+          setShowFloatingWidget(profile.settings.show_floating_widget);
+        }
+        if (profile?.settings?.shortcuts) {
+          setUserShortcuts(profile.settings.shortcuts);
+        }
+      } else {
+        const localWidget = localStorage.getItem('user_show_floating_widget');
+        if (localWidget) setShowFloatingWidget(localWidget === 'true');
+        
+        const localShortcuts = localStorage.getItem('user_shortcuts');
+        if (localShortcuts) setUserShortcuts(JSON.parse(localShortcuts));
+      }
+    }
+    loadPrefs();
+  }, [currentUser?.id]);
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if typing in an input
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+
+      // Normalize key combo
+      let combo = [];
+      if (e.ctrlKey || e.metaKey) combo.push('mod');
+      if (e.altKey) combo.push('alt');
+      if (e.shiftKey) combo.push('shift');
+      
+      const key = e.key.toLowerCase();
+      if (!['control', 'meta', 'alt', 'shift'].includes(key)) {
+        combo.push(key);
+      }
+      const comboStr = combo.join('+');
+
+      // Default/Fallback shortcuts
+      if (comboStr === 'mod+k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+        searchInput?.focus();
+        return;
+      }
+
+      // Check User Shortcuts
+      const matched = userShortcuts.find(s => s.keys === comboStr);
+      if (matched) {
+        e.preventDefault();
+        switch (matched.id) {
+          case 'new_lead': navigate('/leads'); break;
+          case 'new_task': navigate('/tasks'); break;
+          case 'open_ai': window.dispatchEvent(new CustomEvent('toggle-ai-widget')); break;
+          case 'send_sms': navigate('/sms'); break;
+          case 'view_calendar': navigate('/calendar'); break;
+          case 'settings': navigate('/settings'); break;
+          case 'dashboard': navigate('/'); break;
+          case 'toggle_dark': 
+            // Simplified theme toggle
+            window.dispatchEvent(new CustomEvent('toggle-theme'));
+            break;
+          case 'save': window.dispatchEvent(new CustomEvent('global-save')); break;
+          case 'clear_chat': window.dispatchEvent(new CustomEvent('clear-ai-chat')); break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [userShortcuts, navigate]);
 
   const toggleSection = (section: string) => {
     const nextState = { ...collapsedSections, [section]: !collapsedSections[section] };
@@ -436,6 +522,9 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating AI Widget */}
+      {showFloatingWidget && <AIBotWidget />}
 
       {/* Modals */}
       <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />

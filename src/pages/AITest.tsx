@@ -222,6 +222,16 @@ export function AITest() {
       
       if (response.intent === 'redirect_setup') {
         setTimeout(() => navigate('/settings/ai'), 1500);
+      } else if (response.intent === 'confirm_action') {
+        // Handle guardrail confirmation
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'ai',
+          content: response.response,
+          timestamp: new Date().toISOString(),
+          intent: 'confirm_action',
+          data: response.data
+        }]);
       } else if (response.intent === 'rate_limit') {
         const errorMessage = response.response;
         // Detect daily quota vs minute limit
@@ -517,6 +527,35 @@ export function AITest() {
               <span className="text-[10px] text-slate-500 mt-1 px-1">
                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
+
+              {/* Confirmation Guardrail UI */}
+              {msg.intent === 'confirm_action' && msg.data && (
+                <div className="mt-3 p-4 bg-brand-500/10 border border-brand-500/20 rounded-xl space-y-3 animate-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2 text-brand-400 font-semibold text-sm">
+                    <AlertTriangle className="w-4 h-4" />
+                    Action Confirmation Required
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => executeAction(msg.data.intent || 'unknown', msg.data, "Confirmed. Proceeding with your request.")}
+                      className="flex-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold py-2 rounded-lg transition-all"
+                    >
+                      Confirm & Execute
+                    </button>
+                    <button
+                      onClick={() => setMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: 'ai',
+                        content: "Action cancelled.",
+                        timestamp: new Date().toISOString()
+                      }])}
+                      className="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 rounded-lg transition-all"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
