@@ -140,10 +140,10 @@ export async function sendSMSViaAI(target: string, message: string): Promise<{ s
   let userCarrier = '';
 
   if (isSupabaseConfigured && supabase) {
-    const { data } = await supabase.from('agent_preferences').select('sms_phone, sms_carrier').eq('user_id', userId).maybeSingle();
+    const { data } = await supabase.from('agent_preferences').select('phone_number, carrier').eq('user_id', userId).maybeSingle();
     if (data) {
-      userPhone = data.sms_phone;
-      userCarrier = data.sms_carrier;
+      userPhone = data.phone_number;
+      userCarrier = data.carrier;
     }
   } else {
     userPhone = localStorage.getItem('user_sms_phone') || '';
