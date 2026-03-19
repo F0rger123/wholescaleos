@@ -295,6 +295,13 @@ Specific Intent Data Requirements:
     });
 
     if (!res.ok) {
+      if (res.status === 429) {
+        return {
+          intent: 'rate_limit',
+          response: "You've reached your rate limit for the Gemini API. Please wait a moment before trying again.",
+          data: { retryAfter: 60 } // Default fallback for free tier
+        };
+      }
       const errorData = await res.json().catch(() => null);
       throw new Error(`Gemini API Error [${res.status}]: ${errorData?.error?.message || res.statusText}`);
     }
