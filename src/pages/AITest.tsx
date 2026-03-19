@@ -13,7 +13,7 @@ import {
 import { 
   Bot, User, Send, Target, Sparkles, Check, Trash2, 
   UserPlus, Key, Loader2, AlertTriangle, ExternalLink, 
-  RefreshCw, Smartphone, Search, X 
+  RefreshCw, Smartphone, Search, X, ArrowDown 
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -58,6 +58,9 @@ export function AITest() {
   });
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
     if (hasKey === null) {
@@ -109,10 +112,48 @@ export function AITest() {
   }, [rateLimit?.seconds]);
 
   useEffect(() => {
+    const handleInitialScroll = () => {
+      if (isInitialMount.current) {
+        const savedPosition = sessionStorage.getItem('ai_chat_scroll_pos');
+        if (savedPosition && containerRef.current) {
+          containerRef.current.scrollTop = parseInt(savedPosition);
+        } else {
+          scrollToBottom('auto');
+        }
+        isInitialMount.current = false;
+      }
+    };
+    handleInitialScroll();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('ai_chat_history', JSON.stringify(messages));
-    // Auto scroll to bottom smoothly
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    
+    // Auto scroll to bottom only if we are already near the bottom
+    // or if the last message is from the user
+    const container = containerRef.current;
+    if (container) {
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
+      const lastMessage = messages[messages.length - 1];
+      if (isNearBottom || lastMessage?.role === 'user') {
+        scrollToBottom();
+      }
+    }
   }, [messages]);
+
+  const handleScroll = () => {
+    const container = containerRef.current;
+    if (container) {
+      const isScrolledUp = container.scrollHeight - container.scrollTop - container.clientHeight > 300;
+      setShowScrollButton(isScrolledUp);
+      // Persist scroll position
+      sessionStorage.setItem('ai_chat_scroll_pos', container.scrollTop.toString());
+    }
+  };
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    bottomRef.current?.scrollIntoView({ behavior });
+  };
 
   const handleSubmit = async (e?: React.FormEvent, customPrompt?: string) => {
     e?.preventDefault();
@@ -296,7 +337,11 @@ export function AITest() {
       </div>
       
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto mb-4 bg-slate-900/40 rounded-2xl border border-slate-800 p-4 space-y-6">
+      <div 
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto mb-4 bg-slate-900/40 rounded-2xl border border-slate-800 p-4 space-y-6 relative"
+      >
         {messages.map((msg) => (
           <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
             
@@ -351,6 +396,17 @@ export function AITest() {
           </div>
         )}
         <div ref={bottomRef} />
+        
+        {/* Scroll to Bottom Button */}
+        {showScrollButton && (
+          <button
+            onClick={() => scrollToBottom()}
+            className="fixed bottom-32 right-8 md:right-[calc(50%-450px)] p-3 bg-brand-600 hover:bg-brand-500 text-white rounded-full shadow-lg shadow-brand-600/20 transition-all animate-in fade-in slide-in-from-bottom-4 z-40"
+            title="Scroll to bottom"
+          >
+            <ArrowDown size={20} />
+          </button>
+        )}
       </div>
 
       {/* Rate Limit Banner */}
