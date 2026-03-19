@@ -2,13 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   processPrompt, 
+  hasUserApiKey,
   createTask, 
   updateLeadStatusViaAI, 
   createLeadViaAI, 
   updateLeadViaAI, 
   deleteLeadViaAI 
 } from '../lib/gemini';
-import { Bot, User, Send, Target, Sparkles, Check, Trash2, UserPlus } from 'lucide-react';
+import { Bot, User, Send, Target, Sparkles, Check, Trash2, UserPlus, Key, Loader2 } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -24,6 +25,7 @@ export function AITest() {
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
       const saved = localStorage.getItem('ai_chat_history');
@@ -40,8 +42,16 @@ export function AITest() {
       }
     ];
   });
-  
+
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function checkKey() {
+      const keyExists = await hasUserApiKey();
+      setHasKey(keyExists);
+    }
+    checkKey();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('ai_chat_history', JSON.stringify(messages));
@@ -52,7 +62,7 @@ export function AITest() {
   const handleSubmit = async (e?: React.FormEvent, customPrompt?: string) => {
     e?.preventDefault();
     const textToSubmit = customPrompt || prompt;
-    if (!textToSubmit.trim() || loading) return;
+    if (!textToSubmit.trim() || loading || !hasKey) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -60,7 +70,7 @@ export function AITest() {
       content: textToSubmit.trim(),
       timestamp: new Date().toISOString()
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setPrompt('');
     setLoading(true);
@@ -138,6 +148,36 @@ export function AITest() {
     { label: "Delete Lead", prompt: "Delete the lead for 123 Main St", icon: <Trash2 className="w-3 h-3"/> },
     { label: "Team Status", prompt: "Who on the team is online right now?", icon: <User className="w-3 h-3"/> }
   ];
+
+  if (hasKey === false) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] max-w-2xl mx-auto text-center px-4">
+        <div className="w-16 h-16 bg-brand-500/10 rounded-2xl flex items-center justify-center mb-6 border border-brand-500/20">
+          <Key className="w-8 h-8 text-brand-400" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-3">AI Assistant Locked</h2>
+        <p className="text-slate-400 mb-8 leading-relaxed">
+          To use the AI Assistant, you must first configure your personal Gemini API key in your settings. 
+          This ensures you have full control over your AI usage and capabilities.
+        </p>
+        <button
+          onClick={() => navigate('/settings/ai')}
+          className="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-8 py-3 rounded-xl transition-all hover:shadow-lg hover:shadow-brand-600/20 flex items-center gap-2"
+        >
+          <Sparkles className="w-5 h-5" />
+          Setup AI Key Now
+        </button>
+      </div>
+    );
+  }
+
+  if (hasKey === null) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-140px)]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col mx-auto max-w-4xl h-[calc(100vh-73px)] p-4 text-slate-200">
