@@ -42,6 +42,53 @@ export function AIBotWidget() {
   const location = useLocation();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+
+  const [position, setPosition] = useState(() => {
+    const saved = localStorage.getItem('ai_widget_position');
+    return saved ? JSON.parse(saved) : { x: 24, y: 24 };
+  });
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Handle Dragging
+  const startDrag = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: position.x,
+      posY: position.y
+    };
+    // Don't prevent default if it's a click on text/buttons, 
+    // but the header is mostly empty space.
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const deltaX = dragStart.current.x - e.clientX;
+      const deltaY = dragStart.current.y - e.clientY;
+      
+      const newPos = {
+        x: Math.max(0, Math.min(window.innerWidth - 80, dragStart.current.posX + deltaX)),
+        y: Math.max(0, Math.min(window.innerHeight - 80, dragStart.current.posY + deltaY))
+      };
+      setPosition(newPos);
+    };
+
+    const onMouseUp = () => {
+      setIsDragging(false);
+      localStorage.setItem('ai_widget_position', JSON.stringify(position));
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isDragging, position]);
 
   // Load preferences
   useEffect(() => {
@@ -77,6 +124,9 @@ export function AIBotWidget() {
       }
     }
     loadPrefs();
+
+    window.addEventListener('ai-settings-updated', loadPrefs);
+    return () => window.removeEventListener('ai-settings-updated', loadPrefs);
   }, [currentUser?.id]);
 
   // Handle outside toggle events
@@ -196,8 +246,11 @@ export function AIBotWidget() {
 
   if (hasKey === false && isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-4">
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-w-sm text-center">
+      <div 
+        className="fixed z-50 animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
+        style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
+      >
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-w-sm text-center pointer-events-auto relative">
           <Key className="w-8 h-8 text-brand-400 mx-auto mb-4" />
           <h3 className="text-white font-bold mb-2">Setup Required</h3>
           <p className="text-xs text-slate-400 mb-4">Please configure your AI API key to use the floating assistant.</p>
@@ -209,14 +262,20 @@ export function AIBotWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none">
+    <div 
+      className="fixed z-50 flex flex-col items-end pointer-events-none"
+      style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
+    >
       
       {/* Expanded Chat Window */}
       {isOpen && !isMinimized && (
         <div className="w-80 md:w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto mb-4 animate-in zoom-in-95 duration-200 origin-bottom-right">
           
           {/* Header */}
-          <div className="p-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+          <div 
+            className="p-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between cursor-move"
+            onMouseDown={startDrag}
+          >
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-brand-500 rounded-lg flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />
@@ -316,7 +375,13 @@ export function AIBotWidget() {
 
       {/* Floating Bubble Button */}
       <button 
-        onClick={() => {
+        onMouseDown={startDrag}
+        onClick={(e) => {
+          // If we were dragging, don't toggle open state
+          // Simple check: if clientX/Y haven't moved much from dragStart
+          const moved = Math.abs(e.clientX - dragStart.current.x) > 5 || Math.abs(e.clientY - dragStart.current.y) > 5;
+          if (moved) return;
+
           setIsOpen(!isOpen);
           setIsMinimized(false);
         }}
