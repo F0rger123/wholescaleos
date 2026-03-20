@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { X, User, Phone, MapPin, Save, Loader2, AtSign } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
