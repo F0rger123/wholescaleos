@@ -278,11 +278,20 @@ export function AITest() {
           systemLog: debug ? JSON.stringify(response.data, null, 2) : undefined 
         });
 
-        if (['update_status', 'update_lead', 'delete_lead', 'send_sms'].includes(response.intent)) {
+        if (response.intent === 'confirm_action' && response.data) {
+          setConfirmModal({
+            isOpen: true,
+            title: 'Confirm AI Action',
+            message: response.response,
+            onConfirm: () => executeAction(response.data.intent || 'unknown', response.data),
+            confirmLabel: 'Confirm & Execute',
+            variant: 'primary'
+          });
+        } else if (['update_status', 'update_lead', 'delete_lead', 'send_sms'].includes(response.intent)) {
           console.log(`AI Intent [${response.intent}] flagged for confirmation.`);
           setPendingAction({ intent: response.intent, data: response.data, response: clean });
           if (response.data?.target) setLeadSearch(response.data.target);
-        } else if (response.intent !== 'confirm_action') {
+        } else {
           // Execute directly if no manual confirmation needed (for basic intents)
           executeAction(response.intent, response.data);
         }
@@ -663,33 +672,7 @@ export function AITest() {
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
 
-                {/* Confirmation Guardrail UI - Simplified to trigger modal */}
-                {msg.role === 'ai' && msg.intent === 'confirm_action' && msg.data && (
-                  <div className="mt-3 p-4 border rounded-xl space-y-3 animate-in slide-in-from-top-2"
-                    style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}
-                  >
-                    <div className="flex items-center gap-2 font-semibold text-sm" style={{ color: 'var(--t-primary)' }}>
-                      <AlertTriangle className="w-4 h-4" />
-                      Action Confirmation Required
-                    </div>
-                    <button
-                      onClick={() => {
-                        setConfirmModal({
-                          isOpen: true,
-                          title: 'Confirm AI Action',
-                          message: `The AI wants to perform a ${msg.data.intent?.replace('_', ' ') || 'scheduled action'}. Do you want to proceed?`,
-                          onConfirm: () => executeAction(msg.data.intent || 'unknown', msg.data),
-                          confirmLabel: 'Confirm & Execute',
-                          variant: 'primary'
-                        });
-                      }}
-                      className="w-full text-white text-xs font-bold py-2.5 rounded-lg transition-all shadow-lg active:scale-95"
-                      style={{ background: 'var(--t-primary)' }}
-                    >
-                      Process Action Request
-                    </button>
-                  </div>
-                )}
+
               </div>
             </div>
           ))}

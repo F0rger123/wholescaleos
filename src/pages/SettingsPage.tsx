@@ -341,7 +341,10 @@ function GeneralTab() {
    APPEARANCE TAB - WITH SUPABASE THEME PERSISTENCE (FIXED)
    ============================================================ */
 function AppearanceTab() {
-  const { currentTheme, setTheme } = useStore();
+  const { 
+    currentTheme, setTheme, 
+    showQuickNotes, setShowQuickNotes 
+  } = useStore();
   const [themeSaved, setThemeSaved] = useState(false);
 
   const handleThemeChange = async (themeId: string) => {
@@ -434,6 +437,30 @@ const user = data?.user;
               </button>
             );
           })}
+        </div>
+
+        <div className="mt-8 pt-8 border-t" style={{ borderColor: 'var(--t-border)' }}>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>Interface</h2>
+          <p className="text-sm mb-4" style={{ color: 'var(--t-text-secondary)' }}>Customize your workspace tools</p>
+          
+          <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--t-surface-dim)', border: '1px solid var(--t-border)' }}>
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--t-primary-dim)' }}>
+                <Bell className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
+              </div>
+              <div>
+                <p className="font-medium text-sm" style={{ color: 'var(--t-text)' }}>Quick Notes</p>
+                <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Show floating notepad for quick thoughts</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowQuickNotes(!showQuickNotes)} 
+              className="relative w-10 h-5 rounded-full transition-all duration-200" 
+              style={{ backgroundColor: showQuickNotes ? 'var(--t-primary)' : 'var(--t-border)' }}
+            >
+              <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200" style={{ transform: showQuickNotes ? 'translateX(22px)' : 'translateX(2px)' }} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

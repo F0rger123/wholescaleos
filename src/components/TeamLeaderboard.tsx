@@ -8,7 +8,7 @@ export function TeamLeaderboard() {
   const leaderData = team.map(member => {
     const assignedLeads = leads.filter(l => l.assignedTo === member.id);
     const closedWon = assignedLeads.filter(l => l.status === 'closed-won');
-    const totalVolume = closedWon.reduce((sum, l) => sum + (l.estimatedValue || 0), 0);
+    const totalVolume = closedWon.reduce((sum, l) => sum + (l.offerAmount || l.estimatedValue || 0), 0);
     const conversionRate = assignedLeads.length > 0 
       ? (closedWon.length / assignedLeads.length) * 100 
       : 0;

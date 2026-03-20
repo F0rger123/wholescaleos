@@ -141,41 +141,43 @@ export function SMSInbox() {
     }
   };
 
-  const handleSend = async (e?: React.FormEvent) => {
+  const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!replyText.trim() || !selectedPhone || sending) return;
 
-    setSending(true);
-    try {
-      const result = await sendSMSViaAI(selectedPhone, replyText.trim());
-      if (result.success) {
-        // ... handled logic ...
-        if (isSupabaseConfigured && supabase && currentUser?.id) {
-          const lead = leads.find(l => l.phone?.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''));
-          await supabase.from('sms_messages').insert({
-            user_id: currentUser.id,
-            lead_id: lead?.id,
-            phone_number: selectedPhone,
-            content: replyText.trim(),
-            direction: 'outbound',
-            is_read: true
-          });
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirm SMS',
+      message: `Send this text to ${selectedPhone}?\n\n"${replyText.trim()}"`,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setSending(true);
+        try {
+          const result = await sendSMSViaAI(selectedPhone, replyText.trim());
+          if (result.success) {
+            if (isSupabaseConfigured && supabase && currentUser?.id) {
+              const lead = leads.find(l => l.phone?.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''));
+              await supabase.from('sms_messages').insert({
+                user_id: currentUser.id,
+                lead_id: lead?.id,
+                phone_number: selectedPhone,
+                content: replyText.trim(),
+                direction: 'outbound',
+                is_read: true
+              });
+            }
+            setReplyText('');
+            fetchMessages();
+          } else {
+            alert(`Failed: ${result.message}`);
+          }
+        } catch (err) {
+          console.error('Failed to send SMS:', err);
+        } finally {
+          setSending(false);
         }
-        setReplyText('');
-        fetchMessages();
-      } else {
-        setConfirmModal({
-          isOpen: true,
-          title: 'SMS Error',
-          message: result.message,
-          onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
-        });
       }
-    } catch (err) {
-      console.error('Failed to send SMS:', err);
-    } finally {
-      setSending(false);
-    }
+    });
   };
 
   const scrollToBottom = () => {

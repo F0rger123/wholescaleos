@@ -190,7 +190,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
     to: targetEmail,
     subject: 'SMS via WholeScale AI',
     text: message,
-    from: 'WholeScale OS <alerts@wholescale.work>'
+    from: `${store.currentUser?.name} <${store.currentUser?.email}>`
   });
 
   if (res.success) {
