@@ -59,32 +59,66 @@ export function AITest() {
   }, [currentModel]);
 
   // Load AI personality settings
-  useEffect(() => {
-    async function loadPersonality() {
-      if (!currentUser?.id) return;
-      
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('settings')
-            .eq('id', currentUser.id)
-            .maybeSingle();
-          
-          if (profile?.settings?.ai_name) {
-            setAiName(profile.settings.ai_name);
-          }
-        } catch (err) {}
-      }
-      
-      const localAiName = localStorage.getItem('user_ai_name');
-      if (localAiName) setAiName(localAiName);
+  const fetchModel = async () => {
+    if (!currentUser?.id) return;
+    
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase
+          .from('user_connections')
+          .select('access_token')
+          .eq('user_id', currentUser.id)
+          .eq('provider', 'gemini')
+          .maybeSingle();
+        if (data?.access_token && data.access_token !== 'active') {
+          setCurrentModel(data.access_token);
+          return;
+        }
+      } catch (err) {}
     }
     
+    const localModel = localStorage.getItem('user_gemini_model');
+    if (localModel) setCurrentModel(localModel);
+  };
+
+  const loadPersonality = async () => {
+    if (!currentUser?.id) return;
+    
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('settings')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+        
+        if (profile?.settings?.ai_name) {
+          setAiName(profile.settings.ai_name);
+        }
+      } catch (err) {}
+    }
+    
+    const localAiName = localStorage.getItem('user_ai_name');
+    if (localAiName) setAiName(localAiName);
+  };
+
+  useEffect(() => {
+    fetchModel();
     loadPersonality();
 
-    window.addEventListener('ai-settings-updated', loadPersonality);
-    return () => window.removeEventListener('ai-settings-updated', loadPersonality);
+    const handleSettingsUpdate = () => {
+      console.log('🔔 AI Settings updated. Refreshing model and resetting rate limits.');
+      fetchModel();
+      loadPersonality();
+      
+      // Explicitly clear rate limit when settings are updated/saved
+      setRateLimit(null);
+      localStorage.removeItem('ai_rate_limit_expiry');
+      localStorage.removeItem('ai_rate_limit_prompt');
+    };
+
+    window.addEventListener('ai-settings-updated', handleSettingsUpdate);
+    return () => window.removeEventListener('ai-settings-updated', handleSettingsUpdate);
   }, [currentUser]);
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     try {
@@ -108,31 +142,7 @@ export function AITest() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const isInitialMount = useRef(true);
 
-  useEffect(() => {
-    async function fetchModel() {
-      if (!currentUser?.id) return;
-      
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data } = await supabase
-            .from('user_connections')
-            .select('access_token')
-            .eq('user_id', currentUser.id)
-            .eq('provider', 'gemini')
-            .maybeSingle();
-          if (data?.access_token && data.access_token !== 'active') {
-            setCurrentModel(data.access_token);
-            return;
-          }
-        } catch (err) {}
-      }
-      
-      const localModel = localStorage.getItem('user_gemini_model');
-      if (localModel) setCurrentModel(localModel);
-    }
-    
-    fetchModel();
-  }, [currentUser]);
+
 
   useEffect(() => {
     if (hasKey === null) {
@@ -148,11 +158,14 @@ export function AITest() {
     // Check for persisted rate limit on mount
     const savedExpiry = localStorage.getItem('ai_rate_limit_expiry');
     const savedPrompt = localStorage.getItem('ai_rate_limit_prompt');
+    
     if (savedExpiry) {
       const expiry = parseInt(savedExpiry);
       const now = Date.now();
+      
       if (expiry > now) {
         const remaining = Math.ceil((expiry - now) / 1000);
+        console.log(`🕒 Resuming rate limit: ${remaining}s remaining.`);
         setRateLimit({ seconds: remaining, originalPrompt: savedPrompt || '' });
       } else {
         localStorage.removeItem('ai_rate_limit_expiry');
