@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   Search, MessageSquare, User, 
   Send, Loader2, ArrowLeft, MoreVertical, 
   CheckCircle2, UserPlus, Smartphone, ShieldCheck,
-  Plus, X
+  Plus, X, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { sendSMSViaAI } from '../lib/gemini';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { pollSMSMessages } from '../lib/sms-polling';
 
 interface SMSMessage {
   id: string;
@@ -44,6 +45,7 @@ export function SMSInbox() {
   const contacts = useStore(state => state.contacts);
   const addContact = useStore(state => state.addContact);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
   const [newNumber, setNewNumber] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
@@ -58,49 +60,68 @@ export function SMSInbox() {
     onConfirm: () => {},
   });
 
-  useEffect(() => {
-    fetchMessages();
-    
-    // Subscribe to new messages
-    if (isSupabaseConfigured && supabase) {
-      const channel = supabase
-        .channel('sms_changes')
-        .on('postgres_changes', { event: 'INSERT', table: 'sms_messages', schema: 'public' }, () => {
-          fetchMessages();
-        })
-        .subscribe();
-      return () => { supabase!.removeChannel(channel); };
-    }
-  }, []);
-
-  useEffect(() => {
-    processConversations(messages);
-  }, [messages, leads]);
-
-  useEffect(() => {
-    scrollToBottom();
-    if (selectedPhone) {
-      markAsRead(selectedPhone);
-    }
-  }, [selectedPhone, messages]);
-
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase || !currentUser?.id) return;
     try {
-      const { data, error } = await supabase
+      // Try user_id first (correct column name)
+      let { data, error } = await supabase
         .from('sms_messages')
         .select('*')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      // If user_id column doesn't exist or returned nothing, try agent_id fallback
+      if (error || !data || data.length === 0) {
+        const fallback = await supabase
+          .from('sms_messages')
+          .select('*')
+          .eq('agent_id', currentUser.id)
+          .order('created_at', { ascending: false });
+        if (!fallback.error && fallback.data && fallback.data.length > 0) {
+          data = fallback.data;
+        }
+      }
+
       setMessages(data || []);
     } catch (err) {
       console.error('Error fetching SMS:', err);
     } finally {
       setLoading(false);
     }
+  }, [currentUser?.id]);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await pollSMSMessages();
+      await fetchMessages();
+    } finally {
+      setRefreshing(false);
+    }
   };
+
+  useEffect(() => {
+    fetchMessages();
+    
+    // Subscribe to new messages via realtime
+    let channel: any = null;
+    if (isSupabaseConfigured && supabase) {
+      channel = supabase
+        .channel('sms_changes')
+        .on('postgres_changes', { event: 'INSERT', table: 'sms_messages', schema: 'public' }, () => {
+          fetchMessages();
+        })
+        .subscribe();
+    }
+
+    // Fallback: poll every 15 seconds in case realtime isn't enabled on Supabase
+    const refreshInterval = setInterval(fetchMessages, 15000);
+
+    return () => { 
+      if (channel && supabase) supabase.removeChannel(channel);
+      clearInterval(refreshInterval);
+    };
+  }, [fetchMessages]);
 
   const processConversations = (allMessages: SMSMessage[]) => {
     const groups: Record<string, Conversation> = {};
@@ -184,6 +205,17 @@ export function SMSInbox() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  useEffect(() => {
+    processConversations(messages);
+  }, [messages, leads]);
+
+  useEffect(() => {
+    scrollToBottom();
+    if (selectedPhone) {
+      markAsRead(selectedPhone);
+    }
+  }, [selectedPhone, messages]);
+
   const filteredConversations = conversations.filter(c => 
     c.phone.includes(searchQuery) || 
     c.leadName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -211,14 +243,25 @@ export function SMSInbox() {
         <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold" style={{ color: 'var(--t-text-color)' }}>Messages</h2>
-            <button 
-              onClick={() => setShowCompose(true)}
-              className="p-2 rounded-xl transition-all hover:scale-105"
-              style={{ background: 'var(--t-primary)', color: 'white' }}
-              title="New Message"
-            >
-              <Plus size={18} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="p-2 rounded-xl transition-all hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
+                style={{ color: 'var(--t-text-muted)' }}
+                title="Check for new messages now"
+              >
+                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              </button>
+              <button 
+                onClick={() => setShowCompose(true)}
+                className="p-2 rounded-xl transition-all hover:scale-105"
+                style={{ background: 'var(--t-primary)', color: 'white' }}
+                title="New Message"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />

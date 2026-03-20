@@ -130,6 +130,7 @@ export function getTeamAvailability() {
 }
 
 export const SMS_GATEWAYS: Record<string, string> = {
+  // Standard SMS-to-email gateways
   'AT&T': 'txt.att.net',
   'Verizon': 'vtext.com',
   'T-Mobile': 'tmomail.net',
@@ -139,7 +140,12 @@ export const SMS_GATEWAYS: Record<string, string> = {
   'Google Fi': 'msg.fi.google.com',
   'Republic Wireless': 'text.republicwireless.com',
   'U.S. Cellular': 'email.uscc.net',
-  'Virgin Mobile': 'vmobl.com'
+  'Virgin Mobile': 'vmobl.com',
+  // MMS gateways (better for iPhone recipients on major carriers)
+  'AT&T MMS': 'mms.att.net',
+  'Verizon MMS': 'vzwpix.com',
+  'T-Mobile MMS': 'tmomail.net',  // T-Mobile uses same gateway for both
+  'Sprint MMS': 'pm.sprint.com',
 };
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
@@ -168,17 +174,23 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
 
   // 2. Resolve Target (could be a lead name, or a raw number)
   let targetEmail = '';
+  let targetPhone = '';
   const lead = store.leads.find(l => l.name?.toLowerCase().includes(target.toLowerCase()) || l.phone?.includes(target));
   
   // Use explicit target carrier if provided, otherwise fallback to user's carrier
   const effectiveTargetCarrier = targetCarrier || userCarrier;
-  const gateway = SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon']; // Default to Verizon if everything fails
+  
+  // Try MMS variant first for better iPhone compatibility, fallback to SMS
+  const mmsKey = effectiveTargetCarrier + ' MMS';
+  const gateway = SMS_GATEWAYS[mmsKey] || SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon'];
 
   if (lead && lead.phone) {
     const cleanPhone = lead.phone.replace(/\D/g, '');
+    targetPhone = cleanPhone;
     targetEmail = `${cleanPhone}@${gateway}`;
   } else if (target.replace(/\D/g, '').length >= 10) {
     const cleanPhone = target.replace(/\D/g, '');
+    targetPhone = cleanPhone;
     targetEmail = `${cleanPhone}@${gateway}`;
   } else {
     return { success: false, message: `Could not find a valid phone number for '${target}'.` };
@@ -188,13 +200,13 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   const { sendEmail } = await import('./email');
   const res = await sendEmail({
     to: targetEmail,
-    subject: 'SMS via WholeScale AI',
+    subject: '',  // Blank subject works better for SMS gateway delivery
     text: message,
     from: `${store.currentUser?.name} <${store.currentUser?.email}>`
   });
 
   if (res.success) {
-    return { success: true, message: `SMS successfully sent via Gmail to ${target} (${targetEmail})` };
+    return { success: true, message: `SMS sent to ${targetPhone} via ${effectiveTargetCarrier} gateway (${gateway}). Note: iPhone users may need the carrier set to their actual carrier (AT&T MMS, Verizon MMS, etc.) for reliable delivery.` };
   } else {
     return { success: false, message: `Failed to send SMS via Gmail: ${res.error}` };
   }
@@ -443,6 +455,9 @@ Choose the most appropriate intent:
 - If you have both 'target' (phone or name) AND 'message', return 'confirm_action' with the full plan in one step.
 - Do NOT ask for confirmation of each field separately — gather what you can and confirm once.
 - For the 'message' field, include EXACTLY what the user wants to say. Never paraphrase or rewrite their message without asking.
+- **Name-Number Memory**: If the user says "the person's name is X" then later provides a number, REMEMBER that name-number association for the rest of this conversation. Use the number as the 'target' and note the name in the response.
+- **iPhone Delivery**: For best iPhone compatibility, specify carrier as "AT&T MMS", "Verizon MMS", or "T-Mobile MMS" in targetCarrier. If the user just says "AT&T", use "AT&T MMS" for MMS gateway which works better with iPhones.
+- **Carrier Inference**: Default to "Verizon MMS" if no carrier is specified — it has the broadest coverage. Ask the carrier ONLY if the first attempt fails.
 
 ### 4. Confirmation Before Mutations
 - For create_lead, update_lead, delete_lead, send_sms: ALWAYS use 'confirm_action' first if the user hasn't explicitly said "yes" or "confirm" to the specific action.
@@ -467,7 +482,7 @@ Choose the most appropriate intent:
 - Acknowledge completed actions and move to the next step.
 
 ## INTENT DATA SCHEMAS
-- send_sms: { target: "name or phone number", message: "exact text to send", targetCarrier?: "Verizon|AT&T|T-Mobile|Sprint" }
+- send_sms: { target: "name or phone number", message: "exact text to send", targetCarrier?: "Verizon MMS|AT&T MMS|T-Mobile MMS|Verizon|AT&T|T-Mobile|Sprint" }
 - create_task: { title: string, dueDate: "YYYY-MM-DD", priority: "low|medium|high|urgent", leadId?: string }
 - update_status: { leadId: string, newStatus: "new|contacted|qualified|negotiating|closed-won|closed-lost" }
 - create_lead: { name: string, phone?: string, email?: string, propertyAddress?: string, estimatedValue?: number, notes?: string }

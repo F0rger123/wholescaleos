@@ -52,13 +52,12 @@ const BASE_TARGET_FIELDS: { value: string; label: string; icon: React.ElementTyp
 ];
 
 const inputClass = 'w-full px-3 py-2.5 text-sm rounded-xl outline-none transition-all';
-// @ts-expect-error custom prop
 const inputStyles = { 
   background: 'var(--t-input-bg)', 
   borderColor: 'var(--t-border)', 
   color: 'var(--t-text)',
   '--tw-ring-color': 'var(--t-primary)'
-};
+} as React.CSSProperties & Record<string, string>;
 
 function parseValue(raw: string): number {
   return parseInt(raw.replace(/[^0-9]/g, ''), 10) || 0;

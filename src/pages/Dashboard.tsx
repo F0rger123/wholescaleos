@@ -119,6 +119,18 @@ export function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+
+  const hoveredLead = leads.find(l => l.id === hoveredLeadId) ?? null;
+
+  const handleLeadMouseEnter = (e: React.MouseEvent, id: string) => {
+    setHoveredLeadId(id);
+    setHoverPos({ x: e.clientX, y: e.clientY });
+  };
+  const handleLeadMouseLeave = () => {
+    setHoveredLeadId(null);
+    setHoverPos(null);
+  };
 
   // ─── Calculations ────────────────────────────────────────
   const totalPipeline = leads
@@ -399,17 +411,12 @@ export function Dashboard() {
                   <div className="flex-1 min-w-0 relative">
                     <div 
                       className="relative"
-                      onMouseEnter={() => setHoveredLeadId(lead.id)}
-                      onMouseLeave={() => setHoveredLeadId(null)}
+                      onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
+                      onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm font-medium text-[var(--t-on-surface)] truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
                         {lead.name}
                       </p>
-                      {hoveredLeadId === lead.id && (
-                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000] pointer-events-none">
-                          <LeadHoverCard lead={lead} />
-                        </div>
-                      )}
                     </div>
                     <p className="text-xs text-[var(--t-text-secondary)]">{STATUS_LABELS[lead.status]}</p>
                   </div>
@@ -447,17 +454,12 @@ export function Dashboard() {
                   <div className="flex-1 min-w-0 relative">
                     <div 
                       className="relative"
-                      onMouseEnter={() => setHoveredLeadId(lead.id)}
-                      onMouseLeave={() => setHoveredLeadId(null)}
+                      onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
+                      onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm text-[var(--t-on-surface)] font-medium truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
                         {lead.name}
                       </p>
-                      {hoveredLeadId === lead.id && (
-                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000] pointer-events-none">
-                          <LeadHoverCard lead={lead} />
-                        </div>
-                      )}
                     </div>
                     <p className="text-xs text-[var(--t-text-secondary)] truncate">{lead.propertyAddress}</p>
                   </div>
@@ -503,6 +505,16 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Single global LeadHoverCard — rendered once at page root to prevent duplicates */}
+      {hoveredLead && hoverPos && (
+        <div
+          className="fixed z-[9999] pointer-events-none shadow-2xl"
+          style={{ left: hoverPos.x + 16, top: hoverPos.y + 16 }}
+        >
+          <LeadHoverCard lead={hoveredLead} />
+        </div>
+      )}
     </div>
   );
 }
