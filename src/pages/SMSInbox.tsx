@@ -132,10 +132,11 @@ export function SMSInbox() {
     const groups: Record<string, Conversation> = {};
     
     allMessages.forEach(msg => {
-      if (!groups[msg.phone_number]) {
-        const lead = leads.find(l => l.phone?.replace(/\D/g, '') === msg.phone_number.replace(/\D/g, ''));
-        groups[msg.phone_number] = {
-          phone: msg.phone_number,
+      const rawPhone = msg.phone_number.replace(/\D/g, '');
+      if (!groups[rawPhone]) {
+        const lead = leads.find(l => l.phone?.replace(/\D/g, '') === rawPhone);
+        groups[rawPhone] = {
+          phone: rawPhone,
           lastMessage: msg.content,
           timestamp: msg.created_at,
           unreadCount: 0,
@@ -144,7 +145,7 @@ export function SMSInbox() {
         };
       }
       if (!msg.is_read && msg.direction === 'inbound') {
-        groups[msg.phone_number].unreadCount++;
+        groups[rawPhone].unreadCount++;
       }
     });
 
@@ -227,11 +228,19 @@ export function SMSInbox() {
     c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
+
   const selectedMessages = [...messages]
-    .filter(m => m.phone_number === selectedPhone)
+    .filter(m => m.phone_number.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, ''))
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-  const activeConversation = conversations.find(c => c.phone === selectedPhone);
+  const activeConversation = conversations.find(c => c.phone.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, ''));
 
   if (loading) {
     return (
@@ -291,7 +300,7 @@ export function SMSInbox() {
           {filteredConversations.map(conv => (
             <button
               key={conv.phone}
-              onClick={() => setSelectedPhone(conv.phone)}
+              onClick={() => setSelectedPhone(conv.phone.replace(/\D/g, ''))}
               className={`w-full p-4 flex gap-3 border-b transition-colors relative`}
               style={selectedPhone === conv.phone ? { 
                 background: 'var(--t-primary-dim)', 
@@ -317,7 +326,7 @@ export function SMSInbox() {
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex justify-between items-start mb-0.5">
                   <span className="font-semibold truncate text-sm" style={{ color: 'var(--t-text)' }}>
-                    {conv.leadName || conv.phone}
+                    {conv.leadName || formatPhoneNumber(conv.phone)}
                   </span>
                   <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--t-text-muted)' }}>
                     {format(new Date(conv.timestamp), 'h:mm a')}
@@ -375,9 +384,9 @@ export function SMSInbox() {
                   {activeConversation?.leadName?.charAt(0) || <User size={18} />}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{activeConversation?.leadName || activeConversation?.phone}</h3>
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{activeConversation?.leadName || formatPhoneNumber(activeConversation?.phone || '')}</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono" style={{ color: 'var(--t-text-muted)' }}>{activeConversation?.phone}</span>
+                    <span className="text-[10px] font-mono" style={{ color: 'var(--t-text-muted)' }}>{formatPhoneNumber(activeConversation?.phone || '')}</span>
                     {activeConversation?.leadId && (
                       <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--t-success)' }}>
                         <ShieldCheck size={10} /> Linked to Lead

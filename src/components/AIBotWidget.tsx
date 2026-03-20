@@ -7,17 +7,9 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
-import { 
-  processPrompt, 
-  hasUserApiKey,
-  createTask,
-  updateLeadStatusViaAI,
-  createLeadViaAI,
-  updateLeadViaAI,
-  deleteLeadViaAI,
-  sendSMSViaAI
-} from '../lib/gemini';
+import { processPrompt, hasUserApiKey, createTask, updateLeadStatusViaAI, createLeadViaAI, updateLeadViaAI, deleteLeadViaAI, sendSMSViaAI } from '../lib/gemini';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { SaveLeadModal } from './SaveLeadModal';
 
 interface ChatMessage {
   id: string;
@@ -75,6 +67,14 @@ export function AIBotWidget() {
     title: '',
     message: '',
     onConfirm: () => {},
+  });
+
+  const [saveContactModal, setSaveContactModal] = useState<{
+    isOpen: boolean;
+    phone: string;
+  }>({
+    isOpen: false,
+    phone: '',
   });
 
   // Handle Dragging
@@ -359,6 +359,19 @@ export function AIBotWidget() {
           }]);
         }
 
+      } else if (response.intent === 'ask_save_contact') {
+        setSaveContactModal({
+          isOpen: true,
+          phone: response.data?.phone || ''
+        });
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: response.response,
+          timestamp: new Date().toISOString(),
+          intent: 'ask_save_contact',
+          data: response.data
+        }]);
       } else {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
@@ -629,6 +642,11 @@ export function AIBotWidget() {
         message={confirmModal.message}
         onConfirm={confirmModal.onConfirm}
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+      <SaveLeadModal
+        isOpen={saveContactModal.isOpen}
+        phone={saveContactModal.phone}
+        onClose={() => setSaveContactModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
