@@ -295,8 +295,26 @@
 /* ─── Navigation hover styles ───────────────────────────────────────────── */
 
 .inactive-nav-item:hover {
-  background: var(--t-sidebar-hover) !important;
+  background: var(--t-surface-hover) !important;
   color: var(--t-text) !important;
+  transform: translateX(4px);
+}
+
+.active-nav-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.active-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  background: var(--t-primary);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px var(--t-primary);
 }
 
 /* ─── Leaflet container fix ─────────────────────────────────────────────── */

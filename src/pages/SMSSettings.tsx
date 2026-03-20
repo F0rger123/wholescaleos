@@ -19,8 +19,10 @@ export const SMS_GATEWAYS: Record<string, string> = {
 };
 
 export function SMSSettings() {
-  const [phone, setPhone] = useState('');
+   const [phone, setPhone] = useState('');
   const [carrier, setCarrier] = useState('');
+  const [autoReply, setAutoReply] = useState(false);
+  const [autoReplyMessage, setAutoReplyMessage] = useState("I'm sorry, I'm currently with a client or away from my desk. I'll get back to you as soon as possible!");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -45,13 +47,15 @@ export function SMSSettings() {
         try {
           const { data } = await supabase
             .from('agent_preferences')
-            .select('phone_number, carrier, sms_gateway')
+            .select('phone_number, carrier, sms_gateway, sms_auto_reply, sms_auto_reply_message')
             .eq('user_id', currentUser.id)
             .maybeSingle();
 
           if (data) {
             setPhone(data.phone_number || '');
             setCarrier(data.carrier || '');
+            setAutoReply(!!data.sms_auto_reply);
+            if (data.sms_auto_reply_message) setAutoReplyMessage(data.sms_auto_reply_message);
           }
         } catch (err) {
           console.error('Failed to load SMS preferences:', err);
@@ -59,8 +63,12 @@ export function SMSSettings() {
       } else {
         const localPhone = localStorage.getItem('user_sms_phone');
         const localCarrier = localStorage.getItem('user_sms_carrier');
+        const localAutoReply = localStorage.getItem('user_sms_auto_reply');
+        const localAutoReplyMsg = localStorage.getItem('user_sms_auto_reply_message');
         if (localPhone) setPhone(localPhone);
         if (localCarrier) setCarrier(localCarrier);
+        if (localAutoReply) setAutoReply(localAutoReply === 'true');
+        if (localAutoReplyMsg) setAutoReplyMessage(localAutoReplyMsg);
       }
       setLoading(false);
     }
@@ -125,6 +133,8 @@ export function SMSSettings() {
               phone_number: phone,
               carrier: carrier,
               sms_gateway: gateway,
+              sms_auto_reply: autoReply,
+              sms_auto_reply_message: autoReplyMessage,
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'user_id' }
@@ -138,6 +148,8 @@ export function SMSSettings() {
     } else {
       localStorage.setItem('user_sms_phone', phone);
       localStorage.setItem('user_sms_carrier', carrier);
+      localStorage.setItem('user_sms_auto_reply', autoReply.toString());
+      localStorage.setItem('user_sms_auto_reply_message', autoReplyMessage);
       setSaveResult({ success: true, message: 'SMS settings saved locally to browser storage.' });
     }
     setSaving(false);
@@ -283,6 +295,56 @@ export function SMSSettings() {
             Save Settings
           </button>
         </div>
+      </div>
+
+      {/* Auto-Reply Settings */}
+      <div className="bg-[var(--t-surface-hover)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center border"
+              style={{ background: 'color-mix(in srgb, var(--t-info) 15%, transparent)', borderColor: 'var(--t-info-dim)' }}
+            >
+              <RefreshCw className="w-5 h-5" style={{ color: 'var(--t-info)' }} />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text-primary)' }}>SMS Auto-Reply</h2>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Automatically respond to missed calls or texts.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setAutoReply(!autoReply)}
+            className={`w-12 h-6 rounded-full transition-colors relative`}
+            style={{ backgroundColor: autoReply ? 'var(--t-primary)' : 'var(--t-surface-subtle)' }}
+          >
+            <div 
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${autoReply ? 'left-7' : 'left-1'}`}
+            />
+          </button>
+        </div>
+
+        {autoReply && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--t-text-muted)' }}>Auto-Reply Message</label>
+              <textarea
+                value={autoReplyMessage}
+                onChange={(e) => setAutoReplyMessage(e.target.value)}
+                rows={3}
+                placeholder="Type your auto-reply message..."
+                className="w-full rounded-xl px-4 py-3 outline-none focus:ring-2 transition-all resize-none"
+                style={{ 
+                  backgroundColor: 'var(--t-background)', 
+                  border: '1px solid var(--t-border)', 
+                  color: 'var(--t-text)',
+                  '--tw-ring-color': 'var(--t-primary-dim)' 
+                } as any}
+              />
+              <p className="text-[10px] mt-1.5" style={{ color: 'var(--t-text-muted)' }}>
+                This message will be sent to anyone who contacts you while auto-reply is active.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="rounded-2xl p-6 border border-dashed" style={{ backgroundColor: 'rgba(var(--t-background-rgb), 0.5)', borderColor: 'var(--t-border)' }}>

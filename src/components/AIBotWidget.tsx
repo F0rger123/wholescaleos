@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Bot, X, Send, 
-  Minus, AlertTriangle,
-  User, Key, Mic
+  Minus,
+  User, Key, Mic,
+  Layout as LayoutIcon,
+  ChevronLeft
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
@@ -39,7 +41,8 @@ export function AIBotWidget() {
   // const [isDragging, setIsDragging] = useState(false);
   // const [position, setPosition] = useState({ x: 20, y: 20 }); // Bottom-right offsets
   
-  const { currentUser } = useStore();
+  const { currentUser, showFloatingAIWidget } = useStore();
+  const [isDocked, setIsDocked] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -229,6 +232,23 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString()
         }]);
         setTimeout(() => navigate('/settings/ai'), 1500);
+      } else if (response.intent === 'confirm_action' && response.data) {
+        // Trigger modal immediately for confirm_action instead of inline
+        setConfirmModal({
+          isOpen: true,
+          title: 'Confirm AI Action',
+          message: response.response,
+          onConfirm: () => handleExecuteAction(response.data.intent, response.data)
+        });
+        // Still add the message so user sees the context
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: response.response,
+          timestamp: new Date().toISOString(),
+          intent: response.intent,
+          data: response.data
+        }]);
       } else {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
@@ -291,10 +311,38 @@ export function AIBotWidget() {
     }
   };
 
+  if (!showFloatingAIWidget) return null;
+
+  if (isDocked) {
+    return (
+      <div 
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-[10000] transition-all duration-300 pointer-events-auto"
+      >
+        <button
+          onClick={() => {
+            setIsDocked(false);
+            setIsOpen(true);
+            setIsMinimized(false);
+          }}
+          className="group flex items-center gap-2 bg-[var(--t-surface)] border-l border-t border-b border-[var(--t-border)] rounded-l-2xl p-3 shadow-2xl hover:bg-[var(--t-surface-hover)] transition-all cursor-pointer"
+        >
+          <div className="flex flex-col items-center gap-2">
+            <Bot size={20} style={{ color: 'var(--t-primary)' }} className="group-hover:scale-110 transition-transform" />
+            <div className="h-12 w-1 rounded-full bg-[var(--t-border)] group-hover:bg-[var(--t-primary)] transition-colors" />
+            <ChevronLeft size={16} className="text-[var(--t-text-muted)] group-hover:text-white" />
+          </div>
+          <div className="[writing-mode:vertical-rl] text-[10px] font-bold uppercase tracking-widest text-[var(--t-text-secondary)]">
+            AI Assistant
+          </div>
+        </button>
+      </div>
+    );
+  }
+
   if (hasKey === false && isOpen) {
     return (
       <div 
-        className="fixed z-50 animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
+        className="fixed z-[2000] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
         style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
       >
         <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6 shadow-2xl max-w-sm text-center pointer-events-auto relative">
@@ -320,7 +368,7 @@ export function AIBotWidget() {
 
   return (
     <div 
-      className="fixed z-50 flex flex-col items-end pointer-events-none"
+      className="fixed z-[10000] flex flex-col items-end pointer-events-none"
       style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
     >
       
@@ -350,18 +398,23 @@ export function AIBotWidget() {
             </div>
             <div className="flex items-center gap-1">
               <button 
-                onClick={() => setIsMinimized(true)}
-                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors"
-                style={{ color: 'var(--t-text-muted)' }}
+                onClick={() => setIsDocked(true)}
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
+                title="Dock to side"
               >
-                <Minus size={16} />
+                <LayoutIcon size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
+              </button>
+              <button 
+                onClick={() => setIsMinimized(true)}
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
+              >
+                <Minus size={16} className="text-[var(--t-text-muted)] group-hover:text-white" />
               </button>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors"
-                style={{ color: 'var(--t-text-muted)' }}
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
               >
-                <X size={16} />
+                <X size={16} className="text-[var(--t-text-muted)] group-hover:text-red-500" />
               </button>
             </div>
           </div>
@@ -388,33 +441,6 @@ export function AIBotWidget() {
                   }}>
                     {msg.content}
                   </div>
-                  
-                  {/* Guardrail Confirmation inside Widget */}
-                  {msg.intent === 'confirm_action' && msg.data && (
-                    <div className="mt-2 p-3 border rounded-lg space-y-2 w-full"
-                      style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}
-                    >
-                      <p className="text-[10px] font-bold uppercase tracking-tighter flex items-center gap-1"
-                        style={{ color: 'var(--t-primary)' }}
-                      >
-                        <AlertTriangle size={10} /> Confirmation Required
-                      </p>
-                      <button
-                        onClick={() => {
-                          setConfirmModal({
-                            isOpen: true,
-                            title: 'Confirm Action',
-                            message: `Proceed with ${msg.data.intent?.replace('_', ' ')}?`,
-                            onConfirm: () => handleExecuteAction(msg.data.intent, msg.data)
-                          });
-                        }}
-                        className="w-full text-white text-[10px] font-bold py-1.5 rounded-md transition-all"
-                        style={{ background: 'var(--t-primary)' }}
-                      >
-                        Confirm & Proceed
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}
@@ -478,8 +504,6 @@ export function AIBotWidget() {
       <button 
         onMouseDown={startDrag}
         onClick={(e) => {
-          // If we were dragging, don't toggle open state
-          // Simple check: if clientX/Y haven't moved much from dragStart
           const moved = Math.abs(e.clientX - dragStart.current.x) > 5 || Math.abs(e.clientY - dragStart.current.y) > 5;
           if (moved) return;
 
@@ -496,12 +520,10 @@ export function AIBotWidget() {
       >
         {isOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />}
         
-        {/* Unread dot or label */}
         {!isOpen && (
           <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--t-error)] border-2 border-[var(--t-background)] rounded-full animate-pulse" />
         )}
         
-        {/* Tooltip */}
         {!isOpen && (
           <div className="absolute right-full mr-3 whitespace-nowrap bg-[var(--t-surface)] text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[var(--t-border)] shadow-xl">
             How can I help you, {currentUser?.email?.split('@')[0]}?

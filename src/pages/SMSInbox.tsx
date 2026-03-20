@@ -4,10 +4,12 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   Search, MessageSquare, User, 
   Send, Loader2, ArrowLeft, MoreVertical, 
-  CheckCircle2, UserPlus, Smartphone, ShieldCheck
+  CheckCircle2, UserPlus, Smartphone, ShieldCheck,
+  Plus, X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { sendSMSViaAI } from '../lib/gemini';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 interface SMSMessage {
   id: string;
@@ -38,7 +40,23 @@ export function SMSInbox() {
   const [sending, setSending] = useState(false);
   const leads = useStore(state => state.leads);
   const currentUser = useStore(state => state.currentUser);
+  const addLead = useStore(state => state.addLead);
+  const contacts = useStore(state => state.contacts);
+  const addContact = useStore(state => state.addContact);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showCompose, setShowCompose] = useState(false);
+  const [newNumber, setNewNumber] = useState('');
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchMessages();
@@ -131,9 +149,7 @@ export function SMSInbox() {
     try {
       const result = await sendSMSViaAI(selectedPhone, replyText.trim());
       if (result.success) {
-        // Optimistically add to UI or wait for Supabase insert
-        // The sendSMSViaAI should also insert the outbound record eventually.
-        // Let's ensure it does. (Wait, let's add it here for immediate feedback)
+        // ... handled logic ...
         if (isSupabaseConfigured && supabase && currentUser?.id) {
           const lead = leads.find(l => l.phone?.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''));
           await supabase.from('sms_messages').insert({
@@ -148,7 +164,12 @@ export function SMSInbox() {
         setReplyText('');
         fetchMessages();
       } else {
-        alert(result.message);
+        setConfirmModal({
+          isOpen: true,
+          title: 'SMS Error',
+          message: result.message,
+          onConfirm: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        });
       }
     } catch (err) {
       console.error('Failed to send SMS:', err);
@@ -186,7 +207,17 @@ export function SMSInbox() {
       {/* Conversations List */}
       <div className={`flex flex-col border-r ${selectedPhone ? 'hidden md:flex md:w-80' : 'w-full md:w-80'}`} style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.4)', borderColor: 'var(--t-border)' }}>
         <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
-          <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--t-text-color)' }}>Messages</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold" style={{ color: 'var(--t-text-color)' }}>Messages</h2>
+            <button 
+              onClick={() => setShowCompose(true)}
+              className="p-2 rounded-xl transition-all hover:scale-105"
+              style={{ background: 'var(--t-primary)', color: 'white' }}
+              title="New Message"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
             <input 
@@ -307,15 +338,55 @@ export function SMSInbox() {
               </div>
               <div className="flex gap-2">
                 {!activeConversation?.leadId && (
-                  <button className="text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors"
+                  <button 
+                    onClick={() => {
+                      const name = prompt("Enter name for this contact:");
+                      if (name && selectedPhone) {
+                        addLead({
+                          name,
+                          email: '',
+                          phone: selectedPhone,
+                          status: 'new',
+                          source: 'other',
+                          propertyAddress: 'Unknown',
+                          propertyType: 'single-family',
+                          estimatedValue: 0,
+                          offerAmount: 0,
+                          lat: 34.0522, // Default to LA for now or 0
+                          lng: -118.2437,
+                          notes: 'Saved from SMS inbox',
+                          assignedTo: currentUser?.id || '',
+                          probability: 50,
+                          engagementLevel: 3,
+                          timelineUrgency: 3,
+                          competitionLevel: 1
+                        });
+                      }
+                    }}
+                    className="text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors"
                     style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
                   >
-                    <UserPlus size={14} /> Link Lead
+                    <UserPlus size={14} /> Save as Lead
                   </button>
                 )}
                 <button className="p-2 rounded-lg transition-colors" style={{ color: 'var(--t-text-muted)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                   <MoreVertical size={20} />
                 </button>
+                {!contacts.find(c => c.phone.replace(/\D/g, '') === selectedPhone.replace(/\D/g, '')) && !activeConversation?.leadId && (
+                  <button 
+                    onClick={() => {
+                      const name = prompt("Enter contact name:");
+                      if (name && selectedPhone) {
+                        addContact({ name, phone: selectedPhone });
+                      }
+                    }}
+                    className="p-2 rounded-lg transition-colors"
+                    style={{ color: 'var(--t-primary)' }}
+                    title="Save Contact"
+                  >
+                    <UserPlus size={20} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -393,6 +464,94 @@ export function SMSInbox() {
           </>
         )}
       </div>
+
+      {/* Compose Modal */}
+      {showCompose && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>New Message</h3>
+              <button onClick={() => setShowCompose(false)} style={{ color: 'var(--t-text-muted)' }}><X size={20} /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium mb-1.5 uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Phone Number</label>
+                <div className="relative">
+                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
+                  <input 
+                    type="tel"
+                    value={newNumber}
+                    onChange={(e) => setNewNumber(e.target.value)}
+                    placeholder="e.g. 555-0123"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-1 transition-all"
+                    style={{ 
+                      backgroundColor: 'var(--t-background)', 
+                      border: '1px solid var(--t-border)', 
+                      color: 'var(--t-text)',
+                      // @ts-expect-error custom prop
+                      '--tw-ring-color': 'var(--t-primary)' 
+                    }}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {contacts.length > 0 && (
+                <div>
+                  <label className="block text-xs font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Saved Contacts</label>
+                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1">
+                    {contacts.map(contact => (
+                      <button
+                        key={contact.id}
+                        onClick={() => {
+                          setSelectedPhone(contact.phone);
+                          setShowCompose(false);
+                        }}
+                        className="flex items-center justify-between p-2.5 rounded-xl text-left transition-colors hover:bg-[var(--t-surface-hover)] border border-transparent hover:border-[var(--t-border)]"
+                        style={{ backgroundColor: 'var(--t-background)' }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-[var(--t-primary-dim)] flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--t-primary)' }}>
+                            {contact.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>{contact.name}</p>
+                            <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{contact.phone}</p>
+                          </div>
+                        </div>
+                        <Plus size={14} style={{ color: 'var(--t-text-muted)' }} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button 
+                onClick={() => {
+                  if (newNumber.trim()) {
+                    setSelectedPhone(newNumber.trim());
+                    setShowCompose(false);
+                    setNewNumber('');
+                  }
+                }}
+                disabled={!newNumber.trim()}
+                className="w-full py-2.5 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                style={{ background: 'var(--t-primary)', color: 'white' }}
+              >
+                Start Conversation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

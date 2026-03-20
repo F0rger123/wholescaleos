@@ -53,7 +53,10 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
           
           if (profile?.settings?.ai_name) setAiName(profile.settings.ai_name);
           if (profile?.settings?.ai_tone) setAiTone(profile.settings.ai_tone);
-          if (profile?.settings?.show_floating_widget !== undefined) setShowWidget(profile.settings.show_floating_widget);
+          if (profile?.settings?.show_floating_widget !== undefined) {
+            setShowWidget(profile.settings.show_floating_widget);
+            setShowFloatingAIWidget(profile.settings.show_floating_widget);
+          }
         } catch (err) {
           console.error('Failed to load API key:', err);
         }
@@ -69,7 +72,11 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
         const localAiTone = localStorage.getItem('user_ai_tone');
         if (localAiTone) setAiTone(localAiTone);
         const localShowWidget = localStorage.getItem('user_show_floating_widget');
-        if (localShowWidget) setShowWidget(localShowWidget === 'true');
+        if (localShowWidget) {
+          const val = localShowWidget === 'true';
+          setShowWidget(val);
+          setShowFloatingAIWidget(val);
+        }
       }
       setLoading(false);
     }

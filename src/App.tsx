@@ -24,6 +24,7 @@ import { AITest } from './pages/AITest';
 import { AISettings } from './pages/AISettings';
 import { SMSSettings } from './pages/SMSSettings';
 import { SMSInbox } from './pages/SMSInbox';
+import { NotificationInbox } from './pages/NotificationInbox';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -175,6 +176,7 @@ export function App() {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/ai-test" element={<AITest />} />
           <Route path="/sms" element={<SMSInbox />} />
+          <Route path="/notifications" element={<NotificationInbox />} />
         </Route>
 
         {/* Catch all */}

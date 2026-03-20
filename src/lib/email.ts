@@ -37,7 +37,8 @@ export type EmailType =
 export interface EmailPayload {
   to: string;
   subject: string;
-  html: string;
+  html?: string;
+  text?: string;
   from?: string;
   replyTo?: string;
 }
@@ -593,7 +594,7 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     console.log('📧 [DEV] Email would be sent:', {
       to: payload.to,
       subject: payload.subject,
-      htmlLength: payload.html.length,
+      htmlLength: (payload.html || payload.text || '').length,
     });
     return { success: true, messageId: `dev-${Date.now()}` };
   }
@@ -637,15 +638,17 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
 
     const { access_token } = await refreshResponse.json();
 
-    // 3. Construct RFC 2822 message (supporting HTML)
+    const contentType = payload.html ? 'text/html' : 'text/plain';
+    const bodyContent = payload.html || payload.text || '';
+
     const strMessage = [
       `To: ${payload.to}`,
       `Subject: ${payload.subject}`,
-      `Content-Type: text/html; charset="UTF-8"`,
+      `Content-Type: ${contentType}; charset="UTF-8"`,
       `MIME-Version: 1.0`,
       `Content-Transfer-Encoding: 7bit`,
       '',
-      payload.html
+      bodyContent
     ].join('\n');
 
     const encodedMessage = btoa(unescape(encodeURIComponent(strMessage)))
