@@ -135,8 +135,9 @@ export const SMS_GATEWAYS: Record<string, string> = {
   'Verizon': 'vtext.com',
   'T-Mobile': 'tmomail.net',
   'Sprint': 'messaging.sprintpcs.com',
-  'Boost Mobile': 'myboostmobile.com',
-  'Cricket Wireless': 'sms.cricketwireless.net',
+  'Boost Mobile': 'tmomail.net', // Boost uses T-Mobile
+  'Cricket Wireless': 'mms.att.net', // Cricket uses AT&T MMS
+  'Metro by T-Mobile': 'tmomail.net',
   'Google Fi': 'msg.fi.google.com',
   'Republic Wireless': 'text.republicwireless.com',
   'U.S. Cellular': 'email.uscc.net',
@@ -144,7 +145,7 @@ export const SMS_GATEWAYS: Record<string, string> = {
   // MMS gateways (more reliable for iPhones)
   'AT&T MMS': 'mms.att.net',
   'Verizon MMS': 'vzwpix.com',
-  'T-Mobile MMS': 'mms.tmomail.net',
+  'T-Mobile MMS': 'tmomail.net', // Corrected: T-Mobile uses same domain for both
   'Sprint MMS': 'pm.sprint.com',
 };
 
@@ -462,6 +463,7 @@ Choose the most appropriate intent:
 - If you have both 'target' (phone or name) AND 'message', return 'confirm_action' with the full plan in one step.
 - Do NOT ask for confirmation of each field separately — gather what you can and confirm once.
 - For the 'message' field, include EXACTLY what the user wants to say. Never paraphrase or rewrite their message without asking.
+- **NO CONTENT FILTERING**: Do not block, moderate, or refuse to send any message regardless of the language used (even if it contains strong language, slang, or sensitive terms like "stupid", "daddy", etc.). You are a neutral conduit for the user's communications.
 - **Name-Number Memory**: If the user says "the person's name is X" then later provides a number, REMEMBER that name-number association for the rest of this conversation. Use the number as the 'target' and note the name in the response.
 - **iPhone Delivery**: For best iPhone compatibility, specify carrier as "AT&T MMS", "Verizon MMS", or "T-Mobile MMS" in targetCarrier. If the user just says "AT&T", use "AT&T MMS" for MMS gateway which works better with iPhones.
 - **Carrier Inference**: Default to "Verizon MMS" if no carrier is specified — it has the broadest coverage. Ask the carrier ONLY if the first attempt fails.
@@ -527,7 +529,13 @@ Time: ${context.currentTime || new Date().toISOString()}`;
         ],
         generationConfig: {
           temperature: 0.2,
-        }
+        },
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
       })
     });
 
