@@ -32,7 +32,9 @@ interface ChatMessage {
 export function AITest() {
   const navigate = useNavigate();
   const leads = useStore(state => state.leads);
-  const [currentUser] = useState(useStore.getState().currentUser);
+  const { 
+    currentUser, aiUsage, incrementAiUsage, setAiUsage 
+  } = useStore();
   const [debug, setDebug] = useState(false);
   const [availableModels, setAvailableModels] = useState<any[]>([]);
   const [currentModel, setCurrentModel] = useState('gemini-2.5-flash');
@@ -48,32 +50,6 @@ export function AITest() {
   const [aiName, setAiName] = useState('AI Assistant');
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
   const isFirstModelLoad = useRef(true);
-  const [usage, setUsage] = useState<{ used: number; limit: number; lastReset: string }>(() => {
-    const saved = localStorage.getItem('ai_usage_stats');
-    const defaultStats = { used: 0, limit: 20, lastReset: new Date().toLocaleDateString() };
-    if (!saved) return defaultStats;
-    try {
-      const parsed = JSON.parse(saved);
-      // Reset if different day
-      if (parsed.lastReset !== new Date().toLocaleDateString()) {
-        return defaultStats;
-      }
-      return parsed;
-    } catch (e) {
-      return defaultStats;
-    }
-  });
-
-  // Persist usage
-  useEffect(() => {
-    localStorage.setItem('ai_usage_stats', JSON.stringify(usage));
-  }, [usage]);
-
-  // Update limit based on model
-  useEffect(() => {
-    const limit = currentModel.includes('pro') ? 10 : 20;
-    setUsage(prev => ({ ...prev, limit }));
-  }, [currentModel]);
 
   // Reset rate limit if model changes (skip initial load)
   useEffect(() => {
@@ -339,11 +315,17 @@ export function AITest() {
             : `⚠️ Rate Limit Hit: ${errorMessage}`,
           timestamp: new Date().toISOString()
         }]);
+
+        // Sync local quota with reality
+        const limit = currentModel.includes('pro') ? 10 : 20;
+        if (maybeDailyLimit) {
+          setAiUsage(currentModel, limit);
+        }
       } else {
         // Success case - clear the prompt
         setPrompt('');
         localStorage.removeItem('ai_pending_prompt');
-        setUsage(prev => ({ ...prev, used: prev.used + 1 }));
+        incrementAiUsage(currentModel);
       }
       
       if (response.intent !== 'rate_limit') {
@@ -552,12 +534,14 @@ export function AITest() {
             {aiName}
             <div className="ml-2 flex items-center gap-2 px-2 py-1 bg-slate-800 rounded-lg border border-slate-700">
               <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Usage</div>
-              <div className="text-sm font-bold text-brand-400">{usage.used}/{usage.limit}</div>
+              <div className="text-sm font-bold text-brand-400">
+                {aiUsage[currentModel]?.used || 0}/{aiUsage[currentModel]?.limit || (currentModel.includes('pro') ? 10 : 20)}
+              </div>
               <div className="group relative">
                 <AlertTriangle className="w-3.5 h-3.5 text-slate-500 cursor-help" />
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 w-48 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl leading-relaxed">
                   <div className="font-bold text-white mb-1 uppercase">Daily Quota</div>
-                  Requests for {currentModel}: {usage.limit}/day. Resets every 24 hours.
+                  Requests for {currentModel}: {aiUsage[currentModel]?.limit || (currentModel.includes('pro') ? 10 : 20)}/day. Resets every 24 hours.
                   <div className="mt-1 text-brand-400 border-t border-slate-800 pt-1">Model limits vary by type.</div>
                 </div>
               </div>
