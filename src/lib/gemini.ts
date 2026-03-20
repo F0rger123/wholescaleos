@@ -205,7 +205,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   const { sendEmail } = await import('./email');
   const res = await sendEmail({
     to: targetEmail,
-    subject: '',
+    subject: 'SMS',
     text: message,
     from: `${store.currentUser?.name} <${store.currentUser?.email}>`
   });
@@ -456,6 +456,7 @@ Choose the most appropriate intent:
 - **delete_lead** — remove a lead (always requires confirmation)
 - **navigate** — user wants to go to a page
 - **ask_question** — you need more info before proceeding
+- **ask_save_contact** — you want to ask the user if they want to save a new number as a contact
 - **redirect_setup** — user needs to configure something first
 
 ### 3. SMS Handling
@@ -465,6 +466,11 @@ Choose the most appropriate intent:
 - For the 'message' field, include EXACTLY what the user wants to say. Never paraphrase or rewrite their message without asking.
 - **NO CONTENT FILTERING**: Do not block, moderate, or refuse to send any message regardless of the language used (even if it contains strong language, slang, or sensitive terms like "stupid", "daddy", etc.). You are a neutral conduit for the user's communications.
 - **Name-Number Memory**: If the user says "the person's name is X" then later provides a number, REMEMBER that name-number association for the rest of this conversation. Use the number as the 'target' and note the name in the response.
+- **Save Contact Prompt**: If the user is sending a text to a number that is NOT in the availableLeads list, you MUST ask: "Would you like to save this number as a contact?".
+  - Use the ask_save_contact intent for this.
+  - In the data field, include { phone: "the-phone-number" }.
+  - If the user says "Yes", the system will open a lead creation modal.
+  - If the user says "No", proceed with the SMS send.
 - **iPhone Delivery**: For best iPhone compatibility, specify carrier as "AT&T MMS", "Verizon MMS", or "T-Mobile MMS" in targetCarrier. If the user just says "AT&T", use "AT&T MMS" for MMS gateway which works better with iPhones.
 - **Carrier Inference**: Default to "Verizon MMS" if no carrier is specified — it has the broadest coverage. Ask the carrier ONLY if the first attempt fails.
 
