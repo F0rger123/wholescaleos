@@ -97,9 +97,16 @@ export function AIBotWidget() {
       setPosition(newPos);
     };
 
-    const onMouseUp = () => {
+    const onMouseUp = (e: MouseEvent) => {
       setIsDragging(false);
       localStorage.setItem('ai_widget_position', JSON.stringify(position));
+      // If dragged near the top of screen, auto-dock
+      if (e.clientY < 80) {
+        setIsDocked(true);
+        localStorage.setItem('ai_widget_docked', 'true');
+        setIsOpen(false);
+        window.dispatchEvent(new CustomEvent('dock-ai-widget'));
+      }
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -408,17 +415,17 @@ export function AIBotWidget() {
                   window.dispatchEvent(new CustomEvent('dock-ai-widget'));
                 }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
-                title="Dock to side"
+                title="Dock to top bar"
               >
                 <LayoutIcon size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
               </button>
               <button 
-                onClick={() => setIsMinimized(true)}
+                onClick={() => { setIsOpen(false); }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
+                title="Close"
               >
-                <Minus size={16} className="text-[var(--t-text-muted)] group-hover:text-white" />
+                <X size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-error)]" />
               </button>
-
             </div>
           </div>
 
