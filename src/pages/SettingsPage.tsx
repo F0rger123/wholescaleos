@@ -193,6 +193,8 @@ function GeneralTab() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const { showQuickNotes, setShowQuickNotes } = useStore();
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
@@ -299,7 +301,7 @@ function GeneralTab() {
             className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
             style={{
               backgroundColor: saving ? 'var(--t-surface-hover)' : 'var(--t-primary)',
-              color: saving ? 'var(--t-text-secondary)' : 'var(--t-on-primary)',
+              color: saving ? 'var(--t-on-primary)' : 'var(--t-on-primary)',
             }}
           >
             {saving ? (
@@ -311,6 +313,23 @@ function GeneralTab() {
                 <Save size={14} /> Save Settings
               </>
             )}
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--t-text)' }}>Interface Preferences</h2>
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Show Quick Notes</p>
+            <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Display the floating notepad for quick thoughts</p>
+          </div>
+          <button 
+            onClick={() => setShowQuickNotes(!showQuickNotes)} 
+            className="relative w-10 h-5 rounded-full transition-all duration-200" 
+            style={{ backgroundColor: showQuickNotes ? 'var(--t-primary)' : 'var(--t-border)' }}
+          >
+            <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200" style={{ transform: showQuickNotes ? 'translateX(22px)' : 'translateX(2px)' }} />
           </button>
         </div>
       </div>

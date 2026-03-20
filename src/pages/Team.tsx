@@ -50,8 +50,11 @@ export function Team() {
     teamRole: 'member' as TeamRole,
   });
 
-  const totalRevenue = team.reduce((s, t) => s + t.revenue, 0);
-  const totalDeals = team.reduce((s, t) => s + t.dealsCount, 0);
+  const totalRevenue = leads
+    .filter(l => l.status === 'closed-won')
+    .reduce((sum, l) => sum + (l.offerAmount || 0), 0);
+  
+  const totalDeals = leads.filter(l => l.status === 'closed-won').length;
   const onlineCount = team.filter(t => t.presenceStatus === 'online').length;
 
   // Fetch all teams user belongs to
@@ -697,7 +700,11 @@ export function Team() {
         )}
 
         {team.map((member) => {
-          const memberLeads = leads.filter((l) => l.assignedTo === member.name);
+          const memberLeads = leads.filter((l) => l.assignedTo === member.id);
+          const closedLeads = memberLeads.filter(l => l.status === 'closed-won');
+          const memberRevenue = closedLeads.reduce((sum, l) => sum + (l.offerAmount || 0), 0);
+          const memberDeals = closedLeads.length;
+          
           const activeLeads = memberLeads.filter((l) => !l.status.startsWith('closed')).length;
           const memberTasks = tasks.filter(t => t.assignedTo === member.id);
           const pendingTasks = memberTasks.filter(t => t.status === 'todo' || t.status === 'in-progress');
@@ -814,11 +821,11 @@ export function Team() {
                 {/* Quick stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5 pt-5" style={{ borderTop: '1px solid var(--t-border)' }}>
                   <div className="text-center">
-                    <p className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>{member.dealsCount}</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>{memberDeals}</p>
                     <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Deals</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold" style={{ color: 'var(--t-success)' }}>${(member.revenue / 1000).toFixed(0)}k</p>
+                    <p className="text-lg font-bold" style={{ color: 'var(--t-success)' }}>${(memberRevenue / 1000).toFixed(0)}k</p>
                     <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Revenue</p>
                   </div>
                   <div className="text-center">
@@ -843,13 +850,13 @@ export function Team() {
                 <div className="mt-4">
                   <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>
                     <span>Pipeline progress</span>
-                    <span>{totalRevenue > 0 ? Math.round((member.revenue / totalRevenue) * 100) : 0}% of total</span>
+                    <span>{totalRevenue > 0 ? Math.round((memberRevenue / totalRevenue) * 100) : 0}% of total</span>
                   </div>
                   <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--t-input-bg)' }}>
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
-                        width: `${totalRevenue > 0 ? (member.revenue / totalRevenue) * 100 : 0}%`,
+                        width: `${totalRevenue > 0 ? (memberRevenue / totalRevenue) * 100 : 0}%`,
                         background: 'linear-gradient(90deg, var(--t-primary), var(--t-accent))',
                       }}
                     />

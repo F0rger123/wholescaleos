@@ -8,13 +8,12 @@ import {
   Search, Plus, ChevronDown, ChevronRight, Phone, Mail, MapPin,
   DollarSign, Calendar, Edit2, Trash2, X, Check,
   Sparkles, Loader2, Save, PhoneCall, Send,
-  Users, Mic, Play, Pause, Square, Brain,
+  Users, Mic, Play, Pause, Square, Bot as Brain,
   Target, Zap, BarChart3,
-  FileText, Camera, Navigation, Globe, ArrowRight, Volume2, Eye,
+  FileText, Camera, Globe, ArrowRight, Volume2, Eye,
   Trash, AlertTriangle, FileText as ScriptIcon
 } from 'lucide-react';
 import { generateCallScript } from '../lib/gemini';
-import { LeadHoverCard } from '../components/LeadHoverCard';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -53,13 +52,12 @@ interface CustomField {
 
 export default function Leads() {
   const store = useStore();
-  const { leads, addLead, updateLead, deleteLead, teamId, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto } = store;
+  const { leads, addLead, updateLead, deleteLead, teamId, team, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto } = store;
   const saveStatus = (store as any).saveStatus || 'idle';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('priority');
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('timeline');
@@ -71,7 +69,6 @@ export default function Leads() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState<string | null>(null);
-  const [geocodingAll, setGeocodingAll] = useState(false);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [showAddField, setShowAddField] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');
@@ -92,6 +89,7 @@ export default function Leads() {
     name: '', email: '', phone: '', propertyAddress: '',
     propertyType: 'single-family', estimatedValue: '', offerAmount: '',
     status: 'new', notes: '',
+    assignedTo: '',
     probability: '50', engagementLevel: '3', timelineUrgency: '3', competitionLevel: '3',
   });
 
@@ -196,6 +194,7 @@ export default function Leads() {
       name: '', email: '', phone: '', propertyAddress: '', 
       propertyType: 'single-family', estimatedValue: '', offerAmount: '', 
       status: 'new', notes: '', 
+      assignedTo: '',
       probability: '50', engagementLevel: '3', timelineUrgency: '3', competitionLevel: '3' 
     }); 
     setShowModal(true); 
@@ -213,6 +212,7 @@ export default function Leads() {
       offerAmount: (l.offerAmount || '').toString(), 
       status: l.status || 'new', 
       notes: l.notes || '', 
+      assignedTo: l.assignedTo || '',
       probability: (l.probability || 50).toString(), 
       engagementLevel: (l.engagementLevel || 3).toString(), 
       timelineUrgency: (l.timelineUrgency || 3).toString(), 
@@ -239,9 +239,9 @@ export default function Leads() {
       offerAmount: parseFloat(formData.offerAmount) || 0, 
       status: formData.status, 
       notes: formData.notes, 
+      assignedTo: formData.assignedTo,
       lat, lng, 
       source: 'other', 
-      assignedTo: '', 
       probability: parseInt(formData.probability), 
       engagementLevel: parseInt(formData.engagementLevel), 
       timelineUrgency: parseInt(formData.timelineUrgency), 
@@ -292,14 +292,7 @@ export default function Leads() {
     addCallRecording(lid, recordingTime); 
   };
   
-  const geocodeAll = async () => { 
-    setGeocodingAll(true); 
-    for (const l of leads.filter(l => l.propertyAddress && (!l.lat || l.lat === 30.2672))) { 
-      const c = await geocodeAddress(l.propertyAddress || ''); 
-      if (c) updateLead(l.id, { lat: c.lat, lng: c.lng }); 
-    } 
-    setGeocodingAll(false); 
-  };
+
 
   return (
     <div className="p-6 max-w-7xl mx-auto" style={{ backgroundColor: 'var(--t-bg)' }}>
@@ -314,16 +307,7 @@ export default function Leads() {
           </h1>
         </div>
         <div className="flex gap-3">
-          {leads.some(l => l.propertyAddress && (!l.lat || l.lat === 30.2672)) && (
-            <button 
-              onClick={geocodeAll} 
-              disabled={geocodingAll} 
-              className="flex items-center gap-2 px-3 py-2 text-white rounded-lg text-sm transition-opacity hover:opacity-90"
-              style={{ backgroundColor: 'var(--t-warning)' }}
-            >
-              {geocodingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />} Geocode All
-            </button>
-          )}
+
           
           {/* NEW: Bulk delete button */}
           {selectedLeads.size > 0 && (
@@ -642,19 +626,10 @@ export default function Leads() {
                   </div>
                   <div className="flex-1 min-w-0 relative">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div 
-                        className="relative"
-                        onMouseEnter={() => setHoveredLeadId(lead.id)}
-                        onMouseLeave={() => setHoveredLeadId(null)}
-                      >
+                      <div className="relative">
                         <span className="font-medium hover:text-[var(--t-primary)] transition-colors" style={{ color: 'var(--t-text)' }}>
                           {lead.name || 'Unnamed'}
                         </span>
-                        {hoveredLeadId === lead.id && (
-                          <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000]">
-                            <LeadHoverCard lead={lead} />
-                          </div>
-                        )}
                       </div>
                       <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>
                         {STATUS_LABELS[lead.status] || lead.status}
@@ -1251,6 +1226,19 @@ export default function Leads() {
                     <option value="negotiating">Negotiating</option>
                     <option value="closed-won">Closed Won</option>
                     <option value="closed-lost">Closed Lost</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Assigned To</label>
+                  <select 
+                    value={formData.assignedTo} 
+                    onChange={e => setFormData({ ...formData, assignedTo: e.target.value })} 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white"
+                  >
+                    <option value="">Unassigned</option>
+                    {team.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="md:col-span-2">
