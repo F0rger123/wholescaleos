@@ -425,24 +425,40 @@ const user = data?.user;
    NOTIFICATIONS TAB
    ============================================================ */
 function NotificationsTab() {
-  const [settings, setSettings] = useState({
-    emailLeadAssigned: true,
-    emailDealClosed: true,
-    emailTaskDue: true,
-    emailMention: true,
-    pushNewLead: true,
-    pushTaskAssigned: true,
-    pushChatMessage: true,
-    pushDealUpdate: false,
-    digestWeekly: true,
-    digestDaily: false,
-  });
+  const { notificationSettings, updateNotificationSettings } = useStore();
+  const [localSettings, setLocalSettings] = useState(notificationSettings);
+  const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
 
-  const toggle = (key: keyof typeof settings) => setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  useEffect(() => {
+    setLocalSettings(notificationSettings);
+  }, [notificationSettings]);
+
+  const toggle = (key: string) => {
+    setLocalSettings(prev => ({ 
+      ...prev, 
+      [key]: !((prev as any)[key]) 
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveResult(null);
+    
+    try {
+      await updateNotificationSettings(localSettings);
+      setSaveResult('success');
+      setTimeout(() => setSaveResult(null), 3000);
+    } catch (e) {
+      setSaveResult('error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const ToggleSwitch = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
-    <button onClick={onToggle} className="relative w-10 h-5 rounded-full transition-colors" style={{ backgroundColor: enabled ? 'var(--t-primary)' : 'var(--t-border)' }}>
-      <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform" style={{ left: enabled ? '22px' : '2px' }} />
+    <button onClick={onToggle} className="relative w-10 h-5 rounded-full transition-all duration-200" style={{ backgroundColor: enabled ? 'var(--t-primary)' : 'var(--t-border)' }}>
+      <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200" style={{ transform: enabled ? 'translateX(22px)' : 'translateX(2px)' }} />
     </button>
   );
 
@@ -462,7 +478,7 @@ function NotificationsTab() {
                 <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{label}</p>
                 <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{desc}</p>
               </div>
-              <ToggleSwitch enabled={settings[key as keyof typeof settings]} onToggle={() => toggle(key as keyof typeof settings)} />
+              <ToggleSwitch enabled={(localSettings as any)[key]} onToggle={() => toggle(key)} />
             </div>
           ))}
         </div>
@@ -482,7 +498,7 @@ function NotificationsTab() {
                 <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{label}</p>
                 <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{desc}</p>
               </div>
-              <ToggleSwitch enabled={settings[key as keyof typeof settings]} onToggle={() => toggle(key as keyof typeof settings)} />
+              <ToggleSwitch enabled={(localSettings as any)[key]} onToggle={() => toggle(key)} />
             </div>
           ))}
         </div>
@@ -500,10 +516,49 @@ function NotificationsTab() {
                 <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{label}</p>
                 <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{desc}</p>
               </div>
-              <ToggleSwitch enabled={settings[key as keyof typeof settings]} onToggle={() => toggle(key as keyof typeof settings)} />
+              <ToggleSwitch enabled={(localSettings as any)[key]} onToggle={() => toggle(key)} />
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--t-text)' }}>SMS Reminders</h2>
+        <div className="space-y-3">
+          {[
+            ['smsTaskReminder', 'Task Reminders', 'SMS when a task is due in 1 hour'],
+            ['smsAppointmentReminder', 'Appointment Reminders', 'SMS for upcoming appointments'],
+          ].map(([key, label, desc]) => (
+            <div key={key} className="flex items-center justify-between py-2">
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>{label}</p>
+                <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{desc}</p>
+              </div>
+              <ToggleSwitch enabled={(localSettings as any)[key]} onToggle={() => toggle(key)} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all active:scale-95"
+          style={{
+            backgroundColor: 'var(--t-primary)',
+            color: 'var(--t-on-primary)',
+            opacity: saving ? 0.7 : 1
+          }}
+        >
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          {saving ? 'Saving...' : 'Save Notification Settings'}
+        </button>
+        {saveResult === 'success' && (
+          <span className="text-sm font-medium" style={{ color: 'var(--t-success)' }}>
+            <Check size={14} className="inline mr-1" /> All clear! Settings updated.
+          </span>
+        )}
       </div>
     </div>
   );

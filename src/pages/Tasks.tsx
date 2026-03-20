@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   Plus, CheckCircle2, Circle, Clock, AlertTriangle, X, Calendar,
-  User, ChevronDown, Filter, Zap, Search, Flag, Link2, ArrowUpDown,
-  FileText, Minimize2, Maximize2, StickyNote
+  User, ChevronDown, Filter, Zap, Search, Flag, Link2, ArrowUpDown
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import {
@@ -37,7 +36,6 @@ const inputStyle = {
 export function Tasks() {
   const { 
     tasks, team, leads, addTask, updateTask, deleteTask, completeTask,
-    quickNotes, setQuickNotes 
   } = useStore();
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
@@ -48,8 +46,6 @@ export function Tasks() {
   const [sortBy, setSortBy] = useState<'priority' | 'due' | 'status'>('priority');
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [showFilters, setShowFilters] = useState(false);
-  const [showNotes, setShowNotes] = useState(false);
-  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
 
   const emptyForm = (): Omit<Task, 'id' | 'createdAt' | 'completedAt'> => ({
     title: '', description: '', assignedTo: team[0]?.id || '',
@@ -318,7 +314,7 @@ export function Tasks() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tasks..."
-            className={inputClass}
+            className={`${inputClass} pl-10`}
             style={inputStyle}
           />
         </div>
@@ -520,68 +516,6 @@ export function Tasks() {
         </div>
       )}
 
-      {/* Quick Notes Floating Notepad */}
-      <div className={`fixed bottom-6 right-6 z-[8000] flex flex-col items-end gap-3 transition-all duration-300 ${showNotes ? 'w-80 md:w-96' : 'w-12 h-12'}`}>
-        {!showNotes ? (
-          <button
-            onClick={() => setShowNotes(true)}
-            className="w-12 h-12 rounded-full shadow-2xl flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95"
-            style={{ background: 'var(--t-gradient)', border: '1px solid rgba(255,255,255,0.1)' }}
-          >
-            <StickyNote size={20} />
-          </button>
-        ) : (
-          <div className={`w-full flex flex-col rounded-2xl shadow-2xl border overflow-hidden animate-in slide-in-from-bottom-5 duration-300`} 
-               style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', height: isNotesExpanded ? '500px' : '300px' }}>
-            <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)', background: 'rgba(var(--t-surface-rgb), 0.5)' }}>
-              <div className="flex items-center gap-2">
-                <FileText size={16} style={{ color: 'var(--t-primary)' }} />
-                <span className="text-sm font-semibold text-white">Quick Notes</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => setIsNotesExpanded(!isNotesExpanded)}
-                  className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors"
-                  style={{ color: 'var(--t-text-muted)' }}
-                >
-                  {isNotesExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                </button>
-                <button 
-                  onClick={() => setShowNotes(false)}
-                  className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors text-[var(--t-error)]"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-            
-            <textarea
-              value={quickNotes}
-              onChange={(e) => {
-                setQuickNotes(e.target.value);
-              }}
-              placeholder="Jot down quick thoughts, scratchpad, or temporary to-dos..."
-              className="flex-1 w-full p-4 text-sm bg-transparent outline-none resize-none hide-scrollbar"
-              style={{ color: 'var(--t-text-secondary)', lineHeight: '1.6' }}
-            />
-            
-            <div className="px-4 py-2 border-t flex justify-between items-center bg-[var(--t-background)]" style={{ borderColor: 'var(--t-border)' }}>
-              <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>Auto-saves to cloud</span>
-              <button 
-                onClick={() => {
-                  if (confirm('Clear all notes?')) {
-                    setQuickNotes('');
-                  }
-                }}
-                className="text-[10px] hover:text-[var(--t-error)] transition-colors"
-                style={{ color: 'var(--t-text-muted)' }}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

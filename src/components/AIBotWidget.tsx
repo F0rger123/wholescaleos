@@ -4,8 +4,7 @@ import {
   Bot, X, Send, 
   Minus,
   User, Key, Mic,
-  Layout as LayoutIcon,
-  ChevronLeft
+  Layout as LayoutIcon
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
@@ -90,8 +89,8 @@ export function AIBotWidget() {
       const deltaY = dragStart.current.y - e.clientY;
       
       const newPos = {
-        x: Math.max(0, Math.min(window.innerWidth - 80, dragStart.current.posX + deltaX)),
-        y: Math.max(0, Math.min(window.innerHeight - 80, dragStart.current.posY + deltaY))
+        x: Math.max(20, Math.min(window.innerWidth - 60, dragStart.current.posX + deltaX)),
+        y: Math.max(20, Math.min(window.innerHeight - 60, dragStart.current.posY + deltaY))
       };
       setPosition(newPos);
     };
@@ -152,13 +151,20 @@ export function AIBotWidget() {
   useEffect(() => {
     const handleToggle = () => setIsOpen(prev => !prev);
     const handleClear = () => setMessages([]);
+    const handleUndock = () => {
+      setIsDocked(false);
+      setIsOpen(true);
+      setIsMinimized(false);
+    };
     
     window.addEventListener('toggle-ai-widget', handleToggle);
     window.addEventListener('clear-ai-chat', handleClear);
+    window.addEventListener('undock-ai-widget', handleUndock);
     
     return () => {
       window.removeEventListener('toggle-ai-widget', handleToggle);
       window.removeEventListener('clear-ai-chat', handleClear);
+      window.removeEventListener('undock-ai-widget', handleUndock);
     };
   }, []);
 
@@ -311,33 +317,7 @@ export function AIBotWidget() {
     }
   };
 
-  if (!showFloatingAIWidget) return null;
-
-  if (isDocked) {
-    return (
-      <div 
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-[10000] transition-all duration-300 pointer-events-auto"
-      >
-        <button
-          onClick={() => {
-            setIsDocked(false);
-            setIsOpen(true);
-            setIsMinimized(false);
-          }}
-          className="group flex items-center gap-2 bg-[var(--t-surface)] border-l border-t border-b border-[var(--t-border)] rounded-l-2xl p-3 shadow-2xl hover:bg-[var(--t-surface-hover)] transition-all cursor-pointer"
-        >
-          <div className="flex flex-col items-center gap-2">
-            <Bot size={20} style={{ color: 'var(--t-primary)' }} className="group-hover:scale-110 transition-transform" />
-            <div className="h-12 w-1 rounded-full bg-[var(--t-border)] group-hover:bg-[var(--t-primary)] transition-colors" />
-            <ChevronLeft size={16} className="text-[var(--t-text-muted)] group-hover:text-white" />
-          </div>
-          <div className="[writing-mode:vertical-rl] text-[10px] font-bold uppercase tracking-widest text-[var(--t-text-secondary)]">
-            AI Assistant
-          </div>
-        </button>
-      </div>
-    );
-  }
+  if (!showFloatingAIWidget || isDocked) return null;
 
   if (hasKey === false && isOpen) {
     return (
@@ -375,8 +355,16 @@ export function AIBotWidget() {
       {/* Expanded Chat Window */}
       {isOpen && !isMinimized && (
         <div 
-          className="w-80 md:w-96 h-[500px] border rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto mb-4 animate-in zoom-in-95 duration-200 origin-bottom-right"
-          style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          className={`w-80 md:w-96 h-[500px] border rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto mb-4 animate-in zoom-in-95 duration-200 
+            ${position.y > window.innerHeight / 2 ? 'order-last mt-4 mb-0 origin-top-right' : 'mb-4 origin-bottom-right'}`}
+          style={{ 
+            background: 'var(--t-surface)', 
+            borderColor: 'var(--t-border)',
+            position: 'absolute',
+            bottom: position.y > window.innerHeight / 2 ? 'auto' : '100%',
+            top: position.y > window.innerHeight / 2 ? '100%' : 'auto',
+            right: 0
+          }}
         >
           
           {/* Header */}
