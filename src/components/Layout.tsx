@@ -48,7 +48,8 @@ interface UserTeam {
 export function Layout() {
   const { 
     sidebarOpen, toggleSidebar, team, tasks, unreadCounts, 
-    teamConfig, currentUser, showFloatingAIWidget, setShowFloatingAIWidget 
+    teamConfig, currentUser, showFloatingAIWidget, setShowFloatingAIWidget,
+    shortcutsEnabled 
   } = useStore();
 
   const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
@@ -105,6 +106,8 @@ export function Layout() {
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if shortcuts are disabled
+      if (!shortcutsEnabled) return;
       // Don't trigger if typing in an input
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
 
@@ -152,7 +155,7 @@ export function Layout() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [userShortcuts, navigate]);
+  }, [userShortcuts, navigate, shortcutsEnabled]);
 
   const toggleSection = (section: string) => {
     const nextState = { ...collapsedSections, [section]: !collapsedSections[section] };

@@ -47,9 +47,41 @@ export function AITest() {
   const [leadSearch, setLeadSearch] = useState('');
   const [aiName, setAiName] = useState('AI Assistant');
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
+  const isFirstModelLoad = useRef(true);
+  const [usage, setUsage] = useState<{ used: number; limit: number; lastReset: string }>(() => {
+    const saved = localStorage.getItem('ai_usage_stats');
+    const defaultStats = { used: 0, limit: 20, lastReset: new Date().toLocaleDateString() };
+    if (!saved) return defaultStats;
+    try {
+      const parsed = JSON.parse(saved);
+      // Reset if different day
+      if (parsed.lastReset !== new Date().toLocaleDateString()) {
+        return defaultStats;
+      }
+      return parsed;
+    } catch (e) {
+      return defaultStats;
+    }
+  });
 
-  // Reset rate limit if model changes
+  // Persist usage
   useEffect(() => {
+    localStorage.setItem('ai_usage_stats', JSON.stringify(usage));
+  }, [usage]);
+
+  // Update limit based on model
+  useEffect(() => {
+    const limit = currentModel.includes('pro') ? 10 : 20;
+    setUsage(prev => ({ ...prev, limit }));
+  }, [currentModel]);
+
+  // Reset rate limit if model changes (skip initial load)
+  useEffect(() => {
+    if (isFirstModelLoad.current) {
+      isFirstModelLoad.current = false;
+      return;
+    }
+
     if (rateLimit) {
       setRateLimit(null);
       localStorage.removeItem('ai_rate_limit_expiry');
@@ -311,6 +343,7 @@ export function AITest() {
         // Success case - clear the prompt
         setPrompt('');
         localStorage.removeItem('ai_pending_prompt');
+        setUsage(prev => ({ ...prev, used: prev.used + 1 }));
       }
       
       if (response.intent !== 'rate_limit') {
@@ -517,6 +550,18 @@ export function AITest() {
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <Sparkles className="w-6 h-6 text-brand-400" />
             {aiName}
+            <div className="ml-2 flex items-center gap-2 px-2 py-1 bg-slate-800 rounded-lg border border-slate-700">
+              <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Usage</div>
+              <div className="text-sm font-bold text-brand-400">{usage.used}/{usage.limit}</div>
+              <div className="group relative">
+                <AlertTriangle className="w-3.5 h-3.5 text-slate-500 cursor-help" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 w-48 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl leading-relaxed">
+                  <div className="font-bold text-white mb-1 uppercase">Daily Quota</div>
+                  Requests for {currentModel}: {usage.limit}/day. Resets every 24 hours.
+                  <div className="mt-1 text-brand-400 border-t border-slate-800 pt-1">Model limits vary by type.</div>
+                </div>
+              </div>
+            </div>
           </h1>
           <p className="text-sm text-slate-400">Conversational interface with context awareness</p>
         </div>

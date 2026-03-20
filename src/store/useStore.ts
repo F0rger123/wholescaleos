@@ -1338,6 +1338,10 @@ interface AppState {
   // Floating AI Widget
   showFloatingAIWidget: boolean;
   setShowFloatingAIWidget: (v: boolean) => void;
+
+  // Keyboard Shortcuts
+  shortcutsEnabled: boolean;
+  setShortcutsEnabled: (v: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1348,6 +1352,7 @@ export const useStore = create<AppState>((set, get) => ({
   authLoading: false,
   authError: null,
   showFloatingAIWidget: false,
+  shortcutsEnabled: (typeof window !== 'undefined' && localStorage.getItem('wholescale-shortcuts-enabled') !== 'false'),
 
   login: (email, _password) =>
     set(() => {
@@ -2715,4 +2720,11 @@ deleteChannel: (channelId) => {
   },
 
   setShowFloatingAIWidget: (v) => set({ showFloatingAIWidget: v }),
+
+  setShortcutsEnabled: (v) => {
+    set({ shortcutsEnabled: v });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-shortcuts-enabled', v ? 'true' : 'false');
+    }
+  },
 }));
