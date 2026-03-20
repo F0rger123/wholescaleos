@@ -1439,6 +1439,8 @@ interface AppState {
   // Quick Notes
   quickNotes: string;
   setQuickNotes: (v: string) => void;
+  showQuickNotes: boolean;
+  setShowQuickNotes: (v: boolean) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1503,6 +1505,14 @@ export const useStore = create<AppState>((set, get) => ({
   })(),
 
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks_quick_notes') || '' : '',
+  showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('show_quick_notes') !== 'false' : true,
+
+  setShowQuickNotes: (v: boolean) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('show_quick_notes', v.toString());
+    }
+    set({ showQuickNotes: v });
+  },
 
   login: (email, _password) =>
     set(() => {

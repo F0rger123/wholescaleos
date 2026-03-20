@@ -244,7 +244,7 @@ export function AIBotWidget() {
           isOpen: true,
           title: 'Confirm AI Action',
           message: response.response,
-          onConfirm: () => handleExecuteAction(response.data.intent, response.data)
+          onConfirm: () => handleExecuteAction(response.data.intent || 'send_sms', response.data)
         });
         // Still add the message so user sees the context
         setMessages(prev => [...prev, {
@@ -398,12 +398,7 @@ export function AIBotWidget() {
               >
                 <Minus size={16} className="text-[var(--t-text-muted)] group-hover:text-white" />
               </button>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
-              >
-                <X size={16} className="text-[var(--t-text-muted)] group-hover:text-red-500" />
-              </button>
+
             </div>
           </div>
 
