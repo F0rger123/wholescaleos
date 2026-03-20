@@ -30,7 +30,7 @@ export function ShortcutSettings() {
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
-  const { currentUser } = useStore();
+  const { currentUser, shortcutsEnabled, setShortcutsEnabled } = useStore();
 
   useEffect(() => {
     async function loadShortcuts() {
@@ -109,6 +109,7 @@ export function ShortcutSettings() {
             settings: {
               ...(profile?.settings || {}),
               shortcuts: shortcuts,
+              shortcuts_enabled: shortcutsEnabled,
               updated_at: new Date().toISOString()
             }
           })
@@ -117,6 +118,7 @@ export function ShortcutSettings() {
         if (error) throw error;
       } else {
         localStorage.setItem('user_shortcuts', JSON.stringify(shortcuts));
+        localStorage.setItem('wholescale-shortcuts-enabled', shortcutsEnabled ? 'true' : 'false');
       }
       setSaveResult({ success: true, message: 'Shortcuts saved successfully.' });
     } catch (err: any) {
@@ -152,6 +154,24 @@ export function ShortcutSettings() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />}
             Save Changes
           </button>
+        </div>
+      </div>
+
+      <div className="bg-slate-800/30 p-5 rounded-2xl border border-slate-700/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-brand-500/10 rounded-lg shrink-0">
+            <Keyboard className="w-5 h-5 text-brand-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white">Enable Global Shortcuts</h3>
+            <p className="text-xs text-slate-400">Master toggle to turn all keyboard interactions on or off.</p>
+          </div>
+        </div>
+        <div 
+          className={`w-12 h-6 rounded-full relative transition-all duration-300 cursor-pointer shadow-inner ${shortcutsEnabled ? 'bg-brand-500 shadow-brand-900/20' : 'bg-slate-700'}`}
+          onClick={() => setShortcutsEnabled(!shortcutsEnabled)}
+        >
+          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${shortcutsEnabled ? 'left-7' : 'left-1'}`} />
         </div>
       </div>
 
