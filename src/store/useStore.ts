@@ -379,6 +379,12 @@ export interface CalculatorScenario {
 
 // ─── AI Types ────────────────────────────────────────────────────────────────
 
+export interface AIUsage {
+  used: number;
+  limit: number;
+  lastReset: string;
+}
+
 export type AIPriorityLevel = 'high' | 'medium' | 'low';
 export type AIActionType = 'call' | 'email' | 'meeting' | 'follow-up' | 'offer' | 'status-change';
 
@@ -1342,6 +1348,11 @@ interface AppState {
   // Keyboard Shortcuts
   shortcutsEnabled: boolean;
   setShortcutsEnabled: (v: boolean) => void;
+
+  // AI Usage Tracking
+  aiUsage: Record<string, AIUsage>;
+  incrementAiUsage: (model: string) => void;
+  setAiUsage: (model: string, used: number, limit?: number) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1353,6 +1364,15 @@ export const useStore = create<AppState>((set, get) => ({
   authError: null,
   showFloatingAIWidget: false,
   shortcutsEnabled: (typeof window !== 'undefined' && localStorage.getItem('wholescale-shortcuts-enabled') !== 'false'),
+  aiUsage: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('ai_usage_map');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return {};
+  })(),
 
   login: (email, _password) =>
     set(() => {
@@ -2726,5 +2746,44 @@ deleteChannel: (channelId) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('wholescale-shortcuts-enabled', v ? 'true' : 'false');
     }
+  },
+
+  incrementAiUsage: (model) => {
+    set((s) => {
+      const today = new Date().toLocaleDateString();
+      const current = s.aiUsage[model] || { used: 0, limit: model.includes('pro') ? 10 : 20, lastReset: today };
+      
+      const updated = {
+        ...current,
+        used: current.lastReset === today ? current.used + 1 : 1,
+        lastReset: today
+      };
+      
+      const newUsage = { ...s.aiUsage, [model]: updated };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_usage_map', JSON.stringify(newUsage));
+      }
+      return { aiUsage: newUsage };
+    });
+  },
+
+  setAiUsage: (model, used, limit) => {
+    set((s) => {
+      const today = new Date().toLocaleDateString();
+      const current = s.aiUsage[model] || { used: 0, limit: model.includes('pro') ? 10 : 20, lastReset: today };
+      
+      const updated = {
+        ...current,
+        used,
+        limit: limit || current.limit,
+        lastReset: today
+      };
+      
+      const newUsage = { ...s.aiUsage, [model]: updated };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_usage_map', JSON.stringify(newUsage));
+      }
+      return { aiUsage: newUsage };
+    });
   },
 }));

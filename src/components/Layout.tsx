@@ -103,6 +103,23 @@ export function Layout() {
     loadPrefs();
   }, [currentUser?.id, setShowFloatingAIWidget]);
 
+  // Cross-tab Synchronization for AI Usage
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'ai_usage_map' && e.newValue) {
+        try {
+          const newUsage = JSON.parse(e.newValue);
+          useStore.setState({ aiUsage: newUsage });
+        } catch {}
+      }
+      if (e.key === 'wholescale-shortcuts-enabled') {
+        useStore.getState().setShortcutsEnabled(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
