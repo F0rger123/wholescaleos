@@ -141,10 +141,10 @@ export const SMS_GATEWAYS: Record<string, string> = {
   'Republic Wireless': 'text.republicwireless.com',
   'U.S. Cellular': 'email.uscc.net',
   'Virgin Mobile': 'vmobl.com',
-  // MMS gateways (better for iPhone recipients on major carriers)
+  // MMS gateways (more reliable for iPhones)
   'AT&T MMS': 'mms.att.net',
   'Verizon MMS': 'vzwpix.com',
-  'T-Mobile MMS': 'tmomail.net',  // T-Mobile uses same gateway for both
+  'T-Mobile MMS': 'mms.tmomail.net',
   'Sprint MMS': 'pm.sprint.com',
 };
 
@@ -172,43 +172,50 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
     return { success: false, message: 'SMS settings not configured. Please set your phone and carrier in SMS Settings.' };
   }
 
-  // 2. Resolve Target (could be a lead name, or a raw number)
-  let targetEmail = '';
+  // 2. Resolve Target
   let targetPhone = '';
-  const lead = store.leads.find(l => l.name?.toLowerCase().includes(target.toLowerCase()) || l.phone?.includes(target));
+  const lead = store.leads.find(l => 
+    (l.name && l.name.toLowerCase().includes(target.toLowerCase())) || 
+    (l.phone && l.phone.includes(target.replace(/\D/g, '')))
+  );
   
-  // Use explicit target carrier if provided, otherwise fallback to user's carrier
-  const effectiveTargetCarrier = targetCarrier || userCarrier;
-  
-  // Try MMS variant first for better iPhone compatibility, fallback to SMS
-  const mmsKey = effectiveTargetCarrier + ' MMS';
-  const gateway = SMS_GATEWAYS[mmsKey] || SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon'];
-
   if (lead && lead.phone) {
-    const cleanPhone = lead.phone.replace(/\D/g, '');
-    targetPhone = cleanPhone;
-    targetEmail = `${cleanPhone}@${gateway}`;
+    targetPhone = lead.phone.replace(/\D/g, '');
   } else if (target.replace(/\D/g, '').length >= 10) {
-    const cleanPhone = target.replace(/\D/g, '');
-    targetPhone = cleanPhone;
-    targetEmail = `${cleanPhone}@${gateway}`;
+    targetPhone = target.replace(/\D/g, '');
   } else {
     return { success: false, message: `Could not find a valid phone number for '${target}'.` };
   }
 
-  // 3. Send via unified email service (which now uses direct Gmail API)
+  // Use explicit target carrier if provided, otherwise fallback to user's carrier
+  const effectiveTargetCarrier = targetCarrier || userCarrier;
+  
+  // Logic: for major carriers, prefer MMS variant for iPhone compatibility
+  const majorCarriers = ['Verizon', 'AT&T', 'T-Mobile', 'Sprint'];
+  const isMajor = majorCarriers.includes(effectiveTargetCarrier);
+  
+  const mmsKey = effectiveTargetCarrier + ' MMS';
+  const gateway = (isMajor ? (SMS_GATEWAYS[mmsKey] || SMS_GATEWAYS[effectiveTargetCarrier]) : (SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon']));
+
+  const targetEmail = `${targetPhone}@${gateway}`;
+  console.log(`[SMS Send] Sending to ${targetPhone} via ${gateway} (Carrier: ${effectiveTargetCarrier})`);
+
+  // 3. Send via Gmail API
   const { sendEmail } = await import('./email');
   const res = await sendEmail({
     to: targetEmail,
-    subject: '',  // Blank subject works better for SMS gateway delivery
+    subject: '',
     text: message,
     from: `${store.currentUser?.name} <${store.currentUser?.email}>`
   });
 
   if (res.success) {
-    return { success: true, message: `SMS sent to ${targetPhone} via ${effectiveTargetCarrier} gateway (${gateway}). Note: iPhone users may need the carrier set to their actual carrier (AT&T MMS, Verizon MMS, etc.) for reliable delivery.` };
+    return { 
+      success: true, 
+      message: `SMS sent to ${targetPhone} via ${effectiveTargetCarrier} gateway (${gateway}).` 
+    };
   } else {
-    return { success: false, message: `Failed to send SMS via Gmail: ${res.error}` };
+    return { success: false, message: `Failed to send SMS: ${res.error}` };
   }
 }
 

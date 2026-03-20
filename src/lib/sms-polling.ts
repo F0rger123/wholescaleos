@@ -196,7 +196,12 @@ function getReplyGateway(fromHeader: string, phoneNumber: string): string | null
 export async function pollSMSMessages() {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
-  if (!userId) return;
+  if (!userId) {
+    console.log('[SMS Polling] No user ID, skipping poll.');
+    return;
+  }
+
+  console.log('[SMS Polling] Starting poll for user:', userId);
 
   const accessToken = await getAccessToken(userId);
   if (!accessToken) {
@@ -208,29 +213,37 @@ export async function pollSMSMessages() {
 
   try {
     // Strategy: query Gmail inbox for emails from carrier domains
-    // Use a simple recent-inbox scan since carrier query syntax varies
     const queries = [
       GMAIL_FROM_QUERY,                                               // Primary: from:(domain)
-      `in:inbox newer_than:2d`,                                       // Fallback: recent inbox items
+      `newer_than:1d`,                                                // Fallback: any fresh mail (will be filtered by domain below)
     ];
 
     let messages: any[] = [];
 
     for (const query of queries) {
+      console.log(`[SMS Polling] Fetching Gmail with query: ${query}`);
       const listResponse = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=50`,
         { headers: { 'Authorization': `Bearer ${accessToken}` } }
       );
 
-      if (!listResponse.ok) continue;
+      if (!listResponse.ok) {
+        console.error(`[SMS Polling] Gmail list failed for query "${query}":`, listResponse.status);
+        continue;
+      }
+
       const listData = await listResponse.json();
       if (listData.messages?.length > 0) {
         messages = listData.messages;
+        console.log(`[SMS Polling] Found ${messages.length} messages for query: ${query}`);
         break;
       }
     }
 
-    if (!messages || messages.length === 0) return;
+    if (!messages || messages.length === 0) {
+      console.log('[SMS Polling] No messages found in Gmail matching carrier criteria.');
+      return;
+    }
 
     for (const msg of messages) {
       if (!supabase) continue;
@@ -241,14 +254,23 @@ export async function pollSMSMessages() {
         .select('id')
         .eq('gmail_message_id', msg.id)
         .maybeSingle();
-      if (existing) continue;
+
+      if (existing) {
+        // console.log(`[SMS Polling] Message ${msg.id} already exists, skipping.`);
+        continue;
+      }
+
+      console.log(`[SMS Polling] Processing new message: ${msg.id}`);
 
       // Fetch full message
       const detailRes = await fetch(
         `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
         { headers: { 'Authorization': `Bearer ${accessToken}` } }
       );
-      if (!detailRes.ok) continue;
+      if (!detailRes.ok) {
+        console.error(`[SMS Polling] Failed to fetch details for ${msg.id}`);
+        continue;
+      }
       const detail = await detailRes.json();
 
       const headers = detail.payload?.headers || [];
@@ -257,21 +279,35 @@ export async function pollSMSMessages() {
       const dateHeader = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || '';
 
       // ── Filter: Only process emails that actually come from carrier gateways ──
-      const isFromCarrier = ALL_GATEWAY_DOMAINS.some(d => fromHeader.includes(d));
-      if (!isFromCarrier) continue;
+      const isFromCarrier = ALL_GATEWAY_DOMAINS.some(d => fromHeader.toLowerCase().includes(d.toLowerCase()));
+      if (!isFromCarrier) {
+        console.log(`[SMS Polling] Skipping message ${msg.id} - sender ${fromHeader} is not a carrier.`);
+        continue;
+      }
+
+      console.log(`[SMS Polling] Carrier message detected from: ${fromHeader}`);
 
       // Extract phone number from sender address
       const phoneMatch = fromHeader.match(/(\d{10,})/);
       const phoneNumber = phoneMatch ? phoneMatch[1] : '';
-      if (!phoneNumber) continue; // Skip non-phone senders
+      if (!phoneNumber) {
+        console.warn(`[SMS Polling] Could not extract phone number from ${fromHeader}`);
+        continue;
+      }
 
       // Extract message content
       let content = extractTextContent(detail.payload);
       if (!content.trim() && subject) content = subject;
       content = content.trim();
-      if (!content) continue;
+      
+      if (!content) {
+        console.log(`[SMS Polling] Skipping empty message content from ${phoneNumber}`);
+        continue;
+      }
 
       const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString();
+
+      console.log(`[SMS Polling] Inserting inbound SMS from ${phoneNumber}: "${content.substring(0, 30)}..."`);
 
       // ── Insert inbound SMS ──
       const { error: insertError } = await supabase.from('sms_messages').insert({
@@ -285,8 +321,10 @@ export async function pollSMSMessages() {
       });
 
       if (insertError) {
+        console.error(`[SMS Polling] Insert error for message ${msg.id}:`, insertError);
         // Fallback to agent_id if user_id column doesn't exist
         if (insertError.code === '42703' || insertError.message?.includes('user_id')) {
+          console.log('[SMS Polling] retrying insert with agent_id column...');
           await supabase.from('sms_messages').insert({
             agent_id: userId,
             phone_number: phoneNumber,
@@ -297,10 +335,11 @@ export async function pollSMSMessages() {
             is_read: false
           });
         } else {
-          console.error('[SMS Polling] Insert error:', insertError);
           continue;
         }
       }
+
+      console.log(`[SMS Polling] Successfully stored message ${msg.id} from ${phoneNumber}`);
 
       const { smsAutoReplyEnabled, notificationSettings, addNotification } = useStore.getState();
 

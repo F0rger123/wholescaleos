@@ -92,9 +92,14 @@ export function SMSInbox() {
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
+    // console.log('[SMS Inbox] Manual refresh triggered.');
     try {
       await pollSMSMessages();
       await fetchMessages();
+      // Simple notification via title update or similar could be added here
+      // For now we'll just rely on the spinning icon and updated list
+    } catch (err) {
+      console.error('[SMS Inbox] Refresh failed:', err);
     } finally {
       setRefreshing(false);
     }
