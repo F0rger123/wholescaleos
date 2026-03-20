@@ -607,7 +607,7 @@ export default function Leads() {
           const days = getDaysInStatus(lead);
           const geo = lead.lat && lead.lat !== 30.2672;
           return (
-            <div key={lead.id} className="border rounded-xl overflow-hidden transition-colors" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.5)', borderColor: 'var(--t-border)' }}>
+            <div key={lead.id} className="border rounded-xl transition-colors" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.5)', borderColor: 'var(--t-border)' }}>
               {/* LEAD ROW */}
               <div className="flex items-center gap-3 p-4">
                 {/* NEW: Selection checkbox */}
@@ -647,7 +647,7 @@ export default function Leads() {
                         onMouseEnter={() => setHoveredLeadId(lead.id)}
                         onMouseLeave={() => setHoveredLeadId(null)}
                       >
-                        <span className="text-white font-medium hover:text-[var(--t-primary)] transition-colors">
+                        <span className="font-medium hover:text-[var(--t-primary)] transition-colors" style={{ color: 'var(--t-text)' }}>
                           {lead.name || 'Unnamed'}
                         </span>
                         {hoveredLeadId === lead.id && (
@@ -681,7 +681,7 @@ export default function Leads() {
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-white font-semibold">{fmt$(lead.estimatedValue || 0)}</p>
+                    <p className="font-semibold" style={{ color: 'var(--t-text)' }}>{fmt$(lead.estimatedValue || 0)}</p>
                     <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{lead.propertyType || 'Unknown'}</p>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
@@ -740,7 +740,7 @@ export default function Leads() {
                                   <Brain className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
                                 </div>
                                 <div>
-                                  <h4 className="text-white font-medium">{nba.title}</h4>
+                                  <h4 className="font-medium" style={{ color: 'var(--t-text)' }}>{nba.title}</h4>
                                   <p className="text-[var(--t-text-muted)] text-sm mt-1">{nba.description}</p>
                                   <span className="text-xs" style={{ color: 'var(--t-primary)' }}>{nba.confidence}% confidence</span>
                                 </div>
@@ -771,7 +771,7 @@ export default function Leads() {
                                 <x.i className="w-3 h-3" />
                                 {x.l}
                               </div>
-                              <p className="text-white text-sm truncate">{x.v}</p>
+                              <p className="text-sm truncate" style={{ color: 'var(--t-text)' }}>{x.v}</p>
                             </div>
                           ))}
                         </div>
@@ -1176,7 +1176,8 @@ export default function Leads() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] text-white rounded-lg font-medium"
+                  className="flex-1 px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] rounded-lg font-medium"
+                  style={{ color: 'var(--t-text)' }}
                 >
                   Cancel
                 </button>
@@ -1196,7 +1197,7 @@ export default function Leads() {
 
       {/* ADD/EDIT MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9000] p-4" onClick={() => setShowModal(false)}>
           <div className="rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto" 
             style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
             onClick={e => e.stopPropagation()}
@@ -1376,7 +1377,8 @@ export default function Leads() {
                 <button 
                   type="button" 
                   onClick={() => setShowModal(false)} 
-                  className="px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] text-white rounded-lg"
+                  className="px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] rounded-lg"
+                  style={{ color: 'var(--t-text)' }}
                 >
                   Cancel
                 </button>
@@ -1431,7 +1433,8 @@ export default function Leads() {
                   navigator.clipboard.writeText(generatingScript);
                   alert('Script copied to clipboard!');
                 }}
-                className="flex-1 py-3 rounded-xl font-bold bg-[var(--t-surface-subtle)] text-white hover:bg-[var(--t-surface-hover)] transition-all"
+                className="flex-1 py-3 rounded-xl font-bold bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] transition-all"
+                style={{ color: 'var(--t-text)' }}
               >
                 Copy to Clipboard
               </button>

@@ -13,7 +13,7 @@ import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
-  Smartphone, Bell
+  Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 
@@ -72,6 +72,10 @@ export function Layout() {
       return {};
     }
   });
+
+  const [showNotes, setShowNotes] = useState(false);
+  const [isNotesExpanded, setIsNotesExpanded] = useState(false);
+  const { quickNotes, setQuickNotes } = useStore();
 
   const [userShortcuts, setUserShortcuts] = useState<any[]>([]);
   const navigate = useNavigate();
@@ -181,6 +185,12 @@ export function Layout() {
           case 'save': window.dispatchEvent(new CustomEvent('global-save')); break;
           case 'clear_chat': window.dispatchEvent(new CustomEvent('clear-ai-chat')); break;
         }
+      }
+
+      // Global Quick Notes Toggle (Ctrl+Shift+N)
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setShowNotes(prev => !prev);
       }
     };
 
@@ -546,6 +556,16 @@ export function Layout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Bookshelf Docked Button (Relocated) */}
+            <button
+               onClick={() => window.dispatchEvent(new CustomEvent('undock-ai-widget'))}
+               className="p-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
+               style={{ color: 'var(--t-primary)' }}
+               title="Undock AI Widget"
+            >
+              <BookshelfIcon size={20} />
+            </button>
+            <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
             <ThemeSwitcher />
             <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
             <NotificationPanel />
@@ -566,6 +586,69 @@ export function Layout() {
       {/* Modals */}
       <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />
       <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
+
+      {/* Global Quick Notes Floating Notepad */}
+      <div className={`fixed bottom-6 right-6 z-[8000] flex flex-col items-end gap-3 transition-all duration-300 ${showNotes ? 'w-80 md:w-96' : 'w-12 h-12'}`}>
+        {!showNotes ? (
+          <button
+            onClick={() => setShowNotes(true)}
+            className="w-12 h-12 rounded-full shadow-2xl flex items-center justify-center text-white transition-transform hover:scale-110 active:scale-95"
+            style={{ background: 'var(--t-gradient)', border: '1px solid rgba(255,255,255,0.1)' }}
+          >
+            <StickyNote size={20} />
+          </button>
+        ) : (
+          <div className={`w-full flex flex-col rounded-2xl shadow-2xl border overflow-hidden animate-in slide-in-from-bottom-5 duration-300`} 
+               style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', height: isNotesExpanded ? '500px' : '300px' }}>
+            <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)', background: 'rgba(var(--t-surface-rgb), 0.5)' }}>
+              <div className="flex items-center gap-2">
+                <FileText size={16} style={{ color: 'var(--t-primary)' }} />
+                <span className="text-sm font-semibold text-white">Quick Notes</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button 
+                  onClick={() => setIsNotesExpanded(!isNotesExpanded)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors"
+                  style={{ color: 'var(--t-text-muted)' }}
+                >
+                  {isNotesExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                </button>
+                <button 
+                  onClick={() => setShowNotes(false)}
+                  className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors text-[var(--t-error)]"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
+            
+            <textarea
+              value={quickNotes}
+              onChange={(e) => {
+                setQuickNotes(e.target.value);
+              }}
+              placeholder="Jot down quick thoughts..."
+              className="flex-1 w-full p-4 text-sm bg-transparent outline-none resize-none hide-scrollbar text-white"
+              style={{ lineHeight: '1.6' }}
+            />
+            
+            <div className="px-4 py-2 border-t flex justify-between items-center bg-[var(--t-background)]" style={{ borderColor: 'var(--t-border)' }}>
+              <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>Auto-saves to cloud</span>
+              <button 
+                onClick={() => {
+                  if (confirm('Clear all notes?')) {
+                    setQuickNotes('');
+                  }
+                }}
+                className="text-[10px] hover:text-[var(--t-error)] transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

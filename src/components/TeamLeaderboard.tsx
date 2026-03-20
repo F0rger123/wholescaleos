@@ -1,8 +1,8 @@
 import { useStore } from '../store/useStore';
-import { TrendingUp, Award, Users } from 'lucide-react';
+import { TrendingUp, Award, Users, Flame } from 'lucide-react';
 
 export function TeamLeaderboard() {
-  const { team, leads } = useStore();
+  const { team, leads, memberStreaks } = useStore();
 
   // Calculate stats per team member
   const leaderData = team.map(member => {
@@ -18,7 +18,9 @@ export function TeamLeaderboard() {
       closedWonCount: closedWon.length,
       totalVolume,
       conversionRate,
-      assignedCount: assignedLeads.length
+      assignedCount: assignedLeads.length,
+      loginStreak: memberStreaks[member.id]?.login || 0,
+      taskStreak: memberStreaks[member.id]?.task || 0
     };
   }).sort((a, b) => b.totalVolume - a.totalVolume);
 
@@ -39,10 +41,10 @@ export function TeamLeaderboard() {
           <thead>
             <tr className="text-[10px] uppercase tracking-widest border-b border-[var(--t-border)]" style={{ color: 'var(--t-text-muted)' }}>
               <th className="px-4 py-3 font-semibold">Member</th>
-              <th className="px-4 py-3 font-semibold text-right">Closed</th>
-              <th className="px-4 py-3 font-semibold text-right">Volume</th>
+              <th className="px-4 py-3 font-semibold text-right">Revenue</th>
+              <th className="px-4 py-3 font-semibold text-right">Streaks</th>
               <th className="px-4 py-3 font-semibold text-right">Conv. %</th>
-              <th className="px-4 py-3 font-semibold">Trend</th>
+              <th className="px-4 py-3 font-semibold">Rank</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--t-border)]">
@@ -69,12 +71,27 @@ export function TeamLeaderboard() {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <span className="text-sm font-bold text-white">{member.closedWonCount}</span>
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-bold text-white">${(member.totalVolume / 1000).toFixed(1)}k</span>
+                    <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{member.closedWonCount} closed</span>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <span className="text-sm font-bold" style={{ color: 'var(--t-success)' }}>
-                    ${(member.totalVolume / 1000).toFixed(1)}k
-                  </span>
+                  <div className="flex items-center justify-end gap-1.5">
+                    {member.loginStreak > 0 && (
+                      <div className="flex items-center gap-0.5 bg-orange-500/10 text-orange-500 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                        <Flame size={10} /> {member.loginStreak}
+                      </div>
+                    )}
+                    {member.taskStreak > 0 && (
+                      <div className="flex items-center gap-0.5 bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                        <Award size={10} /> {member.taskStreak}
+                      </div>
+                    )}
+                    {member.loginStreak === 0 && member.taskStreak === 0 && (
+                      <span className="text-[10px] text-[var(--t-text-muted)]">—</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <span className="text-sm font-medium text-[var(--t-text-secondary)]">
