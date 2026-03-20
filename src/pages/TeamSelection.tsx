@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Building2, Loader2, Plus, ArrowRight, Users, LogOut,
-  X, ArrowRightLeft, Copy, Check, AlertTriangle,
+  Building2, Loader2, Users, ArrowRight, ArrowRightLeft,
+  Check, Copy, LogOut, Plus, X
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -31,7 +31,6 @@ export function TeamSelection() {
   const [newTeamName, setNewTeamName] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
-  const [showRlsFix, setShowRlsFix] = useState(false);
   const [copiedFix, setCopiedFix] = useState(false);
 
   // Fetch user's teams
@@ -229,10 +228,6 @@ export function TeamSelection() {
 
       if (teamErr) {
         console.error('Team create error:', teamErr);
-        const msg = teamErr.message || '';
-        if (msg.toLowerCase().includes('row-level security') || msg.toLowerCase().includes('policy') || msg.toLowerCase().includes('permission denied')) {
-          setShowRlsFix(true);
-        }
         setCreateError(`${teamErr.message}${teamErr.details ? '. ' + teamErr.details : ''}${teamErr.hint ? '. ' + teamErr.hint : ''}`);
         setCreateLoading(false);
         return;
@@ -299,11 +294,13 @@ export function TeamSelection() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
-        <div className="w-14 h-14 rounded-xl bg-blue-600 flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--t-background)' }}>
+        <div className="w-14 h-14 rounded-xl flex items-center justify-center"
+          style={{ background: 'var(--t-primary)' }}
+        >
           <Building2 size={28} className="text-white" />
         </div>
-        <div className="flex items-center gap-2 text-slate-400">
+        <div className="flex items-center gap-2" style={{ color: 'var(--t-text-muted)' }}>
           <Loader2 size={16} className="animate-spin" />
           <span className="text-sm">Finding your teams...</span>
         </div>
@@ -312,15 +309,21 @@ export function TeamSelection() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--t-background)' }}>
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-600/20">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl"
+            style={{
+              background: 'var(--t-primary)',
+              // @ts-expect-error custom prop
+              '--tw-shadow-color': 'var(--t-primary-dim)'
+            }}
+          >
             <Building2 size={32} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">WholeScale OS</h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
             Welcome{currentUser?.name ? `, ${currentUser.name}` : ''}! Choose how to continue.
           </p>
         </div>
@@ -331,7 +334,7 @@ export function TeamSelection() {
             {/* Existing teams */}
             {teams.length > 0 && (
               <>
-                <p className="text-xs uppercase tracking-wider font-semibold text-slate-500 px-1">
+                <p className="text-xs uppercase tracking-wider font-semibold px-1" style={{ color: 'var(--t-text-muted)', opacity: 0.6 }}>
                   Your Teams
                 </p>
                 <div className="space-y-3">
@@ -339,32 +342,40 @@ export function TeamSelection() {
                     <button
                       key={t.teamId}
                       onClick={() => selectTeam(t.teamId)}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl border border-slate-700/50 bg-slate-800/50 hover:bg-slate-800 hover:border-blue-500/30 transition-all group text-left"
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl border transition-all group text-left"
+                      style={{
+                        background: 'var(--t-surface)',
+                        borderColor: 'var(--t-border)'
+                      }}
                     >
-                      <div className="w-12 h-12 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0 group-hover:bg-blue-500/25 transition-colors">
-                        <Building2 size={22} className="text-blue-400" />
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors"
+                        style={{ background: 'var(--t-primary-dim)' }}
+                      >
+                        <Building2 size={22} style={{ color: 'var(--t-primary)' }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-semibold text-white truncate">
                           {t.teamName}
                         </p>
                         <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
                             {t.memberCount} member{t.memberCount !== 1 ? 's' : ''}
                           </span>
-                          <span className="text-xs capitalize text-slate-500 bg-slate-700/50 px-2 py-0.5 rounded-full">
+                          <span className="text-xs capitalize px-2 py-0.5 rounded-full"
+                            style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}
+                          >
                             {t.role}
                           </span>
                         </div>
                       </div>
-                      <ArrowRight size={18} className="text-slate-500 group-hover:text-blue-400 transition-colors" />
+                      <ArrowRight size={18} style={{ color: 'var(--t-primary)' }} />
                     </button>
                   ))}
                 </div>
                 <div className="flex items-center gap-3 py-2">
-                  <div className="flex-1 h-px bg-slate-800" />
-                  <span className="text-xs text-slate-600">or</span>
-                  <div className="flex-1 h-px bg-slate-800" />
+                  <div className="flex-1 h-px" style={{ background: 'var(--t-border-subtle)' }} />
+                  <span className="text-xs" style={{ color: 'var(--t-text-muted)', opacity: 0.5 }}>or</span>
+                  <div className="flex-1 h-px" style={{ background: 'var(--t-border-subtle)' }} />
                 </div>
               </>
             )}
@@ -373,27 +384,36 @@ export function TeamSelection() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => setMode('join')}
-                className="flex items-center gap-3 p-4 rounded-2xl border border-slate-700/50 bg-slate-800/30 hover:bg-slate-800/60 hover:border-emerald-500/30 transition-all text-left"
+                className="flex items-center gap-3 p-4 rounded-2xl border transition-all text-left"
+                style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
-                  <ArrowRightLeft size={18} className="text-emerald-400" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--t-success-dim)' }}
+                >
+                  <ArrowRightLeft size={18} style={{ color: 'var(--t-success)' }} />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Join a Team</p>
-                  <p className="text-[11px] text-slate-500">Enter an invite code</p>
+                  <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>Enter an invite code</p>
                 </div>
               </button>
 
               <button
                 onClick={() => setMode('create')}
-                className="flex items-center gap-3 p-4 rounded-2xl border border-slate-700/50 bg-slate-800/30 hover:bg-slate-800/60 hover:border-blue-500/30 transition-all text-left"
+                className="flex items-center gap-3 p-4 rounded-2xl border transition-all text-left"
+                style={{
+                  background: 'var(--t-surface)',
+                  borderColor: 'var(--t-border)'
+                }}
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
-                  <Plus size={18} className="text-blue-400" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ background: 'var(--t-primary-dim)' }}
+                >
+                  <Plus size={18} style={{ color: 'var(--t-primary)' }} />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-white">Create a Team</p>
-                  <p className="text-[11px] text-slate-500">Start a new workspace</p>
+                  <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>Start a new workspace</p>
                 </div>
               </button>
             </div>
@@ -402,7 +422,8 @@ export function TeamSelection() {
             <div className="text-center pt-4">
               <button
                 onClick={handleSignOut}
-                className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs hover:text-white transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
               >
                 <LogOut size={12} /> Sign out
               </button>
@@ -412,20 +433,21 @@ export function TeamSelection() {
 
         {/* Join Team Mode */}
         {mode === 'join' && (
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+          <div className="border rounded-2xl p-6 space-y-4" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
-                  <Users size={20} className="text-emerald-400" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--t-success-dim)' }}>
+                  <Users size={20} style={{ color: 'var(--t-success)' }} />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white">Join a Team</h2>
-                  <p className="text-xs text-slate-400">Enter the invite code from your team admin</p>
+                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Enter the invite code from your team admin</p>
                 </div>
               </div>
               <button
                 onClick={() => { setMode('select'); setJoinError(''); setJoinCode(''); }}
-                className="p-2 rounded-lg hover:bg-white/10 text-slate-400"
+                className="p-2 rounded-lg hover:bg-white/10"
+                style={{ color: 'var(--t-text-muted)' }}
               >
                 <X size={16} />
               </button>
@@ -437,14 +459,21 @@ export function TeamSelection() {
                 value={joinCode}
                 onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); }}
                 placeholder="WS-XXXXXX"
-                className="w-full px-4 py-3.5 text-lg font-mono tracking-widest text-center rounded-xl bg-slate-900 border border-slate-600 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                className="w-full px-4 py-3.5 text-lg font-mono tracking-widest text-center rounded-xl outline-none border transition-all"
+                style={{
+                  background: 'var(--t-input-bg)',
+                  borderColor: 'var(--t-border)',
+                  color: 'var(--t-text)',
+                  // @ts-expect-error custom prop
+                  '--tw-ring-color': 'var(--t-primary-dim)'
+                }}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !joinLoading) handleJoinTeam(); }}
                 autoFocus
               />
             </div>
 
             {joinError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+              <div className="p-3 rounded-xl border text-sm" style={{ backgroundColor: 'var(--t-error-dim)', borderColor: 'var(--t-error-border)', color: 'var(--t-error)' }}>
                 {joinError}
               </div>
             )}
@@ -452,14 +481,18 @@ export function TeamSelection() {
             <div className="flex gap-3">
               <button
                 onClick={() => { setMode('select'); setJoinError(''); setJoinCode(''); }}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors"
+                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
               >
                 Back
               </button>
               <button
                 onClick={handleJoinTeam}
                 disabled={joinLoading || !joinCode.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50"
+                style={{ backgroundColor: 'var(--t-success)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-success-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-success)'}
               >
                 {joinLoading ? (
                   <><Loader2 size={16} className="animate-spin" /> Joining...</>
@@ -473,58 +506,64 @@ export function TeamSelection() {
 
         {/* Create Team Mode */}
         {mode === 'create' && (
-          <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+          <div className="border rounded-2xl p-6 space-y-4" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/15 flex items-center justify-center">
-                  <Building2 size={20} className="text-blue-400" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'var(--t-primary-dim)' }}
+                >
+                  <Building2 size={20} style={{ color: 'var(--t-primary)' }} />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white">Create a Team</h2>
-                  <p className="text-xs text-slate-400">Start a new workspace for your group</p>
+                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Start a new workspace for your group</p>
                 </div>
               </div>
               <button
                 onClick={() => { setMode('select'); setCreateError(''); setNewTeamName(''); }}
-                className="p-2 rounded-lg hover:bg-white/10 text-slate-400"
+                className="p-2 rounded-lg hover:bg-white/10"
+                style={{ color: 'var(--t-text-muted)' }}
               >
                 <X size={16} />
               </button>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">Team Name</label>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--t-text)' }}>Team Name</label>
               <input
                 type="text"
                 value={newTeamName}
                 onChange={(e) => { setNewTeamName(e.target.value); setCreateError(''); }}
                 placeholder="e.g. Dallas Office, Investment Group..."
-                className="w-full px-4 py-3 text-sm rounded-xl bg-slate-900 border border-slate-600 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                className="w-full px-4 py-3 text-sm rounded-xl outline-none border transition-all"
+                style={{
+                  backgroundColor: 'var(--t-background)',
+                  border: '1px solid var(--t-border)',
+                  color: 'var(--t-text)',
+                  '--tw-ring-color': 'var(--t-primary-dim)'
+                } as any}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !createLoading) handleCreateTeam(); }}
                 autoFocus
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/15">
-              <p className="text-xs text-slate-400">
-                <span className="text-blue-400 font-medium">What you'll get:</span> Shared leads database, team chat with #general channel, task management, and a unique invite code to add members.
+            <div className="p-3 rounded-xl border" style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
+                <span className="font-medium" style={{ color: 'var(--t-primary)' }}>What you'll get:</span> Shared leads database, team chat with #general channel, task management, and a unique invite code to add members.
               </p>
             </div>
 
             {createError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm whitespace-pre-wrap">
-                <div className="flex items-center gap-2 mb-1">
-                  <AlertTriangle size={14} />
-                  <span className="font-semibold">Error</span>
-                </div>
-                <p className="text-xs">{createError}</p>
-                {showRlsFix && (
-                  <div className="mt-3 pt-3 border-t border-red-500/20">
-                    <p className="text-xs text-red-300 mb-2 font-medium">Quick Fix — Disable Row Level Security:</p>
-                    <p className="text-xs text-red-300/80 mb-2">
-                      1. Open <a href="https://supabase.com/dashboard/project/jdneeubmkgefhrfcurji/sql/new" target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">Supabase SQL Editor</a>
+              <div className="p-3 rounded-xl border text-sm whitespace-pre-wrap" style={{ backgroundColor: 'var(--t-error-dim)', borderColor: 'var(--t-error-border)', color: 'var(--t-error)' }}>
+                {createError}
+
+                {createError.includes('RLS') && (
+                  <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--t-error-border)' }}>
+                    <p className="text-xs mb-2 font-medium" style={{ color: 'var(--t-error)' }}>Quick Fix — Disable Row Level Security:</p>
+                    <p className="text-xs mb-2" style={{ color: 'var(--t-error-muted)' }}>
+                      1. Open <a href="https://supabase.com/dashboard/project/jdneeubmkgefhrfcurji/sql/new" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--t-primary)' }}>Supabase SQL Editor</a>
                     </p>
-                    <p className="text-xs text-red-300/80 mb-2">2. Paste the fix and click Run:</p>
+                    <p className="text-xs mb-2" style={{ color: 'var(--t-error-muted)' }}>2. Paste the fix and click Run:</p>
                     <button
                       onClick={async () => {
                         const sql = `DO $$ DECLARE r RECORD;\nBEGIN FOR r IN (SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public') LOOP\nEXECUTE format('DROP POLICY IF EXISTS %I ON %I', r.policyname, r.tablename);\nEND LOOP; END $$;\n\nALTER TABLE IF EXISTS profiles DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS teams DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS team_members DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS leads DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS channels DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS channel_members DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS messages DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS tasks DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS notifications DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS timeline_entries DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS status_history DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS coverage_areas DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS buyers DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS call_recordings DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS import_history DISABLE ROW LEVEL SECURITY;\nALTER TABLE IF EXISTS access_codes DISABLE ROW LEVEL SECURITY;`;
@@ -540,7 +579,7 @@ export function TeamSelection() {
                     >
                       {copiedFix ? <><Check size={14} /> Copied! Paste in SQL Editor → Run</> : <><Copy size={14} /> Copy Fix SQL</>}
                     </button>
-                    <p className="text-xs text-red-300/80 mt-2">3. Come back and try again</p>
+                    <p className="text-xs mt-2" style={{ color: 'rgba(239, 68, 68, 0.7)' }}>3. Come back and try again</p>
                   </div>
                 )}
               </div>
@@ -549,14 +588,16 @@ export function TeamSelection() {
             <div className="flex gap-3">
               <button
                 onClick={() => { setMode('select'); setCreateError(''); setNewTeamName(''); }}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-600 text-slate-300 hover:bg-white/5 transition-colors"
+                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors"
+                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
               >
                 Back
               </button>
               <button
                 onClick={handleCreateTeam}
                 disabled={createLoading || !newTeamName.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50"
+                style={{ background: 'var(--t-primary)' }}
               >
                 {createLoading ? (
                   <><Loader2 size={16} className="animate-spin" /> Creating...</>

@@ -54,11 +54,11 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 // Loading screen while checking session
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
-      <div className="w-14 h-14 rounded-xl bg-brand-600 flex items-center justify-center">
+    <div className="min-h-screen bg-[var(--t-surface)] flex flex-col items-center justify-center gap-4">
+      <div className="w-14 h-14 rounded-xl bg-[var(--t-success)] flex items-center justify-center">
         <Building2 size={28} className="text-white" />
       </div>
-      <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex items-center gap-2 text-[var(--t-text-muted)]">
         <Loader2 size={16} className="animate-spin" />
         <span className="text-sm">Loading WholeScale OS...</span>
       </div>

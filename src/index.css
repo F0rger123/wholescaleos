@@ -30,6 +30,7 @@
   --t-secondary: #6366f1;
   --t-accent: #8b5cf6;
   --t-bg: #0f172a;
+  --t-background: var(--t-bg);
   --t-surface: #1e293b;
   --t-surface-hover: #334155;
   --t-surface-active: #3b4d6b;
@@ -66,6 +67,7 @@
   --t-secondary: #6b7280;
   --t-accent: #7c3aed;
   --t-bg: #f8fafc;
+  --t-background: var(--t-bg);
   --t-surface: #ffffff;
   --t-surface-hover: #f1f5f9;
   --t-surface-active: #e2e8f0;
@@ -99,6 +101,7 @@
   --t-secondary: rgba(99, 102, 241, 0.9);
   --t-accent: rgba(139, 92, 246, 0.9);
   --t-bg: rgba(15, 23, 42, 0.8);
+  --t-background: var(--t-bg);
   --t-surface: rgba(30, 41, 59, 0.7);
   --t-surface-hover: rgba(51, 65, 85, 0.8);
   --t-surface-active: rgba(59, 77, 107, 0.8);
@@ -133,6 +136,7 @@
   --t-secondary: #cccccc;
   --t-accent: #e0e0e0;
   --t-bg: #0a0a0a;
+  --t-background: var(--t-bg);
   --t-surface: #1a1a1a;
   --t-surface-hover: #252525;
   --t-surface-active: #303030;
@@ -171,6 +175,7 @@
   --t-secondary: #4a4a4a;
   --t-accent: #6b6b6b;
   --t-bg: #f5f5f5;
+  --t-background: var(--t-bg);
   --t-surface: #ffffff;
   --t-surface-hover: #f0f0f0;
   --t-surface-active: #e8e8e8;
@@ -209,6 +214,7 @@
   --t-secondary: #6b7280;
   --t-accent: #8b5cf6;
   --t-bg: #000000;
+  --t-background: var(--t-bg);
   --t-surface: #0a0a0a;
   --t-surface-hover: #121212;
   --t-surface-active: #1a1a1a;
@@ -242,6 +248,7 @@
   --t-secondary: #9f7aea;
   --t-accent: #ed64a6;
   --t-bg: #0b1120;
+  --t-background: var(--t-bg);
   --t-surface: #141b2b;
   --t-surface-hover: #1e293b;
   --t-surface-active: #2d3748;

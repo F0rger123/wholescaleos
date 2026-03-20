@@ -626,7 +626,13 @@ function TeamTab() {
                   <option value="member">Member</option>
                   <option value="viewer">Viewer</option>
                 </select>
-                <button onClick={() => removeTeamMember(member.id)} className="p-1 rounded hover:bg-red-500/20">
+                <button 
+                  onClick={() => removeTeamMember(member.id)} 
+                  className="p-1 rounded transition-colors"
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-error-dim)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  style={{ color: 'var(--t-error)' }}
+                >
                   <UserMinus size={14} style={{ color: 'var(--t-error)' }} />
                 </button>
               </div>

@@ -63,22 +63,22 @@ export function CustomFieldsPanel() {
 
   if (loading) {
     return (
-      <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+      <div className="bg-[var(--t-surface)]/50 rounded-xl p-4 border border-[var(--t-border)]">
         <div className="flex items-center justify-center py-4">
-          <Loader2 className="w-5 h-5 animate-spin text-brand-400" />
-          <span className="ml-2 text-sm text-slate-400">Loading custom fields...</span>
+          <Loader2 className="w-5 h-5 animate-spin text-[var(--t-primary)]" />
+          <span className="ml-2 text-sm text-[var(--t-text-muted)]">Loading custom fields...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-r from-purple-500/10 to-brand-500/10 rounded-xl p-4 border border-purple-500/30 mb-4">
+    <div className="bg-gradient-to-r from-[var(--t-primary)]/10 to-[var(--t-primary)]/10 rounded-xl p-4 border border-[var(--t-primary)]/30 mb-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-lg">⭐</span>
           <h3 className="font-semibold text-white">Custom Lead Fields</h3>
-          <span className="text-xs bg-slate-700 px-2 py-0.5 rounded-full text-slate-300">
+          <span className="text-xs bg-[var(--t-surface-subtle)] px-2 py-0.5 rounded-full text-[var(--t-text-muted)]">
             {fields.length} {fields.length === 1 ? 'field' : 'fields'}
           </span>
         </div>
@@ -93,20 +93,20 @@ export function CustomFieldsPanel() {
 
       {/* Add Field Form */}
       {showAddForm && (
-        <div className="mb-4 p-3 bg-slate-800/50 rounded-lg border border-purple-500/30">
+        <div className="mb-4 p-3 bg-[var(--t-surface)]/50 rounded-lg border border-[var(--t-primary)]/30">
           <div className="flex gap-2 mb-2">
             <input
               type="text"
               value={newFieldName}
               onChange={(e) => setNewFieldName(e.target.value)}
               placeholder="Field name (e.g., Lot Size, ARV, Equity)"
-              className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-slate-700 border border-slate-600 text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              className="flex-1 px-3 py-1.5 text-sm rounded-lg bg-[var(--t-surface-subtle)] border border-[var(--t-border)] text-white placeholder:text-[var(--t-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
               autoFocus
             />
             <select
               value={newFieldType}
               onChange={(e) => setNewFieldType(e.target.value as 'text' | 'number')}
-              className="px-3 py-1.5 text-sm rounded-lg bg-slate-700 border border-slate-600 text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              className="px-3 py-1.5 text-sm rounded-lg bg-[var(--t-surface-subtle)] border border-[var(--t-border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
             >
               <option value="text">Text</option>
               <option value="number">Number</option>
@@ -115,7 +115,7 @@ export function CustomFieldsPanel() {
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setShowAddForm(false)}
-              className="px-3 py-1 text-sm rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors"
+              className="px-3 py-1 text-sm rounded-lg bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] transition-colors"
             >
               Cancel
             </button>
@@ -136,7 +136,7 @@ export function CustomFieldsPanel() {
 
       {/* Success Message */}
       {saveSuccess && (
-        <div className="mb-3 p-2 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs flex items-center gap-1">
+        <div className="mb-3 p-2 bg-[var(--t-success)]/20 border border-[var(--t-success)]/30 rounded-lg text-[var(--t-success)] text-xs flex items-center gap-1">
           <Check size={12} />
           Field added successfully!
         </div>
@@ -148,17 +148,17 @@ export function CustomFieldsPanel() {
           {fields.map((field) => (
             <div
               key={field.id}
-              className="group flex items-center gap-1 px-3 py-1.5 bg-slate-800/80 rounded-lg border border-slate-700 hover:border-purple-500/30 transition-colors"
+              className="group flex items-center gap-1 px-3 py-1.5 bg-[var(--t-surface)]/80 rounded-lg border border-[var(--t-border)] hover:border-[var(--t-primary)]/30 transition-colors"
             >
-              <span className="text-xs font-medium text-slate-300">{field.name}</span>
-              <span className="text-[10px] text-slate-500 px-1">|</span>
+              <span className="text-xs font-medium text-[var(--t-text-muted)]">{field.name}</span>
+              <span className="text-[10px] text-[var(--t-text-muted)] px-1">|</span>
               <span className="text-[10px] text-purple-400">{field.field_type}</span>
               {deletingId === field.id ? (
-                <Loader2 size={12} className="ml-1 animate-spin text-slate-500" />
+                <Loader2 size={12} className="ml-1 animate-spin text-[var(--t-text-muted)]" />
               ) : (
                 <button
                   onClick={() => handleDeleteField(field.id)}
-                  className="ml-1 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"
+                  className="ml-1 opacity-0 group-hover:opacity-100 hover:text-[var(--t-error)] transition-all"
                 >
                   <X size={12} />
                 </button>
@@ -167,7 +167,7 @@ export function CustomFieldsPanel() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500 italic">
+        <p className="text-sm text-[var(--t-text-muted)] italic">
           No custom fields yet. Add fields like "Lot Size", "ARV", or "Equity" to track additional lead data.
         </p>
       )}

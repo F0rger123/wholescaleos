@@ -61,8 +61,8 @@ export function GoogleCalendarConnect() {
         onClick={isConnected ? () => setShowDropdown(!showDropdown) : handleConnect}
         className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
           isConnected 
-            ? 'bg-green-500/10 text-green-600 dark:text-green-400 hover:bg-green-500/20' 
-            : 'bg-brand-500 text-white hover:bg-brand-600'
+            ? 'bg-[var(--t-surface)] text-[var(--t-success)] dark:text-[var(--t-text-muted)] hover:bg-[var(--t-success)]/10' 
+            : 'bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)]'
         }`}
       >
         <Calendar size={18} />
@@ -79,7 +79,7 @@ export function GoogleCalendarConnect() {
             onClick={() => setShowDropdown(false)}
           />
           <div 
-            className="absolute right-0 mt-2 w-80 z-50 rounded-xl border shadow-2xl overflow-hidden"
+            className="absolute right-0 mt-2 w-80 z-50 rounded-xl border-[var(--t-border)] shadow-2xl overflow-hidden"
             style={{
               background: 'var(--t-sidebar-bg)',
               borderColor: 'var(--t-sidebar-border)',
@@ -90,12 +90,13 @@ export function GoogleCalendarConnect() {
                 <h3 className="font-semibold" style={{ color: 'var(--t-text)' }}>Google Calendar</h3>
                 <button
                   onClick={handleDisconnect}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-red-500/10 text-red-500 rounded hover:bg-red-500/20"
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-[var(--t-error)]/10 text-[var(--t-error)] rounded hover:bg-[var(--t-error)]/20"
                 >
                   <LogOut size={12} />
                   Disconnect
                 </button>
               </div>
+
             </div>
 
             <div className="p-3">
@@ -113,7 +114,7 @@ export function GoogleCalendarConnect() {
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors hover:bg-white/5"
                   >
                     <div className={`w-4 h-4 rounded flex items-center justify-center ${
-                      selectedCalendar === cal.id ? 'bg-brand-500' : 'border'
+                      selectedCalendar === cal.id ? 'bg-[var(--t-primary)]' : 'border'
                     }`} style={{ borderColor: 'var(--t-border)' }}>
                       {selectedCalendar === cal.id && <Check size={12} className="text-white" />}
                     </div>
@@ -129,7 +130,7 @@ export function GoogleCalendarConnect() {
             <div className="p-3 border-t" style={{ borderColor: 'var(--t-sidebar-border)' }}>
               <button
                 onClick={loadCalendars}
-                className="flex items-center gap-2 text-sm text-brand-500 hover:text-brand-600"
+                className="flex items-center gap-2 text-sm text-[var(--t-primary)] hover:text-[var(--t-primary-hover)]"
               >
                 <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
                 Refresh calendars

@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { LogOut, User, Settings, ChevronDown, Moon, Sun } from 'lucide-react';
 
 export function UserMenu() {
-  const { currentUser, logout, currentTheme, setTheme } = useStore();
+  const { currentUser, currentTheme, setTheme } = useStore();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   if (!currentUser) return null;
 
@@ -140,7 +142,7 @@ export function UserMenu() {
 
               <button
                 onClick={() => {
-                  logout();
+                  navigate('/settings');
                   setIsOpen(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"

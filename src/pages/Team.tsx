@@ -100,8 +100,8 @@ export function Team() {
       dealsCount: 0,
       revenue: 0,
       presenceStatus: 'offline',
-      lastSeen: new Date().toISOString(),
       customStatus: '',
+      lastSeen: new Date().toISOString(),
       teamRole: newMember.teamRole,
     });
     setNewMember({ name: '', role: '', email: '', phone: '', teamRole: 'member' });
@@ -865,7 +865,7 @@ export function Team() {
                   <ListTodo size={13} />
                   {pendingTasks.length} pending task{pendingTasks.length !== 1 ? 's' : ''}
                   {todayTasks.length > 0 && (
-                    <span className="text-amber-400">({todayTasks.length} due today)</span>
+                    <span style={{ color: 'var(--t-warning)' }}>({todayTasks.length} due today)</span>
                   )}
                   <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                 </button>

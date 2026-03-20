@@ -267,10 +267,10 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
         {success ? (
           <div className="space-y-5">
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                <Check size={32} className="text-emerald-400" />
+              <div className="w-16 h-16 rounded-full bg-[var(--t-success)]/20 flex items-center justify-center mx-auto mb-4">
+                <Check size={32} className="text-[var(--t-success)]" />
               </div>
-              <h3 className="text-lg font-bold text-emerald-400 mb-1">
+              <h3 className="text-lg font-bold text-[var(--t-success)] mb-1">
                 Team Created! 🎉
               </h3>
               <p className="text-sm" style={{ color: 'var(--t-text-muted, #94a3b8)' }}>
@@ -328,7 +328,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                 value={name}
                 onChange={(e) => { setName(e.target.value); setError(''); setIsRlsError(false); }}
                 placeholder="e.g. Dallas Office, Investment Group..."
-                className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                className="w-full px-4 py-3 rounded-xl border focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
                 style={{
                   background: 'var(--t-input-bg, #0f172a)',
                   borderColor: error ? 'var(--t-error, #ef4444)' : 'var(--t-input-border, #334155)',
@@ -362,12 +362,12 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
 
             {/* RLS Error - Show specific fix */}
             {isRlsError && (
-              <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <div className="mb-4 p-4 bg-[var(--t-error)]/10 border border-[var(--t-error)]/30 rounded-xl">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle size={16} className="text-red-400" />
-                  <h4 className="text-sm font-bold text-red-400">Security Policy Error</h4>
+                  <AlertTriangle size={16} className="text-[var(--t-error)]" />
+                  <h4 className="text-sm font-bold text-[var(--t-error)]">Security Policy Error</h4>
                 </div>
-                <p className="text-xs text-red-300/80 mb-3">
+                <p className="text-xs text-[var(--t-error)]/80 mb-3">
                   Your database has Row Level Security policies blocking this action. Quick fix:
                 </p>
                 <div className="space-y-2">
@@ -376,7 +376,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
                       href="https://supabase.com/dashboard/project/jdneeubmkgefhrfcurji/sql/new"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-400 underline hover:text-blue-300"
+                      className="text-[var(--t-text-muted)] underline hover:text-[var(--t-primary)]"
                     >Supabase SQL Editor</a>
                   </p>
                   <p className="text-xs text-white font-medium">2. Paste the fix SQL and click Run:</p>
@@ -398,7 +398,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
 
             {/* Regular error (non-RLS) */}
             {error && !isRlsError && (
-              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+              <div className="mb-4 p-3 rounded-xl bg-[var(--t-error)]/10 border border-[var(--t-error)]/30 text-[var(--t-error)] text-sm">
                 {error}
               </div>
             )}

@@ -64,6 +64,7 @@ export interface AIThread {
   title: string;
   createdAt: string;
   lastMessageAt: string;
+  pinned?: boolean;
 }
 
 export interface AIBotMessage {
@@ -444,9 +445,9 @@ export interface AISuggestion {
 }
 
 export const AI_PRIORITY_COLORS: Record<AIPriorityLevel, { bg: string; text: string; border: string; dot: string; label: string }> = {
-  high: { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/30', dot: 'bg-red-400', label: 'High Priority' },
-  medium: { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30', dot: 'bg-amber-400', label: 'Medium Priority' },
-  low: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30', dot: 'bg-emerald-400', label: 'Low Priority' },
+  high: { bg: 'color-mix(in srgb, var(--t-error) 15%, transparent)', text: 'var(--t-error)', border: 'color-mix(in srgb, var(--t-error) 30%, transparent)', dot: 'var(--t-error)', label: 'High Priority' },
+  medium: { bg: 'color-mix(in srgb, var(--t-warning) 15%, transparent)', text: 'var(--t-warning)', border: 'color-mix(in srgb, var(--t-warning) 30%, transparent)', dot: 'var(--t-warning)', label: 'Medium Priority' },
+  low: { bg: 'color-mix(in srgb, var(--t-success) 15%, transparent)', text: 'var(--t-success)', border: 'color-mix(in srgb, var(--t-success) 30%, transparent)', dot: 'var(--t-success)', label: 'Low Priority' },
 };
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -463,9 +464,9 @@ export function calculateDealScore(lead: Lead): number {
 }
 
 export function getScoreColor(score: number) {
-  if (score >= 70) return { bg: 'bg-emerald-500/15', text: 'text-emerald-400', ring: 'ring-emerald-500/40', bar: 'bg-emerald-500', label: 'Hot' };
-  if (score >= 40) return { bg: 'bg-amber-500/15', text: 'text-amber-400', ring: 'ring-amber-500/40', bar: 'bg-amber-500', label: 'Warm' };
-  return { bg: 'bg-red-500/15', text: 'text-red-400', ring: 'ring-red-500/40', bar: 'bg-red-500', label: 'Cold' };
+  if (score >= 70) return { bg: 'color-mix(in srgb, var(--t-success) 15%, transparent)', text: 'var(--t-success)', ring: 'box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-success) 40%, transparent)', bar: 'var(--t-success)', label: 'Hot' };
+  if (score >= 40) return { bg: 'color-mix(in srgb, var(--t-warning) 15%, transparent)', text: 'var(--t-warning)', ring: 'box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-warning) 40%, transparent)', bar: 'var(--t-warning)', label: 'Warm' };
+  return { bg: 'color-mix(in srgb, var(--t-error) 15%, transparent)', text: 'var(--t-error)', ring: 'box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-error) 40%, transparent)', bar: 'var(--t-error)', label: 'Cold' };
 }
 
 export function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
@@ -1116,15 +1117,15 @@ export const DETECTED_TYPE_TO_TARGET: Record<string, string> = {
 };
 
 export const DETECTED_TYPE_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  name: { bg: 'bg-blue-500/15', text: 'text-blue-400', label: 'Name' },
-  email: { bg: 'bg-cyan-500/15', text: 'text-cyan-400', label: 'Email' },
-  phone: { bg: 'bg-green-500/15', text: 'text-green-400', label: 'Phone' },
-  address: { bg: 'bg-purple-500/15', text: 'text-purple-400', label: 'Address' },
-  currency: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', label: 'Currency' },
-  number: { bg: 'bg-orange-500/15', text: 'text-orange-400', label: 'Number' },
-  date: { bg: 'bg-pink-500/15', text: 'text-pink-400', label: 'Date' },
-  url: { bg: 'bg-indigo-500/15', text: 'text-indigo-400', label: 'URL' },
-  text: { bg: 'bg-slate-500/15', text: 'text-slate-400', label: 'Text' },
+  name: { bg: 'var(--t-primary-dim)', text: 'var(--t-primary)', label: 'Name' },
+  email: { bg: 'color-mix(in srgb, var(--t-info) 15%, transparent)', text: 'var(--t-info)', label: 'Email' },
+  phone: { bg: 'var(--t-success-dim)', text: 'var(--t-success)', label: 'Phone' },
+  address: { bg: 'color-mix(in srgb, var(--t-purple) 15%, transparent)', text: 'var(--t-purple)', label: 'Address' },
+  currency: { bg: 'color-mix(in srgb, var(--t-emerald) 15%, transparent)', text: 'var(--t-emerald)', label: 'Currency' },
+  number: { bg: 'color-mix(in srgb, var(--t-orange) 15%, transparent)', text: 'var(--t-orange)', label: 'Number' },
+  date: { bg: 'color-mix(in srgb, var(--t-pink) 15%, transparent)', text: 'var(--t-pink)', label: 'Date' },
+  url: { bg: 'color-mix(in srgb, var(--t-indigo) 15%, transparent)', text: 'var(--t-indigo)', label: 'URL' },
+  text: { bg: 'var(--t-surface-hover)', text: 'var(--t-text-muted)', label: 'Text' },
 };
 
 export function generateInviteCode(): string {
@@ -1132,10 +1133,10 @@ export function generateInviteCode(): string {
 }
 
 export const PRESENCE_COLORS: Record<PresenceStatus, string> = {
-  online: '#10b981',
-  offline: '#64748b',
-  busy: '#ef4444',
-  dnd: '#f59e0b',
+  online: 'var(--t-success)',
+  offline: 'var(--t-text-muted)',
+  busy: 'var(--t-error)',
+  dnd: 'var(--t-warning)',
 };
 
 export const PRESENCE_LABELS: Record<PresenceStatus, string> = {
@@ -1146,17 +1147,17 @@ export const PRESENCE_LABELS: Record<PresenceStatus, string> = {
 };
 
 export const PRIORITY_COLORS: Record<TaskPriority, { bg: string; text: string; dot: string }> = {
-  low: { bg: 'bg-slate-500/15', text: 'text-slate-400', dot: 'bg-slate-400' },
-  medium: { bg: 'bg-blue-500/15', text: 'text-blue-400', dot: 'bg-blue-400' },
-  high: { bg: 'bg-amber-500/15', text: 'text-amber-400', dot: 'bg-amber-400' },
-  urgent: { bg: 'bg-red-500/15', text: 'text-red-400', dot: 'bg-red-400' },
+  low: { bg: 'var(--t-surface-hover)', text: 'var(--t-text-muted)', dot: 'var(--t-text-muted)' },
+  medium: { bg: 'var(--t-primary-dim)', text: 'var(--t-primary)', dot: 'var(--t-primary)' },
+  high: { bg: 'color-mix(in srgb, var(--t-warning) 15%, transparent)', text: 'var(--t-warning)', dot: 'var(--t-warning)' },
+  urgent: { bg: 'var(--t-error-dim)', text: 'var(--t-error)', dot: 'var(--t-error)' },
 };
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, { bg: string; text: string }> = {
-  'todo': { bg: 'bg-slate-500/15', text: 'text-slate-400' },
-  'in-progress': { bg: 'bg-brand-500/15', text: 'text-brand-400' },
-  'done': { bg: 'bg-emerald-500/15', text: 'text-emerald-400' },
-  'cancelled': { bg: 'bg-red-500/15', text: 'text-red-400' },
+  'todo': { bg: 'var(--t-surface-hover)', text: 'var(--t-text-muted)' },
+  'in-progress': { bg: 'var(--t-primary-dim)', text: 'var(--t-primary)' },
+  'done': { bg: 'var(--t-success-dim)', text: 'var(--t-success)' },
+  'cancelled': { bg: 'var(--t-error-dim)', text: 'var(--t-error)' },
 };
 
 export const STATUS_FLOW: Record<LeadStatus, LeadStatus[]> = {
@@ -1386,6 +1387,7 @@ interface AppState {
   deleteAiThread: (id: string) => void;
   setCurrentAiThread: (id: string) => void;
   updateAiThreadTitle: (id: string, title: string) => void;
+  toggleAiThreadPin: (id: string) => void;
   addAiMessage: (threadId: string, message: AIBotMessage) => void;
   clearAiThreadMessages: (threadId: string) => void;
 }
@@ -2048,7 +2050,8 @@ export const useStore = create<AppState>((set, get) => ({
                 .insert(members.map(userId => ({
                   channel_id: id,
                   user_id: userId,
-                })))
+                }))
+                )
                 .then(({ data: memberData, error: memberError }) => {
                   if (memberError) {
                     console.error('❌ Failed to save channel members:', memberError);
@@ -2423,7 +2426,7 @@ deleteChannel: (channelId) => {
                   .eq('id', data.user.id)
                   .then(({ error }) => {
                     if (error) console.error('Failed to save theme:', error);
-                    else console.log('✅ Theme saved to Supabase:', theme);
+                    console.log('✅ Theme saved to Supabase:', theme);
                   });
               }
             });
@@ -2657,6 +2660,8 @@ deleteChannel: (channelId) => {
         engagementLevel: 2,
         timelineUrgency: 3,
         competitionLevel: 3,
+        importSource: (d as any).importSource || 'import',
+        photos: (d as any).photos || [],
         timeline: [{
           id: uuidv4(), type: 'note' as TimelineType,
           content: `Imported via bulk import.${d.notes ? ` Notes: ${d.notes}` : ''}`,
@@ -2907,16 +2912,33 @@ deleteChannel: (channelId) => {
     });
   },
 
-  addAiMessage: (threadId, message) => {
+  toggleAiThreadPin: (id: string) => {
+    set((s) => {
+      const updatedThreads = s.aiThreads.map((t: AIThread) => t.id === id ? { ...t, pinned: !t.pinned } : t)
+        .sort((a: AIThread, b: AIThread) => {
+          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+          return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+        });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+      }
+      return { aiThreads: updatedThreads };
+    });
+  },
+
+  addAiMessage: (threadId: string, message: AIBotMessage) => {
     set((s) => {
       const threadMessages = s.aiMessages[threadId] || [];
       const updatedMessages = [...threadMessages, message];
       const newMessagesMap = { ...s.aiMessages, [threadId]: updatedMessages };
       
-      // Update lastMessageAt for the thread
-      const updatedThreads = s.aiThreads.map(t => 
+      // Update lastMessageAt for the thread and sort by pinned then date
+      const updatedThreads = s.aiThreads.map((t: AIThread) => 
         t.id === threadId ? { ...t, lastMessageAt: new Date().toISOString() } : t
-      ).sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+      ).sort((a: AIThread, b: AIThread) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
+      });
 
       if (typeof window !== 'undefined') {
         localStorage.setItem('ai_messages_map', JSON.stringify(newMessagesMap));

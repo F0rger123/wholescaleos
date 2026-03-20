@@ -176,25 +176,32 @@ export function SMSInbox() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--t-primary)' }} />
       </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-140px)] bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden">
+    <div className="flex h-[calc(100vh-140px)] rounded-2xl border overflow-hidden" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.4)', borderColor: 'var(--t-border)' }}>
       {/* Conversations List */}
-      <div className={`flex flex-col border-r border-slate-800 bg-slate-900/40 ${selectedPhone ? 'hidden md:flex md:w-80' : 'w-full md:w-80'}`}>
-        <div className="p-4 border-b border-slate-800">
-          <h2 className="text-xl font-bold text-white mb-4">Messages</h2>
+      <div className={`flex flex-col border-r ${selectedPhone ? 'hidden md:flex md:w-80' : 'w-full md:w-80'}`} style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.4)', borderColor: 'var(--t-border)' }}>
+        <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
+          <h2 className="text-xl font-bold mb-4" style={{ color: 'var(--t-text-color)' }}>Messages</h2>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
             <input 
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="w-full pl-10 pr-4 py-2 rounded-xl text-sm transition-all focus:outline-none focus:ring-1"
+              style={{ 
+                backgroundColor: 'var(--t-background)', 
+                border: '1px solid var(--t-border)', 
+                color: 'var(--t-text)',
+                // @ts-expect-error custom prop
+                '--tw-ring-color': 'var(--t-primary)' 
+              }}
             />
           </div>
         </div>
@@ -204,39 +211,52 @@ export function SMSInbox() {
             <button
               key={conv.phone}
               onClick={() => setSelectedPhone(conv.phone)}
-              className={`w-full p-4 flex gap-3 border-b border-slate-800/50 hover:bg-slate-800/50 transition-colors relative ${selectedPhone === conv.phone ? 'bg-brand-500/5 border-l-2 border-l-brand-500' : ''}`}
+              className={`w-full p-4 flex gap-3 border-b transition-colors relative`}
+              style={selectedPhone === conv.phone ? { 
+                background: 'var(--t-primary-dim)', 
+                borderLeft: '2px solid var(--t-primary)',
+                borderColor: 'rgba(var(--t-border-rgb), 0.5)'
+              } : {
+                borderColor: 'rgba(var(--t-border-rgb), 0.5)'
+              }}
+              onMouseEnter={(e) => { if (selectedPhone !== conv.phone) e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'; }}
+              onMouseLeave={(e) => { if (selectedPhone !== conv.phone) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
-              <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--t-surface)' }}>
                 {conv.leadId ? (
-                  <div className="w-full h-full rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 font-bold">
+                  <div className="w-full h-full rounded-full flex items-center justify-center font-bold"
+                    style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
+                  >
                     {conv.leadName?.charAt(0)}
                   </div>
                 ) : (
-                  <User className="text-slate-500 w-6 h-6" />
+                  <User className="w-6 h-6" style={{ color: 'var(--t-text-muted)' }} />
                 )}
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex justify-between items-start mb-0.5">
-                  <span className="font-semibold text-white truncate text-sm">
+                  <span className="font-semibold truncate text-sm" style={{ color: 'var(--t-text)' }}>
                     {conv.leadName || conv.phone}
                   </span>
-                  <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                  <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--t-text-muted)' }}>
                     {format(new Date(conv.timestamp), 'h:mm a')}
                   </span>
                 </div>
-                <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-slate-200 font-medium' : 'text-slate-500'}`}>
+                <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'font-medium' : ''}`} style={{ color: conv.unreadCount > 0 ? 'var(--t-text)' : 'var(--t-text-muted)' }}>
                   {conv.lastMessage}
                 </p>
               </div>
               {conv.unreadCount > 0 && (
-                <div className="absolute right-4 bottom-4 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                <div className="absolute right-4 bottom-4 w-5 h-5 text-white rounded-full flex items-center justify-center text-[10px] font-bold"
+                  style={{ background: 'var(--t-primary)' }}
+                >
                   {conv.unreadCount}
                 </div>
               )}
             </button>
           ))}
           {filteredConversations.length === 0 && (
-            <div className="p-8 text-center text-slate-500">
+            <div className="p-8 text-center" style={{ color: 'var(--t-text-muted)' }}>
               <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
               <p className="text-sm">No conversations found</p>
             </div>
@@ -245,37 +265,40 @@ export function SMSInbox() {
       </div>
 
       {/* Chat Thread */}
-      <div className={`flex-1 flex flex-col bg-slate-900/60 ${!selectedPhone ? 'hidden md:flex items-center justify-center' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col ${!selectedPhone ? 'hidden md:flex items-center justify-center' : 'flex'}`} style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.6)' }}>
         {!selectedPhone ? (
           <div className="text-center p-8 max-w-sm">
-            <div className="w-20 h-20 bg-slate-800 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <Smartphone className="w-10 h-10 text-slate-600" />
+            <div className="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: 'var(--t-surface)' }}>
+              <Smartphone className="w-10 h-10" style={{ color: 'var(--t-text-muted)' }} />
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Select a conversation</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--t-text)' }}>Select a conversation</h3>
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>
               Choose a contact from the left to view your message history and send SMS replies.
             </p>
           </div>
         ) : (
           <>
             {/* Thread Header */}
-            <div className="p-4 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between">
+            <div className={`p-4 border-b flex items-center justify-between`} style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.8)', borderColor: 'var(--t-border)' }}>
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setSelectedPhone(null)}
-                  className="p-2 -ml-2 md:hidden hover:bg-slate-800 rounded-lg text-slate-400"
+                  className="p-2 -ml-2 md:hidden rounded-lg transition-colors"
+                  style={{ color: 'var(--t-text-muted)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                 >
                   <ArrowLeft size={20} />
                 </button>
-                <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-sm">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>
                   {activeConversation?.leadName?.charAt(0) || <User size={18} />}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">{activeConversation?.leadName || activeConversation?.phone}</h3>
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{activeConversation?.leadName || activeConversation?.phone}</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-slate-500 font-mono">{activeConversation?.phone}</span>
+                    <span className="text-[10px] font-mono" style={{ color: 'var(--t-text-muted)' }}>{activeConversation?.phone}</span>
                     {activeConversation?.leadId && (
-                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium">
+                      <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--t-success)' }}>
                         <ShieldCheck size={10} /> Linked to Lead
                       </span>
                     )}
@@ -284,11 +307,13 @@ export function SMSInbox() {
               </div>
               <div className="flex gap-2">
                 {!activeConversation?.leadId && (
-                  <button className="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1.5 px-3 py-1.5 bg-brand-500/10 rounded-lg transition-colors">
+                  <button className="text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors"
+                    style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
+                  >
                     <UserPlus size={14} /> Link Lead
                   </button>
                 )}
-                <button className="p-2 hover:bg-slate-800 rounded-lg text-slate-500">
+                <button className="p-2 rounded-lg transition-colors" style={{ color: 'var(--t-text-muted)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
                   <MoreVertical size={20} />
                 </button>
               </div>
@@ -304,7 +329,7 @@ export function SMSInbox() {
                   <React.Fragment key={msg.id}>
                     {showDate && (
                       <div className="flex justify-center my-6">
-                        <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500 bg-slate-800 px-3 py-1 rounded-full">
+                        <span className="text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text-muted)' }}>
                           {format(new Date(msg.created_at), 'MMMM dd, yyyy')}
                         </span>
                       </div>
@@ -312,9 +337,14 @@ export function SMSInbox() {
                     <div className={`flex w-full ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                         msg.direction === 'outbound' 
-                          ? 'bg-brand-600 text-white rounded-tr-none' 
-                          : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none'
-                      }`}>
+                          ? 'text-white rounded-tr-none' 
+                          : 'rounded-tl-none'
+                      }`}
+                      style={msg.direction === 'outbound' 
+                        ? { background: 'var(--t-primary)', color: 'var(--t-text-on-primary)' } 
+                        : { backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
+                      }
+                      >
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                         <div className={`flex items-center gap-1 mt-1 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                           <span className="text-[9px] opacity-60">
@@ -331,24 +361,32 @@ export function SMSInbox() {
             </div>
 
             {/* Reply Area */}
-            <div className="p-4 border-t border-slate-800 bg-slate-900/80">
+            <div className="p-4 border-t" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.8)', borderColor: 'var(--t-border)' }}>
               <form onSubmit={handleSend} className="flex gap-2">
                 <input 
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="Type an SMS reply..."
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="flex-1 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1"
+                  style={{ 
+                    backgroundColor: 'var(--t-background)', 
+                    border: '1px solid var(--t-border)', 
+                    color: 'var(--t-text)',
+                    // @ts-expect-error custom prop
+                    '--tw-ring-color': 'var(--t-primary)' 
+                  }}
                 />
                 <button 
                   type="submit"
                   disabled={!replyText.trim() || sending}
-                  className="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white p-2.5 rounded-xl transition-colors shrink-0"
+                  className="disabled:opacity-50 text-white p-2.5 rounded-xl transition-colors shrink-0"
+                  style={{ background: 'var(--t-primary)' }}
                 >
                   {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </form>
-              <p className="text-[10px] text-slate-500 mt-2 text-center">
+              <p className="text-[10px] mt-2 text-center" style={{ color: 'var(--t-text-muted)' }}>
                 Messaging via your connected Gmail account to SMS gateways.
               </p>
             </div>

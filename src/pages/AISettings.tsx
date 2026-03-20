@@ -182,7 +182,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--t-primary)]" />
       </div>
     );
   }
@@ -192,22 +192,22 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
       {!hideHeader && (
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white mb-2">AI Assistant Settings</h1>
-          <p className="text-slate-400">Configure your personal Gemini API key to enable AI-powered features.</p>
+          <p className="text-[var(--t-text-muted)]">Configure your personal Gemini API key to enable AI-powered features.</p>
         </div>
       )}
 
       {/* Guide Card */}
-      <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6 space-y-4">
+      <div className="bg-[var(--t-surface)]/50 rounded-2xl border border-[var(--t-border)] p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Key className="w-5 h-5 text-brand-400" />
+          <Key className="w-5 h-5 text-[var(--t-primary)]" />
           Setup Instructions
         </h2>
         
-        <div className="space-y-3 text-slate-300 text-sm">
+        <div className="space-y-3 text-[var(--t-text-muted)] text-sm">
           <p>Follow these steps to get your free API key from Google AI Studio:</p>
           <ol className="list-decimal list-inside space-y-2 ml-2">
             <li>
-              Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-brand-400 hover:text-brand-300 inline-flex items-center gap-1 underline underline-offset-4">
+              Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] hover:text-[var(--t-error)]/80 inline-flex items-center gap-1 underline underline-offset-4">
                 Google AI Studio <ExternalLink className="w-3 h-3" />
               </a>
             </li>
@@ -219,13 +219,13 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
       </div>
 
       {/* Model Selection Card */}
-      <div className="bg-slate-900 rounded-2xl border border-brand-500/20 shadow-lg shadow-brand-500/5 p-6 space-y-4">
+      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-primary)]/20 shadow-lg shadow-[var(--t-primary)]/5 p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-brand-400" />
+          <Sparkles className="w-5 h-5 text-[var(--t-primary)]" />
           General AI Settings
         </h2>
         <div>
-          <label className="block text-sm font-medium text-slate-400 mb-3">Preferred AI Model</label>
+          <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred AI Model</label>
           <div className="grid grid-cols-1 gap-3">
             {[
               { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Higher daily limits, best for continuous testing.' },
@@ -239,39 +239,39 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
                 onClick={() => setModel(m.id)}
                 className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${
                   model === m.id 
-                    ? 'bg-brand-500/10 border-brand-500 ring-1 ring-brand-500' 
-                    : 'bg-slate-800/50 border-slate-700 hover:border-slate-600'
+                    ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' 
+                    : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-brand-400' : 'bg-slate-600'}`} />
-                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-slate-300'}`}>{m.label}</span>
+                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
+                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
                 </div>
-                <span className="text-xs text-slate-500">{m.desc}</span>
+                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Personality Section */}
-        <div className="pt-6 border-t border-slate-800 space-y-6">
+        <div className="pt-6 border-t border-[var(--t-border)] space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-2">Assistant Name</label>
+              <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Assistant Name</label>
               <input
                 type="text"
                 value={aiName}
                 onChange={(e) => setAiName(e.target.value)}
                 placeholder="e.g., WholeScale Buddy"
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all"
+                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-2">Response Tone</label>
+              <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Response Tone</label>
               <select
                 value={aiTone}
                 onChange={(e) => setAiTone(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all appearance-none"
+                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all appearance-none"
               >
                 <option value="friendly">Friendly (Warm & Helpful)</option>
                 <option value="professional">Professional (Formal & Precise)</option>
@@ -280,14 +280,14 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
               </select>
             </div>
           </div>
-          <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+          <div className="flex items-center justify-between p-4 bg-[var(--t-surface)]/50 rounded-xl border border-[var(--t-border)]">
             <div>
               <p className="text-white font-medium">Floating AI Widget</p>
-              <p className="text-xs text-slate-500">Show a draggable AI bubble available on all pages</p>
+              <p className="text-xs text-[var(--t-text-muted)]">Show a draggable AI bubble available on all pages</p>
             </div>
             <button
               onClick={() => handleToggleWidget(!showWidget)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${showWidget ? 'bg-brand-600' : 'bg-slate-700'}`}
+              className={`w-12 h-6 rounded-full transition-colors relative ${showWidget ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-subtle)]'}`}
             >
               <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showWidget ? 'left-7' : 'left-1'}`} />
             </button>
@@ -296,22 +296,22 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
       </div>
 
       {/* Configuration Card */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 space-y-6">
+      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
 
         <div>
-          <label className="block text-sm font-medium text-slate-400 mb-2">Gemini API Key</label>
+          <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Gemini API Key</label>
           <div className="flex gap-2">
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Paste your API key here..."
-              className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all"
+              className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
             />
             <button
               onClick={handleTestKey}
               disabled={testing || !apiKey}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)] rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2 disabled:opacity-50"
             >
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
             </button>
@@ -319,24 +319,24 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
         </div>
 
         {testResult && (
-          <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
+          <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-[var(--t-success)]/10 border border-[var(--t-success)]/20 text-[var(--t-success)]' : 'bg-[var(--t-error)]/10 border border-[var(--t-error)]/20 text-[var(--t-error)]'}`}>
             {testResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
             <span className="text-sm">{testResult.message}</span>
           </div>
         )}
 
         {saveResult && (
-          <div className={`p-4 rounded-xl flex items-start gap-3 ${saveResult.success ? 'bg-brand-500/10 border border-brand-500/20 text-brand-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
+          <div className={`p-4 rounded-xl flex items-start gap-3 ${saveResult.success ? 'bg-[var(--t-primary)]/10 border border-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'bg-[var(--t-error)]/10 border border-[var(--t-error)]/20 text-[var(--t-error)]'}`}>
             {saveResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
             <span className="text-sm">{saveResult.message}</span>
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-800">
+        <div className="pt-4 border-t border-[var(--t-border)]">
           <button
             onClick={handleSaveKey}
             disabled={saving || !apiKey}
-            className="w-full bg-brand-600 hover:bg-brand-500 text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-brand-600/20 disabled:opacity-50"
+            className="w-full bg-[var(--t-primary)] hover:bg-[var(--t-primary)] text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-[var(--t-primary-dim)] disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             Save AI Settings
@@ -344,7 +344,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
         </div>
       </div>
 
-      <p className="text-center text-xs text-slate-500">
+      <p className="text-center text-xs text-[var(--t-text-muted)]">
         Your API key is stored locally in your workspace connections and is only used to fulfill your specific AI requests.
       </p>
     </div>

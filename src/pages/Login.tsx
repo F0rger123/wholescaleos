@@ -593,56 +593,76 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     navigate('/');
   };
 
-  const inputClass = 'w-full pl-10 pr-4 py-3 text-sm rounded-xl bg-slate-800/60 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-colors';
+  const inputClass = 'w-full pl-10 pr-4 py-3 text-sm rounded-xl border transition-colors outline-none';
+  const inputStyle = {
+    background: 'var(--t-input-bg)',
+    borderColor: 'var(--t-border)',
+    color: 'var(--t-text)',
+    '--tw-ring-color': 'var(--t-primary-dim)'
+  };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex">
+    <div className="min-h-screen flex" style={{ backgroundColor: 'var(--t-background)' }}>
       {/* Left: Brand Panel */}
-      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 bg-gradient-to-br from-brand-950 via-slate-900 to-slate-950 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 relative overflow-hidden"
+        style={{ 
+          background: 'linear-gradient(to bottom right, var(--t-primary-dim), rgba(15, 23, 42, 0.9))'
+        }}
+      >
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMzYjgyZjYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE4YzEuNjU3IDAgMyAxLjM0MyAzIDN2MThsLTMgM0gxOGwtMy0zVjIxYzAtMS42NTcgMS4zNDMtMyAzLTNoMTh6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
 
         <div className="relative">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-brand-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--t-primary)' }}
+            >
               <Building2 size={26} className="text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white tracking-tight">WholeScale</h1>
-              <p className="text-[11px] uppercase tracking-[0.3em] text-brand-400 font-semibold">OS</p>
+              <p className="text-[11px] uppercase tracking-[0.3em] font-semibold" style={{ color: 'var(--t-primary)' }}>OS</p>
             </div>
           </div>
-          <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
+          <p className="text-sm leading-relaxed max-w-sm" style={{ color: 'var(--t-text-muted)' }}>
             The complete real estate CRM for wholesalers. Track leads, manage deals,
             map coverage areas, and close faster — all in one platform.
           </p>
         </div>
 
         <div className="relative space-y-6">
-          <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={20} className="text-emerald-400" />
+          <div className="flex items-center gap-4 p-4 rounded-2xl border transition-all"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--t-success-dim)' }}>
+              <CheckCircle2 size={20} style={{ color: 'var(--t-success)' }} />
             </div>
             <div>
               <p className="text-sm font-medium text-white">Smart Lead Scoring</p>
-              <p className="text-xs text-slate-500">AI-powered deal scores from 0-100</p>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>AI-powered deal scores from 0-100</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={20} className="text-purple-400" />
+          <div className="flex items-center gap-4 p-4 rounded-2xl border transition-all"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(var(--t-accent-rgb, 139, 92, 246), 0.2)' }}>
+              <CheckCircle2 size={20} style={{ color: 'var(--t-accent, #a78bfa)' }} />
             </div>
             <div>
               <p className="text-sm font-medium text-white">Team Collaboration</p>
-              <p className="text-xs text-slate-500">Real-time chat, tasks & assignments</p>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Real-time chat, tasks & assignments</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-            <div className="w-10 h-10 rounded-xl bg-brand-500/20 flex items-center justify-center shrink-0">
-              <CheckCircle2 size={20} className="text-brand-400" />
+          <div className="flex items-center gap-4 p-4 rounded-2xl border transition-all"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: 'var(--t-primary-dim)' }}
+            >
+              <CheckCircle2 size={20} style={{ color: 'var(--t-primary)' }} />
             </div>
             <div>
               <p className="text-sm font-medium text-white">Interactive Maps</p>
-              <p className="text-xs text-slate-500">Coverage areas, buyer pins, and more</p>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Coverage areas, buyer pins, and more</p>
             </div>
           </div>
         </div>
@@ -650,12 +670,12 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
         <div className="relative">
           <div className="flex items-center gap-2 mb-2">
             {isSupabaseConfigured ? (
-              <><Wifi size={12} className="text-emerald-400" /><span className="text-xs text-emerald-400">Connected to Supabase</span></>
+              <><Wifi size={12} style={{ color: 'var(--t-success)' }} /><span className="text-xs" style={{ color: 'var(--t-success)' }}>Connected to Supabase</span></>
             ) : (
-              <><WifiOff size={12} className="text-amber-400" /><span className="text-xs text-amber-400">Demo Mode</span></>
+              <><WifiOff size={12} style={{ color: 'var(--t-warning)' }} /><span className="text-xs" style={{ color: 'var(--t-warning)' }}>Demo Mode</span></>
             )}
           </div>
-          <p className="text-xs text-slate-600">© 2024 WholeScale OS. All rights reserved.</p>
+          <p className="text-xs opacity-40" style={{ color: 'var(--t-text)' }}>© 2024 WholeScale OS. All rights reserved.</p>
         </div>
       </div>
 
@@ -664,21 +684,23 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: 'var(--t-primary)' }}
+            >
               <Building2 size={22} className="text-white" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">WholeScale</h1>
-              <p className="text-[10px] uppercase tracking-widest text-brand-400 font-semibold">OS</p>
+              <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--t-primary)' }}>OS</p>
             </div>
           </div>
 
           {/* Connection status on mobile */}
           <div className="flex items-center gap-2 mb-4 lg:hidden">
             {isSupabaseConfigured ? (
-              <><Wifi size={12} className="text-emerald-400" /><span className="text-xs text-emerald-400">Connected to Supabase</span></>
+              <><Wifi size={12} style={{ color: 'var(--t-success)' }} /><span className="text-xs" style={{ color: 'var(--t-success)' }}>Connected to Supabase</span></>
             ) : (
-              <><WifiOff size={12} className="text-amber-400" /><span className="text-xs text-amber-400">Demo Mode — data resets on refresh</span></>
+              <><WifiOff size={12} style={{ color: 'var(--t-warning)' }} /><span className="text-xs" style={{ color: 'var(--t-warning)' }}>Demo Mode — data resets on refresh</span></>
             )}
           </div>
 
@@ -686,7 +708,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             <h2 className="text-2xl font-bold text-white">
               {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset password'}
             </h2>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
               {mode === 'login'
                 ? 'Sign in to access your WholeScale dashboard'
                 : mode === 'signup'
@@ -697,26 +719,32 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
           {/* ═══ DATABASE SETUP ERROR ═══ */}
           {showDbSetup && (
-            <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+            <div className="mb-6 p-4 rounded-2xl border" style={{ 
+              backgroundColor: 'var(--t-warning-dim)',
+              borderColor: 'var(--t-warning-border)'
+            }}>
               <div className="flex items-center gap-2 mb-3">
-                <Database size={18} className="text-amber-400" />
-                <h3 className="text-sm font-bold text-amber-300">Database Setup Required</h3>
+                <Database size={18} style={{ color: 'var(--t-warning)' }} />
+                <h3 className="text-sm font-bold" style={{ color: 'var(--t-warning)' }}>Database Setup Required</h3>
               </div>
-              <p className="text-xs text-amber-200/80 mb-4">
+              <p className="text-xs mb-4" style={{ color: 'color-mix(in srgb, var(--t-warning) 80%, black)' }}>
                 Your Supabase project is connected but has no tables yet. Follow these 3 steps:
               </p>
 
               <div className="space-y-3">
                 {/* Step 1 */}
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs font-bold shrink-0">1</span>
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)', color: 'var(--t-warning)' }}
+                  >1</span>
                   <div className="flex-1">
                     <p className="text-xs text-white font-medium">Open Supabase SQL Editor</p>
                     <a
                       href="https://supabase.com/dashboard/project/jdneeubmkgefhrfcurji/sql/new"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 mt-1"
+                      className="inline-flex items-center gap-1 text-xs hover:opacity-80 mt-1"
+                      style={{ color: 'var(--t-primary)' }}
                     >
                       Open SQL Editor <ExternalLink size={10} />
                     </a>
@@ -725,12 +753,13 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
                 {/* Step 2 */}
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs font-bold shrink-0">2</span>
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: 'var(--t-warning-dim)', color: 'var(--t-warning)' }}>2</span>
                   <div className="flex-1">
                     <p className="text-xs text-white font-medium mb-1.5">Copy & paste this SQL, then click "Run"</p>
                     <button
                       onClick={copySqlUrl}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors"
+                      style={{ background: 'var(--t-primary)' }}
                     >
                       {sqlCopied ? <><Check size={12} />Copied!</> : <><Copy size={12} />Copy Setup SQL</>}
                     </button>
@@ -739,15 +768,15 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
                 {/* Step 3 */}
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs font-bold shrink-0">3</span>
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: 'var(--t-warning-dim)', color: 'var(--t-warning)' }}>3</span>
                   <div className="flex-1">
                     <p className="text-xs text-white font-medium">Come back here and sign up again!</p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-amber-500/20">
-                <p className="text-[10px] text-amber-200/50">
+              <div className="mt-4 pt-3 border-t" style={{ borderColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)' }}>
+                <p className="text-[10px]" style={{ color: 'color-mix(in srgb, var(--t-warning) 50%, black)' }}>
                   💡 The SQL creates all tables, triggers, security policies, and a default team for you automatically.
                 </p>
               </div>
@@ -756,26 +785,27 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
           {/* ═══ EMAIL FIX INSTRUCTIONS ═══ */}
           {showEmailFix && (
-            <div className="mb-6 p-4 bg-orange-500/10 border border-orange-500/30 rounded-2xl">
+            <div className="mb-6 p-4 rounded-2xl border" style={{ backgroundColor: 'var(--t-warning-dim)', borderColor: 'var(--t-warning-border)' }}>
               <div className="flex items-center gap-2 mb-3">
-                <Mail size={18} className="text-orange-400" />
-                <h3 className="text-sm font-bold text-orange-300">Fix: Disable Email Confirmation</h3>
+                <Mail size={18} style={{ color: 'var(--t-warning)' }} />
+                <h3 className="text-sm font-bold" style={{ color: 'var(--t-warning)' }}>Fix: Disable Email Confirmation</h3>
               </div>
-              <p className="text-xs text-orange-200/80 mb-4">
+              <p className="text-xs mb-4" style={{ color: 'rgba(var(--t-text-rgb), 0.7)' }}>
                 Supabase's free email service has a strict rate limit (~3 emails/hour). 
                 The quickest fix is to disable email confirmation so you can sign up instantly:
               </p>
 
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold shrink-0">1</span>
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: 'var(--t-warning-dim)', color: 'var(--t-warning)' }}>1</span>
                   <div className="flex-1">
                     <p className="text-xs text-white font-medium">Open Supabase Auth Settings</p>
                     <a
                       href="https://supabase.com/dashboard/project/jdneeubmkgefhrfcurji/auth/providers"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 mt-1"
+                      className="inline-flex items-center gap-1 text-xs hover:opacity-80 mt-1"
+                      style={{ color: 'var(--t-primary)' }}
                     >
                       Open Auth Settings <ExternalLink size={10} />
                     </a>
@@ -783,30 +813,35 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold shrink-0">2</span>
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)', color: 'var(--t-warning)' }}
+                  >2</span>
                   <div className="flex-1">
                     <p className="text-xs text-white font-medium">Click "Email" provider → Toggle OFF "Confirm email"</p>
-                    <p className="text-[11px] text-orange-200/60 mt-0.5">
+                    <p className="text-[11px] mt-0.5" style={{ color: 'color-mix(in srgb, var(--t-warning) 60%, black)' }}>
                       This lets users sign up and log in immediately without needing to click a verification link.
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 text-xs font-bold shrink-0">3</span>
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)', color: 'var(--t-warning)' }}
+                  >3</span>
                   <div className="flex-1">
                     <p className="text-xs text-white font-medium">Click "Save" → Come back and try again</p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-orange-500/20 space-y-2">
-                <p className="text-[10px] text-orange-200/50">
+              <div className="mt-4 pt-3 border-t space-y-2" style={{ borderColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)' }}>
+                <p className="text-[10px]" style={{ color: 'color-mix(in srgb, var(--t-warning) 50%, black)' }}>
                   💡 You can re-enable email confirmation later after setting up a custom SMTP (like Resend — 3,000 emails/mo free).
                 </p>
                 <button
                   onClick={() => { setShowEmailFix(false); setError(null); }}
-                  className="text-xs text-orange-400 hover:text-orange-300 font-medium"
+                  className="text-xs hover:opacity-80 font-medium"
+                  style={{ color: 'var(--t-primary)' }}
                 >
                   Dismiss & try again →
                 </button>
@@ -816,23 +851,31 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
           {/* Regular error */}
           {error && !showDbSetup && !showEmailFix && (
-            <div className="flex items-center gap-2 p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <AlertCircle size={16} className="text-red-400 shrink-0" />
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="flex items-center gap-2 p-3 mb-4 rounded-xl border" style={{ 
+              backgroundColor: 'var(--t-error-dim)',
+              borderColor: 'var(--t-error-border)'
+            }}>
+              <AlertCircle size={16} className="shrink-0" style={{ color: 'var(--t-error)' }} />
+              <p className="text-sm" style={{ color: 'var(--t-error)' }}>{error}</p>
             </div>
           )}
 
           {info && (
-            <div className="flex items-center gap-2 p-3 mb-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-              <CheckCircle2 size={16} className="text-blue-400 shrink-0" />
-              <p className="text-sm text-blue-400">{info}</p>
+            <div className="flex items-center gap-2 p-3 mb-4 rounded-xl border"
+              style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}
+            >
+              <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--t-primary)' }} />
+              <p className="text-sm" style={{ color: 'var(--t-primary)' }}>{info}</p>
             </div>
           )}
 
           {forgotSent && (
-            <div className="flex items-center gap-2 p-3 mb-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-              <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-              <p className="text-sm text-emerald-400">Password reset link sent to {form.email}</p>
+            <div className="flex items-center gap-2 p-3 mb-4 rounded-xl border" style={{ 
+              backgroundColor: 'var(--t-success-dim)',
+              borderColor: 'var(--t-success-border)'
+            }}>
+              <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--t-success)' }} />
+              <p className="text-sm" style={{ color: 'var(--t-success)' }}>Password reset link sent to {form.email}</p>
             </div>
           )}
 
@@ -840,96 +883,107 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             {/* Name (signup only) */}
             {mode === 'signup' && (
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Full Name</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Full Name</label>
                 <div className="relative">
-                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
                   <input
                     value={form.name}
                     onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
                     placeholder="John Doe"
                     className={inputClass}
+                    style={inputStyle}
                     disabled={loading}
                   />
                 </div>
-                {fieldErrors.name && <p className="text-xs text-red-400 mt-1">{fieldErrors.name}</p>}
+                {fieldErrors.name && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.name}</p>}
               </div>
             )}
 
             {/* Email */}
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Email</label>
+              <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Email</label>
               <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
                   placeholder="you@company.com"
                   className={inputClass}
+                  style={inputStyle}
                   disabled={loading}
                 />
               </div>
-              {fieldErrors.email && <p className="text-xs text-red-400 mt-1">{fieldErrors.email}</p>}
+              {fieldErrors.email && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.email}</p>}
             </div>
 
             {/* Password */}
             {mode !== 'forgot' && (
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Password</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Password</label>
                 <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={form.password}
                     onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
                     placeholder="••••••••"
                     className={`${inputClass} pr-10`}
+                    style={inputStyle}
                     disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 transition-colors"
+                    style={{ color: 'var(--t-text-muted)' }}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                {fieldErrors.password && <p className="text-xs text-red-400 mt-1">{fieldErrors.password}</p>}
+                {fieldErrors.password && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.password}</p>}
               </div>
             )}
 
             {/* Confirm password (signup) */}
             {mode === 'signup' && (
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Confirm Password</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Confirm Password</label>
                 <div className="relative">
-                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={form.confirmPassword}
                     onChange={(e) => setForm(f => ({ ...f, confirmPassword: e.target.value }))}
                     placeholder="••••••••"
                     className={inputClass}
+                    style={inputStyle}
                     disabled={loading}
                   />
                 </div>
-                {fieldErrors.confirmPassword && <p className="text-xs text-red-400 mt-1">{fieldErrors.confirmPassword}</p>}
+                {fieldErrors.confirmPassword && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.confirmPassword}</p>}
               </div>
             )}
 
             {/* Invite code (signup) */}
             {mode === 'signup' && (
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Team Invite Code <span className="text-slate-600">(optional — join an existing team)</span></label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Team Invite Code <span style={{ color: 'var(--t-text-muted)' }}>(optional — join an existing team)</span></label>
                 <input
                   value={form.inviteCode}
                   onChange={(e) => setForm(f => ({ ...f, inviteCode: e.target.value.toUpperCase() }))}
                   placeholder="WS-XXXXXX"
-                  className="w-full px-4 py-3 text-sm rounded-xl bg-slate-800/60 border border-slate-700 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50 font-mono tracking-wider"
+                  className="w-full px-4 py-3 text-sm rounded-xl focus:outline-none focus:ring-2 font-mono tracking-wider"
+                  style={{ 
+                    backgroundColor: 'var(--t-surface)',
+                    border: '1px solid var(--t-border)',
+                    color: 'var(--t-text)',
+                    '--tw-ring-color': 'var(--t-primary-dim)' 
+                  } as any}
                   disabled={loading}
                 />
                 {form.inviteCode.trim() && (
-                  <p className="text-[11px] text-brand-400/70 mt-1">
+                  <p className="text-[11px] mt-1" style={{ color: 'var(--t-primary)' }}>
                     ✨ You'll be added to the team after creating your account
                   </p>
                 )}
@@ -939,7 +993,12 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             {/* Forgot password link */}
             {mode === 'login' && (
               <div className="flex justify-end">
-                <button type="button" onClick={() => switchMode('forgot')} className="text-xs text-brand-400 hover:text-brand-300">
+                <button 
+                  type="button" 
+                  onClick={() => switchMode('forgot')} 
+                  className="text-xs hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--t-primary)' }}
+                >
                   Forgot password?
                 </button>
               </div>
@@ -949,7 +1008,11 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-brand-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ 
+                backgroundColor: 'var(--t-primary)',
+                '--tw-shadow-color': 'var(--t-primary-dim)'
+              } as any}
             >
               {loading ? (
                 <><Loader2 size={16} className="animate-spin" />Processing...</>
@@ -960,31 +1023,55 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           </form>
 
           {/* Demo login button */}
-          <button
-            onClick={handleDemoLogin}
-            className="w-full mt-3 py-2.5 text-sm text-slate-400 hover:text-white border border-slate-700/50 hover:border-slate-600 rounded-xl transition-all"
-          >
-            🚀 Quick Demo Login (no account needed)
-          </button>
+          <div className="relative mt-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t" style={{ borderColor: 'var(--t-border-subtle)' }} />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="px-3" style={{ background: 'var(--t-background)', color: 'var(--t-text-muted)' }}>Or continue with demo</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDemoLogin}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border transition-all mt-6"
+              style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+            >
+              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--t-warning-dim)' }}>
+                <Database size={14} style={{ color: 'var(--t-warning)' }} />
+              </div>
+              Try with Demo Account
+            </button>
 
           {/* Mode switcher */}
-          <div className="mt-6 text-center">
-            {mode === 'login' ? (
-              <p className="text-sm text-slate-400">
-                Don't have an account?{' '}
-                <button onClick={() => switchMode('signup')} className="text-brand-400 hover:text-brand-300 font-medium">
-                  Sign up
-                </button>
-              </p>
-            ) : (
-              <p className="text-sm text-slate-400">
-                Already have an account?{' '}
-                <button onClick={() => switchMode('login')} className="text-brand-400 hover:text-brand-300 font-medium">
-                  Sign in
-                </button>
-              </p>
-            )}
-          </div>
+          <p className="mt-8 text-center text-sm" style={{ color: 'var(--t-text-muted)' }}>
+              {mode === 'login' ? (
+                <>
+                  Don't have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => switchMode('signup')}
+                    className="font-bold hover:underline"
+                    style={{ color: 'var(--t-primary)' }}
+                  >
+                    Create account
+                  </button>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <button
+                    type="button"
+                    onClick={() => switchMode('login')}
+                    className="font-bold hover:underline"
+                    style={{ color: 'var(--t-primary)' }}
+                  >
+                    Sign in
+                  </button>
+                </>
+              )}
+            </p>
         </div>
       </div>
     </div>

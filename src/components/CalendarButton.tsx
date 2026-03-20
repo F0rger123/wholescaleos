@@ -92,7 +92,7 @@ export function CalendarButton({ leadName, propertyAddress, leadEmail, leadPhone
     <div className="relative">
       <button
         onClick={() => setShowPicker(!showPicker)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 hover:border-purple-500/50 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--t-primary-border)] bg-[var(--t-primary-dim)] text-[var(--t-primary)] hover:bg-[var(--t-primary-dim-hover)] hover:border-[var(--t-primary-border-hover)] transition-colors"
       >
         <Calendar size={12} />
         Add to Calendar
@@ -101,9 +101,9 @@ export function CalendarButton({ leadName, propertyAddress, leadEmail, leadPhone
       {showPicker && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
-          <div className="absolute bottom-full mb-2 left-0 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 p-4">
+          <div className="absolute bottom-full mb-2 left-0 w-72 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl z-50 p-4">
             <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-              <Calendar size={14} className="text-purple-400" />
+              <Calendar size={14} className="text-[var(--t-primary)]" />
               Schedule: {leadName}
             </h4>
 
@@ -120,8 +120,8 @@ export function CalendarButton({ leadName, propertyAddress, leadEmail, leadPhone
                   onClick={() => setSelectedDate(getQuickDate(opt.offset))}
                   className={`px-2 py-1 text-[10px] rounded-lg border transition-colors ${
                     selectedDate === getQuickDate(opt.offset)
-                      ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                      ? 'bg-[var(--t-primary-dim)] border-[var(--t-primary-border)] text-[var(--t-primary)]'
+                      : 'bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white'
                   }`}
                 >
                   {opt.label}
@@ -132,28 +132,28 @@ export function CalendarButton({ leadName, propertyAddress, leadEmail, leadPhone
             {/* Date & Time */}
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div>
-                <label className="text-[10px] text-slate-500 mb-1 block">Date</label>
+                <label className="text-[10px] text-[var(--t-text-muted)] mb-1 block">Date</label>
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full px-2 py-1.5 text-xs rounded-lg bg-[var(--t-surface-subtle)] border border-[var(--t-border)] text-white focus:outline-none focus:ring-1 focus:ring-[var(--t-primary)]"
                 />
               </div>
               <div>
-                <label className="text-[10px] text-slate-500 mb-1 block">Time</label>
+                <label className="text-[10px] text-[var(--t-text-muted)] mb-1 block">Time</label>
                 <input
                   type="time"
                   value={selectedTime}
                   onChange={(e) => setSelectedTime(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full px-2 py-1.5 text-xs rounded-lg bg-[var(--t-surface-subtle)] border border-[var(--t-border)] text-white focus:outline-none focus:ring-1 focus:ring-[var(--t-primary)]"
                 />
               </div>
             </div>
 
             {/* Duration */}
             <div className="mb-3">
-              <label className="text-[10px] text-slate-500 mb-1 block flex items-center gap-1">
+              <label className="text-[10px] text-[var(--t-text-muted)] mb-1 block flex items-center gap-1">
                 <Clock size={9} /> Duration
               </label>
               <div className="flex gap-1.5">
@@ -163,8 +163,8 @@ export function CalendarButton({ leadName, propertyAddress, leadEmail, leadPhone
                     onClick={() => setDuration(d)}
                     className={`flex-1 py-1 text-[10px] rounded-lg border transition-colors ${
                       duration === d
-                        ? 'bg-purple-500/20 border-purple-500/40 text-purple-300'
-                        : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+                        ? 'bg-[var(--t-primary-dim)] border-[var(--t-primary-border)] text-[var(--t-primary)]'
+                        : 'bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white'
                     }`}
                   >
                     {d}m
@@ -177,12 +177,12 @@ export function CalendarButton({ leadName, propertyAddress, leadEmail, leadPhone
             <button
               onClick={handleDownload}
               disabled={!selectedDate}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
             >
               <Download size={12} />
               Download .ics File
             </button>
-            <p className="text-[10px] text-slate-600 mt-2 text-center">
+            <p className="text-[10px] text-[var(--t-text-muted)] mt-2 text-center">
               Opens in Google Calendar, Outlook, or Apple Calendar
             </p>
           </div>

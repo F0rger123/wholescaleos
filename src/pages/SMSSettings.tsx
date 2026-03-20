@@ -146,7 +146,7 @@ export function SMSSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--t-primary)' }} />
       </div>
     );
   }
@@ -155,23 +155,32 @@ export function SMSSettings() {
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white mb-2">SMS & Notifications</h1>
-        <p className="text-slate-400">Configure how the AI Assistant sends text messages and alerts.</p>
+        <p className="text-[var(--t-text-muted)]">Configure how the AI Assistant sends text messages and alerts.</p>
       </div>
 
-      <div className="bg-slate-800/50 rounded-2xl border border-slate-700 p-6 space-y-6">
+      <div className="bg-[var(--t-surface-hover)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center border border-brand-500/20">
-            <Smartphone className="w-5 h-5 text-brand-400" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center border"
+            style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}
+          >
+            <Smartphone className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">SMS Gateway Setup</h2>
-            <p className="text-xs text-slate-500">Uses email-to-SMS to send messages free of charge.</p>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text-primary)' }}>SMS Gateway Setup</h2>
+            <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Uses email-to-SMS to send messages free of charge.</p>
           </div>
         </div>
 
         {hasGmailPerm === false && (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-3">
-            <div className="flex items-start gap-3 text-amber-400">
+          <div className="p-4 rounded-xl space-y-3"
+            style={{
+              backgroundColor: 'color-mix(in srgb, var(--t-warning) 10%, transparent)',
+              borderColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)',
+              borderWidth: '1px',
+              borderStyle: 'solid'
+            }}
+          >
+            <div className="flex items-start gap-3" style={{ color: 'var(--t-warning)' }}>
               <AlertCircle className="w-5 h-5 shrink-0" />
               <div>
                 <p className="text-sm font-semibold">Gmail Send Permission Required</p>
@@ -180,7 +189,10 @@ export function SMSSettings() {
             </div>
             <button
               onClick={handleReconnectGoogle}
-              className="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+              style={{ backgroundColor: 'var(--t-warning)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--t-warning) 80%, black)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-warning)'}
+              className="w-full py-2 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Reconnect Google Account
@@ -190,22 +202,34 @@ export function SMSSettings() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">Phone Number</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--t-text-muted)' }}>Phone Number</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="(555) 123-4567"
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all"
+              className="w-full rounded-xl px-4 py-2.5 outline-none focus:ring-2 transition-all"
+              style={{ 
+                backgroundColor: 'var(--t-background)', 
+                border: '1px solid var(--t-border)', 
+                color: 'var(--t-text)',
+                '--tw-ring-color': 'var(--t-primary-dim)' 
+              } as any}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-400 mb-2">Mobile Carrier</label>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--t-text-muted)' }}>Mobile Carrier</label>
             <select
               value={carrier}
               onChange={(e) => setCarrier(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-brand-500/50 transition-all appearance-none"
+              className="w-full rounded-xl px-4 py-2.5 outline-none focus:ring-2 transition-all appearance-none"
+              style={{ 
+                backgroundColor: 'var(--t-background)', 
+                border: '1px solid var(--t-border)', 
+                color: 'var(--t-text)',
+                '--tw-ring-color': 'var(--t-primary-dim)' 
+              } as any}
             >
               <option value="">Select Carrier</option>
               {Object.keys(SMS_GATEWAYS).map((c) => (
@@ -216,24 +240,35 @@ export function SMSSettings() {
         </div>
 
         {testResult && (
-          <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
+          <div className="p-4 rounded-xl flex items-start gap-3 border" style={{
+            backgroundColor: testResult.success ? 'var(--t-success-dim)' : 'var(--t-error-dim)',
+            borderColor: testResult.success ? 'var(--t-success-border)' : 'var(--t-error-border)',
+            color: testResult.success ? 'var(--t-success)' : 'var(--t-error)'
+          }}>
             {testResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
             <span className="text-sm">{testResult.message}</span>
           </div>
         )}
 
         {saveResult && (
-          <div className={`p-4 rounded-xl flex items-start gap-3 ${saveResult.success ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
+          <div className="p-4 rounded-xl flex items-start gap-3 border" style={{
+            backgroundColor: saveResult.success ? 'var(--t-success-dim)' : 'var(--t-error-dim)',
+            borderColor: saveResult.success ? 'var(--t-success-border)' : 'var(--t-error-border)',
+            color: saveResult.success ? 'var(--t-success)' : 'var(--t-error)'
+          }}>
             {saveResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
             <span className="text-sm">{saveResult.message}</span>
           </div>
         )}
 
-        <div className="flex gap-3 pt-4 border-t border-slate-700">
+        <div className="flex gap-3 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
           <button
             onClick={handleTestSMS}
             disabled={testing || !phone || !carrier}
-            className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface)'}
+            className="flex-1 px-4 py-2.5 rounded-xl border transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Send Test SMS
@@ -241,7 +276,8 @@ export function SMSSettings() {
           <button
             onClick={handleSave}
             disabled={saving || !phone || !carrier}
-            className="flex-1 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ background: 'var(--t-primary)' }}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Settings
@@ -249,12 +285,12 @@ export function SMSSettings() {
         </div>
       </div>
 
-      <div className="bg-slate-900/50 rounded-2xl p-6 border border-slate-800 border-dashed">
+      <div className="rounded-2xl p-6 border border-dashed" style={{ backgroundColor: 'rgba(var(--t-background-rgb), 0.5)', borderColor: 'var(--t-border)' }}>
         <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-3">
-          <AlertCircle className="w-4 h-4 text-brand-400" />
+          <AlertCircle className="w-4 h-4" style={{ color: 'var(--t-primary)' }} />
           How it works
         </h3>
-        <p className="text-sm text-slate-400 leading-relaxed mb-4">
+        <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--t-text-muted)' }}>
           Most mobile carriers provide a free email address that forwards to your phone as an SMS. 
           For example, 555-123-4567 on Verizon becomes <code>5551234567@vtext.com</code>.
         </p>
@@ -262,7 +298,8 @@ export function SMSSettings() {
           href="https://ai.google.dev/gemini-api/docs/rate-limits" 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-xs text-brand-400 hover:text-brand-300 inline-flex items-center gap-1"
+          className="text-xs hover:opacity-80 inline-flex items-center gap-1"
+          style={{ color: 'var(--t-primary)' }}
         >
           View supported gateways <ExternalLink className="w-3 h-3" />
         </a>
