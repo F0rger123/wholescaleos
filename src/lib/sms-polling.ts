@@ -1,18 +1,27 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { useStore } from '../store/useStore';
 
-const SMS_GATEWAYS = [
-  '@vtext.com', 
-  '@txt.att.net', 
-  '@tmomail.net', 
-  '@messaging.sprintpcs.com',
-  '@myboostmobile.com',
-  '@sms.cricketwireless.net',
-  '@msg.fi.google.com',
-  '@text.republicwireless.com',
-  '@email.uscc.net',
-  '@vmobl.com'
+// All gateways we might receive replies FROM (both SMS and MMS)
+const ALL_GATEWAY_DOMAINS = [
+  // Standard SMS gateways
+  'vtext.com',
+  'txt.att.net',
+  'tmomail.net',
+  'messaging.sprintpcs.com',
+  'myboostmobile.com',
+  'sms.cricketwireless.net',
+  'msg.fi.google.com',
+  'text.republicwireless.com',
+  'email.uscc.net',
+  'vmobl.com',
+  // MMS gateways (better for iPhones)
+  'vzwpix.com',
+  'mms.att.net',
+  'pm.sprint.com',
 ];
+
+// Gmail query: match any email FROM these domains
+const GMAIL_FROM_QUERY = ALL_GATEWAY_DOMAINS.map(d => `from:@${d}`).join(' OR ');
 
 const CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
 const CLIENT_SECRET = "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";
@@ -68,7 +77,10 @@ async function sendGmail(accessToken: string, to: string, subject: string, body:
     body
   ].join('\n');
 
-  const base64EncodedEmail = btoa(message).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const base64EncodedEmail = btoa(unescape(encodeURIComponent(message)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 
   try {
     await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
@@ -114,7 +126,51 @@ function checkScheduledReminders() {
 }
 
 /**
- * Polls Gmail for new messages from SMS gateways.
+ * Decodes a base64url string (Gmail API format) to UTF-8 text.
+ */
+function decodeGmailBody(data: string): string {
+  try {
+    const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
+    return decodeURIComponent(escape(atob(base64)));
+  } catch {
+    try {
+      return atob(data.replace(/-/g, '+').replace(/_/g, '/'));
+    } catch {
+      return '';
+    }
+  }
+}
+
+/**
+ * Recursively extracts text/plain content from a Gmail message part.
+ */
+function extractTextContent(payload: any): string {
+  if (!payload) return '';
+
+  // Direct body data (simple single-part message)
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    return decodeGmailBody(payload.body.data);
+  }
+
+  // Multi-part: recurse through parts
+  if (payload.parts && Array.isArray(payload.parts)) {
+    for (const part of payload.parts) {
+      const text = extractTextContent(part);
+      if (text.trim()) return text;
+    }
+  }
+
+  // Fallback: inline body data
+  if (payload.body?.data) {
+    return decodeGmailBody(payload.body.data);
+  }
+
+  return '';
+}
+
+/**
+ * Polls Gmail for new inbound SMS/MMS messages from carrier gateways.
+ * Stores them in `sms_messages` with `user_id` column (NOT agent_id).
  */
 export async function pollSMSMessages() {
   const store = useStore.getState();
@@ -122,23 +178,34 @@ export async function pollSMSMessages() {
   if (!userId) return;
 
   const accessToken = await getAccessToken(userId);
-  if (!accessToken) return;
+  if (!accessToken) {
+    console.warn('[SMS Polling] No access token — Google not connected?');
+    return;
+  }
 
-  // Also check reminders while we're at it
+  // Run reminders check concurrently
   checkScheduledReminders();
 
   try {
-    const query = `from:(${SMS_GATEWAYS.join(' OR ')})`;
-    const listResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=20`, {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
+    // Fetch messages matching any gateway domain
+    const listResponse = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(GMAIL_FROM_QUERY)}&maxResults=30`,
+      { headers: { 'Authorization': `Bearer ${accessToken}` } }
+    );
 
-    if (!listResponse.ok) return;
-    const { messages } = await listResponse.json();
+    if (!listResponse.ok) {
+      console.error('[SMS Polling] Gmail list failed:', listResponse.status, await listResponse.text());
+      return;
+    }
+
+    const listData = await listResponse.json();
+    const messages = listData.messages;
     if (!messages || messages.length === 0) return;
 
     for (const msg of messages) {
       if (!supabase) continue;
+
+      // ── Dedup: skip if already stored ──────────────────────────────────
       const { data: existing } = await supabase
         .from('sms_messages')
         .select('id')
@@ -147,65 +214,81 @@ export async function pollSMSMessages() {
 
       if (existing) continue;
 
-      const detailResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`, {
-        headers: { 'Authorization': `Bearer ${accessToken}` }
-      });
+      // ── Fetch full message detail ───────────────────────────────────────
+      const detailResponse = await fetch(
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`,
+        { headers: { 'Authorization': `Bearer ${accessToken}` } }
+      );
 
       if (!detailResponse.ok) continue;
       const detail = await detailResponse.json();
 
-      const headers = detail.payload.headers;
-      const fromHeader = headers.find((h: any) => h.name === 'From')?.value || '';
-      const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
-      const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || '';
+      const headers = detail.payload?.headers || [];
+      const fromHeader = headers.find((h: any) => h.name.toLowerCase() === 'from')?.value || '';
+      const subject = headers.find((h: any) => h.name.toLowerCase() === 'subject')?.value || '';
+      const dateHeader = headers.find((h: any) => h.name.toLowerCase() === 'date')?.value || '';
 
-      const phoneMatch = fromHeader.match(/(\d+)@/);
+      // Extract the phone number from the From address (e.g. 7175551234@vtext.com)
+      const phoneMatch = fromHeader.match(/(\d{10,})/);
       const phoneNumber = phoneMatch ? phoneMatch[1] : fromHeader;
 
-      let content = '';
-      if (detail.payload.parts) {
-        const textPart = detail.payload.parts.find((p: any) => p.mimeType === 'text/plain');
-        if (textPart && textPart.body?.data) {
-          content = atob(textPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-        }
-      } else if (detail.payload.body?.data) {
-        content = atob(detail.payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+      // Extract message body
+      let content = extractTextContent(detail.payload);
+      // Fallback to subject if body is empty (some carriers send SMS as subject)
+      if (!content.trim() && subject) content = subject;
+      content = content.trim();
+
+      if (!content) {
+        console.log('[SMS Polling] Skipping empty message', msg.id);
+        continue;
       }
 
-      if (!content && subject) content = subject;
+      // ── Insert into sms_messages using `user_id` column ─────────────────
+      // NOTE: Use `user_id` (NOT `agent_id`) to match what SMSInbox.tsx queries.
+      const receivedAt = dateHeader ? new Date(dateHeader).toISOString() : new Date().toISOString();
 
-      if (!supabase) continue;
       const { error: insertError } = await supabase.from('sms_messages').insert({
-        agent_id: userId,
+        user_id: userId,          // ← CRITICAL: must match what SMSInbox reads
         phone_number: phoneNumber,
-        content: content.trim(),
+        content,
         direction: 'inbound',
         gmail_message_id: msg.id,
-        created_at: new Date(dateHeader).toISOString(),
+        created_at: receivedAt,
         is_read: false
       });
 
       if (insertError) {
-        console.error('Error storing inbound SMS:', insertError);
+        console.error('[SMS Polling] Error storing inbound SMS:', insertError);
+        // If user_id column doesn't exist, try agent_id as fallback
+        if (insertError.code === '42703' || insertError.message?.includes('user_id')) {
+          await supabase.from('sms_messages').insert({
+            agent_id: userId,
+            phone_number: phoneNumber,
+            content,
+            direction: 'inbound',
+            gmail_message_id: msg.id,
+            created_at: receivedAt,
+            is_read: false
+          });
+        }
       } else {
         const { smsAutoReplyEnabled, smsAutoReplyMessage, addNotification, notificationSettings } = useStore.getState();
         
-        // Trigger In-app notification
+        // In-app notification
         if (notificationSettings?.smsReceived) {
           addNotification({
             type: 'message',
             title: 'New SMS Received',
-            message: `From ${phoneNumber}: ${content.trim().substring(0, 50)}...`,
+            message: `From ${phoneNumber}: ${content.substring(0, 60)}${content.length > 60 ? '...' : ''}`,
             link: '/sms'
           });
         }
 
-        // Trigger Auto-reply
-        if (smsAutoReplyEnabled && fromHeader.includes('@')) {
-          await sendGmail(accessToken, fromHeader, 'Auto-Reply', smsAutoReplyMessage);
-          
+        // Auto-reply
+        if (smsAutoReplyEnabled && smsAutoReplyMessage && fromHeader.includes('@')) {
+          await sendGmail(accessToken, fromHeader, '', smsAutoReplyMessage);
           await supabase.from('sms_messages').insert({
-            agent_id: userId,
+            user_id: userId,
             phone_number: phoneNumber,
             content: smsAutoReplyMessage,
             direction: 'outbound',
@@ -214,26 +297,31 @@ export async function pollSMSMessages() {
           });
         }
 
+        // Link to lead if phone matches
         const leads = useStore.getState().leads;
         const matchingLead = leads.find(l => l.phone?.replace(/\D/g, '') === phoneNumber.replace(/\D/g, ''));
         if (matchingLead) {
-          await supabase.from('sms_messages').update({ lead_id: matchingLead.id }).eq('gmail_message_id', msg.id);
+          await supabase.from('sms_messages')
+            .update({ lead_id: matchingLead.id })
+            .eq('gmail_message_id', msg.id);
         }
       }
     }
   } catch (err) {
-    console.error('Error polling Gmail for SMS:', err);
+    console.error('[SMS Polling] Unexpected error:', err);
   }
 }
 
 /**
  * Starts the background polling interval.
  */
-export function startSMSPolling(intervalMs = 60000) {
+export function startSMSPolling(intervalMs = 30000) {
   if (pollingInterval) return;
+  // Run immediately on start
   pollSMSMessages();
+  // Then poll every 30 seconds (was 60s — reduced for better responsiveness)
   pollingInterval = setInterval(pollSMSMessages, intervalMs);
-  console.log('SMS Polling & Reminder service started.');
+  console.log('[SMS Polling] Started. Polling every', intervalMs / 1000, 'seconds.');
 }
 
 /**
@@ -243,7 +331,6 @@ export function stopSMSPolling() {
   if (pollingInterval) {
     clearInterval(pollingInterval);
     pollingInterval = null;
-    console.log('SMS Polling & Reminder service stopped.');
+    console.log('[SMS Polling] Stopped.');
   }
 }
-

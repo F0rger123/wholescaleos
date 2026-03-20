@@ -1060,7 +1060,6 @@ export function AITest() {
                     background: 'var(--t-input-bg)', 
                     borderColor: 'var(--t-border)', 
                     color: 'var(--t-text)',
-                    // @ts-expect-error custom prop
                     '--tw-ring-color': 'var(--t-primary)'
                   } as any}
                 />

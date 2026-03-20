@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Bot, X, Send, 
-  Minus,
   User, Key, Mic,
   Layout as LayoutIcon
 } from 'lucide-react';

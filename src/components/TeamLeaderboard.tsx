@@ -1,5 +1,5 @@
 import { useStore } from '../store/useStore';
-import { TrendingUp, Award, Flame, Star, DollarSign } from 'lucide-react';
+import { TrendingUp, Award, Flame, Star, DollarSign, TrendingDown } from 'lucide-react';
 
 const RANK_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
@@ -9,12 +9,19 @@ export function TeamLeaderboard() {
   const leaderData = team.map(member => {
     const assignedLeads = leads.filter(l => l.assignedTo === member.id);
     const closedWon = assignedLeads.filter(l => l.status === 'closed-won');
-    const totalVolume = closedWon.reduce((sum, l) => sum + (l.offerAmount || l.estimatedValue || 0), 0);
+    const totalRevenue = closedWon.reduce((sum, l) => sum + (l.offerAmount || l.estimatedValue || 0), 0);
+    const totalProfit = closedWon.reduce((sum, l) => {
+      const revenue = l.offerAmount || l.estimatedValue || 0;
+      // Profit = estimatedValue - offerAmount (wholesale spread)
+      const profit = l.offerAmount && l.estimatedValue
+        ? Math.max(0, l.estimatedValue - l.offerAmount)
+        : revenue * 0.2; // Fallback: 20% margin estimate
+      return sum + profit;
+    }, 0);
     const conversionRate = assignedLeads.length > 0
       ? Math.round((closedWon.length / assignedLeads.length) * 100)
       : 0;
 
-    // Use memberStreaks if available; fall back to current user's own streak
     const isCurrentUser = member.id === currentUser?.id || member.email === currentUser?.email;
     const lStreak = memberStreaks[member.id]?.login ?? (isCurrentUser ? loginStreak : 0);
     const tStreak = memberStreaks[member.id]?.task ?? (isCurrentUser ? taskStreak : 0);
@@ -22,15 +29,16 @@ export function TeamLeaderboard() {
     return {
       ...member,
       closedWonCount: closedWon.length,
-      totalVolume,
+      totalRevenue,
+      totalProfit,
       conversionRate,
       assignedCount: assignedLeads.length,
       loginStreak: lStreak,
       taskStreak: tStreak,
     };
-  }).sort((a, b) => b.totalVolume - a.totalVolume);
+  }).sort((a, b) => b.totalRevenue - a.totalRevenue);
 
-  const maxVolume = leaderData[0]?.totalVolume || 1;
+  const maxRevenue = leaderData[0]?.totalRevenue || 1;
 
   const fmtMoney = (v: number) => {
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -75,34 +83,12 @@ export function TeamLeaderboard() {
                 )}
               </div>
 
-              {/* Name + Role */}
+              {/* Name + Stats */}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2 mb-1">
                   <p className="text-xs font-bold text-white truncate">{member.name}</p>
-                  {/* Revenue */}
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    <DollarSign size={9} style={{ color: 'var(--t-success)' }} />
-                    <span className="text-xs font-black" style={{ color: 'var(--t-success)' }}>
-                      {fmtMoney(member.totalVolume)}
-                    </span>
-                  </div>
-                </div>
-                {/* Progress bar */}
-                <div className="mt-1.5 w-full h-1 bg-[var(--t-background)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${Math.min(100, (member.totalVolume / maxVolume) * 100)}%`,
-                      background: 'var(--t-primary)',
-                    }}
-                  />
-                </div>
-                {/* Stats row */}
-                <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>
-                    {member.closedWonCount} closed · {member.conversionRate}% conv.
-                  </span>
-                  <div className="flex items-center gap-1 ml-auto">
+                  {/* Streaks */}
+                  <div className="flex items-center gap-1 shrink-0">
                     {member.loginStreak > 0 && (
                       <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 text-[9px] font-bold">
                         <Flame size={8} /> {member.loginStreak}d
@@ -114,6 +100,41 @@ export function TeamLeaderboard() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Revenue + Profit row */}
+                <div className="flex items-center gap-3 mb-1.5">
+                  <div className="flex items-center gap-0.5">
+                    <DollarSign size={9} style={{ color: 'var(--t-success)' }} />
+                    <span className="text-[11px] font-bold" style={{ color: 'var(--t-success)' }}>
+                      {fmtMoney(member.totalRevenue)}
+                    </span>
+                    <span className="text-[9px] ml-0.5" style={{ color: 'var(--t-text-muted)' }}>rev</span>
+                  </div>
+                  {member.totalProfit > 0 && (
+                    <>
+                      <span className="text-[9px]" style={{ color: 'var(--t-border)' }}>|</span>
+                      <div className="flex items-center gap-0.5">
+                        <TrendingDown size={9} className="text-emerald-400" />
+                        <span className="text-[11px] font-bold text-emerald-400">{fmtMoney(member.totalProfit)}</span>
+                        <span className="text-[9px] ml-0.5" style={{ color: 'var(--t-text-muted)' }}>profit</span>
+                      </div>
+                    </>
+                  )}
+                  <span className="text-[9px] ml-auto" style={{ color: 'var(--t-text-muted)' }}>
+                    {member.closedWonCount} won · {member.conversionRate}%
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-1 bg-[var(--t-background)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.min(100, (member.totalRevenue / maxRevenue) * 100)}%`,
+                      background: 'var(--t-primary)',
+                    }}
+                  />
                 </div>
               </div>
             </div>
