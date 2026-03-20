@@ -290,7 +290,7 @@ export async function hasUserApiKey(): Promise<boolean> {
  * Sends a prompt and context to the Gemini API and returns a parsed intent and response.
  * Strictly requires a user-configured API key from settings.
  */
-export async function processPrompt(prompt: string, context: Record<string, any> = {}): Promise<GeminiResponse> {
+export async function processPrompt(prompt: string, context: Record<string, any> = {}, modelOverride?: string, signal?: AbortSignal): Promise<GeminiResponse> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   let apiKey = '';
@@ -331,8 +331,8 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   const allTasks = context.test ? [] : useStore.getState().tasks;
   
   // Get preferred model
-  let model = '';
-  if (userId) {
+  let model = modelOverride || '';
+  if (!model && userId) {
     if (isSupabaseConfigured && supabase) {
       try {
         const { data } = await supabase
@@ -393,11 +393,13 @@ Core Rules:
 2. SMS RECOGNITION: If the user provides a raw phone number (e.g. 555-0199), use it DIRECTLY as the 'target' in 'send_sms'. 
    Do NOT try to look up a name if a clear number is provided.
 3. GUARDRAILS: For intents 'create_lead', 'update_lead', 'delete_lead', and 'send_sms', you MUST ask for confirmation first if the user hasn't explicitly said "yes" or "proceed" to a specific plan. 
-   Use intent 'confirm_action' to summarize what you are about to do and ask for permission.
+   Use intent 'confirm_action' to summarize what you are about to do and ask for permission. 
+   IMPORTANT: Once you have all fields (e.g. for SMS: target and message), immediately return 'confirm_action' with the full plan. Do not ask for each field one-by-one if the user provides multiple.
 4. CONFIRMATION UI: When returning 'confirm_action', provide a clear, detailed summary in the 'response' field and include the intended action data in the 'data' field.
-5. SMS CONTENT PARSING: Phrases like "this is [Name]", "I am [Name]", or "Hi, it's [Name]" at the BEGINNING of a prompt are almost always PART OF THE MESSAGE CONTENT if the user is asking to send an SMS. 
-   Treat them as the first line of the message, not as the user's name identification for the system.
-6. PLAIN ENGLISH: Always respond in natural language within the 'response' field. Never mention JSON or internal logic to the user.
+5. SMS CONTENT PARSING: If the user provides a phone number and a message, you have EVERYTHING you need. Do NOT ask for a contact name if a number is provided. 
+   Phrases like "this is [Name]" at the start of a prompt are part of the message content.
+6. NO LOOPING: If the user provides a correction to a previous piece of info, update your plan and ask for confirmation again ONCE. Do not get stuck repeating the same question.
+7. PLAIN ENGLISH: Always respond in natural language within the 'response' field. Never mention JSON or internal logic to the user.
 
 JSON Structure:
 {
@@ -417,6 +419,9 @@ Intent Requirements:
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
+  // Combine internal timeout signal with external caller signal if provided
+  const combinedSignal = signal ? ((AbortSignal as any).any ? (AbortSignal as any).any([controller.signal, signal]) : signal) : controller.signal;
+
   try {
     // Determine the correct API version (v1 for stable 1.5 models, v1beta for 2.x/3.x experimental)
     const apiVersion = (model.includes('2.0') || model.includes('2.5') || model.includes('3.') || model.includes('exp')) ? 'v1beta' : 'v1';
@@ -425,7 +430,7 @@ Intent Requirements:
       headers: { 
         'Content-Type': 'application/json' 
       },
-      signal: controller.signal,
+      signal: combinedSignal,
       body: JSON.stringify({
         contents: [
           {

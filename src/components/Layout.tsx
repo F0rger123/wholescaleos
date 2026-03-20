@@ -49,7 +49,8 @@ export function Layout() {
   const { 
     sidebarOpen, toggleSidebar, team, tasks, unreadCounts, 
     teamConfig, currentUser, showFloatingAIWidget, setShowFloatingAIWidget,
-    shortcutsEnabled 
+    shortcutsEnabled,
+    currentTheme, setTheme
   } = useStore();
 
   const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
@@ -102,6 +103,13 @@ export function Layout() {
     }
     loadPrefs();
   }, [currentUser?.id, setShowFloatingAIWidget]);
+
+  // Apply theme colors on mount
+  useEffect(() => {
+    if (currentTheme) {
+      setTheme(currentTheme);
+    }
+  }, []);
 
   // Cross-tab Synchronization for AI Usage
   useEffect(() => {
