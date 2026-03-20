@@ -1242,12 +1242,17 @@ export default function Leads() {
                   <select 
                     value={formData.assignedTo} 
                     onChange={e => setFormData({ ...formData, assignedTo: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white"
-                    style={{ colorScheme: 'dark' }}
+                    className="w-full px-3 py-2 border rounded-lg text-white"
+                    style={{ 
+                      backgroundColor: '#1e293b', 
+                      borderColor: 'var(--t-border)',
+                      colorScheme: 'dark',
+                      color: 'white'
+                    }}
                   >
-                    <option value="">Unassigned</option>
+                    <option value="" style={{ background: '#1e293b', color: 'white' }}>Unassigned</option>
                     {team.map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
+                      <option key={m.id} value={m.id} style={{ background: '#1e293b', color: 'white' }}>{m.name}</option>
                     ))}
                   </select>
                 </div>

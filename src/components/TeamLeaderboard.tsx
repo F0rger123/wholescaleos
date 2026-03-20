@@ -1,17 +1,23 @@
 import { useStore } from '../store/useStore';
-import { TrendingUp, Award, Users, Flame } from 'lucide-react';
+import { TrendingUp, Award, Flame, Star, DollarSign } from 'lucide-react';
+
+const RANK_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
 export function TeamLeaderboard() {
-  const { team, leads, memberStreaks } = useStore();
+  const { team, leads, memberStreaks, loginStreak, taskStreak, currentUser } = useStore();
 
-  // Calculate stats per team member
   const leaderData = team.map(member => {
     const assignedLeads = leads.filter(l => l.assignedTo === member.id);
     const closedWon = assignedLeads.filter(l => l.status === 'closed-won');
     const totalVolume = closedWon.reduce((sum, l) => sum + (l.offerAmount || l.estimatedValue || 0), 0);
-    const conversionRate = assignedLeads.length > 0 
-      ? (closedWon.length / assignedLeads.length) * 100 
+    const conversionRate = assignedLeads.length > 0
+      ? Math.round((closedWon.length / assignedLeads.length) * 100)
       : 0;
+
+    // Use memberStreaks if available; fall back to current user's own streak
+    const isCurrentUser = member.id === currentUser?.id || member.email === currentUser?.email;
+    const lStreak = memberStreaks[member.id]?.login ?? (isCurrentUser ? loginStreak : 0);
+    const tStreak = memberStreaks[member.id]?.task ?? (isCurrentUser ? taskStreak : 0);
 
     return {
       ...member,
@@ -19,110 +25,105 @@ export function TeamLeaderboard() {
       totalVolume,
       conversionRate,
       assignedCount: assignedLeads.length,
-      loginStreak: memberStreaks[member.id]?.login || 0,
-      taskStreak: memberStreaks[member.id]?.task || 0
+      loginStreak: lStreak,
+      taskStreak: tStreak,
     };
   }).sort((a, b) => b.totalVolume - a.totalVolume);
 
+  const maxVolume = leaderData[0]?.totalVolume || 1;
+
+  const fmtMoney = (v: number) => {
+    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+    return `$${v}`;
+  };
+
   return (
     <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl overflow-hidden shadow-sm">
-      <div className="p-4 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface-hover)]">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-[var(--t-border)] flex items-center justify-between"
+           style={{ background: 'var(--t-surface-hover)' }}>
         <div className="flex items-center gap-2">
-          <Award className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
-          <h3 className="font-bold text-white">Team Performance</h3>
+          <Award className="w-4 h-4" style={{ color: 'var(--t-primary)' }} />
+          <h3 className="font-bold text-sm text-white">Team Performance</h3>
         </div>
         <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--t-text-muted)' }}>
-          <TrendingUp size={12} /> Monthly Stats
+          <TrendingUp size={10} /> Monthly
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="text-[10px] uppercase tracking-widest border-b border-[var(--t-border)]" style={{ color: 'var(--t-text-muted)' }}>
-              <th className="px-4 py-3 font-semibold">Member</th>
-              <th className="px-4 py-3 font-semibold text-right">Revenue</th>
-              <th className="px-4 py-3 font-semibold text-right">Streaks</th>
-              <th className="px-4 py-3 font-semibold text-right">Conv. %</th>
-              <th className="px-4 py-3 font-semibold">Rank</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--t-border)]">
-            {leaderData.map((member, idx) => (
-              <tr key={member.id} className="group hover:bg-[var(--t-surface-hover)] transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
-                        style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
-                      >
-                        {member.name.charAt(0)}
-                      </div>
-                      {idx === 0 && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-yellow-500 flex items-center justify-center border-2 border-[var(--t-surface)]">
-                          <Award size={8} className="text-white" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{member.name}</p>
-                      <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{member.role}</p>
-                    </div>
+      {/* Leader cards */}
+      <div className="divide-y divide-[var(--t-border)]">
+        {leaderData.map((member, idx) => (
+          <div key={member.id} className="px-4 py-3 group hover:bg-[var(--t-surface-hover)] transition-colors">
+            <div className="flex items-center gap-3">
+              {/* Rank + Avatar */}
+              <div className="relative shrink-0">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
+                  style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
+                >
+                  {member.name.charAt(0)}
+                </div>
+                {idx < 3 && (
+                  <div
+                    className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center border border-[var(--t-surface)]"
+                    style={{ background: RANK_COLORS[idx] }}
+                  >
+                    <span className="text-[7px] font-black text-black">{idx + 1}</span>
                   </div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex flex-col items-end">
-                    <span className="text-sm font-bold text-white">${(member.totalVolume / 1000).toFixed(1)}k</span>
-                    <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{member.closedWonCount} closed</span>
+                )}
+              </div>
+
+              {/* Name + Role */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-white truncate">{member.name}</p>
+                  {/* Revenue */}
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <DollarSign size={9} style={{ color: 'var(--t-success)' }} />
+                    <span className="text-xs font-black" style={{ color: 'var(--t-success)' }}>
+                      {fmtMoney(member.totalVolume)}
+                    </span>
                   </div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <div className="flex items-center justify-end gap-1.5">
+                </div>
+                {/* Progress bar */}
+                <div className="mt-1.5 w-full h-1 bg-[var(--t-background)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.min(100, (member.totalVolume / maxVolume) * 100)}%`,
+                      background: 'var(--t-primary)',
+                    }}
+                  />
+                </div>
+                {/* Stats row */}
+                <div className="mt-1.5 flex items-center gap-2">
+                  <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>
+                    {member.closedWonCount} closed · {member.conversionRate}% conv.
+                  </span>
+                  <div className="flex items-center gap-1 ml-auto">
                     {member.loginStreak > 0 && (
-                      <div className="flex items-center gap-0.5 bg-orange-500/10 text-orange-500 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                        <Flame size={10} /> {member.loginStreak}
+                      <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-orange-500/10 text-orange-400 text-[9px] font-bold">
+                        <Flame size={8} /> {member.loginStreak}d
                       </div>
                     )}
                     {member.taskStreak > 0 && (
-                      <div className="flex items-center gap-0.5 bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                        <Award size={10} /> {member.taskStreak}
+                      <div className="flex items-center gap-0.5 px-1 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[9px] font-bold">
+                        <Star size={8} /> {member.taskStreak}
                       </div>
                     )}
-                    {member.loginStreak === 0 && member.taskStreak === 0 && (
-                      <span className="text-[10px] text-[var(--t-text-muted)]">—</span>
-                    )}
                   </div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-sm font-medium text-[var(--t-text-secondary)]">
-                    {member.conversionRate.toFixed(1)}%
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="w-16 h-1.5 bg-[var(--t-background)] rounded-full overflow-hidden">
-                    <div 
-                      className="h-full rounded-full"
-                      style={{ 
-                        width: `${Math.min(100, (member.totalVolume / (leaderData[0].totalVolume || 1)) * 100)}%`,
-                        background: 'var(--t-primary)'
-                      }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      
-      <div className="p-3 bg-[var(--t-surface-hover)] border-t border-[var(--t-border)] flex items-center justify-center">
-        <button className="text-[10px] font-bold uppercase tracking-tighter flex items-center gap-1.5 transition-colors"
-          style={{ color: 'var(--t-primary-text)' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--t-primary)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--t-primary-text)'}
-        >
-          <Users size={12} /> View Full Team Analytics
-        </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {leaderData.length === 0 && (
+          <div className="px-4 py-6 text-center text-[var(--t-text-muted)] text-sm">
+            No team members yet.
+          </div>
+        )}
       </div>
     </div>
   );

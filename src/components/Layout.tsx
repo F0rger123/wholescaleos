@@ -77,6 +77,7 @@ export function Layout() {
 
   const [showNotes, setShowNotes] = useState(false);
   const [isNotesExpanded, setIsNotesExpanded] = useState(false);
+  const [notesDragStart, setNotesDragStart] = useState<{ x: number; y: number } | null>(null);
   const { quickNotes, setQuickNotes } = useStore();
 
   const [userShortcuts, setUserShortcuts] = useState<any[]>([]);
@@ -637,9 +638,24 @@ export function Layout() {
               <StickyNote size={20} />
             </button>
           ) : (
-            <div className={`w-full flex flex-col rounded-2xl shadow-2xl border overflow-hidden animate-in slide-in-from-bottom-5 duration-300`} 
-                 style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', height: isNotesExpanded ? '500px' : '300px' }}>
-              <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)', background: 'rgba(var(--t-surface-rgb), 0.5)' }}>
+            <div
+              className={`w-full flex flex-col rounded-2xl shadow-2xl border overflow-hidden animate-in slide-in-from-bottom-5 duration-300`} 
+              style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', height: isNotesExpanded ? '500px' : '300px' }}
+            >
+              <div 
+                className="px-4 py-3 border-b flex items-center justify-between cursor-move select-none" 
+                style={{ borderColor: 'var(--t-border)', background: 'rgba(var(--t-surface-rgb), 0.5)' }}
+                onMouseDown={(e) => setNotesDragStart({ x: e.clientX, y: e.clientY })}
+                onMouseUp={(e) => {
+                  if (notesDragStart && Math.abs(e.clientY - notesDragStart.y) > 20 && e.clientY < 80) {
+                    setNotesDocked(true);
+                    setShowNotes(false);
+                    localStorage.setItem('quick_notes_docked', 'true');
+                    window.dispatchEvent(new CustomEvent('dock-notes'));
+                  }
+                  setNotesDragStart(null);
+                }}
+              >
                 <div className="flex items-center gap-2">
                   <FileText size={16} style={{ color: 'var(--t-primary)' }} />
                   <span className="text-sm font-semibold text-white">Quick Notes</span>
