@@ -26,7 +26,7 @@ export function StatusIndicator({ status, size = 'md', showLabel = false, pulse 
         )}
       </span>
       {showLabel && (
-        <span className="text-xs text-slate-400">{PRESENCE_LABELS[status]}</span>
+        <span className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{PRESENCE_LABELS[status]}</span>
       )}
     </span>
   );
@@ -39,10 +39,10 @@ interface StatusBadgeProps {
 
 export function StatusBadge({ status, customStatus }: StatusBadgeProps) {
   const bgMap: Record<PresenceStatus, string> = {
-    online: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    offline: 'bg-slate-500/15 text-slate-400 border-slate-500/30',
-    busy: 'bg-red-500/15 text-red-400 border-red-500/30',
-    dnd: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    online: 'bg-[var(--t-success)]/15 text-[var(--t-success)] border-[var(--t-success)]/30',
+    offline: 'bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] border-[var(--t-border)]',
+    busy: 'bg-[var(--t-error)]/15 text-[var(--t-error)] border-[var(--t-error)]/30',
+    dnd: 'bg-[var(--t-warning)]/15 text-[var(--t-warning)] border-[var(--t-warning)]/30',
   };
 
   return (
@@ -52,7 +52,7 @@ export function StatusBadge({ status, customStatus }: StatusBadgeProps) {
         {PRESENCE_LABELS[status]}
       </span>
       {customStatus && (
-        <span className="text-[11px] text-slate-500 italic pl-0.5">
+        <span className="text-[11px] italic pl-0.5" style={{ color: 'var(--t-text-muted)' }}>
           "{customStatus}"
         </span>
       )}

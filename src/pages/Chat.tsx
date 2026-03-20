@@ -71,18 +71,18 @@ function VoiceRecorder({ onSend, onCancel }: { onSend: (attachment: ChatAttachme
   const ss = (duration % 60).toString().padStart(2, '0');
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-2xl">
-      <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-      <span className="text-red-400 font-mono text-sm font-medium">{mm}:{ss}</span>
+    <div className="flex items-center gap-3 px-4 py-3 bg-[var(--t-error)]/10 border border-[var(--t-error)]/30 rounded-2xl">
+      <div className="w-3 h-3 rounded-full bg-[var(--t-error)] animate-pulse" />
+      <span className="text-[var(--t-error)] font-mono text-sm font-medium">{mm}:{ss}</span>
       <div className="flex-1 flex items-center gap-1">
         {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="w-1 rounded-full bg-red-400/60" style={{ height: `${Math.random() * 16 + 4}px` }} />
+          <div key={i} className="w-1 rounded-full bg-[var(--t-error)]/60" style={{ height: `${Math.random() * 16 + 4}px` }} />
         ))}
       </div>
-      <button onClick={onCancel} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-colors">
+      <button onClick={onCancel} className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]/80 hover:text-white transition-colors">
         <Trash2 size={16} />
       </button>
-      <button onClick={stopAndSend} className="p-2 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors">
+      <button onClick={stopAndSend} className="p-2 rounded-xl bg-[var(--t-error)] text-white hover:bg-[var(--t-error-hover)] transition-colors">
         <Send size={16} />
       </button>
     </div>
@@ -124,16 +124,20 @@ function AudioPlayer({ attachment }: { attachment: ChatAttachment }) {
   const ss = (dur % 60).toString().padStart(2, '0');
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 bg-slate-700/50 rounded-xl min-w-[200px]">
-      <button onClick={togglePlay} className="p-1.5 rounded-full bg-brand-500 text-white hover:bg-brand-600 transition-colors shrink-0">
+    <div className="flex items-center gap-3 px-3 py-2 bg-[var(--t-surface-subtle)] rounded-xl min-w-[200px]">
+      <button onClick={togglePlay} className="p-1.5 rounded-full text-white transition-colors shrink-0"
+        style={{ background: 'var(--t-primary)' }}
+      >
         {playing ? <Pause size={14} /> : <Play size={14} className="ml-0.5" />}
       </button>
       <div className="flex-1">
-        <div className="w-full h-1.5 bg-slate-600 rounded-full overflow-hidden">
-          <div className="h-full bg-brand-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+        <div className="w-full h-1.5 bg-[var(--t-surface-subtle)] rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-300" 
+            style={{ width: `${progress}%`, background: 'var(--t-primary)' }} 
+          />
         </div>
       </div>
-      <span className="text-xs text-slate-400 font-mono">{mm}:{ss}</span>
+      <span className="text-xs text-[var(--t-text-muted)] font-mono">{mm}:{ss}</span>
     </div>
   );
 }
@@ -149,12 +153,12 @@ function FilePreview({ attachment }: { attachment: ChatAttachment }) {
   };
   const Icon = iconMap[attachment.type] || File;
   const colorMap = {
-    image: 'text-purple-400 bg-purple-500/15',
-    video: 'text-pink-400 bg-pink-500/15',
-    audio: 'text-cyan-400 bg-cyan-500/15',
-    document: 'text-blue-400 bg-blue-500/15',
+    image: 'text-[var(--t-primary)] bg-[var(--t-primary-dim)]',
+    video: 'text-[var(--t-primary)] bg-[var(--t-primary)]/15',
+    audio: 'text-[var(--t-primary)] bg-[var(--t-primary)]/15',
+    document: 'text-[var(--t-primary-text)] bg-[var(--t-primary-dim)]',
   };
-  const color = colorMap[attachment.type] || 'text-slate-400 bg-slate-500/15';
+  const color = colorMap[attachment.type] || 'text-[var(--t-text-muted)] bg-[var(--t-surface)]/15';
 
   if (attachment.type === 'audio') {
     return <AudioPlayer attachment={attachment} />;
@@ -162,12 +166,12 @@ function FilePreview({ attachment }: { attachment: ChatAttachment }) {
 
   if (attachment.type === 'image') {
     return (
-      <div className="group relative rounded-xl overflow-hidden border border-slate-700 max-w-[280px]">
-        <div className="w-full h-40 bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center">
-          <ImageIcon size={32} className="text-slate-500" />
-          <span className="absolute bottom-2 left-2 text-xs text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded">{attachment.name}</span>
+      <div className="group relative rounded-xl overflow-hidden border border-[var(--t-border)] max-w-[280px]">
+        <div className="w-full h-40 bg-gradient-to-br from-[var(--t-surface)] to-[var(--t-surface)] flex items-center justify-center">
+          <ImageIcon size={32} className="text-[var(--t-text-muted)]" />
+          <span className="absolute bottom-2 left-2 text-xs text-[var(--t-text-muted)] bg-[var(--t-surface)]/80 px-2 py-0.5 rounded">{attachment.name}</span>
         </div>
-        <button className="absolute top-2 right-2 p-1 rounded-md bg-slate-900/80 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button className="absolute top-2 right-2 p-1 rounded-md bg-[var(--t-surface)]/80 text-[var(--t-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity">
           <Download size={14} />
         </button>
       </div>
@@ -175,15 +179,15 @@ function FilePreview({ attachment }: { attachment: ChatAttachment }) {
   }
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 bg-slate-700/40 rounded-xl border border-slate-700 max-w-[300px] group">
+    <div className="flex items-center gap-3 px-3 py-2.5 bg-[var(--t-surface)]/40 rounded-xl border border-[var(--t-border)] max-w-[300px] group">
       <div className={`p-2 rounded-lg ${color} shrink-0`}>
         <Icon size={18} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-200 truncate">{attachment.name}</p>
-        <p className="text-xs text-slate-500">{formatFileSize(attachment.size)}</p>
+        <p className="text-sm text-[var(--t-text)] truncate">{attachment.name}</p>
+        <p className="text-xs text-[var(--t-text-muted)]">{formatFileSize(attachment.size)}</p>
       </div>
-      <button className="p-1 rounded-md text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-all">
+      <button className="p-1 rounded-md text-[var(--t-text-muted)] hover:text-white opacity-0 group-hover:opacity-100 transition-all">
         <Download size={14} />
       </button>
     </div>
@@ -211,26 +215,28 @@ function MentionAutocomplete({
 
   return (
     <div
-      className="absolute z-50 w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl py-1 overflow-hidden"
+      className="absolute z-50 w-64 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl py-1 overflow-hidden"
       style={{ bottom: position.bottom, left: position.left }}
     >
-      <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">Members</div>
+      <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[var(--t-text-muted)] font-semibold">Members</div>
       {filtered.map(m => (
         <button
           key={m.id}
           onClick={() => onSelect({ id: m.id, name: m.name })}
-          className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-slate-700/70 transition-colors text-left"
+          className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-[var(--t-surface-subtle)]/70 transition-colors text-left"
         >
           <div className="relative">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+              style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+            >
               {m.avatar}
             </div>
             <div
-              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-800"
+              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--t-border)]"
               style={{ backgroundColor: PRESENCE_COLORS[m.presenceStatus as keyof typeof PRESENCE_COLORS] || '#64748b' }}
             />
           </div>
-          <span className="text-sm text-slate-200">{m.name}</span>
+          <span className="text-sm text-[var(--t-text)]">{m.name}</span>
         </button>
       ))}
     </div>
@@ -261,17 +267,17 @@ function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: string) => void;
   }, [onClose]);
 
   return (
-    <div ref={ref} className="absolute bottom-14 left-0 z-50 w-80 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl p-3">
+    <div ref={ref} className="absolute bottom-14 left-0 z-50 w-80 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl p-3">
       <div className="flex items-center gap-2 mb-2">
-        <Smile size={16} className="text-slate-400" />
-        <span className="text-xs text-slate-400 font-medium">Quick Reactions</span>
+        <Smile size={16} className="text-[var(--t-text-muted)]" />
+        <span className="text-xs text-[var(--t-text-muted)] font-medium">Quick Reactions</span>
       </div>
-      <div className="flex gap-1 mb-3 pb-3 border-b border-slate-700">
+      <div className="flex gap-1 mb-3 pb-3 border-b border-[var(--t-border)]">
         {QUICK_REACTIONS.map(emoji => (
           <button
             key={emoji}
             onClick={() => { onSelect(emoji); onClose(); }}
-            className="text-xl p-1.5 hover:bg-slate-700 rounded-lg transition-colors"
+            className="text-xl p-1.5 hover:bg-[var(--t-surface)]/80 rounded-lg transition-colors"
           >
             {emoji}
           </button>
@@ -282,7 +288,7 @@ function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: string) => void;
           <button
             key={emoji}
             onClick={() => { onSelect(emoji); onClose(); }}
-            className="text-lg p-1 hover:bg-slate-700 rounded-md transition-colors"
+            className="text-lg p-1 hover:bg-[var(--t-surface)]/80 rounded-md transition-colors"
           >
             {emoji}
           </button>
@@ -322,9 +328,13 @@ function ReactionBar({
             }}
             className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs transition-colors ${
               isMine
-                ? 'bg-brand-500/20 border border-brand-500/40 text-brand-300'
-                : 'bg-slate-700/50 border border-slate-700 text-slate-400 hover:bg-slate-700'
+                ? 'border text-[var(--t-primary)]'
+                : 'bg-[var(--t-surface-subtle)] border border-[var(--t-border)] text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]/80'
             }`}
+            style={isMine ? { 
+              background: 'var(--t-primary-dim)', 
+              borderColor: 'var(--t-primary-dim)' 
+            } : {}}
           >
             <span className="text-sm">{r.emoji}</span>
             <span>{r.users.length}</span>
@@ -362,7 +372,7 @@ function MessageBubble({
   const isMine = message.senderId === currentUserId;
 
   const renderContent = (text: string) => {
-    if (message.deleted) return <span className="text-slate-500 italic">{text}</span>;
+    if (message.deleted) return <span className="text-[var(--t-text-muted)] italic">{text}</span>;
     let parts: (string | React.ReactElement)[] = [text];
     for (const member of team) {
       const newParts: (string | React.ReactElement)[] = [];
@@ -371,9 +381,11 @@ function MessageBubble({
         const mention = `@${member.name.split(' ')[0]}`;
         const idx = part.indexOf(mention);
         if (idx === -1) { newParts.push(part); continue; }
-        if (idx > 0) newParts.push(part.slice(0, idx));
+        newParts.push(part.slice(0, idx));
         newParts.push(
-          <span key={`${member.id}-${idx}`} className="px-1 py-0.5 rounded bg-brand-500/20 text-brand-300 font-medium text-sm">
+          <span key={`${member.id}-${idx}`} className="px-1 py-0.5 rounded font-medium text-sm"
+            style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
+          >
             {mention}
           </span>
         );
@@ -387,9 +399,9 @@ function MessageBubble({
   if (message.type === 'system') {
     return (
       <div className="flex items-center justify-center gap-2 my-3">
-        <div className="h-px flex-1 bg-slate-800" />
-        <span className="text-xs text-slate-500 px-3">{message.content}</span>
-        <div className="h-px flex-1 bg-slate-800" />
+        <div className="h-px flex-1 bg-[var(--t-surface)]" />
+        <span className="text-xs text-[var(--t-text-muted)] px-3">{message.content}</span>
+        <div className="h-px flex-1 bg-[var(--t-surface)]" />
       </div>
     );
   }
@@ -406,13 +418,15 @@ function MessageBubble({
 
   return (
     <div
-      className={`group flex gap-3 px-6 py-0.5 hover:bg-slate-800/30 transition-colors relative ${isGrouped ? '' : 'mt-3'}`}
+      className={`group flex gap-3 px-6 py-0.5 hover:bg-[var(--t-surface)]/30 transition-colors relative ${isGrouped ? '' : 'mt-3'}`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => { setShowActions(false); setShowReactionPicker(false); }}
     >
       <div className="w-9 shrink-0">
         {!isGrouped && (
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[11px] font-bold text-white mt-0.5">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold text-white"
+            style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+          >
             {message.senderAvatar}
           </div>
         )}
@@ -421,19 +435,21 @@ function MessageBubble({
       <div className="flex-1 min-w-0">
         {!isGrouped && (
           <div className="flex items-baseline gap-2 mb-0.5">
-            <span className="text-sm font-semibold text-slate-200">{message.senderName}</span>
-            <span className="text-[11px] text-slate-500">{formatMessageTime(message.timestamp)}</span>
-            {message.edited && <span className="text-[10px] text-slate-600">(edited)</span>}
+            <span className="text-sm font-semibold text-white">{message.senderName}</span>
+            <span className="text-[11px] text-[var(--t-text-muted)]">{formatMessageTime(message.timestamp)}</span>
+            {message.edited && <span className="text-[10px] text-[var(--t-text-muted)]">(edited)</span>}
           </div>
         )}
 
         {replyMessage && !replyMessage.deleted && (
-          <div className="flex items-center gap-2 mb-1 pl-3 border-l-2 border-slate-600">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[7px] font-bold text-white shrink-0">
+          <div className="flex items-center gap-2 mb-1 pl-3 border-l-2 border-[var(--t-border)]">
+            <div className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold text-white shrink-0"
+              style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+            >
               {replyMessage.senderAvatar}
             </div>
-            <span className="text-xs text-slate-400 truncate max-w-xs">
-              <span className="font-medium text-slate-300">{replyMessage.senderName}</span>{' '}
+            <span className="text-xs text-[var(--t-text-muted)] truncate max-w-xs">
+              <span className="font-medium text-[var(--t-text-muted)]">{replyMessage.senderName}</span>{' '}
               {replyMessage.content.slice(0, 80)}{replyMessage.content.length > 80 ? '...' : ''}
             </span>
           </div>
@@ -442,17 +458,21 @@ function MessageBubble({
         {editing ? (
           <div className="flex items-center gap-2">
             <input
-              className="flex-1 bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1"
+              style={{ 
+                // @ts-expect-error custom prop
+                '--tw-ring-color': 'var(--t-primary)' 
+              }}
               value={editText}
               onChange={e => setEditText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(); if (e.key === 'Escape') setEditing(false); }}
               autoFocus
             />
-            <button onClick={handleSaveEdit} className="text-xs text-brand-400 hover:text-brand-300">Save</button>
-            <button onClick={() => setEditing(false)} className="text-xs text-slate-500 hover:text-slate-300">Cancel</button>
+            <button onClick={handleSaveEdit} className="text-xs font-medium" style={{ color: 'var(--t-primary)' }}>Save</button>
+            <button onClick={() => setEditing(false)} className="text-xs text-[var(--t-text-muted)] hover:text-[var(--t-text-muted)]">Cancel</button>
           </div>
         ) : (
-          <div className="text-sm text-slate-300 leading-relaxed break-words">
+          <div className="text-sm text-white leading-relaxed break-words">
             {renderContent(message.content)}
           </div>
         )}
@@ -470,11 +490,11 @@ function MessageBubble({
         {isMine && isGrouped === false && (
           <div className="flex items-center gap-1 mt-0.5">
             {allRead ? (
-              <CheckCheck size={12} className="text-brand-400" />
+              <CheckCheck size={12} style={{ color: 'var(--t-primary)' }} />
             ) : (
-              <Check size={12} className="text-slate-500" />
+              <Check size={12} className="text-[var(--t-text-muted)]" />
             )}
-            <span className="text-[10px] text-slate-600">
+            <span className="text-[10px] text-[var(--t-text-muted)]">
               {allRead ? `Read by ${readCount - 1}` : 'Sent'}
             </span>
           </div>
@@ -482,26 +502,26 @@ function MessageBubble({
       </div>
 
       {showActions && !message.deleted && !editing && (
-        <div className="absolute -top-3 right-6 flex items-center bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden z-20">
+        <div className="absolute -top-3 right-6 flex items-center bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg shadow-lg overflow-hidden z-20">
           {QUICK_REACTIONS.slice(0, 4).map(emoji => (
             <button
               key={emoji}
               onClick={() => addReaction(channelId, message.id, emoji, currentUserId)}
-              className="px-1.5 py-1 hover:bg-slate-700 transition-colors text-sm"
+              className="px-1.5 py-1 hover:bg-[var(--t-surface)]/80 transition-colors text-sm"
             >
               {emoji}
             </button>
           ))}
-          <div className="w-px h-5 bg-slate-700" />
+          <div className="w-px h-5 bg-[var(--t-surface)]" />
           <button
             onClick={() => setShowReactionPicker(!showReactionPicker)}
-            className="p-1.5 hover:bg-slate-700 transition-colors text-slate-400 hover:text-white"
+            className="p-1.5 hover:bg-[var(--t-surface)]/80 transition-colors text-[var(--t-text-muted)] hover:text-white"
           >
             <Smile size={14} />
           </button>
           <button
             onClick={() => onReply(message.id)}
-            className="p-1.5 hover:bg-slate-700 transition-colors text-slate-400 hover:text-white"
+            className="p-1.5 hover:bg-[var(--t-surface)]/80 transition-colors text-[var(--t-text-muted)] hover:text-white"
           >
             <Reply size={14} />
           </button>
@@ -509,13 +529,13 @@ function MessageBubble({
             <>
               <button
                 onClick={() => { setEditing(true); setShowActions(false); }}
-                className="p-1.5 hover:bg-slate-700 transition-colors text-slate-400 hover:text-white"
+                className="p-1.5 hover:bg-[var(--t-surface)]/80 transition-colors text-[var(--t-text-muted)] hover:text-white"
               >
                 <Edit3 size={14} />
               </button>
               <button
                 onClick={() => deleteMessage(channelId, message.id)}
-                className="p-1.5 hover:bg-slate-700 transition-colors text-red-400 hover:text-red-300"
+                className="p-1.5 hover:bg-[var(--t-surface)]/80 transition-colors text-[var(--t-error)] hover:text-[var(--t-error)]"
               >
                 <Trash2 size={14} />
               </button>
@@ -569,26 +589,26 @@ function AddMemberModal({ channelId, currentMembers, onClose }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+      <div className="w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--t-border)]">
           <h3 className="text-lg font-semibold text-white">Add Members</h3>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800"><X size={18} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]"><X size={18} /></button>
         </div>
 
         <div className="p-5 space-y-4">
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)]" />
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search team members..."
-              className="w-full pl-9 pr-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-500"
+              className="w-full pl-9 pr-3 py-2 text-sm bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg text-white placeholder:text-[var(--t-text-muted)]"
             />
           </div>
 
           <div className="space-y-1 max-h-48 overflow-y-auto">
             {filteredMembers.length === 0 ? (
-              <p className="text-sm text-slate-500 text-center py-4">No members available to add</p>
+              <p className="text-sm text-[var(--t-text-muted)] text-center py-4">No members available to add</p>
             ) : (
               filteredMembers.map(m => {
                 const selected = selectedMembers.includes(m.id);
@@ -596,18 +616,22 @@ function AddMemberModal({ channelId, currentMembers, onClose }: {
                   <button
                     key={m.id}
                     onClick={() => toggleMember(m.id)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
-                      selected ? 'bg-brand-500/15 border border-brand-500/30' : 'hover:bg-slate-800 border border-transparent'
-                    }`}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left border"
+                    style={selected ? { 
+                      background: 'var(--t-primary-dim)', 
+                      borderColor: 'var(--t-primary-dim)' 
+                    } : { borderColor: 'transparent' }}
                   >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+                    >
                       {m.avatar}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-slate-200">{m.name}</p>
-                      <p className="text-[10px] text-slate-500">{m.role}</p>
+                      <p className="text-sm text-[var(--t-text)]">{m.name}</p>
+                      <p className="text-[10px] text-[var(--t-text-muted)]">{m.role}</p>
                     </div>
-                    {selected && <Check size={16} className="text-brand-400" />}
+                    {selected && <Check size={16} style={{ color: 'var(--t-primary)' }} />}
                   </button>
                 );
               })
@@ -616,11 +640,12 @@ function AddMemberModal({ channelId, currentMembers, onClose }: {
         </div>
 
         <div className="flex justify-end gap-2 px-5 pb-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm text-[var(--t-text-muted)] hover:text-white">Cancel</button>
           <button
             onClick={handleAdd}
             disabled={selectedMembers.length === 0}
-            className="px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-xl hover:bg-brand-500 disabled:opacity-40"
+            className="px-5 py-2 text-white text-sm font-medium rounded-xl disabled:opacity-40 transition-all"
+            style={{ background: 'var(--t-primary)' }}
           >
             Add {selectedMembers.length > 0 ? `(${selectedMembers.length})` : ''}
           </button>
@@ -645,42 +670,43 @@ function EditChannelNameModal({ channel, onClose }: { channel: ChatChannel; onCl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+      <div className="w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--t-border)]">
           <h3 className="text-lg font-semibold text-white">Edit Channel</h3>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800"><X size={18} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]"><X size={18} /></button>
         </div>
 
         <div className="p-5 space-y-4">
           <div>
-            <label className="text-xs text-slate-400 font-medium mb-1 block">Channel Name</label>
-            <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3">
-              <Hash size={14} className="text-slate-500" />
+            <label className="text-xs text-[var(--t-text-muted)] font-medium mb-1 block">Channel Name</label>
+            <div className="flex items-center gap-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-3">
+              <Hash size={14} className="text-[var(--t-text-muted)]" />
               <input
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Channel name"
-                className="flex-1 bg-transparent py-2.5 text-sm text-slate-200 focus:outline-none"
+                className="flex-1 bg-transparent py-2.5 text-sm text-[var(--t-text)] focus:outline-none"
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-slate-400 font-medium mb-1 block">Description (optional)</label>
+            <label className="text-xs text-[var(--t-text-muted)] font-medium mb-1 block">Description (optional)</label>
             <input
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="What's this channel about?"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200"
+              className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-3 py-2.5 text-sm text-[var(--t-text)]"
             />
           </div>
         </div>
 
         <div className="flex justify-end gap-2 px-5 pb-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm text-[var(--t-text-muted)] hover:text-white">Cancel</button>
           <button
             onClick={handleSave}
             disabled={!name.trim()}
-            className="px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-xl hover:bg-brand-500 disabled:opacity-40"
+            className="px-5 py-2 text-white text-sm font-medium rounded-xl disabled:opacity-40 transition-all"
+            style={{ background: 'var(--t-primary)' }}
           >
             Save Changes
           </button>
@@ -723,10 +749,10 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
 
   return (
     <>
-      <div className="w-80 border-l border-slate-800 bg-slate-900 flex flex-col shrink-0">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+      <div className="w-80 border-l border-[var(--t-border)] bg-[var(--t-surface)] flex flex-col shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--t-border)]">
           <h3 className="text-sm font-semibold text-white">Channel Info</h3>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+          <button onClick={onClose} className="p-1 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)] hover:text-white transition-colors">
             <X size={16} />
           </button>
         </div>
@@ -738,7 +764,9 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
               {channel.type === 'group' ? (
                 <span className="text-2xl">{channel.avatar}</span>
               ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                  style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+                >
                   {channel.avatar}
                 </div>
               )}
@@ -746,7 +774,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                 <h4 className="text-base font-semibold text-white">
                   {channel.type === 'group' ? `#${channel.name}` : channel.name}
                 </h4>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[var(--t-text-muted)]">
                   Created {format(new Date(channel.createdAt), 'MMM d, yyyy')}
                 </p>
               </div>
@@ -758,14 +786,14 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                     <>
                       <button
                         onClick={() => setShowEditChannel(true)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                        className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)] hover:text-white transition-colors"
                         title="Edit channel"
                       >
                         <Edit size={14} />
                       </button>
                       <button
                         onClick={() => setShowAddMember(true)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                        className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)] hover:text-white transition-colors"
                         title="Add members"
                       >
                         <UserPlus size={14} />
@@ -775,7 +803,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                   {isMember && !isCreator && (
                     <button
                       onClick={handleLeaveChannel}
-                      className="p-1.5 rounded-lg text-slate-400 hover:bg-amber-600/20 hover:text-amber-400 transition-colors"
+                      className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-warning)]/20 hover:text-[var(--t-warning)] transition-colors"
                       title="Leave channel"
                     >
                       <LogOut size={14} />
@@ -784,7 +812,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                   {isCreator && (
                     <button
                       onClick={() => setShowDeleteConfirm(true)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:bg-red-600/20 hover:text-red-400 transition-colors"
+                      className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-error)]/20 hover:text-[var(--t-error)] transition-colors"
                       title="Delete channel"
                     >
                       <Trash2 size={14} />
@@ -794,32 +822,33 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
               )}
             </div>
             {channel.description && (
-              <p className="text-sm text-slate-400 mt-2">{channel.description}</p>
+              <p className="text-sm text-[var(--t-text-muted)] mt-2">{channel.description}</p>
             )}
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-slate-800/50 rounded-xl p-3">
+            <div className="bg-[var(--t-surface)]/50 rounded-xl p-3">
               <p className="text-lg font-bold text-white">{msgCount}</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Messages</p>
+              <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-wider">Messages</p>
             </div>
-            <div className="bg-slate-800/50 rounded-xl p-3">
+            <div className="bg-[var(--t-surface)]/50 rounded-xl p-3">
               <p className="text-lg font-bold text-white">{fileCount}</p>
-              <p className="text-[10px] text-slate-500 uppercase tracking-wider">Files</p>
+              <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-wider">Files</p>
             </div>
           </div>
 
           {/* Members list with management */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold">
+              <h5 className="text-xs text-[var(--t-text-muted)] uppercase tracking-wider font-semibold">
                 Members — {channelMembers.length}
               </h5>
               {isCreator && (
                 <button
                   onClick={() => setShowAddMember(true)}
-                  className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1"
+                  className="text-xs font-medium flex items-center gap-1"
+                  style={{ color: 'var(--t-primary)' }}
                 >
                   <Plus size={12} /> Add
                 </button>
@@ -831,32 +860,36 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                 const canRemove = isCreator && !isCurrentUser && channel.type === 'group';
                 
                 return (
-                  <div key={m.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-800/50 transition-colors group">
+                  <div key={m.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[var(--t-surface)]/50 transition-colors group">
                     <div className="relative">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--t-primary)] to-[var(--t-secondary)] flex items-center justify-center text-[10px] font-bold text-white">
                         {m.avatar}
                       </div>
                       <div
-                        className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-slate-900"
+                        className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[var(--t-border)]"
                         style={{ backgroundColor: PRESENCE_COLORS[m.presenceStatus] }}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-200 truncate flex items-center gap-1">
+                      <p className="text-sm text-[var(--t-text)] truncate flex items-center gap-1">
                         {m.name}
                         {m.id === channel.createdBy && (
-                          <span className="text-[10px] px-1 py-0.5 bg-amber-500/20 text-amber-400 rounded">Creator</span>
+                          <span className="text-[10px] px-1 py-0.5 bg-[var(--t-warning)]/20 text-[var(--t-warning)] rounded">Creator</span>
                         )}
                         {isCurrentUser && (
-                          <span className="text-[10px] px-1 py-0.5 bg-brand-500/20 text-brand-400 rounded">You</span>
+                          <span className="text-[10px] px-1 py-0.5 rounded"
+                            style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
+                          >
+                            You
+                          </span>
                         )}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">{m.role}</p>
+                      <p className="text-[10px] text-[var(--t-text-muted)] truncate">{m.role}</p>
                     </div>
                     {canRemove && (
                       <button
                         onClick={() => handleRemoveMember(m.id, m.name)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-400 transition-all"
+                        className="opacity-0 group-hover:opacity-100 p-1 text-[var(--t-text-muted)] hover:text-[var(--t-error)] transition-all"
                         title="Remove member"
                       >
                         <X size={14} />
@@ -871,7 +904,7 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
           {/* Shared Files */}
           {fileCount > 0 && (
             <div>
-              <h5 className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">
+              <h5 className="text-xs text-[var(--t-text-muted)] uppercase tracking-wider font-semibold mb-2">
                 Shared Files
               </h5>
               <div className="space-y-1">
@@ -880,11 +913,11 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
                   .slice(-5)
                   .reverse()
                   .map(f => (
-                    <div key={f.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-slate-800/30">
-                      <FileText size={14} className="text-blue-400 shrink-0" />
+                    <div key={f.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-[var(--t-surface)]/30">
+                      <FileText size={14} className="shrink-0" style={{ color: 'var(--t-primary)' }} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-slate-300 truncate">{f.name}</p>
-                        <p className="text-[10px] text-slate-500">{f.sender} · {formatFileSize(f.size)}</p>
+                        <p className="text-xs text-[var(--t-text-muted)] truncate">{f.name}</p>
+                        <p className="text-[10px] text-[var(--t-text-muted)]">{f.sender} · {formatFileSize(f.size)}</p>
                       </div>
                     </div>
                   ))}
@@ -913,25 +946,25 @@ function ChannelInfoPanel({ channel, onClose }: { channel: ChatChannel; onClose:
       {/* Delete confirmation dialog */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
             <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
-                <Trash2 className="w-6 h-6 text-red-400" />
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--t-error)]/20 flex items-center justify-center">
+                <Trash2 className="w-6 h-6 text-[var(--t-error)]" />
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Delete Channel?</h3>
-              <p className="text-sm text-slate-400 mb-6">
+              <p className="text-sm text-[var(--t-text-muted)] mb-6">
                 This will permanently delete the channel and all message history. This action cannot be undone.
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium"
+                  className="flex-1 px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-white rounded-lg font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteChannel}
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium"
+                  className="flex-1 px-4 py-2 bg-[var(--t-error)] hover:bg-[var(--t-error-hover)] text-white rounded-lg font-medium"
                 >
                   Delete
                 </button>
@@ -969,10 +1002,10 @@ function NewChannelModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
+      <div className="w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--t-border)]">
           <h3 className="text-lg font-semibold text-white">New Conversation</h3>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800"><X size={18} /></button>
+          <button onClick={onClose} className="p-1 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]"><X size={18} /></button>
         </div>
 
         <div className="flex gap-1 px-5 pt-4">
@@ -980,9 +1013,11 @@ function NewChannelModal({ onClose }: { onClose: () => void }) {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                tab === t ? 'bg-brand-500/20 text-brand-400' : 'text-slate-400 hover:bg-slate-800'
-              }`}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={tab === t ? { 
+                background: 'var(--t-primary-dim)', 
+                color: 'var(--t-primary)' 
+              } : { color: '#94a3b8' }}
             >
               {t === 'group' ? 'Group Channel' : 'Direct Message'}
             </button>
@@ -993,29 +1028,29 @@ function NewChannelModal({ onClose }: { onClose: () => void }) {
           {tab === 'group' && (
             <>
               <div>
-                <label className="text-xs text-slate-400 font-medium mb-1 block">Channel Name</label>
-                <div className="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3">
-                  <Hash size={14} className="text-slate-500" />
+                <label className="text-xs text-[var(--t-text-muted)] font-medium mb-1 block">Channel Name</label>
+                <div className="flex items-center gap-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-3">
+                  <Hash size={14} className="text-[var(--t-text-muted)]" />
                   <input
                     value={name} onChange={e => setName(e.target.value)}
                     placeholder="e.g., closings"
-                    className="flex-1 bg-transparent py-2.5 text-sm text-slate-200 focus:outline-none placeholder:text-slate-600"
+                    className="flex-1 bg-transparent py-2.5 text-sm text-[var(--t-text)] focus:outline-none placeholder:text-[var(--t-text-muted)]"
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 font-medium mb-1 block">Description (optional)</label>
+                <label className="text-xs text-[var(--t-text-muted)] font-medium mb-1 block">Description (optional)</label>
                 <input
                   value={description} onChange={e => setDescription(e.target.value)}
                   placeholder="What's this channel about?"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none placeholder:text-slate-600"
+                  className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-3 py-2.5 text-sm text-[var(--t-text)] focus:outline-none placeholder:text-[var(--t-text-muted)]"
                 />
               </div>
             </>
           )}
 
           <div>
-            <label className="text-xs text-slate-400 font-medium mb-2 block">
+            <label className="text-xs text-[var(--t-text-muted)] font-medium mb-2 block">
               {tab === 'direct' ? 'Select Member' : 'Add Members'}
             </label>
             <div className="space-y-1 max-h-48 overflow-y-auto">
@@ -1029,17 +1064,17 @@ function NewChannelModal({ onClose }: { onClose: () => void }) {
                       else toggleMember(m.id);
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
-                      selected ? 'bg-brand-500/15 border border-brand-500/30' : 'hover:bg-slate-800 border border-transparent'
+                      selected ? 'bg-[var(--t-primary)]/15 border border-[var(--t-primary)]/30' : 'hover:bg-[var(--t-surface)] border border-transparent'
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--t-primary)] to-[var(--t-secondary)] flex items-center justify-center text-[10px] font-bold text-white">
                       {m.avatar}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm text-slate-200">{m.name}</p>
-                      <p className="text-[10px] text-slate-500">{m.role}</p>
+                      <p className="text-sm text-[var(--t-text)]">{m.name}</p>
+                      <p className="text-[10px] text-[var(--t-text-muted)]">{m.role}</p>
                     </div>
-                    {selected && <Check size={16} className="text-brand-400" />}
+                    {selected && <Check size={16} className="text-[var(--t-primary)]" />}
                   </button>
                 );
               })}
@@ -1048,11 +1083,12 @@ function NewChannelModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex justify-end gap-2 px-5 pb-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Cancel</button>
+          <button onClick={onClose} className="px-4 py-2 text-sm text-[var(--t-text-muted)] hover:text-white transition-colors">Cancel</button>
           <button
             onClick={handleCreate}
             disabled={tab === 'group' ? !name.trim() || selectedMembers.length === 0 : selectedMembers.length === 0}
-            className="px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-xl hover:bg-brand-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-5 py-2 text-white text-sm font-medium rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: 'var(--t-primary)' }}
           >
             {tab === 'group' ? 'Create Channel' : 'Start Chat'}
           </button>
@@ -1098,30 +1134,34 @@ function ChatSidebar({
     : directChannels;
 
   return (
-    <div className="w-72 border-r border-slate-800 bg-slate-900 flex flex-col shrink-0">
-      <div className="px-4 py-3 border-b border-slate-800">
+    <div className="w-72 border-r border-[var(--t-border)] bg-[var(--t-surface)] flex flex-col shrink-0">
+      <div className="px-4 py-3 border-b border-[var(--t-border)]">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <MessageSquare size={20} className="text-brand-400" />
+            <MessageSquare size={20} style={{ color: 'var(--t-primary)' }} />
             Chat
           </h2>
-          <button onClick={onNewChannel} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+          <button onClick={onNewChannel} className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)] hover:text-white transition-colors">
             <Plus size={18} />
           </button>
         </div>
         <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)]" />
           <input
             value={searchQuery} onChange={e => onSearch(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full pl-8 pr-3 py-2 text-xs bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 placeholder:text-slate-500"
+            className="w-full pl-8 pr-3 py-2 text-xs bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)] focus:outline-none focus:ring-1 placeholder:text-[var(--t-text-muted)]"
+            style={{ 
+              // @ts-expect-error custom prop
+              '--tw-ring-color': 'var(--t-primary)' 
+            }}
           />
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto py-2">
         <div className="px-3 mb-1">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold px-2 py-1">Channels</p>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--t-text-muted)] font-semibold px-2 py-1">Channels</p>
         </div>
         {filteredGroup.map(ch => {
           const unread = unreadCounts[ch.id] || 0;
@@ -1131,30 +1171,36 @@ function ChatSidebar({
             <button
               key={ch.id}
               onClick={() => onSelect(ch.id)}
-              className={`w-full flex items-start gap-2.5 px-4 py-2.5 transition-colors text-left ${
-                active ? 'bg-brand-500/10 border-r-2 border-brand-500' : 'hover:bg-slate-800/50'
-              }`}
+              className="w-full flex items-start gap-2.5 px-4 py-2.5 transition-colors text-left"
+              style={active ? { 
+                background: 'var(--t-primary-dim)', 
+                borderRight: '2px solid var(--t-primary)' 
+              } : {}}
             >
               <span className="text-lg mt-0.5 shrink-0">{ch.avatar}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${active ? 'text-brand-400' : unread > 0 ? 'text-white' : 'text-slate-300'}`}>
+                  <span className="text-sm font-medium" 
+                    style={{ color: active ? 'var(--t-primary)' : unread > 0 ? '#fff' : '#94a3b8' }}
+                  >
                     #{ch.name}
                   </span>
                   {last && (
-                    <span className="text-[10px] text-slate-500 shrink-0">
+                    <span className="text-[10px] text-[var(--t-text-muted)] shrink-0">
                       {formatDistanceToNow(new Date(last.timestamp), { addSuffix: false })}
                     </span>
                   )}
                 </div>
                 {last && (
-                  <p className={`text-xs truncate mt-0.5 ${unread > 0 ? 'text-slate-300' : 'text-slate-500'}`}>
-                    <span className="text-slate-400">{last.senderName.split(' ')[0]}:</span> {last.content.slice(0, 40)}
+                  <p className={`text-xs truncate mt-0.5 ${unread > 0 ? 'text-[var(--t-text-muted)]' : 'text-[var(--t-text-muted)]'}`}>
+                    <span className="text-[var(--t-text-muted)]">{last.senderName.split(' ')[0]}:</span> {last.content.slice(0, 40)}
                   </p>
                 )}
               </div>
               {unread > 0 && (
-                <span className="bg-brand-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center mt-1 shrink-0">
+                <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center mt-1 shrink-0"
+                  style={{ background: 'var(--t-primary)' }}
+                >
                   {unread}
                 </span>
               )}
@@ -1163,7 +1209,7 @@ function ChatSidebar({
         })}
 
         <div className="px-3 mt-3 mb-1">
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold px-2 py-1">Direct Messages</p>
+          <p className="text-[10px] uppercase tracking-wider text-[var(--t-text-muted)] font-semibold px-2 py-1">Direct Messages</p>
         </div>
         {filteredDirect.map(ch => {
           const unread = unreadCounts[ch.id] || 0;
@@ -1173,32 +1219,40 @@ function ChatSidebar({
             <button
               key={ch.id}
               onClick={() => onSelect(ch.id)}
-              className={`w-full flex items-start gap-2.5 px-4 py-2.5 transition-colors text-left ${
-                active ? 'bg-brand-500/10 border-r-2 border-brand-500' : 'hover:bg-slate-800/50'
-              }`}
+              className="w-full flex items-start gap-2.5 px-4 py-2.5 transition-colors text-left"
+              style={active ? { 
+                background: 'var(--t-primary-dim)', 
+                borderRight: '2px solid var(--t-primary)' 
+              } : {}}
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5"
+                style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+              >
                 {ch.avatar}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className={`text-sm font-medium ${active ? 'text-brand-400' : unread > 0 ? 'text-white' : 'text-slate-300'}`}>
+                  <span className="text-sm font-medium"
+                    style={{ color: active ? 'var(--t-primary)' : unread > 0 ? '#fff' : '#94a3b8' }}
+                  >
                     {ch.name}
                   </span>
                   {last && (
-                    <span className="text-[10px] text-slate-500 shrink-0">
+                    <span className="text-[10px] text-[var(--t-text-muted)] shrink-0">
                       {formatDistanceToNow(new Date(last.timestamp), { addSuffix: false })}
                     </span>
                   )}
                 </div>
                 {last && (
-                  <p className={`text-xs truncate mt-0.5 ${unread > 0 ? 'text-slate-300' : 'text-slate-500'}`}>
+                  <p className={`text-xs truncate mt-0.5 ${unread > 0 ? 'text-[var(--t-text-muted)]' : 'text-[var(--t-text-muted)]'}`}>
                     {last.content.slice(0, 50)}
                   </p>
                 )}
               </div>
               {unread > 0 && (
-                <span className="bg-brand-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center mt-1 shrink-0">
+                <span className="text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center mt-1 shrink-0"
+                  style={{ background: 'var(--t-primary)' }}
+                >
                   {unread}
                 </span>
               )}
@@ -1365,23 +1419,23 @@ function MessageInput({
   return (
     <div className="px-4 pb-4 relative">
       {replyMessage && (
-        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-slate-800/70 rounded-xl border border-slate-700">
-          <Reply size={14} className="text-brand-400 shrink-0" />
+        <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-[var(--t-surface)]/70 rounded-xl border border-[var(--t-border)]">
+          <Reply size={14} style={{ color: 'var(--t-primary)' }} className="shrink-0" />
           <div className="flex-1 min-w-0">
-            <span className="text-xs text-brand-400 font-medium">Replying to {replyMessage.senderName}</span>
-            <p className="text-xs text-slate-400 truncate">{replyMessage.content.slice(0, 60)}</p>
+            <span className="text-xs font-medium" style={{ color: 'var(--t-primary)' }}>Replying to {replyMessage.senderName}</span>
+            <p className="text-xs text-[var(--t-text-muted)] truncate">{replyMessage.content.slice(0, 60)}</p>
           </div>
-          <button onClick={onClearReply} className="p-1 rounded text-slate-400 hover:text-white"><X size={14} /></button>
+          <button onClick={onClearReply} className="p-1 rounded text-[var(--t-text-muted)] hover:text-white"><X size={14} /></button>
         </div>
       )}
 
       {attachments.length > 0 && (
         <div className="flex gap-2 mb-2 flex-wrap">
           {attachments.map((att, i) => (
-            <div key={att.id} className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 rounded-lg border border-slate-700">
-              <FileText size={14} className="text-blue-400" />
-              <span className="text-xs text-slate-300 truncate max-w-[120px]">{att.name}</span>
-              <button onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} className="text-slate-500 hover:text-white">
+            <div key={att.id} className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-surface)] rounded-lg border border-[var(--t-border)]">
+              <FileText size={14} className="text-[var(--t-primary)]" />
+              <span className="text-xs text-[var(--t-text-muted)] truncate max-w-[120px]">{att.name}</span>
+              <button onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))} className="text-[var(--t-text-muted)] hover:text-white">
                 <X size={12} />
               </button>
             </div>
@@ -1405,11 +1459,19 @@ function MessageInput({
         />
       )}
 
-      <div className="flex items-end gap-2 bg-slate-800 border border-slate-700 rounded-2xl px-3 py-2 focus-within:ring-1 focus-within:ring-brand-500/50 focus-within:border-brand-500/50 transition-all">
-        <button onClick={() => setShowEmojis(!showEmojis)} className="p-1.5 rounded-lg text-slate-400 hover:text-yellow-400 hover:bg-slate-700 transition-colors shrink-0 mb-0.5">
+      <div className="flex items-end gap-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl px-3 py-2 transition-all"
+        style={{ 
+          // @ts-expect-error custom prop
+          '--tw-ring-color': 'var(--t-primary-dim)', 
+          borderColor: 'var(--t-border)' 
+        }}
+      >
+        <button onClick={() => setShowEmojis(!showEmojis)} className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:text-[var(--t-warning)] hover:bg-[var(--t-surface)]/80 transition-colors shrink-0 mb-0.5">
           <Smile size={18} />
         </button>
-        <button onClick={handleFileAttach} className="p-1.5 rounded-lg text-slate-400 hover:text-brand-400 hover:bg-slate-700 transition-colors shrink-0 mb-0.5">
+        <button onClick={handleFileAttach} className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]/80 transition-colors shrink-0 mb-0.5"
+          style={{ color: 'var(--t-primary)' }}
+        >
           <Paperclip size={18} />
         </button>
 
@@ -1420,13 +1482,17 @@ function MessageInput({
           onKeyDown={handleKeyDown}
           placeholder={isVoiceTyping ? "Listening..." : "Type a message... (@ to mention)"}
           rows={1}
-          className={`flex-1 bg-transparent text-sm text-slate-200 focus:outline-none placeholder:text-slate-500 resize-none max-h-24 py-1.5 ${isVoiceTyping ? 'text-brand-400 font-medium' : ''}`}
+          className={`flex-1 bg-transparent text-sm text-[var(--t-text)] focus:outline-none placeholder:text-[var(--t-text-muted)] resize-none max-h-24 py-1.5 ${isVoiceTyping ? 'text-[var(--t-primary)] font-medium' : ''}`}
           style={{ minHeight: '32px' }}
         />
 
         <button
           onClick={toggleVoiceTyping}
-          className={`p-1.5 rounded-lg transition-colors shrink-0 mb-0.5 ${isVoiceTyping ? 'text-brand-400 bg-brand-500/10 animate-pulse' : 'text-slate-500 hover:text-brand-400 hover:bg-slate-700'}`}
+          className="p-1.5 rounded-lg transition-colors shrink-0 mb-0.5"
+          style={isVoiceTyping ? { 
+            background: 'var(--t-primary-dim)', 
+            color: 'var(--t-primary)' 
+          } : { color: '#64748b' }}
           title="Voice Typing (To Text)"
         >
           <Mic size={18} />
@@ -1434,7 +1500,7 @@ function MessageInput({
 
         <button
           onClick={() => setIsRecording(true)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors shrink-0 mb-0.5"
+          className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:text-[var(--t-error)] hover:bg-[var(--t-surface)]/80 transition-colors shrink-0 mb-0.5"
           title="Record Audio Message"
         >
           <Volume2 size={18} />
@@ -1442,7 +1508,8 @@ function MessageInput({
         <button
           onClick={handleSend}
           disabled={!text.trim() && attachments.length === 0}
-          className="p-2 rounded-xl bg-brand-600 text-white hover:bg-brand-500 transition-colors shrink-0 mb-0.5 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 rounded-xl text-white transition-colors shrink-0 mb-0.5 disabled:opacity-30 disabled:cursor-not-allowed"
+          style={{ background: 'var(--t-primary)' }}
         >
           <Send size={16} />
         </button>
@@ -1481,36 +1548,38 @@ function SearchResultsPanel({
   };
 
   return (
-    <div className="w-80 border-l border-slate-800 bg-slate-900 flex flex-col shrink-0">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+    <div className="w-80 border-l border-[var(--t-border)] bg-[var(--t-surface)] flex flex-col shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--t-border)]">
         <h3 className="text-sm font-semibold text-white">Search Results ({results.length})</h3>
-        <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"><X size={16} /></button>
+        <button onClick={onClose} className="p-1 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)] hover:text-white"><X size={16} /></button>
       </div>
       <div className="flex-1 overflow-y-auto">
         {results.length === 0 && (
-          <div className="p-6 text-center text-slate-500 text-sm">No messages found</div>
+          <div className="p-6 text-center text-[var(--t-text-muted)] text-sm">No messages found</div>
         )}
         {results.map(msg => (
           <button
             key={msg.id}
             onClick={() => onGoTo(msg.channelId)}
-            className="w-full text-left px-4 py-3 border-b border-slate-800 hover:bg-slate-800/50 transition-colors"
+            className="w-full text-left px-4 py-3 border-b border-[var(--t-border)] hover:bg-[var(--t-surface)]/50 transition-colors"
           >
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[8px] font-bold text-white">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white"
+                style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+              >
                 {msg.senderAvatar}
               </div>
-              <span className="text-xs font-medium text-slate-300">{msg.senderName}</span>
-              <span className="text-[10px] text-slate-500">in {getChannelName(msg.channelId)}</span>
+              <span className="text-xs font-medium text-[var(--t-text-muted)]">{msg.senderName}</span>
+              <span className="text-[10px] text-[var(--t-text-muted)]">in {getChannelName(msg.channelId)}</span>
             </div>
-            <p className="text-xs text-slate-400 line-clamp-2">
+            <p className="text-xs text-[var(--t-text-muted)] line-clamp-2">
               {msg.content.split(new RegExp(`(${query})`, 'gi')).map((part, i) =>
                 part.toLowerCase() === query.toLowerCase()
-                  ? <mark key={i} className="bg-yellow-500/30 text-yellow-300 rounded px-0.5">{part}</mark>
+                  ? <mark key={i} className="bg-[var(--t-warning)]/30 text-[var(--t-warning)] rounded px-0.5">{part}</mark>
                   : part
               )}
             </p>
-            <span className="text-[10px] text-slate-600 mt-1 block">{formatMessageTime(msg.timestamp)}</span>
+            <span className="text-[10px] text-[var(--t-text-muted)] mt-1 block">{formatMessageTime(msg.timestamp)}</span>
           </button>
         ))}
       </div>
@@ -1680,59 +1749,65 @@ export function Chat() {
 
       {currentChannel ? (
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm shrink-0">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--t-border)] bg-[var(--t-surface)]/50 backdrop-blur-sm shrink-0">
             <div className="flex items-center gap-3">
               {currentChannel.type === 'group' ? (
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{currentChannel.avatar}</span>
                   <div>
                     <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-                      <Hash size={14} className="text-slate-400" />
+                      <Hash size={14} className="text-[var(--t-text-muted)]" />
                       {currentChannel.name}
                     </h3>
                     {currentChannel.description && (
-                      <p className="text-[11px] text-slate-500 truncate max-w-md">{currentChannel.description}</p>
+                      <p className="text-[11px] text-[var(--t-text-muted)] truncate max-w-md">{currentChannel.description}</p>
                     )}
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                    style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+                  >
                     {currentChannel.avatar}
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-white flex items-center gap-1.5">
-                      <Lock size={12} className="text-slate-500" />
+                      <Lock size={12} className="text-[var(--t-text-muted)]" />
                       {currentChannel.name}
                     </h3>
-                    <p className="text-[11px] text-slate-500">Direct Message</p>
+                    <p className="text-[11px] text-[var(--t-text-muted)]">Direct Message</p>
                   </div>
                 </div>
               )}
-              <span className="text-xs text-slate-600 ml-2">
+              <span className="text-xs text-[var(--t-text-muted)] ml-2">
                 {currentChannel.members.length} members
               </span>
             </div>
 
             <div className="flex items-center gap-1">
               <div className="relative mr-1">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)]" />
                 <input
                   value={globalSearch}
                   onChange={e => { setGlobalSearch(e.target.value); setShowSearchResults(!!e.target.value); }}
                   placeholder="Search messages..."
-                  className="w-48 pl-8 pr-3 py-1.5 text-xs bg-slate-800 border border-slate-700 rounded-lg text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 placeholder:text-slate-500"
+                  className="w-48 pl-8 pr-3 py-1.5 text-xs bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)] focus:outline-none focus:ring-1 focus:ring-[var(--t-primary)] placeholder:text-[var(--t-text-muted)]"
                 />
               </div>
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+              <button className="p-2 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)] hover:text-white transition-colors">
                 <Phone size={16} />
               </button>
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors">
+              <button className="p-2 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)] hover:text-white transition-colors">
                 <Video size={16} />
               </button>
               <button
                 onClick={() => { setShowChannelInfo(!showChannelInfo); setShowSearchResults(false); }}
-                className={`p-2 rounded-lg transition-colors ${showChannelInfo ? 'bg-brand-500/20 text-brand-400' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                className="p-2 rounded-lg transition-colors"
+                style={showChannelInfo ? { 
+                  background: 'var(--t-primary-dim)', 
+                  color: 'var(--t-primary)' 
+                } : { color: '#64748b' }}
               >
                 <Settings size={16} />
               </button>
@@ -1746,21 +1821,23 @@ export function Chat() {
                 {loadingMessages && (
                   <div className="flex justify-center py-8">
                     <div className="flex gap-2">
-                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--t-primary)', animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--t-primary)', animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--t-primary)', animationDelay: '300ms' }} />
                     </div>
                   </div>
                 )}
 
                 {/* Channel welcome */}
                 {!loadingMessages && sortedMessages.length === 0 && (
-                  <div className="px-6 pb-4 mb-2 border-b border-slate-800/50">
+                  <div className="px-6 pb-4 mb-2 border-b border-[var(--t-border)]/50">
                     <div className="flex items-center gap-3 mb-2">
                       {currentChannel.type === 'group' ? (
                         <span className="text-3xl">{currentChannel.avatar}</span>
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-lg font-bold text-white">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white"
+                          style={{ background: 'linear-gradient(to bottom right, var(--t-primary), #9333ea)' }}
+                        >
                           {currentChannel.avatar}
                         </div>
                       )}
@@ -1768,7 +1845,7 @@ export function Chat() {
                         <h2 className="text-xl font-bold text-white">
                           {currentChannel.type === 'group' ? `#${currentChannel.name}` : currentChannel.name}
                         </h2>
-                        <p className="text-sm text-slate-500">
+                        <p className="text-sm text-[var(--t-text-muted)]">
                           {currentChannel.type === 'group'
                             ? currentChannel.description || 'This is the start of the channel.'
                             : 'This is the beginning of your conversation.'
@@ -1784,11 +1861,11 @@ export function Chat() {
                   if (item.type === 'divider') {
                     return (
                       <div key={`divider-${i}`} className="flex items-center gap-3 px-6 my-3">
-                        <div className="h-px flex-1 bg-slate-800" />
-                        <span className="text-[11px] text-slate-500 font-medium px-3 py-0.5 bg-slate-800/50 rounded-full">
+                        <div className="h-px flex-1 bg-[var(--t-surface)]" />
+                        <span className="text-[11px] text-[var(--t-text-muted)] font-medium px-3 py-0.5 bg-[var(--t-surface)]/50 rounded-full">
                           {formatDateDivider(item.date!)}
                         </span>
-                        <div className="h-px flex-1 bg-slate-800" />
+                        <div className="h-px flex-1 bg-[var(--t-surface)]" />
                       </div>
                     );
                   }
@@ -1812,11 +1889,11 @@ export function Chat() {
                 {typingNames.length > 0 && (
                   <div className="flex items-center gap-2 px-6 py-2 mt-1">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 bg-brand-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--t-primary)', animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--t-primary)', animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'var(--t-primary)', animationDelay: '300ms' }} />
                     </div>
-                    <span className="text-xs text-slate-500 italic">
+                    <span className="text-xs text-[var(--t-text-muted)] italic">
                       {typingNames.join(', ')} {typingNames.length === 1 ? 'is' : 'are'} typing...
                     </span>
                   </div>
@@ -1847,12 +1924,13 @@ export function Chat() {
       ) : (
         <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--t-bg)' }}>
           <div className="text-center">
-            <MessageSquare size={48} className="text-slate-700 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-400">Select a conversation</h3>
-            <p className="text-sm text-slate-600 mt-1">Choose a channel or start a new conversation</p>
+            <MessageSquare size={48} className="text-[var(--t-text-muted)] mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-[var(--t-text-muted)]">Select a conversation</h3>
+            <p className="text-sm text-[var(--t-text-muted)] mt-1">Choose a channel or start a new conversation</p>
             <button
               onClick={() => setShowNewChannel(true)}
-              className="mt-4 px-5 py-2 bg-brand-600 text-white text-sm font-medium rounded-xl hover:bg-brand-500 transition-colors"
+              className="mt-4 px-5 py-2 text-white text-sm font-medium rounded-xl transition-all"
+              style={{ background: 'var(--t-primary)' }}
             >
               <Plus size={16} className="inline mr-1.5 -mt-0.5" /> New Conversation
             </button>

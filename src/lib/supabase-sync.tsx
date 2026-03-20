@@ -197,22 +197,22 @@ function dbStatusHistoryToStore(row: Record<string, unknown>): StatusHistoryEntr
 function SyncLoadingScreen({ status }: { status: string }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6" style={{ background: 'var(--t-bg, #0f172a)' }}>
-      <div className="w-16 h-16 rounded-2xl bg-brand-600 flex items-center justify-center shadow-xl shadow-brand-600/20">
+      <div className="w-16 h-16 rounded-2xl bg-[var(--t-primary)] flex items-center justify-center shadow-xl shadow-[var(--t-primary-dim)]">
         <Building2 size={32} className="text-white" />
       </div>
       <div className="text-center">
         <h2 className="text-lg font-bold text-white mb-1">Loading WholeScale OS</h2>
-        <div className="flex items-center justify-center gap-2 text-slate-400">
+        <div className="flex items-center justify-center gap-2 text-[var(--t-text-muted)]">
           <Loader2 size={14} className="animate-spin" />
           <span className="text-sm">{status}</span>
         </div>
       </div>
       <div className="flex items-center gap-4 mt-4">
-        <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--t-success)]">
           <Wifi size={12} />
           <span>Connected</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-brand-400">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--t-primary)]">
           <Database size={12} />
           <span>Syncing data</span>
         </div>
@@ -356,7 +356,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
         // Channels and messages
         const channels: ChatChannel[] = [];
         const messages: Record<string, ChatMessage[]> = {};
-        const unreadCounts: Record<string, number> = {};
+        const unreadCounts: Record<string, number> & { sms: number } = { sms: 0 };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const chRow of ((channelsRes.data || []) as any[])) {

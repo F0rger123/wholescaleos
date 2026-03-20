@@ -49,7 +49,10 @@ export function PhotoGallery({ photos, onAdd, onRemove, onReorder, propertyAddre
         {photos.map((photo, idx) => (
           <div
             key={photo}
-            className="relative group aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-brand-500/50 transition-all"
+            className="relative group aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent transition-all"
+            style={{ border: '2px solid transparent' }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--t-primary-dim)'}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
             onClick={() => setFullscreenIdx(idx)}
           >
             <div
@@ -74,7 +77,10 @@ export function PhotoGallery({ photos, onAdd, onRemove, onReorder, propertyAddre
               )}
               <button
                 onClick={(e) => { e.stopPropagation(); onRemove(photo); }}
-                className="p-1 rounded bg-red-500/70 hover:bg-red-500 text-white"
+                className="p-1 rounded text-white transition-colors"
+                style={{ backgroundColor: 'var(--t-error)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.9)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-error)'}
               >
                 <Trash2 size={10} />
               </button>
@@ -98,7 +104,16 @@ export function PhotoGallery({ photos, onAdd, onRemove, onReorder, propertyAddre
         {/* Add button */}
         <button
           onClick={handleAdd}
-          className="aspect-square rounded-xl border-2 border-dashed border-slate-700 hover:border-brand-500/50 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-brand-400 transition-colors"
+          className="aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-0.5 transition-colors"
+          style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--t-primary)';
+            e.currentTarget.style.color = 'var(--t-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--t-border)';
+            e.currentTarget.style.color = 'var(--t-text-muted)';
+          }}
         >
           <Plus size={16} />
           <span className="text-[8px] font-medium">Add</span>
@@ -106,7 +121,7 @@ export function PhotoGallery({ photos, onAdd, onRemove, onReorder, propertyAddre
       </div>
 
       {photos.length > 0 && (
-        <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
+        <p className="text-[10px] mt-1.5 flex items-center gap-1" style={{ color: 'var(--t-text-muted)' }}>
           <Image size={9} />
           {photos.length} photo{photos.length !== 1 ? 's' : ''} · Click to view · Hover to reorder
         </p>

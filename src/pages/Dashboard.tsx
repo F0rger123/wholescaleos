@@ -89,17 +89,21 @@ function StatCard({
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const statusBarColors: Record<string, string> = {
-  new: 'bg-blue-500', contacted: 'bg-amber-500', qualified: 'bg-purple-500',
-  negotiating: 'bg-orange-500', 'closed-won': 'bg-emerald-500', 'closed-lost': 'bg-red-500',
+  new: 'bg-[var(--t-info)]', 
+  contacted: 'bg-[var(--t-warning)]', 
+  qualified: 'bg-[var(--t-accent)]',
+  negotiating: 'bg-[var(--t-warning)]', 
+  'closed-won': 'bg-[var(--t-success)]', 
+  'closed-lost': 'bg-[var(--t-error)]',
 };
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; label: string }> = {
-  website: { bg: 'bg-cyan-500/15', text: 'text-cyan-400', bar: 'bg-cyan-500', label: 'Website' },
-  referral: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', bar: 'bg-emerald-500', label: 'Referral' },
-  'cold-call': { bg: 'bg-blue-500/15', text: 'text-blue-400', bar: 'bg-blue-500', label: 'Cold Call' },
-  'social-media': { bg: 'bg-pink-500/15', text: 'text-pink-400', bar: 'bg-pink-500', label: 'Social Media' },
-  mailer: { bg: 'bg-amber-500/15', text: 'text-amber-400', bar: 'bg-amber-500', label: 'Mailer' },
-  other: { bg: 'bg-slate-500/15', text: 'text-slate-400', bar: 'bg-slate-500', label: 'Other' },
+  website: { bg: 'rgba(6, 182, 212, 0.15)', text: 'rgb(34, 211, 238)', bar: 'rgb(6, 182, 212)', label: 'Website' },
+  referral: { bg: 'var(--t-success-dim)', text: 'var(--t-success)', bar: 'var(--t-success)', label: 'Referral' },
+  'cold-call': { bg: 'var(--t-primary-dim)', text: 'var(--t-primary)', bar: 'var(--t-primary)', label: 'Cold Call' },
+  'social-media': { bg: 'rgba(236, 72, 153, 0.15)', text: 'rgb(244, 114, 182)', bar: 'rgb(236, 72, 153)', label: 'Social Media' },
+  mailer: { bg: 'var(--t-warning-dim)', text: 'var(--t-warning)', bar: 'var(--t-warning)', label: 'Mailer' },
+  other: { bg: 'var(--t-surface-hover)', text: 'var(--t-text-muted)', bar: 'var(--t-border)', label: 'Other' },
 };
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────

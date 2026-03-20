@@ -12,9 +12,10 @@ import {
   UserPlus, Key, Loader2, AlertTriangle, 
   RefreshCw, Smartphone, Search, X, ArrowDown,
   Plus, MessageSquare, History, ChevronLeft, ChevronRight,
-  Mic
+  Mic, Pin, Edit2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 interface AIBotMessage {
   id: string;
@@ -33,11 +34,11 @@ export function AITest() {
     aiUsage, incrementAiUsage,
     aiThreads, currentAiThreadId, aiMessages,
     createAiThread, deleteAiThread, setCurrentAiThread,
-    updateAiThreadTitle, addAiMessage, clearAiThreadMessages
+    updateAiThreadTitle, toggleAiThreadPin, addAiMessage, clearAiThreadMessages
   } = useStore();
   
   const [debug, setDebug] = useState(false);
-  const [currentModel, setCurrentModel] = useState('gemini-2.0-flash');
+  const [currentModel, setCurrentModel] = useState('gemini-1.5-flash');
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -52,8 +53,25 @@ export function AITest() {
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Thread Sidebar Search
+  // Thread Sidebar Search & Editing
   const [threadSearch, setThreadSearch] = useState('');
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: React.ReactNode;
+    onConfirm: () => void;
+    variant?: 'primary' | 'danger';
+    confirmLabel?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
 
   // Guided Action Wizards State
   const [activeWizard, setActiveWizard] = useState<'lead' | 'sms' | 'task' | null>(null);
@@ -230,6 +248,7 @@ export function AITest() {
 
     pushMessage({ role: 'user', content: text.trim() });
     setPrompt('');
+    setLoading(true); // Fix duplicate responses by locking input immediately
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
@@ -260,10 +279,12 @@ export function AITest() {
         });
 
         if (['update_status', 'update_lead', 'delete_lead', 'send_sms'].includes(response.intent)) {
+          console.log(`AI Intent [${response.intent}] flagged for confirmation.`);
           setPendingAction({ intent: response.intent, data: response.data, response: clean });
           if (response.data?.target) setLeadSearch(response.data.target);
         } else if (response.intent !== 'confirm_action') {
-          executeAction(response.intent, response.data, clean);
+          // Execute directly if no manual confirmation needed (for basic intents)
+          executeAction(response.intent, response.data);
         }
 
         if (messages.length <= 2) {
@@ -288,7 +309,7 @@ export function AITest() {
     }
   };
 
-  const executeAction = async (intent: string, data: any, aiResponse: string, confirmedLeadId?: string) => {
+  const executeAction = async (intent: string, data: any, confirmedLeadId?: string) => {
     let log = undefined;
     const finalData = confirmedLeadId ? { ...data, leadId: confirmedLeadId } : data;
     try {
@@ -298,13 +319,25 @@ export function AITest() {
       } else if (intent === 'update_status' && finalData?.leadId) {
         const res = updateLeadStatusViaAI(finalData.leadId, finalData.newStatus);
         log = `System: ${res.message}`;
-      } else if (intent === 'send_sms' && finalData?.message) {
+      } else if (intent === 'send_sms' && (finalData?.target || finalData?.leadId) && finalData?.message) {
         setLoading(true);
-        const res = await sendSMSViaAI(confirmedLeadId || finalData.target, finalData.message);
+        const res = await sendSMSViaAI(
+          confirmedLeadId || finalData.leadId || finalData.target, 
+          finalData.message,
+          finalData.targetCarrier
+        );
         log = `System: ${res.message}`;
+        if (!res.success) {
+          pushMessage({ role: 'ai', content: `❌ SMS Failed: ${res.message}`, intent: 'error' });
+          return;
+        }
       }
 
-      pushMessage({ role: 'ai', content: aiResponse || "Action completed.", intent, data: finalData, systemLog: log });
+      // ONLY push a new message if there is a system log to show, 
+      // otherwise we already pushed the AI response in handleSendMessage.
+      if (log) {
+        pushMessage({ role: 'ai', content: log, intent, data: finalData, systemLog: log });
+      }
     } catch (err) {
       console.error('Action failed:', err);
     } finally {
@@ -342,16 +375,19 @@ export function AITest() {
   if (hasKey === false) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] max-w-2xl mx-auto text-center px-4">
-        <div className="w-16 h-16 bg-brand-500/10 rounded-2xl flex items-center justify-center mb-6 border border-brand-500/20">
-          <Key size={32} className="text-brand-400" />
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 border"
+          style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}
+        >
+          <Key size={32} style={{ color: 'var(--t-primary)' }} />
         </div>
         <h2 className="text-2xl font-bold text-white mb-3">AI Assistant Locked</h2>
-        <p className="text-slate-400 mb-8 leading-relaxed">
+        <p className="text-[var(--t-text-muted)] mb-8 leading-relaxed">
           Configure your Gemini API key in settings to unlock these features.
         </p>
         <button
           onClick={() => navigate('/settings/ai')}
-          className="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-8 py-3 rounded-xl transition-all flex items-center gap-2"
+          className="text-white font-semibold px-8 py-3 rounded-xl transition-all flex items-center gap-2"
+          style={{ background: 'var(--t-primary)' }}
         >
           <Sparkles className="w-5 h-5" />
           Setup AI Key Now
@@ -363,7 +399,7 @@ export function AITest() {
   if (hasKey === null) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--t-primary)' }} />
       </div>
     );
   }
@@ -381,16 +417,17 @@ export function AITest() {
     <div className="flex h-[calc(100vh-73px)] overflow-hidden">
       {/* Thread Sidebar */}
       <aside 
-        className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col overflow-hidden relative shrink-0`}
+        className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-[var(--t-surface)] border-r border-[var(--t-border)] transition-all duration-300 flex flex-col overflow-hidden relative shrink-0`}
       >
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 border-b border-[var(--t-border)] flex items-center justify-between">
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
-            <History size={16} className="text-brand-400" />
+            <History size={16} style={{ color: 'var(--t-primary)' }} />
             History
           </h2>
           <button 
             onClick={() => createAiThread()}
-            className="p-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg transition-colors"
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
             title="New Conversation"
           >
             <Plus size={16} />
@@ -399,13 +436,17 @@ export function AITest() {
 
         <div className="px-3 pt-2">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 w-3 h-3" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)] w-3 h-3" />
             <input 
               type="text"
               value={threadSearch}
               onChange={(e) => setThreadSearch(e.target.value)}
               placeholder="Search threads..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-[10px] text-white focus:ring-1 focus:ring-brand-500/50 outline-none placeholder:text-slate-600 transition-all"
+              className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-lg pl-8 pr-3 py-1.5 text-[10px] text-white outline-none placeholder:text-[var(--t-text-muted)] transition-all font-mono"
+              style={{ 
+                // @ts-expect-error custom prop
+                '--tw-ring-color': 'var(--t-primary-dim)' 
+              }}
             />
           </div>
         </div>
@@ -416,27 +457,87 @@ export function AITest() {
             .map((t) => (
             <div 
               key={t.id}
-              className={`group flex items-center gap-2 p-3 rounded-xl transition-all cursor-pointer ${
-                currentAiThreadId === t.id ? 'bg-brand-500/10 text-white' : 'hover:bg-slate-800 text-slate-400'
-              }`}
+              className="group flex items-center gap-2 p-3 rounded-xl transition-all cursor-pointer relative"
+              style={currentAiThreadId === t.id ? { background: 'var(--t-primary-dim)', color: 'white' } : { color: 'var(--t-text-muted)' }}
               onClick={() => setCurrentAiThread(t.id)}
             >
-              <MessageSquare size={14} className={currentAiThreadId === t.id ? 'text-brand-400' : 'text-slate-500'} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{t.title}</p>
-                <p className="text-[10px] text-slate-500">{new Date(t.lastMessageAt).toLocaleDateString()}</p>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                {t.pinned ? (
+                  <Pin size={12} className="shrink-0" style={{ color: 'var(--t-primary)', fill: 'var(--t-primary)' }} />
+                ) : (
+                  <MessageSquare size={14} style={currentAiThreadId === t.id ? { color: 'var(--t-primary)' } : { color: 'var(--t-text-muted)' }} />
+                )}
+                
+                <div className="flex-1 min-w-0">
+                  {editingThreadId === t.id ? (
+                    <input
+                      autoFocus
+                      className="w-full bg-[var(--t-background)] border rounded px-1 py-0.5 text-xs text-white outline-none"
+                      style={{ borderColor: 'var(--t-primary-dim)' }}
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => {
+                        if (editingTitle.trim()) updateAiThreadTitle(t.id, editingTitle.trim());
+                        setEditingThreadId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (editingTitle.trim()) updateAiThreadTitle(t.id, editingTitle.trim());
+                          setEditingThreadId(null);
+                        }
+                        if (e.key === 'Escape') setEditingThreadId(null);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <>
+                      <p className="text-xs font-medium truncate">{t.title}</p>
+                      <p className="text-[10px] text-[var(--t-text-muted)]">{new Date(t.lastMessageAt).toLocaleDateString()}</p>
+                    </>
+                  )}
+                </div>
               </div>
-              <button 
-                onClick={(e) => { e.stopPropagation(); deleteAiThread(t.id); }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-400 transition-opacity"
-              >
-                <X size={12} />
-              </button>
+
+              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); toggleAiThreadPin(t.id); }}
+                  className="p-1 transition-colors"
+                  style={t.pinned ? { color: 'var(--t-primary)' } : { color: 'var(--t-text-muted)' }}
+                  title={t.pinned ? "Unpin" : "Pin"}
+                >
+                  <Pin size={12} className={t.pinned ? "fill-current" : ""} style={t.pinned ? { fill: 'var(--t-primary)' } : {}} />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setEditingThreadId(t.id); setEditingTitle(t.title); }}
+                  className="p-1 hover:text-white transition-colors"
+                  style={{ color: 'var(--t-text-muted)' }}
+                  title="Rename"
+                >
+                  <Edit2 size={12} />
+                </button>
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setConfirmModal({
+                      isOpen: true,
+                      title: 'Delete Thread',
+                      message: `Are you sure you want to delete "${t.title}"? This action cannot be undone.`,
+                      confirmLabel: 'Delete Thread',
+                      variant: 'danger',
+                      onConfirm: () => deleteAiThread(t.id)
+                    });
+                  }}
+                  className="p-1 hover:text-[var(--t-error)] transition-colors text-[var(--t-text-muted)]"
+                  title="Delete"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
             </div>
           ))}
           {aiThreads.length === 0 && (
             <div className="p-8 text-center">
-              <p className="text-xs text-slate-600 italic">No threads yet</p>
+              <p className="text-xs text-[var(--t-text-muted)] italic">No threads yet</p>
             </div>
           )}
         </div>
@@ -445,7 +546,7 @@ export function AITest() {
       {/* Toggle Sidebar Button */}
       <button 
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="absolute left-[240px] top-1/2 -translate-y-1/2 z-10 w-4 h-12 bg-slate-900 border border-slate-700 border-l-0 rounded-r-lg flex items-center justify-center text-slate-500 hover:text-white transition-all overflow-hidden"
+        className="absolute left-[240px] top-1/2 -translate-y-1/2 z-10 w-4 h-12 bg-[var(--t-surface)] border border-[var(--t-border)] border-l-0 rounded-r-lg flex items-center justify-center text-[var(--t-text-muted)] hover:text-white transition-all overflow-hidden"
         style={{ left: isSidebarOpen ? '256px' : '0' }}
       >
         {isSidebarOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
@@ -562,32 +663,31 @@ export function AITest() {
                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
 
-                {/* Confirmation Guardrail UI */}
+                {/* Confirmation Guardrail UI - Simplified to trigger modal */}
                 {msg.role === 'ai' && msg.intent === 'confirm_action' && msg.data && (
-                  <div className="mt-3 p-4 bg-brand-500/10 border border-brand-500/20 rounded-xl space-y-3 animate-in slide-in-from-top-2">
-                    <div className="flex items-center gap-2 text-brand-400 font-semibold text-sm">
+                  <div className="mt-3 p-4 border rounded-xl space-y-3 animate-in slide-in-from-top-2"
+                    style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}
+                  >
+                    <div className="flex items-center gap-2 font-semibold text-sm" style={{ color: 'var(--t-primary)' }}>
                       <AlertTriangle className="w-4 h-4" />
                       Action Confirmation Required
                     </div>
-                    <div className="flex gap-2">
                     <button
-                        onClick={() => executeAction(msg.data.intent || 'unknown', msg.data, "Confirmed. Proceeding with your request.")}
-                        className="flex-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold py-2 rounded-lg transition-all"
-                      >
-                        Confirm & Execute
-                      </button>
-                      <button
-                        onClick={() => currentAiThreadId && addAiMessage(currentAiThreadId, {
-                          id: Date.now().toString(),
-                          role: 'ai',
-                          content: "Action cancelled.",
-                          timestamp: new Date().toISOString()
-                        })}
-                        className="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 rounded-lg transition-all"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                      onClick={() => {
+                        setConfirmModal({
+                          isOpen: true,
+                          title: 'Confirm AI Action',
+                          message: `The AI wants to perform a ${msg.data.intent?.replace('_', ' ') || 'scheduled action'}. Do you want to proceed?`,
+                          onConfirm: () => executeAction(msg.data.intent || 'unknown', msg.data),
+                          confirmLabel: 'Confirm & Execute',
+                          variant: 'primary'
+                        });
+                      }}
+                      className="w-full text-white text-xs font-bold py-2.5 rounded-lg transition-all shadow-lg active:scale-95"
+                      style={{ background: 'var(--t-primary)' }}
+                    >
+                      Process Action Request
+                    </button>
                   </div>
                 )}
               </div>
@@ -596,13 +696,15 @@ export function AITest() {
           
           {loading && (
             <div className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                style={{ background: 'var(--t-primary)' }}
+              >
                 <Bot className="w-4 h-4 text-white" />
               </div>
-              <div className="px-4 py-4 rounded-2xl bg-slate-800 border border-slate-700 rounded-tl-none flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="px-4 py-4 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-tl-none flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-[var(--t-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-[var(--t-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-[var(--t-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           )}
@@ -612,7 +714,12 @@ export function AITest() {
           {showScrollButton && (
             <button
               onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              className="fixed bottom-32 right-8 md:right-[calc(50%-450px)] p-3 bg-brand-600 hover:bg-brand-500 text-white rounded-full shadow-lg shadow-brand-600/20 transition-all animate-in fade-in slide-in-from-bottom-4 z-40"
+              className="fixed bottom-32 right-8 md:right-[calc(50%-450px)] p-3 text-white rounded-full shadow-lg transition-all animate-in fade-in slide-in-from-bottom-4 z-40"
+              style={{ 
+                background: 'var(--t-primary)',
+                // @ts-expect-error custom prop
+                '--tw-shadow-color': 'var(--t-primary-dim)'
+              }}
               title="Scroll to bottom"
             >
               <ArrowDown size={20} />
@@ -715,7 +822,7 @@ export function AITest() {
                 <button
                   type="button"
                   onClick={handleStopGeneration}
-                  className="w-full h-full flex items-center justify-center bg-rose-600 hover:bg-rose-500 rounded-xl transition-all animate-pulse"
+                  className="w-full h-full flex items-center justify-center bg-[var(--t-error)] hover:bg-[var(--t-error-hover)] rounded-xl transition-all animate-pulse"
                   title="Stop Generating"
                 >
                   <X className="w-5 h-5 text-white" />
@@ -731,38 +838,50 @@ export function AITest() {
       {/* Lead Selection Modal */}
       {pendingAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+          <div className="border w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          >
+            <div className="p-4 border-b flex items-center justify-between"
+              style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}
+            >
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Target className="w-5 h-5 text-brand-400" />
+                  <Target className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
                   Confirm Lead for Action
                 </h3>
-                <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider font-bold">Intent: {pendingAction.intent.replace('_', ' ')}</p>
+                <p className="text-[10px] mt-0.5 uppercase tracking-wider font-bold" style={{ color: 'var(--t-text-muted)' }}>Intent: {pendingAction.intent.replace('_', ' ')}</p>
               </div>
               <button 
                 onClick={() => { setPendingAction(null); setLoading(false); }}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-4 bg-slate-900/30 border-b border-slate-800">
+            <div className="p-4 border-b" style={{ background: 'var(--t-background)', borderColor: 'var(--t-border)' }}>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
                 <input 
                   autoFocus
                   type="text"
                   value={leadSearch}
                   onChange={(e) => setLeadSearch(e.target.value)}
                   placeholder="Search leads..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm transition-all"
+                  style={{ 
+                    background: 'var(--t-input-bg)', 
+                    borderColor: 'var(--t-border)', 
+                    color: 'var(--t-text)',
+                    // @ts-expect-error custom prop
+                    '--tw-ring-color': 'var(--t-primary)'
+                  }}
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1" style={{ background: 'var(--t-background)' }}>
               {leads
                 .filter(l => 
                   (l.name?.toLowerCase().includes(leadSearch.toLowerCase())) || 
@@ -772,25 +891,39 @@ export function AITest() {
                 .map(lead => (
                   <button
                     key={lead.id}
-                    onClick={() => executeAction(pendingAction.intent, pendingAction.data, pendingAction.response, lead.id)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-xl transition-all group"
+                    onClick={() => {
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Confirm Action',
+                        message: `Proceed with ${pendingAction.intent.replace('_', ' ')} for ${lead.name || lead.propertyAddress}?`,
+                        onConfirm: () => executeAction(pendingAction.intent, pendingAction.data, lead.id),
+                        confirmLabel: 'Yes, Proceed'
+                      });
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl transition-all group"
+                    style={{ background: 'transparent' }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 text-xs border border-slate-700">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs border"
+                        style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
+                      >
                         {lead.name?.charAt(0) || 'U'}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-white group-hover:text-brand-400 transition-colors">
+                        <p className="text-sm font-semibold transition-colors" style={{ color: 'var(--t-text)' }}>
                           {lead.name || 'Unknown Lead'}
                         </p>
-                        <p className="text-[10px] text-slate-500 truncate max-w-[200px]">{lead.propertyAddress || 'No address'}</p>
+                        <p className="text-[10px] truncate max-w-[200px]" style={{ color: 'var(--t-text-muted)' }}>{lead.propertyAddress || 'No address'}</p>
                       </div>
                     </div>
-                    <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
-                      lead.status === 'new' ? 'bg-blue-500/10 text-blue-400' :
-                      lead.status === 'closed-won' ? 'bg-brand-500/10 text-brand-400' :
-                      'bg-slate-800 text-slate-500'
-                    }`}>
+                    <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full"
+                      style={{ 
+                        background: lead.status === 'new' ? 'var(--t-primary-dim)' : 
+                                   lead.status === 'closed-won' ? 'var(--t-success-dim)' : 'var(--t-surface-hover)',
+                        color: lead.status === 'new' ? 'var(--t-primary)' : 
+                               lead.status === 'closed-won' ? 'var(--t-success)' : 'var(--t-text-muted)'
+                      }}
+                    >
                       {lead.status}
                     </span>
                   </button>
@@ -798,16 +931,26 @@ export function AITest() {
               }
             </div>
 
-            <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex gap-3">
+            <div className="p-4 border-t flex gap-3" style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}>
               <button 
                 onClick={() => { setPendingAction(null); setLoading(false); }}
-                className="flex-1 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold uppercase tracking-wider"
+                className="flex-1 py-2.5 rounded-xl border text-xs font-bold uppercase tracking-wider transition-colors"
+                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
               >
                 Cancel
               </button>
               <button 
-                onClick={() => executeAction(pendingAction.intent, pendingAction.data, pendingAction.response)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-colors text-xs font-bold uppercase tracking-wider"
+                onClick={() => {
+                  setConfirmModal({
+                    isOpen: true,
+                    title: 'Confirm Action',
+                    message: `Proceed with ${pendingAction.intent.replace('_', ' ')} without selecting a lead?`,
+                    onConfirm: () => executeAction(pendingAction.intent, pendingAction.data),
+                    confirmLabel: 'Yes, Proceed'
+                  });
+                }}
+                className="flex-1 py-2.5 rounded-xl text-white transition-colors text-xs font-bold uppercase tracking-wider"
+                style={{ background: 'var(--t-secondary)' }}
               >
                 Skip Lead
               </button>
@@ -819,72 +962,81 @@ export function AITest() {
       {/* Guided Action Wizards */}
       {activeWizard === 'lead' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="border w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          >
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-brand-400" />
+                <UserPlus className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
                 Add New Lead
               </h3>
               <button 
                 onClick={() => setActiveWizard(null)}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
               >
                 <X size={20} />
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Full Name</label>
+                <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Full Name</label>
                 <input 
                   type="text" 
                   placeholder="e.g. Jessica Taylor"
                   onChange={(e) => setWizardData({ ...wizardData, name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  className="w-full border rounded-xl px-4 py-2 text-sm outline-none"
+                  style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Phone</label>
+                  <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Phone</label>
                   <input 
                     type="tel" 
                     placeholder="555-0199"
                     onChange={(e) => setWizardData({ ...wizardData, phone: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                    className="w-full border rounded-xl px-4 py-2 text-sm outline-none"
+                    style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Email</label>
+                  <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Email</label>
                   <input 
                     type="email" 
                     placeholder="jessica@example.com"
                     onChange={(e) => setWizardData({ ...wizardData, email: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                    className="w-full border rounded-xl px-4 py-2 text-sm outline-none"
+                    style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                   />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Property Address</label>
+                <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Property Address</label>
                 <input 
                   type="text" 
                   placeholder="123 Main St, Anytown"
                   onChange={(e) => setWizardData({ ...wizardData, propertyAddress: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  className="w-full border rounded-xl px-4 py-2 text-sm outline-none"
+                  style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                 />
               </div>
             </div>
-            <div className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
+            <div className="p-4 border-t flex gap-3" style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}>
               <button 
                 onClick={() => setActiveWizard(null)}
-                className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold"
+                className="flex-1 py-2 rounded-xl border text-xs font-bold transition-colors"
+                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
               >
                 Cancel
               </button>
               <button 
                 onClick={() => {
-                  executeAction('create_lead', wizardData, "I've added the new lead for you.");
+                  executeAction('create_lead', wizardData);
                   setActiveWizard(null);
                 }}
-                className="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-colors text-xs font-bold"
+                className="flex-1 py-2 rounded-xl text-white transition-colors text-xs font-bold"
+                style={{ background: 'var(--t-primary)' }}
               >
                 Create Lead
               </button>
@@ -895,34 +1047,44 @@ export function AITest() {
 
       {activeWizard === 'sms' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="border w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          >
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-brand-400" />
+                <Smartphone className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
                 Send SMS Message
               </h3>
               <button 
                 onClick={() => setActiveWizard(null)}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
               >
                 <X size={20} />
               </button>
             </div>
             
-            <div className="p-4 bg-slate-900/30 border-b border-slate-800">
+            <div className="p-4 border-b" style={{ background: 'var(--t-background)', borderColor: 'var(--t-border)' }}>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
                 <input 
                   type="text"
                   placeholder="Search lead to text..."
                   value={leadSearch}
                   onChange={(e) => setLeadSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm outline-none"
+                  style={{ 
+                    background: 'var(--t-input-bg)', 
+                    borderColor: 'var(--t-border)', 
+                    color: 'var(--t-text)',
+                    // @ts-expect-error custom prop
+                    '--tw-ring-color': 'var(--t-primary)'
+                  } as any}
                 />
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 overflow-y-auto p-2 space-y-1" style={{ background: 'var(--t-background)' }}>
               {leads
                 .filter(l => l.name?.toLowerCase().includes(leadSearch.toLowerCase()) || l.phone?.includes(leadSearch))
                 .slice(0, 10)
@@ -930,17 +1092,21 @@ export function AITest() {
                   <button
                     key={lead.id}
                     onClick={() => setWizardData({ ...wizardData, leadId: lead.id, leadName: lead.name })}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${
-                      wizardData.leadId === lead.id ? 'bg-brand-500/10 border border-brand-500/20' : 'hover:bg-slate-800/50 border border-transparent'
-                    }`}
+                    className="w-full flex items-center justify-between p-3 rounded-xl transition-all border"
+                    style={{ 
+                      background: wizardData.leadId === lead.id ? 'var(--t-primary-dim)' : 'transparent',
+                      borderColor: wizardData.leadId === lead.id ? 'var(--t-primary)' : 'transparent'
+                    }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 text-[10px]">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-[10px]"
+                        style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}
+                      >
                         {lead.name?.charAt(0) || 'U'}
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-semibold text-white">{lead.name || 'Unknown'}</p>
-                        <p className="text-[10px] text-slate-500">{lead.phone || 'No phone'}</p>
+                        <p className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>{lead.name || 'Unknown'}</p>
+                        <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{lead.phone || 'No phone'}</p>
                       </div>
                     </div>
                   </button>
@@ -948,30 +1114,33 @@ export function AITest() {
               }
             </div>
 
-            <div className="p-4 space-y-3 border-t border-slate-800">
+            <div className="p-4 space-y-3 border-t" style={{ borderColor: 'var(--t-border)' }}>
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Message Content</label>
+                <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Message Content</label>
                 <textarea 
                   rows={3}
                   placeholder={`Hi ${wizardData.leadName || 'there'}, ...`}
                   onChange={(e) => setWizardData({ ...wizardData, message: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none resize-none"
+                  className="w-full border rounded-xl px-4 py-2 text-sm outline-none resize-none"
+                  style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                 />
               </div>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setActiveWizard(null)}
-                  className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold"
+                  className="flex-1 py-2 rounded-xl border text-xs font-bold transition-colors"
+                  style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
                 >
                   Cancel
                 </button>
                 <button 
                   disabled={!wizardData.leadId || !wizardData.message}
                   onClick={() => {
-                    executeAction('send_sms', { target: wizardData.leadId, message: wizardData.message }, "I've sent that SMS message for you.");
+                    executeAction('send_sms', { target: wizardData.leadId, message: wizardData.message });
                     setActiveWizard(null);
                   }}
-                  className="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white transition-colors text-xs font-bold"
+                  className="flex-1 py-2 rounded-xl text-white transition-colors text-xs font-bold disabled:opacity-50"
+                  style={{ background: 'var(--t-primary)' }}
                 >
                   Send SMS
                 </button>
@@ -983,43 +1152,49 @@ export function AITest() {
 
       {activeWizard === 'task' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="border w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+          >
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <Check className="w-5 h-5 text-brand-400" />
+                <Check className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
                 Schedule New Task
               </h3>
               <button 
                 onClick={() => setActiveWizard(null)}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
               >
                 <X size={20} />
               </button>
             </div>
             <div className="p-4 space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Task Title</label>
+                <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Task Title</label>
                 <input 
                   type="text" 
                   placeholder="e.g. Call John Smith"
                   onChange={(e) => setWizardData({ ...wizardData, title: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  className="w-full border rounded-xl px-4 py-2 text-sm outline-none"
+                  style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Due Date</label>
+                  <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Due Date</label>
                   <input 
                     type="date" 
                     onChange={(e) => setWizardData({ ...wizardData, dueDate: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                    className="w-full border rounded-xl px-4 py-2 text-sm outline-none"
+                    style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Priority</label>
+                  <label className="text-[10px] uppercase font-bold ml-1" style={{ color: 'var(--t-text-muted)' }}>Priority</label>
                   <select 
                     onChange={(e) => setWizardData({ ...wizardData, priority: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                    className="w-full border rounded-xl px-4 py-2 text-sm outline-none"
+                    style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                   >
                     <option value="medium">Medium</option>
                     <option value="low">Low</option>
@@ -1029,19 +1204,21 @@ export function AITest() {
                 </div>
               </div>
             </div>
-            <div className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
+            <div className="p-4 border-t flex gap-3" style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}>
               <button 
                 onClick={() => setActiveWizard(null)}
-                className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold"
+                className="flex-1 py-2 rounded-xl border text-xs font-bold transition-colors"
+                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
               >
                 Cancel
               </button>
               <button 
                 onClick={() => {
-                  executeAction('create_task', wizardData, "I've scheduled that task for you.");
+                  executeAction('create_task', wizardData);
                   setActiveWizard(null);
                 }}
-                className="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-colors text-xs font-bold"
+                className="flex-1 py-2 rounded-xl text-white transition-colors text-xs font-bold"
+                style={{ background: 'var(--t-primary)' }}
               >
                 Create Task
               </button>
@@ -1051,22 +1228,22 @@ export function AITest() {
       )}
 
       {debug && (
-        <div className="fixed bottom-24 right-4 z-50 p-4 bg-slate-900/90 border border-slate-800 rounded-2xl text-[10px] font-mono backdrop-blur-xl shadow-2xl max-w-xs animate-in slide-in-from-right-4">
-          <div className="flex items-center gap-2 font-bold mb-3 text-brand-400 uppercase tracking-widest">
+        <div className="fixed bottom-24 right-4 z-50 p-4 bg-[var(--t-surface)]/90 border border-[var(--t-border)] rounded-2xl text-[10px] font-mono backdrop-blur-xl shadow-2xl max-w-xs animate-in slide-in-from-right-4">
+          <div className="flex items-center gap-2 font-bold mb-3 text-[var(--t-primary)] uppercase tracking-widest">
             <RefreshCw className="w-3 h-3 animate-spin-slow" /> DEBUG CONSOLE
           </div>
-          <div className="space-y-1 text-slate-400">
+          <div className="space-y-1 text-[var(--t-text-muted)]">
             <div className="flex justify-between"><span>Thread ID:</span> <span className="text-white truncate max-w-[120px]">{currentAiThreadId}</span></div>
             <div className="flex justify-between"><span>Messages:</span> <span className="text-white">{messages.length}</span></div>
-            <div className="flex justify-between"><span>Rate Limit:</span> <span className={rateLimit ? 'text-rose-400' : 'text-emerald-400'}>{rateLimit ? 'ACTIVE' : 'READY'}</span></div>
-            <div className="flex justify-between border-t border-slate-800 mt-2 pt-2">
+            <div className="flex justify-between"><span>Rate Limit:</span> <span className={rateLimit ? 'text-[var(--t-error)]' : 'text-[var(--t-success)]'}>{rateLimit ? 'ACTIVE' : 'READY'}</span></div>
+            <div className="flex justify-between border-t border-[var(--t-border)] mt-2 pt-2">
               <button 
                 onClick={() => {
                   localStorage.removeItem('ai_threads');
                   localStorage.removeItem('ai_messages_map');
                   window.location.reload();
                 }}
-                className="text-rose-400 hover:text-rose-300 underline"
+                className="text-[var(--t-error)] hover:text-[var(--t-error-hover)] underline"
               >
                 Factory Reset Threads
               </button>
@@ -1074,6 +1251,17 @@ export function AITest() {
           </div>
         </div>
       )}
+
+      {/* Reusable Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

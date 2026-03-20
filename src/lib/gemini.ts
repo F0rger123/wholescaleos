@@ -142,7 +142,7 @@ export const SMS_GATEWAYS: Record<string, string> = {
   'Virgin Mobile': 'vmobl.com'
 };
 
-export async function sendSMSViaAI(target: string, message: string): Promise<{ success: boolean; message: string }> {
+export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   if (!userId) return { success: false, message: 'User not authenticated.' };
@@ -170,20 +170,16 @@ export async function sendSMSViaAI(target: string, message: string): Promise<{ s
   let targetEmail = '';
   const lead = store.leads.find(l => l.name?.toLowerCase().includes(target.toLowerCase()) || l.phone?.includes(target));
   
+  // Use explicit target carrier if provided, otherwise fallback to user's carrier
+  const effectiveTargetCarrier = targetCarrier || userCarrier;
+  const gateway = SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon']; // Default to Verizon if everything fails
+
   if (lead && lead.phone) {
-    // For now, we assume the RECEIVER has a carrier-agnostic way or we use a default?
-    // Wait, the prompt implies "Text John Smith". If John Smith is a lead, we need HIS carrier?
-    // Actually, usually email-to-SMS requires knowing the receiver's carrier.
-    // However, if the user is texting THEMSELVES or a known team member, we can use their settings.
-    // If it's a lead, without their carrier info, this won't work perfectly.
-    // I'll assume for this task we use a default gateway or the user's carrier as a fallback if unknown.
-    // Better yet, I'll check if the lead has a carrier stored.
-    // For this implementation, I'll use the user's carrier as the protocol for the receiver too if unspecified.
     const cleanPhone = lead.phone.replace(/\D/g, '');
-    targetEmail = `${cleanPhone}@${SMS_GATEWAYS[userCarrier]}`;
+    targetEmail = `${cleanPhone}@${gateway}`;
   } else if (target.replace(/\D/g, '').length >= 10) {
     const cleanPhone = target.replace(/\D/g, '');
-    targetEmail = `${cleanPhone}@${SMS_GATEWAYS[userCarrier]}`;
+    targetEmail = `${cleanPhone}@${gateway}`;
   } else {
     return { success: false, message: `Could not find a valid phone number for '${target}'.` };
   }
@@ -409,7 +405,7 @@ JSON Structure:
 }
 
 Intent Requirements:
-- 'send_sms': data: { "target": "name or number", "message": "content" }
+- 'send_sms': data: { "target": "name or number", "message": "content", "targetCarrier": "optional carrier name (Verizon, AT&T, etc.)" }
 - 'create_task': data: { "title": "string", "dueDate": "YYYY-MM-DD", "priority": "low/medium/high/urgent", "leadId": "id" }
 - 'update_status': data: { "leadId": "id", "newStatus": "new/contacted/qualified/negotiating/closed-won/closed-lost" }
 - 'create_lead': data: { "name": "...", "phone": "...", "email": "...", "propertyAddress": "...", "notes": "..." }

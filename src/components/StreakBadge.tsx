@@ -2,10 +2,10 @@ import { Flame, Trophy, Zap } from 'lucide-react';
 
 function getStreakLevel(streak: number) {
   if (streak >= 30) return { color: 'text-purple-400', bg: 'bg-purple-500/15', border: 'border-purple-500/30', label: 'Legendary', emoji: '👑' };
-  if (streak >= 14) return { color: 'text-orange-400', bg: 'bg-orange-500/15', border: 'border-orange-500/30', label: 'On Fire', emoji: '🔥' };
-  if (streak >= 7) return { color: 'text-amber-400', bg: 'bg-amber-500/15', border: 'border-amber-500/30', label: 'Hot Streak', emoji: '⚡' };
-  if (streak >= 3) return { color: 'text-yellow-400', bg: 'bg-yellow-500/15', border: 'border-yellow-500/30', label: 'Warming Up', emoji: '✨' };
-  return { color: 'text-slate-400', bg: 'bg-slate-500/15', border: 'border-slate-500/30', label: 'Getting Started', emoji: '💪' };
+  if (streak >= 14) return { color: 'text-[var(--t-warning)]', bg: 'bg-[var(--t-warning-dim)]/15', border: 'border-[var(--t-warning)]/30', label: 'On Fire', emoji: '🔥' };
+  if (streak >= 7) return { color: 'var(--t-warning)', bg: 'var(--t-warning-dim)', border: 'var(--t-warning-border)', label: 'Hot Streak', emoji: '⚡' };
+  if (streak >= 3) return { color: 'var(--t-warning)', bg: 'var(--t-warning-dim)', border: 'var(--t-warning-border)', label: 'Warming Up', emoji: '✨' };
+  return { color: 'var(--t-text-muted)', bg: 'var(--t-surface-hover)', border: 'var(--t-border)', label: 'Getting Started', emoji: '💪' };
 }
 
 interface StreakBadgeProps {
@@ -26,7 +26,7 @@ export function StreakBadge({ streak, type = 'login', size = 'sm', showLabel = f
         <div>
           <div className="flex items-center gap-2">
             <span className={`text-lg font-black ${level.color}`}>{streak}</span>
-            <span className="text-xs text-slate-400">day streak</span>
+            <span className="text-xs" style={{ color: 'var(--t-text-muted)' }}>day streak</span>
           </div>
           {showLabel && (
             <span className={`text-[10px] font-semibold ${level.color}`}>{level.label}</span>
@@ -70,26 +70,26 @@ export function StreakLeaderboard({ members }: { members: StreakMember[] }) {
   const sorted = [...members].sort((a, b) => b.loginStreak - a.loginStreak);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+    <div className="rounded-2xl p-5 border" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
       <div className="flex items-center gap-2 mb-4">
-        <Flame size={18} className="text-orange-400" />
-        <h2 className="text-lg font-semibold text-white">Productivity Streaks</h2>
+        <Flame size={18} style={{ color: 'var(--t-warning)' }} />
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>Productivity Streaks</h2>
       </div>
       <div className="space-y-3">
         {sorted.map((member, i) => {
           const level = getStreakLevel(member.loginStreak);
           return (
-            <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-800 transition-colors">
-              <span className="text-sm font-bold text-slate-500 w-5">{i + 1}</span>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+            <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl transition-colors" style={{ backgroundColor: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+              <span className="text-sm font-bold w-5" style={{ color: 'var(--t-text-muted)' }}>{i + 1}</span>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: 'var(--t-gradient)' }}>
                 {member.avatar}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{member.name}</p>
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--t-text)' }}>{member.name}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <StreakBadge streak={member.loginStreak} type="login" size="sm" />
                   {member.taskStreak > 0 && (
-                    <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                    <span className="text-[10px] flex items-center gap-0.5" style={{ color: 'var(--t-text-muted)' }}>
                       <Zap size={8} />
                       {member.taskStreak} tasks
                     </span>
@@ -98,7 +98,7 @@ export function StreakLeaderboard({ members }: { members: StreakMember[] }) {
               </div>
               <div className="flex flex-col items-end">
                 <span className={`text-sm font-black ${level.color}`}>{member.loginStreak}</span>
-                <span className="text-[10px] text-slate-500">days</span>
+                <span className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>days</span>
               </div>
             </div>
           );

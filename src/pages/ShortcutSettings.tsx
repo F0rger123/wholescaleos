@@ -133,23 +133,31 @@ export function ShortcutSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
-            <Keyboard className="w-6 h-6 text-brand-400" />
+            <Keyboard className="w-6 h-6" style={{ color: 'var(--t-primary)' }} />
             Keyboard Shortcuts
           </h1>
-          <p className="text-slate-400 text-sm">Customize how you interact with WholeScale OS using your keyboard.</p>
+        <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Customize how you interact with WholeScale OS using your keyboard.</p>
         </div>
         <div className="flex gap-3">
-          <button 
+          <button
             onClick={handleReset}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 text-sm font-medium transition-colors flex items-center gap-2"
+            className="px-4 py-2 rounded-xl border text-sm font-medium transition-colors flex items-center gap-2"
+            style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface)'}
           >
             <RotateCcw size={14} />
             Reset to Defaults
           </button>
-          <button 
+          <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-brand-600/20 disabled:opacity-50"
+            className="px-4 py-2 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+            style={{
+              background: 'var(--t-primary)',
+              // @ts-expect-error custom prop
+              '--tw-shadow-color': 'var(--t-primary-dim)'
+            }}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />}
             Save Changes
@@ -157,18 +165,19 @@ export function ShortcutSettings() {
         </div>
       </div>
 
-      <div className="bg-slate-800/30 p-5 rounded-2xl border border-slate-700/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.3)', borderColor: 'rgba(var(--t-border-rgb), 0.5)' }}>
         <div className="flex items-start gap-4">
-          <div className="p-2 bg-brand-500/10 rounded-lg shrink-0">
-            <Keyboard className="w-5 h-5 text-brand-400" />
+          <div className="p-2 rounded-lg shrink-0" style={{ background: 'var(--t-primary-dim)' }}>
+            <Keyboard className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
           </div>
           <div>
             <h3 className="text-sm font-bold text-white">Enable Global Shortcuts</h3>
-            <p className="text-xs text-slate-400">Master toggle to turn all keyboard interactions on or off.</p>
+            <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Master toggle to turn all keyboard interactions on or off.</p>
           </div>
         </div>
-        <div 
-          className={`w-12 h-6 rounded-full relative transition-all duration-300 cursor-pointer shadow-inner ${shortcutsEnabled ? 'bg-brand-500 shadow-brand-900/20' : 'bg-slate-700'}`}
+        <div
+          className="w-12 h-6 rounded-full relative transition-all duration-300 cursor-pointer shadow-inner"
+          style={{ background: shortcutsEnabled ? 'var(--t-primary)' : '#334155' }}
           onClick={() => setShortcutsEnabled(!shortcutsEnabled)}
         >
           <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm ${shortcutsEnabled ? 'left-7' : 'left-1'}`} />
@@ -176,45 +185,58 @@ export function ShortcutSettings() {
       </div>
 
       {saveResult && (
-        <div className={`p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 ${saveResult.success ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'}`}>
+        <div className="p-4 rounded-xl flex items-start gap-3 animate-in fade-in slide-in-from-top-2 border" style={{ 
+          backgroundColor: saveResult.success ? 'var(--t-success-dim)' : 'var(--t-error-dim)',
+          borderColor: saveResult.success ? 'var(--t-success-border)' : 'var(--t-error-border)',
+          color: saveResult.success ? 'var(--t-success)' : 'var(--t-error)'
+        }}>
           {saveResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
           <span className="text-sm font-medium">{saveResult.message}</span>
         </div>
       )}
 
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+      <div className="rounded-2xl border overflow-hidden shadow-xl" style={{ backgroundColor: 'var(--t-surface-dim)', borderColor: 'var(--t-border)' }}>
         <div className="grid grid-cols-1 md:grid-cols-2">
           {shortcuts.map((s, idx) => (
-            <div 
-              key={s.id} 
-              className={`p-6 flex items-center justify-between group hover:bg-slate-800/30 transition-all border-slate-800 ${idx % 2 === 0 ? 'md:border-r' : ''} ${idx < shortcuts.length - 2 ? 'border-b' : ''}`}
+            <div
+              key={s.id}
+              className={`p-6 flex items-center justify-between group transition-all ${idx % 2 === 0 ? 'md:border-r' : ''} ${idx < shortcuts.length - 2 ? 'border-b' : ''}`}
+              style={{ borderColor: 'var(--t-border)' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(var(--t-surface-rgb), 0.3)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-white uppercase tracking-wider">{s.label}</span>
-                  <HelpCircle size={12} className="text-slate-600 cursor-help" />
+                  <HelpCircle size={12} className="cursor-help" style={{ color: 'rgba(var(--t-text-rgb), 0.3)' }} />
                 </div>
-                <p className="text-xs text-slate-500 line-clamp-1">{s.description}</p>
+                <p className="text-xs line-clamp-1" style={{ color: 'var(--t-text-muted)' }}>{s.description}</p>
               </div>
 
               <button
                 onClick={() => handleRecord(s.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
-                  recordingId === s.id 
-                    ? 'bg-brand-500/20 border-brand-500 ring-2 ring-brand-500/50 animate-pulse' 
-                    : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-                }`}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all"
+                style={recordingId === s.id ? {
+                  backgroundColor: 'var(--t-primary-dim)',
+                  borderColor: 'var(--t-primary)',
+                  boxShadow: '0 0 0 2px var(--t-primary-dim)'
+                } : {
+                  backgroundColor: 'var(--t-surface)',
+                  borderColor: 'var(--t-border)'
+                }}
               >
                 {recordingId === s.id ? (
-                  <span className="text-[10px] font-bold text-brand-400 uppercase tracking-widest">Press Keys...</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--t-primary)' }}>Press Keys...</span>
                 ) : (
                   <div className="flex items-center gap-1">
                     {s.keys.split('+').map((k, i) => (
                       <React.Fragment key={i}>
-                        <kbd className="min-w-[20px] h-6 px-1.5 flex items-center justify-center bg-slate-900 border border-slate-700 rounded text-[10px] font-mono font-bold text-slate-400 shadow-sm">
+                        <kbd className="min-w-[20px] h-6 px-1.5 flex items-center justify-center rounded text-[10px] font-mono font-bold shadow-sm"
+                          style={{ backgroundColor: 'var(--t-surface-dim)', border: '1px solid var(--t-border)', color: 'var(--t-text-muted)' }}
+                        >
                           {k === 'mod' ? (navigator.platform.includes('Mac') ? '⌘' : 'Ctrl') : k.toUpperCase()}
                         </kbd>
-                        {i < s.keys.split('+').length - 1 && <span className="text-slate-600 text-[10px]">+</span>}
+                        {i < s.keys.split('+').length - 1 && <span className="text-[10px]" style={{ color: 'rgba(var(--t-text-rgb), 0.3)' }}>+</span>}
                       </React.Fragment>
                     ))}
                   </div>
@@ -225,12 +247,12 @@ export function ShortcutSettings() {
         </div>
       </div>
 
-      <div className="p-4 bg-brand-500/5 border border-brand-500/10 rounded-xl">
+      <div className="p-4 rounded-xl border" style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}>
         <div className="flex gap-3">
-          <Info className="w-5 h-5 text-brand-400 shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 shrink-0 mt-0.5" style={{ color: 'var(--t-primary)' }} />
           <div className="space-y-1">
-            <h4 className="text-sm font-semibold text-brand-300">AI Shortcut Assistant</h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <h4 className="text-sm font-semibold" style={{ color: 'var(--t-primary-text)' }}>AI Shortcut Assistant</h4>
+            <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
               You can also ask the AI Bot to "Change my New Lead shortcut to Meta+L" or "Create a shortcut for View calendar" and it will handle it for you.
             </p>
           </div>

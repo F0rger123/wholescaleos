@@ -48,7 +48,7 @@ interface UserTeam {
 export function Layout() {
   const { 
     sidebarOpen, toggleSidebar, team, tasks, unreadCounts, 
-    teamConfig, currentUser, showFloatingAIWidget, setShowFloatingAIWidget,
+    teamConfig, currentUser,
     shortcutsEnabled,
     currentTheme, setTheme
   } = useStore();
@@ -87,22 +87,19 @@ export function Layout() {
           .eq('id', currentUser.id)
           .maybeSingle();
         
-        if (profile?.settings?.show_floating_widget !== undefined) {
-          setShowFloatingAIWidget(profile.settings.show_floating_widget);
-        }
+        // Floating widget visibility is now handled by route (hiding on /ai-test)
         if (profile?.settings?.shortcuts) {
           setUserShortcuts(profile.settings.shortcuts);
         }
       } else {
-        const localWidget = localStorage.getItem('user_show_floating_widget');
-        if (localWidget) setShowFloatingAIWidget(localWidget === 'true');
+        // LocalStorage override for widget visibility is no longer needed
         
         const localShortcuts = localStorage.getItem('user_shortcuts');
         if (localShortcuts) setUserShortcuts(JSON.parse(localShortcuts));
       }
     }
     loadPrefs();
-  }, [currentUser?.id, setShowFloatingAIWidget]);
+  }, [currentUser?.id]);
 
   // Apply theme colors on mount
   useEffect(() => {
@@ -263,7 +260,7 @@ export function Layout() {
           >
             <button
               onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-white/5"
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--t-surface-hover)]"
             >
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
@@ -327,8 +324,8 @@ export function Layout() {
                             className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left transition-colors hover:bg-white/5"
                           >
                             <div
-                              className={`w-2 h-2 rounded-full shrink-0 ${t.isCurrent ? 'bg-emerald-400' : ''}`}
-                              style={{ background: t.isCurrent ? undefined : 'var(--t-text-muted)' }}
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ background: t.isCurrent ? 'var(--t-success)' : 'var(--t-text-muted)' }}
                             />
                             <span className="text-xs truncate flex-1" style={{
                               color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text-secondary)',
@@ -336,7 +333,7 @@ export function Layout() {
                               {t.teamName}
                             </span>
                             {t.isCurrent && (
-                              <span className="text-[9px] text-emerald-400">✓</span>
+                              <span className="text-[9px]" style={{ color: 'var(--t-success)' }}>✓</span>
                             )}
                           </button>
                         ))}
@@ -553,8 +550,8 @@ export function Layout() {
         </main>
       </div>
 
-      {/* Floating AI Widget */}
-      {showFloatingAIWidget && <AIBotWidget />}
+      {/* AI Bot Floating Widget */}
+      {!location.pathname.includes('/ai-test') && <AIBotWidget />}
 
       {/* Modals */}
       <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />

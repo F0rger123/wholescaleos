@@ -150,20 +150,20 @@ export function AuthCallback() {
   }, [navigate, login, currentUser?.id]);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-6 p-4">
-      <div className="w-16 h-16 rounded-xl bg-brand-600 flex items-center justify-center">
+    <div className="min-h-screen bg-[var(--t-background)] flex flex-col items-center justify-center gap-6 p-4">
+      <div className="w-16 h-16 rounded-xl bg-[var(--t-primary)] flex items-center justify-center">
         <Building2 size={32} className="text-white" />
       </div>
       
       <div className="text-center space-y-3 max-w-md">
         {status === 'loading' && (
           <>
-            <Loader2 size={32} className="animate-spin text-brand-500 mx-auto" />
-            <p className="text-slate-300">{message}</p>
-            <div className="mt-4 p-3 bg-slate-900 rounded-lg text-left max-h-96 overflow-y-auto">
-              <p className="text-xs font-mono text-slate-400 mb-2">🔍 Debug Info:</p>
+            <Loader2 size={32} className="animate-spin text-[var(--t-primary)] mx-auto" />
+            <p className="text-[var(--t-text-muted)]">{message}</p>
+            <div className="mt-4 p-3 bg-[var(--t-surface)] rounded-lg text-left max-h-96 overflow-y-auto">
+              <p className="text-xs font-mono text-[var(--t-text-muted)] mb-2">🔍 Debug Info:</p>
               {debugInfo.map((line, i) => (
-                <p key={i} className="text-xs font-mono text-slate-500 mt-1 border-l-2 border-slate-700 pl-2">{line}</p>
+                <p key={i} className="text-xs font-mono text-[var(--t-text-muted)] mt-1 border-l-2 border-[var(--t-border)] pl-2">{line}</p>
               ))}
             </div>
           </>
@@ -171,19 +171,19 @@ export function AuthCallback() {
         
         {status === 'success' && (
           <>
-            <CheckCircle2 size={48} className="text-green-500 mx-auto" />
-            <p className="text-green-500 font-medium">{message}</p>
+            <CheckCircle2 size={48} className="text-[var(--t-success)] mx-auto" />
+            <p className="text-[var(--t-success)] font-medium">{message}</p>
           </>
         )}
         
         {status === 'error' && (
           <>
-            <XCircle size={48} className="text-red-500 mx-auto" />
-            <p className="text-red-500 font-medium">{message}</p>
-            <div className="mt-4 p-3 bg-slate-900 rounded-lg text-left max-h-96 overflow-y-auto">
-              <p className="text-xs font-mono text-slate-400 mb-2">🔍 Debug Info:</p>
+            <XCircle size={48} className="text-[var(--t-error)] mx-auto" />
+            <p className="text-[var(--t-error)] font-medium">{message}</p>
+            <div className="mt-4 p-3 bg-[var(--t-surface)] rounded-lg text-left max-h-96 overflow-y-auto">
+              <p className="text-xs font-mono text-[var(--t-text-muted)] mb-2">🔍 Debug Info:</p>
               {debugInfo.map((line, i) => (
-                <p key={i} className="text-xs font-mono text-slate-500 mt-1 border-l-2 border-slate-700 pl-2">{line}</p>
+                <p key={i} className="text-xs font-mono text-[var(--t-text-muted)] mt-1 border-l-2 border-[var(--t-border)] pl-2">{line}</p>
               ))}
             </div>
           </>
