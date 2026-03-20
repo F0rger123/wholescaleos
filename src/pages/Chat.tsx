@@ -1231,9 +1231,52 @@ function MessageInput({
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Initialize Speech Recognition for Voice-to-Text
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+
+      recognitionRef.current.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setText(prev => prev + transcript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsVoiceTyping(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsVoiceTyping(false);
+      };
+    }
+  }, []);
+
+  const toggleVoiceTyping = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    if (isVoiceTyping) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+      setIsVoiceTyping(true);
+    }
+  };
 
   const handleTextChange = (val: string) => {
     setText(val);
@@ -1375,17 +1418,26 @@ function MessageInput({
           value={text}
           onChange={e => handleTextChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message... (@ to mention)"
+          placeholder={isVoiceTyping ? "Listening..." : "Type a message... (@ to mention)"}
           rows={1}
-          className="flex-1 bg-transparent text-sm text-slate-200 focus:outline-none placeholder:text-slate-500 resize-none max-h-24 py-1.5"
+          className={`flex-1 bg-transparent text-sm text-slate-200 focus:outline-none placeholder:text-slate-500 resize-none max-h-24 py-1.5 ${isVoiceTyping ? 'text-brand-400 font-medium' : ''}`}
           style={{ minHeight: '32px' }}
         />
 
         <button
-          onClick={() => setIsRecording(true)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors shrink-0 mb-0.5"
+          onClick={toggleVoiceTyping}
+          className={`p-1.5 rounded-lg transition-colors shrink-0 mb-0.5 ${isVoiceTyping ? 'text-brand-400 bg-brand-500/10 animate-pulse' : 'text-slate-500 hover:text-brand-400 hover:bg-slate-700'}`}
+          title="Voice Typing (To Text)"
         >
           <Mic size={18} />
+        </button>
+
+        <button
+          onClick={() => setIsRecording(true)}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors shrink-0 mb-0.5"
+          title="Record Audio Message"
+        >
+          <Volume2 size={18} />
         </button>
         <button
           onClick={handleSend}

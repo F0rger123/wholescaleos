@@ -1,25 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   processPrompt, 
   hasUserApiKey,
-  listAvailableModels,
   createTask, 
   updateLeadStatusViaAI, 
-  createLeadViaAI, 
-  updateLeadViaAI, 
-  deleteLeadViaAI,
   sendSMSViaAI 
 } from '../lib/gemini';
 import { 
   Bot, User, Send, Target, Sparkles, Check, Trash2, 
-  UserPlus, Key, Loader2, AlertTriangle, ExternalLink, 
-  RefreshCw, Smartphone, Search, X, ArrowDown 
+  UserPlus, Key, Loader2, AlertTriangle, 
+  RefreshCw, Smartphone, Search, X, ArrowDown,
+  Plus, MessageSquare, History, ChevronLeft, ChevronRight,
+  Mic
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
-interface ChatMessage {
+interface AIBotMessage {
   id: string;
   role: 'user' | 'ai';
   content: string;
@@ -31,16 +28,20 @@ interface ChatMessage {
 
 export function AITest() {
   const navigate = useNavigate();
-  const leads = useStore(state => state.leads);
   const { 
-    currentUser, aiUsage, incrementAiUsage, setAiUsage 
+    leads, currentUser, 
+    aiUsage, incrementAiUsage,
+    aiThreads, currentAiThreadId, aiMessages,
+    createAiThread, deleteAiThread, setCurrentAiThread,
+    updateAiThreadTitle, addAiMessage, clearAiThreadMessages
   } = useStore();
+  
   const [debug, setDebug] = useState(false);
-  const [availableModels, setAvailableModels] = useState<any[]>([]);
-  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash');
-  const [prompt, setPrompt] = useState(() => localStorage.getItem('ai_pending_prompt') || '');
+  const [currentModel, setCurrentModel] = useState('gemini-2.0-flash');
+  const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [pendingAction, setPendingAction] = useState<{
     intent: string;
     data: any;
@@ -49,63 +50,44 @@ export function AITest() {
   const [leadSearch, setLeadSearch] = useState('');
   const [aiName, setAiName] = useState('AI Assistant');
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
-  const isFirstModelLoad = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Reset rate limit if model changes (skip initial load)
+  // Thread Sidebar Search
+  const [threadSearch, setThreadSearch] = useState('');
+
+  // Guided Action Wizards State
+  const [activeWizard, setActiveWizard] = useState<'lead' | 'sms' | 'task' | null>(null);
+  const [wizardData, setWizardData] = useState<any>({});
+
+  // Voice Input State
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Derive messages from current thread
+  const messages = (currentAiThreadId ? aiMessages[currentAiThreadId] : []) || [];
+
+  // Clear pending prompt on load (Part 1 Fix)
   useEffect(() => {
-    if (isFirstModelLoad.current) {
-      isFirstModelLoad.current = false;
-      return;
-    }
+    localStorage.removeItem('ai_pending_prompt');
+  }, []);
 
-    if (rateLimit) {
-      setRateLimit(null);
-      localStorage.removeItem('ai_rate_limit_expiry');
-      localStorage.removeItem('ai_rate_limit_prompt');
-      console.log(`🔄 Model switched to ${currentModel}. Resetting rate limit state.`);
+  // Initialize threads if empty
+  useEffect(() => {
+    if (aiThreads.length === 0) {
+      createAiThread('Main Conversation');
+    } else if (!currentAiThreadId) {
+      setCurrentAiThread(aiThreads[0].id);
     }
-  }, [currentModel]);
+  }, [aiThreads, currentAiThreadId]);
 
-  // Load AI personality settings
+  // Load AI personality and model
   const fetchModel = async () => {
     if (!currentUser?.id) return;
-    
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data } = await supabase
-          .from('user_connections')
-          .select('access_token')
-          .eq('user_id', currentUser.id)
-          .eq('provider', 'gemini')
-          .maybeSingle();
-        if (data?.access_token && data.access_token !== 'active') {
-          setCurrentModel(data.access_token);
-          return;
-        }
-      } catch (err) {}
-    }
-    
     const localModel = localStorage.getItem('user_gemini_model');
     if (localModel) setCurrentModel(localModel);
   };
 
   const loadPersonality = async () => {
-    if (!currentUser?.id) return;
-    
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('settings')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-        
-        if (profile?.settings?.ai_name) {
-          setAiName(profile.settings.ai_name);
-        }
-      } catch (err) {}
-    }
-    
     const localAiName = localStorage.getItem('user_ai_name');
     if (localAiName) setAiName(localAiName);
   };
@@ -113,44 +95,18 @@ export function AITest() {
   useEffect(() => {
     fetchModel();
     loadPersonality();
-
     const handleSettingsUpdate = () => {
-      console.log('🔔 AI Settings updated. Refreshing model and resetting rate limits.');
       fetchModel();
       loadPersonality();
-      
-      // Explicitly clear rate limit when settings are updated/saved
       setRateLimit(null);
-      localStorage.removeItem('ai_rate_limit_expiry');
-      localStorage.removeItem('ai_rate_limit_prompt');
     };
-
     window.addEventListener('ai-settings-updated', handleSettingsUpdate);
     return () => window.removeEventListener('ai-settings-updated', handleSettingsUpdate);
   }, [currentUser]);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const saved = localStorage.getItem('ai_chat_history');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return [
-      {
-        id: '1',
-        role: 'ai',
-        content: "Hi! I'm your AI assistant. I can look up leads, manage tasks, update lead statuses, and see who's online on your team. How can I help you today?",
-        timestamp: new Date().toISOString()
-      }
-    ];
-  });
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const isInitialMount = useRef(true);
-
-
 
   useEffect(() => {
     if (hasKey === null) {
@@ -163,21 +119,15 @@ export function AITest() {
   }, [hasKey]);
 
   useEffect(() => {
-    // Check for persisted rate limit on mount
     const savedExpiry = localStorage.getItem('ai_rate_limit_expiry');
-    const savedPrompt = localStorage.getItem('ai_rate_limit_prompt');
-    
     if (savedExpiry) {
       const expiry = parseInt(savedExpiry);
       const now = Date.now();
-      
       if (expiry > now) {
-        const remaining = Math.ceil((expiry - now) / 1000);
-        console.log(`🕒 Resuming rate limit: ${remaining}s remaining.`);
-        setRateLimit({ seconds: remaining, originalPrompt: savedPrompt || '' });
-      } else {
-        localStorage.removeItem('ai_rate_limit_expiry');
-        localStorage.removeItem('ai_rate_limit_prompt');
+        setRateLimit({ 
+          seconds: Math.ceil((expiry - now) / 1000), 
+          originalPrompt: localStorage.getItem('ai_rate_limit_prompt') || '' 
+        });
       }
     }
   }, []);
@@ -186,16 +136,11 @@ export function AITest() {
     let interval: any;
     if (rateLimit && rateLimit.seconds > 0) {
       interval = setInterval(() => {
-        setRateLimit(prev => {
-          if (!prev || prev.seconds <= 0) return null;
-          return { ...prev, seconds: prev.seconds - 1 };
-        });
+        setRateLimit(prev => prev ? { ...prev, seconds: prev.seconds - 1 } : null);
       }, 1000);
     } else if (rateLimit && rateLimit.seconds <= 0) {
       setRateLimit(null);
       localStorage.removeItem('ai_rate_limit_expiry');
-      localStorage.removeItem('ai_rate_limit_prompt');
-      console.log('✅ Rate limit cooldown finished.');
     }
     return () => clearInterval(interval);
   }, [rateLimit?.seconds]);
@@ -212,35 +157,11 @@ export function AITest() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('ai_pending_prompt', prompt);
-  }, [prompt]);
-
-  useEffect(() => {
-    const handleInitialScroll = () => {
-      if (isInitialMount.current) {
-        const savedPosition = sessionStorage.getItem('ai_chat_scroll_pos');
-        if (savedPosition && containerRef.current) {
-          containerRef.current.scrollTop = parseInt(savedPosition);
-        } else {
-          scrollToBottom('auto');
-        }
-        isInitialMount.current = false;
-      }
-    };
-    handleInitialScroll();
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('ai_chat_history', JSON.stringify(messages));
-    
-    // Auto scroll to bottom only if we are already near the bottom
-    // or if the last message is from the user
     const container = containerRef.current;
     if (container) {
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 200;
-      const lastMessage = messages[messages.length - 1];
-      if (isNearBottom || lastMessage?.role === 'user') {
-        scrollToBottom();
+      if (isNearBottom || messages[messages.length - 1]?.role === 'user') {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
   }, [messages]);
@@ -248,178 +169,142 @@ export function AITest() {
   const handleScroll = () => {
     const container = containerRef.current;
     if (container) {
-      const isScrolledUp = container.scrollHeight - container.scrollTop - container.clientHeight > 300;
-      setShowScrollButton(isScrolledUp);
-      // Persist scroll position
-      sessionStorage.setItem('ai_chat_scroll_pos', container.scrollTop.toString());
+      setShowScrollButton(container.scrollHeight - container.scrollTop - container.clientHeight > 300);
     }
   };
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    bottomRef.current?.scrollIntoView({ behavior });
+  const pushMessage = (msg: Omit<AIBotMessage, 'id' | 'timestamp'>) => {
+    if (!currentAiThreadId) return;
+    addAiMessage(currentAiThreadId, {
+      ...msg,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString()
+    });
   };
 
-  const handleSubmit = async (e?: React.FormEvent, customPrompt?: string) => {
-    e?.preventDefault();
-    const textToSubmit = customPrompt || prompt;
-    if (!textToSubmit.trim() || loading || !hasKey) return;
+  useEffect(() => {
+    // Initialize Speech Recognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
 
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: textToSubmit.trim(),
-      timestamp: new Date().toISOString()
-    };
+      recognitionRef.current.onresult = (event: any) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        setPrompt(prev => prev + ' ' + transcript);
+      };
 
-    setMessages(prev => [...prev, userMessage]);
-    setLoading(true);
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+      setIsRecording(true);
+    }
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent, customPrompt?: string) => {
+    if (e) e.preventDefault();
+    const text = customPrompt || prompt;
+    if (!text.trim() || loading || !currentAiThreadId || !hasKey) return;
+
+    pushMessage({ role: 'user', content: text.trim() });
+    setPrompt('');
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
-      const response = await processPrompt(textToSubmit, { 
-        page: '/ai-test', 
-        userRole: 'admin',
-        currentTime: new Date().toISOString()
-      });
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const response = await processPrompt(text.trim(), history, currentModel, controller.signal);
       
-      if (response.intent === 'redirect_setup') {
-        setTimeout(() => navigate('/settings/ai'), 1500);
-      } else if (response.intent === 'confirm_action') {
-        // Handle guardrail confirmation
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'ai',
-          content: response.response,
-          timestamp: new Date().toISOString(),
-          intent: 'confirm_action',
-          data: response.data
-        }]);
-      } else if (response.intent === 'rate_limit') {
-        const errorMessage = response.response;
-        // Detect daily quota vs minute limit
-        const maybeDailyLimit = errorMessage.toLowerCase().includes('quota exceeded') || errorMessage.toLowerCase().includes('billing');
-        // If it's a daily limit, we set a very long timer or just show the error. 
-        // For now let's set it to 1 hour to prevent immediate spamming, but label it.
-        const retrySeconds = maybeDailyLimit ? 3600 : (response.data?.retryAfter || 60);
-        
-        setRateLimit({ seconds: retrySeconds, originalPrompt: textToSubmit });
-        const expiry = Date.now() + (retrySeconds * 1000);
-        localStorage.setItem('ai_rate_limit_expiry', expiry.toString());
-        localStorage.setItem('ai_rate_limit_prompt', textToSubmit);
-        
-        // Show the error message in chat too
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'ai',
-          content: maybeDailyLimit 
-            ? `🛑 Daily Quota Exceeded: Your plan allows 20 requests/day for this model. Please try a "Lite" model or wait for your daily reset.`
-            : `⚠️ Rate Limit Hit: ${errorMessage}`,
-          timestamp: new Date().toISOString()
-        }]);
-
-        // Sync local quota with reality
-        const limit = currentModel.includes('pro') ? 10 : 20;
-        if (maybeDailyLimit) {
-          setAiUsage(currentModel, limit);
-        }
+      if (response.intent === 'rate_limit') {
+        const retry = response.data?.retryAfter || 60;
+        setRateLimit({ seconds: retry, originalPrompt: text });
+        localStorage.setItem('ai_rate_limit_expiry', (Date.now() + retry * 1000).toString());
+        pushMessage({ role: 'ai', content: `⚠️ Rate Limit Hit: ${response.response}` });
       } else {
-        // Success case - clear the prompt
-        setPrompt('');
-        localStorage.removeItem('ai_pending_prompt');
         incrementAiUsage(currentModel);
-      }
-      
-      if (response.intent !== 'rate_limit') {
-        const leadIntents = ['update_status', 'update_lead', 'delete_lead', 'send_sms'];
-        const needsLead = leadIntents.includes(response.intent);
-        
-        // Clean JSON from response if needed
-        let cleanResponse = response.response || '';
-        if (typeof cleanResponse === 'string' && cleanResponse.trim().startsWith('{')) {
+        let clean = response.response || '';
+        if (typeof clean === 'string' && clean.trim().startsWith('{')) {
           try {
-            const parsed = JSON.parse(cleanResponse);
-            if (parsed.response) cleanResponse = parsed.response;
+            const p = JSON.parse(clean);
+            if (p.response) clean = p.response;
           } catch (e) {}
         }
 
-        if (needsLead) {
-          setPendingAction({
-            intent: response.intent,
-            data: response.data,
-            response: cleanResponse
-          });
-          // Pre-populate search with target if available
+        pushMessage({ 
+          role: 'ai', 
+          content: clean, 
+          intent: response.intent, 
+          systemLog: debug ? JSON.stringify(response.data, null, 2) : undefined 
+        });
+
+        if (['update_status', 'update_lead', 'delete_lead', 'send_sms'].includes(response.intent)) {
+          setPendingAction({ intent: response.intent, data: response.data, response: clean });
           if (response.data?.target) setLeadSearch(response.data.target);
-          else if (response.data?.leadId) {
-            const l = leads.find(lead => lead.id === response.data.leadId);
-            if (l) setLeadSearch(l.name || '');
-          }
-        } else if (response.intent !== 'confirm_action' && response.intent !== 'rate_limit') {
-          // Only execute actions that aren't meta-intents
-          executeAction(response.intent, response.data, cleanResponse);
+        } else if (response.intent !== 'confirm_action') {
+          executeAction(response.intent, response.data, clean);
+        }
+
+        if (messages.length <= 2) {
+          updateAiThreadTitle(currentAiThreadId, text.substring(0, 30) + (text.length > 30 ? '...' : ''));
         }
       }
-    } catch (error: any) {
-      console.error('Gemini Submission Error:', error);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        content: error instanceof Error ? `Error: ${error.message}` : "Sorry, I encountered an error communicating with the API.",
-        timestamp: new Date().toISOString(),
-        intent: 'error'
-      }]);
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        pushMessage({ role: 'ai', content: "Request cancelled by user.", intent: 'error' });
+      } else {
+        pushMessage({ role: 'ai', content: "Error communicating with the API.", intent: 'error' });
+      }
     } finally {
-      if (!pendingAction) setLoading(false);
+      setLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
   };
 
   const executeAction = async (intent: string, data: any, aiResponse: string, confirmedLeadId?: string) => {
-    let systemLog = undefined;
-    
-    // Final safety check for JSON in aiResponse
-    let finalAiResponse = aiResponse;
-    if (typeof finalAiResponse === 'string' && finalAiResponse.trim().startsWith('{')) {
-      try {
-        const parsed = JSON.parse(finalAiResponse);
-        if (parsed.response) finalAiResponse = parsed.response;
-      } catch (e) {}
-    }
-
+    let log = undefined;
     const finalData = confirmedLeadId ? { ...data, leadId: confirmedLeadId } : data;
-
     try {
       if (intent === 'create_task' && finalData) {
         createTask(finalData);
-        systemLog = `System: Created task '${finalData.title}'`;
-      } else if (intent === 'update_status' && finalData?.leadId && finalData?.newStatus) {
-        const result = updateLeadStatusViaAI(finalData.leadId, finalData.newStatus);
-        systemLog = `System: ${result.message}`;
-      } else if (intent === 'create_lead' && finalData) {
-        const result = createLeadViaAI(finalData);
-        systemLog = `System: ${result.message}`;
-      } else if (intent === 'update_lead' && finalData?.leadId) {
-        const result = updateLeadViaAI(finalData.leadId, finalData);
-        systemLog = `System: ${result.message}`;
-      } else if (intent === 'delete_lead' && finalData?.leadId) {
-        const result = deleteLeadViaAI(finalData.leadId);
-        systemLog = `System: ${result.message}`;
-      } else if (intent === 'send_sms' && (finalData?.target || finalData?.leadId) && finalData?.message) {
+        log = `System: Created task '${finalData.title}'`;
+      } else if (intent === 'update_status' && finalData?.leadId) {
+        const res = updateLeadStatusViaAI(finalData.leadId, finalData.newStatus);
+        log = `System: ${res.message}`;
+      } else if (intent === 'send_sms' && finalData?.message) {
         setLoading(true);
-        const target = confirmedLeadId || finalData.target;
-        const result = await sendSMSViaAI(target, finalData.message);
-        systemLog = `System: ${result.message}`;
+        const res = await sendSMSViaAI(confirmedLeadId || finalData.target, finalData.message);
+        log = `System: ${res.message}`;
       }
 
-      const aiMessage: ChatMessage = {
-        id: Date.now().toString(),
-        role: 'ai',
-        content: finalAiResponse || "Action completed.",
-        timestamp: new Date().toISOString(),
-        intent: intent,
-        data: finalData,
-        systemLog
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
+      pushMessage({ role: 'ai', content: aiResponse || "Action completed.", intent, data: finalData, systemLog: log });
     } catch (err) {
       console.error('Action failed:', err);
     } finally {
@@ -428,69 +313,29 @@ export function AITest() {
     }
   };
 
-  const clearHistory = () => {
-    localStorage.removeItem('ai_chat_history');
-    setMessages([{
-      id: Date.now().toString(),
-      role: 'ai',
-      content: "Chat history cleared. How can I help you today?",
-      timestamp: new Date().toISOString()
-    }]);
-  };
-
   const handleTestConnection = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      const response = await processPrompt('ping', { test: true });
-      
-      if (response.intent === 'rate_limit') {
-        const retrySeconds = response.data?.retryAfter || 60;
-        setRateLimit({ seconds: retrySeconds, originalPrompt: '' }); // Don't queue the ping
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'ai',
-          content: `Test failed: Rate limit reached. Try again in ${retrySeconds}s.`,
-          timestamp: new Date().toISOString(),
-          intent: 'error'
-        }]);
-      } else if (response.intent === 'error') {
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'ai',
-          content: `Test failed: ${response.response}`,
-          timestamp: new Date().toISOString(),
-          intent: 'error'
-        }]);
-      } else {
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'ai',
-          content: `Connection Test Success: ${response.response}`,
-          timestamp: new Date().toISOString(),
-          intent: 'test'
-        }]);
-      }
+      const resp = await processPrompt('ping', [], currentModel);
+      pushMessage({ role: 'ai', content: `Test: ${resp.response}`, intent: 'test' });
     } catch (err: any) {
-      console.error('Test connection failed:', err);
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'ai',
-        content: `Test failed with exception: ${err.message}`,
-        timestamp: new Date().toISOString(),
-        intent: 'error'
-      }]);
+      pushMessage({ role: 'ai', content: `Test failed: ${err.message}`, intent: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
+  const clearHistory = () => {
+    if (currentAiThreadId) clearAiThreadMessages(currentAiThreadId);
+  };
+
   const quickPrompts = [
-    { label: "New Lead", prompt: "Create a new lead for Jessica Taylor at 789 Pine Rd. Cell is 555-8888.", icon: <UserPlus className="w-3 h-3"/> },
+    { label: "New Lead", action: () => setActiveWizard('lead'), icon: <UserPlus className="w-3 h-3"/> },
+    { label: "Send SMS", action: () => setActiveWizard('sms'), icon: <Smartphone className="w-3 h-3"/> },
+    { label: "New Task", action: () => setActiveWizard('task'), icon: <Check className="w-3 h-3"/> },
     { label: "Update Status", prompt: "Mark the lead at 123 Main St as negotiating", icon: <Target className="w-3 h-3"/> },
-    { label: "Create Task", prompt: "Create a task to call Jessica Taylor tomorrow", icon: <Check className="w-3 h-3"/> },
     { label: "Delete Lead", prompt: "Delete the lead for 123 Main St", icon: <Trash2 className="w-3 h-3"/> },
-    { label: "Text Lead", prompt: "Text John Smith: I'm running 5 minutes late", icon: <Smartphone className="w-3 h-3"/> },
     { label: "Team Status", prompt: "Who on the team is online right now?", icon: <User className="w-3 h-3"/> }
   ];
 
@@ -498,16 +343,15 @@ export function AITest() {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] max-w-2xl mx-auto text-center px-4">
         <div className="w-16 h-16 bg-brand-500/10 rounded-2xl flex items-center justify-center mb-6 border border-brand-500/20">
-          <Key className="w-8 h-8 text-brand-400" />
+          <Key size={32} className="text-brand-400" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-3">AI Assistant Locked</h2>
         <p className="text-slate-400 mb-8 leading-relaxed">
-          To use the AI Assistant, you must first configure your personal Gemini API key in your settings. 
-          This ensures you have full control over your AI usage and capabilities.
+          Configure your Gemini API key in settings to unlock these features.
         </p>
         <button
           onClick={() => navigate('/settings/ai')}
-          className="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-8 py-3 rounded-xl transition-all hover:shadow-lg hover:shadow-brand-600/20 flex items-center gap-2"
+          className="bg-brand-600 hover:bg-brand-500 text-white font-semibold px-8 py-3 rounded-xl transition-all flex items-center gap-2"
         >
           <Sparkles className="w-5 h-5" />
           Setup AI Key Now
@@ -518,279 +362,402 @@ export function AITest() {
 
   if (hasKey === null) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-140px)]">
+      <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
       </div>
     );
   }
 
+  // Calculate time until reset
+  const now = new Date();
+  const tonight = new Date(now);
+  tonight.setHours(24, 0, 0, 0);
+  const msRem = tonight.getTime() - now.getTime();
+  const hrsRem = Math.floor(msRem / (1000 * 60 * 60));
+  const minsRem = Math.floor((msRem % (1000 * 60 * 60)) / (1000 * 60));
+  const resetTimer = `${hrsRem}h ${minsRem}m`;
+
   return (
-    <div className="flex flex-col mx-auto max-w-4xl h-[calc(100vh-73px)] p-4 text-slate-200">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-slate-700/50">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-brand-400" />
-            {aiName}
-            <div className="ml-2 flex items-center gap-2 px-2 py-1 bg-slate-800 rounded-lg border border-slate-700">
-              <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Usage</div>
-              <div className="text-sm font-bold text-brand-400">
-                {aiUsage[currentModel]?.used || 0}/{aiUsage[currentModel]?.limit || (currentModel.includes('pro') ? 10 : 20)}
-              </div>
-              <div className="group relative">
-                <AlertTriangle className="w-3.5 h-3.5 text-slate-500 cursor-help" />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2 bg-slate-900 border border-slate-700 rounded-lg text-[10px] text-slate-300 w-48 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl leading-relaxed">
-                  <div className="font-bold text-white mb-1 uppercase">Daily Quota</div>
-                  Requests for {currentModel}: {aiUsage[currentModel]?.limit || (currentModel.includes('pro') ? 10 : 20)}/day. Resets every 24 hours.
-                  <div className="mt-1 text-brand-400 border-t border-slate-800 pt-1">Model limits vary by type.</div>
-                </div>
-              </div>
-            </div>
-          </h1>
-          <p className="text-sm text-slate-400">Conversational interface with context awareness</p>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={handleTestConnection}
-            disabled={loading}
-            className="text-xs text-brand-400 hover:text-brand-300 bg-brand-500/10 hover:bg-brand-500/20 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
-          >
-            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-            Test Connection
-          </button>
-          <button 
-            onClick={clearHistory}
-            className="text-xs text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors"
-          >
-            Clear History
-          </button>
-        </div>
-      </div>
-      
-      {/* Chat Messages */}
-      <div 
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto mb-4 bg-slate-900/40 rounded-2xl border border-slate-800 p-4 space-y-6 relative"
+    <div className="flex h-[calc(100vh-73px)] overflow-hidden">
+      {/* Thread Sidebar */}
+      <aside 
+        className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col overflow-hidden relative shrink-0`}
       >
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            
-            {/* Avatar */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-              msg.role === 'user' ? 'bg-brand-600' : 'bg-indigo-600'
-            }`}>
-              {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            <History size={16} className="text-brand-400" />
+            History
+          </h2>
+          <button 
+            onClick={() => createAiThread()}
+            className="p-1.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 rounded-lg transition-colors"
+            title="New Conversation"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
+        <div className="px-3 pt-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 w-3 h-3" />
+            <input 
+              type="text"
+              value={threadSearch}
+              onChange={(e) => setThreadSearch(e.target.value)}
+              placeholder="Search threads..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-[10px] text-white focus:ring-1 focus:ring-brand-500/50 outline-none placeholder:text-slate-600 transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {aiThreads
+            .filter(t => t.title.toLowerCase().includes(threadSearch.toLowerCase()))
+            .map((t) => (
+            <div 
+              key={t.id}
+              className={`group flex items-center gap-2 p-3 rounded-xl transition-all cursor-pointer ${
+                currentAiThreadId === t.id ? 'bg-brand-500/10 text-white' : 'hover:bg-slate-800 text-slate-400'
+              }`}
+              onClick={() => setCurrentAiThread(t.id)}
+            >
+              <MessageSquare size={14} className={currentAiThreadId === t.id ? 'text-brand-400' : 'text-slate-500'} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate">{t.title}</p>
+                <p className="text-[10px] text-slate-500">{new Date(t.lastMessageAt).toLocaleDateString()}</p>
+              </div>
+              <button 
+                onClick={(e) => { e.stopPropagation(); deleteAiThread(t.id); }}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:text-rose-400 transition-opacity"
+              >
+                <X size={12} />
+              </button>
             </div>
-            
-            {/* Message Body */}
-            <div className={`flex flex-col max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-              <div className={`px-4 py-3 rounded-2xl ${
-                msg.role === 'user' 
-                  ? 'bg-brand-600 text-white rounded-tr-none' 
-                  : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-none'
-              }`}>
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</div>
+          ))}
+          {aiThreads.length === 0 && (
+            <div className="p-8 text-center">
+              <p className="text-xs text-slate-600 italic">No threads yet</p>
+            </div>
+          )}
+        </div>
+      </aside>
+
+      {/* Toggle Sidebar Button */}
+      <button 
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="absolute left-[240px] top-1/2 -translate-y-1/2 z-10 w-4 h-12 bg-slate-900 border border-slate-700 border-l-0 rounded-r-lg flex items-center justify-center text-slate-500 hover:text-white transition-all overflow-hidden"
+        style={{ left: isSidebarOpen ? '256px' : '0' }}
+      >
+        {isSidebarOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}
+      </button>
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0 p-4" style={{ background: 'var(--t-background)' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4 pb-4 border-b shrink-0" style={{ borderColor: 'var(--t-border)', opacity: 0.8 }}>
+          <div>
+            <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
+              <Sparkles className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
+              {currentAiThreadId ? aiThreads.find(t => t.id === currentAiThreadId)?.title || aiName : aiName}
+              <div className="ml-2 flex items-center gap-2 px-2 py-1 rounded-lg border" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+                <div className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Usage</div>
+                <div className="text-xs font-bold" style={{ color: 'var(--t-primary)' }}>
+                  {aiUsage[currentModel]?.used || 0}/{aiUsage[currentModel]?.limit || (currentModel.includes('pro') ? 10 : 20)}
+                </div>
+                <div className="group relative">
+                  <AlertTriangle className="w-3 h-3 cursor-help" style={{ color: 'var(--t-text-muted)' }} />
+                  <div className="absolute top-8 left-1/2 -translate-x-1/2 mt-2 p-3 border rounded-xl text-[10px] w-56 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[100] shadow-2xl leading-relaxed" 
+                    style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text-secondary)' }}>
+                    <div className="font-bold mb-1 uppercase tracking-wider" style={{ color: 'var(--t-text)' }}>Daily Quota Status</div>
+                    <div className="flex justify-between mb-1">
+                      <span>Model:</span>
+                      <span style={{ color: 'var(--t-text)' }}>{currentModel}</span>
+                    </div>
+                    <div className="flex justify-between mb-2">
+                      <span>Available:</span>
+                      <span style={{ color: 'var(--t-primary)' }}>{aiUsage[currentModel]?.limit || 20}/day</span>
+                    </div>
+                    <div className="pt-2 border-t flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
+                      <span style={{ color: 'var(--t-text-muted)' }}>Resets in:</span>
+                      <span className="font-mono text-[11px]" style={{ color: 'var(--t-text)' }}>{resetTimer}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </h1>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleTestConnection}
+              disabled={loading}
+              className="text-[10px] px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+              style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary-text)' }}
+            >
+              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              Test
+            </button>
+            <button 
+              onClick={clearHistory}
+              className="text-[10px] px-3 py-1.5 rounded-full transition-colors border"
+              style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text-secondary)' }}
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+        
+        {/* Chat Messages */}
+        <div 
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto mb-4 rounded-2xl border p-4 space-y-6 relative scroll-smooth"
+          style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)', opacity: 0.9 }}
+        >
+          {messages.length === 0 && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center opacity-40">
+              <Bot size={48} className="mb-4 animate-pulse" style={{ color: 'var(--t-primary)' }} />
+              <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>How can I help you with your real estate OS today?</p>
+            </div>
+          )}
+          {messages.map((msg: AIBotMessage) => (
+            <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              
+              {/* Avatar */}
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" 
+                style={{ background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-secondary)' }}>
+                {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
               </div>
               
-              {msg.role === 'ai' && msg.intent && msg.intent !== 'error' && msg.intent !== 'unknown' && msg.intent !== 'ask_question' && (
-                <div className="flex gap-2 items-center mt-2 px-1">
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded border border-emerald-400/20">
-                    {msg.intent}
-                  </span>
+              {/* Message Body */}
+              <div className={`flex flex-col max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <div className={`px-4 py-3 rounded-2xl ${
+                  msg.role === 'user' 
+                    ? 'rounded-tr-none text-white' 
+                    : 'border rounded-tl-none'
+                }`} style={{ 
+                  background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-surface)',
+                  borderColor: msg.role === 'user' ? 'transparent' : 'var(--t-border)',
+                  color: msg.role === 'user' ? 'var(--t-on-primary)' : 'var(--t-text)'
+                }}>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</div>
                 </div>
-              )}
-              
-              {msg.systemLog && (
-                <div className="mt-2 bg-slate-900 text-slate-400 border border-slate-800 rounded-lg p-2 text-xs font-mono w-full text-left">
-                  {msg.systemLog}
-                </div>
-              )}
-              
-              <span className="text-[10px] text-slate-500 mt-1 px-1">
-                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
+                
+                {msg.role === 'ai' && msg.intent && msg.intent !== 'error' && msg.intent !== 'unknown' && msg.intent !== 'ask_question' && (
+                  <div className="flex gap-2 items-center mt-2 px-1">
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded border" 
+                      style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary-text)', borderColor: 'var(--t-primary-dim)' }}>
+                      {msg.intent}
+                    </span>
+                  </div>
+                )}
+                
+                {msg.systemLog && (
+                  <div className="mt-2 border rounded-lg p-2 text-xs font-mono w-full text-left"
+                    style={{ background: 'var(--t-surface-active)', borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}>
+                    {msg.systemLog}
+                  </div>
+                )}
+                
+                <span className="text-[10px] mt-1 px-1" style={{ color: 'var(--t-text-muted)' }}>
+                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
 
-              {/* Confirmation Guardrail UI */}
-              {msg.intent === 'confirm_action' && msg.data && (
-                <div className="mt-3 p-4 bg-brand-500/10 border border-brand-500/20 rounded-xl space-y-3 animate-in slide-in-from-top-2">
-                  <div className="flex items-center gap-2 text-brand-400 font-semibold text-sm">
-                    <AlertTriangle className="w-4 h-4" />
-                    Action Confirmation Required
-                  </div>
-                  <div className="flex gap-2">
+                {/* Confirmation Guardrail UI */}
+                {msg.role === 'ai' && msg.intent === 'confirm_action' && msg.data && (
+                  <div className="mt-3 p-4 bg-brand-500/10 border border-brand-500/20 rounded-xl space-y-3 animate-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2 text-brand-400 font-semibold text-sm">
+                      <AlertTriangle className="w-4 h-4" />
+                      Action Confirmation Required
+                    </div>
+                    <div className="flex gap-2">
                     <button
-                      onClick={() => executeAction(msg.data.intent || 'unknown', msg.data, "Confirmed. Proceeding with your request.")}
-                      className="flex-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold py-2 rounded-lg transition-all"
-                    >
-                      Confirm & Execute
-                    </button>
-                    <button
-                      onClick={() => setMessages(prev => [...prev, {
-                        id: Date.now().toString(),
-                        role: 'ai',
-                        content: "Action cancelled.",
-                        timestamp: new Date().toISOString()
-                      }])}
-                      className="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 rounded-lg transition-all"
-                    >
-                      Cancel
-                    </button>
+                        onClick={() => executeAction(msg.data.intent || 'unknown', msg.data, "Confirmed. Proceeding with your request.")}
+                        className="flex-1 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold py-2 rounded-lg transition-all"
+                      >
+                        Confirm & Execute
+                      </button>
+                      <button
+                        onClick={() => currentAiThreadId && addAiMessage(currentAiThreadId, {
+                          id: Date.now().toString(),
+                          role: 'ai',
+                          content: "Action cancelled.",
+                          timestamp: new Date().toISOString()
+                        })}
+                        className="flex-1 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 rounded-lg transition-all"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-        
-        {loading && (
-          <div className="flex gap-4">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4 text-white" />
+          ))}
+          
+          {loading && (
+            <div className="flex gap-4">
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
+                <Bot className="w-4 h-4 text-white" />
+              </div>
+              <div className="px-4 py-4 rounded-2xl bg-slate-800 border border-slate-700 rounded-tl-none flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
             </div>
-            <div className="px-4 py-4 rounded-2xl bg-slate-800 border border-slate-700 rounded-tl-none flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          )}
+          <div ref={bottomRef} />
+          
+          {/* Scroll to Bottom Button */}
+          {showScrollButton && (
+            <button
+              onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="fixed bottom-32 right-8 md:right-[calc(50%-450px)] p-3 bg-brand-600 hover:bg-brand-500 text-white rounded-full shadow-lg shadow-brand-600/20 transition-all animate-in fade-in slide-in-from-bottom-4 z-40"
+              title="Scroll to bottom"
+            >
+              <ArrowDown size={20} />
+            </button>
+          )}
+        </div>
+
+        {/* Rate Limit Banner */}
+        {rateLimit && (
+          <div className="mb-4 border rounded-2xl p-4 flex gap-4 items-center animate-in fade-in slide-in-from-bottom-2 shrink-0"
+            style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: 'var(--t-error)' }}>
+              <AlertTriangle className="w-5 h-5 text-white" />
             </div>
+            <div className="flex-1 text-left">
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>Rate Limit Reached</h3>
+              <p className="text-xs mt-1" style={{ color: 'var(--t-text-secondary)' }}>
+                You've reached your rate limit for the Gemini API. 
+                Retrying in <span className="font-bold" style={{ color: 'var(--t-primary)' }}>{rateLimit.seconds}s</span>...
+                <br />
+                <span className="text-[10px] mt-1 block">
+                  Upgrade your Google Cloud/AI Studio plan for higher limits. 
+                  <a href="https://ai.google.dev/gemini-api/docs/rate-limits" target="_blank" rel="noopener noreferrer" className="ml-1 underline transition-colors" style={{ color: 'var(--t-primary)' }}>
+                    Increase Limits
+                  </a>
+                </span>
+              </p>
+            </div>
+            <button disabled className="px-4 py-2 rounded-xl text-xs opacity-50 flex items-center gap-2" style={{ background: 'var(--t-background)', color: 'var(--t-text-muted)' }}>
+              <RefreshCw className="w-3 h-3" /> Cooldown active
+            </button>
           </div>
         )}
-        <div ref={bottomRef} />
-        
-        {/* Scroll to Bottom Button */}
-        {showScrollButton && (
-          <button
-            onClick={() => scrollToBottom()}
-            className="fixed bottom-32 right-8 md:right-[calc(50%-450px)] p-3 bg-brand-600 hover:bg-brand-500 text-white rounded-full shadow-lg shadow-brand-600/20 transition-all animate-in fade-in slide-in-from-bottom-4 z-40"
-            title="Scroll to bottom"
-          >
-            <ArrowDown size={20} />
-          </button>
-        )}
-      </div>
 
-      {/* Rate Limit Banner */}
-      {rateLimit && (
-        <div className="mb-4 bg-brand-500/10 border border-brand-500/20 rounded-2xl p-4 flex gap-4 items-center animate-in fade-in slide-in-from-bottom-2">
-          <div className="w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-brand-400" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-white">Rate Limit Reached</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              You've reached your rate limit for the Gemini API. 
-              Retrying in <span className="text-brand-400 font-bold">{rateLimit.seconds}s</span>...
-              <br />
-              <span className="text-[10px] mt-1 block">
-                Upgrade your Google Cloud/AI Studio plan for higher limits. 
-                <a 
-                  href="https://ai.google.dev/gemini-api/docs/rate-limits" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-brand-400 hover:text-brand-300 ml-1 inline-flex items-center gap-0.5 underline underline-offset-2"
+        {/* Input Area */}
+        <div className={`p-4 rounded-2xl border transition-all shrink-0 ${rateLimit && !rateLimit.originalPrompt ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}
+          style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x px-1">
+              {quickPrompts.map((item, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => item.action ? item.action() : item.prompt && setPrompt(item.prompt)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all whitespace-nowrap snap-start group"
+                  style={{ 
+                    background: 'var(--t-background)', 
+                    borderColor: 'var(--t-border)', 
+                    color: 'var(--t-text-secondary)' 
+                  }}
                 >
-                  Increase Limits <ExternalLink size={10} />
-                </a>
-              </span>
-            </p>
+                  <span className="group-hover:scale-110 transition-transform" style={{ color: 'var(--t-primary)' }}>{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <button 
-            disabled 
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-xl text-xs text-slate-400 opacity-50"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Cooldown active
-          </button>
+          
+          <form onSubmit={handleSendMessage} className="flex gap-2 items-end relative">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              placeholder={rateLimit && rateLimit.seconds > 0 ? `Rate limit active... wait ${rateLimit.seconds}s` : (isRecording ? "Listening..." : "Type your message...")}
+              className={`flex-1 border rounded-xl pl-4 pr-12 py-3 outline-none resize-none min-h-[50px] max-h-[150px] transition-all scrollbar-thin scrollbar-thumb-slate-700 ${isRecording ? 'shadow-xl' : ''}`}
+              style={{ 
+                background: 'var(--t-background)', 
+                borderColor: isRecording ? 'var(--t-primary)' : 'var(--t-border)', 
+                color: 'var(--t-text)',
+                // @ts-expect-error custom css prop
+                '--tw-shadow': isRecording ? '0 0 15px var(--t-primary-dim)' : 'none'
+              }}
+              rows={1}
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={toggleRecording}
+              className={`absolute right-16 bottom-[10px] p-2 rounded-lg transition-all ${isRecording ? 'animate-pulse' : 'hover:scale-110'}`}
+              style={{ 
+                color: isRecording ? 'var(--t-primary)' : 'var(--t-text-muted)',
+                background: isRecording ? 'var(--t-primary-dim)' : 'transparent'
+              }}
+              title={isRecording ? "Stop Recording" : "Voice Typing"}
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !prompt.trim() || !!(rateLimit && rateLimit.seconds > 0)}
+              className="w-12 h-12 shrink-0 text-white rounded-xl flex items-center justify-center transition-all group shadow-lg active:scale-95 disabled:opacity-30"
+              style={{ background: 'var(--t-primary)' }}
+            >
+              {loading ? (
+                <button
+                  type="button"
+                  onClick={handleStopGeneration}
+                  className="w-full h-full flex items-center justify-center bg-rose-600 hover:bg-rose-500 rounded-xl transition-all animate-pulse"
+                  title="Stop Generating"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              ) : (
+                <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              )}
+            </button>
+          </form>
         </div>
-      )}
-
-      {/* Input Area */}
-      <div className={`bg-slate-800/50 p-3 rounded-2xl border border-slate-700 transition-all ${rateLimit && !rateLimit.originalPrompt ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
-        <div className="flex items-center justify-between mb-2 px-1">
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x px-1">
-            {quickPrompts.map((item, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  setPrompt(item.prompt);
-                  const ta = document.querySelector('textarea');
-                  if (ta) {
-                    ta.focus();
-                    ta.value = item.prompt; // force update for immediate focus
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-brand-500/20 text-slate-300 hover:text-brand-300 text-xs rounded-full border border-slate-700 transition-colors whitespace-nowrap snap-start group"
-              >
-                <span className="text-brand-400 group-hover:scale-110 transition-transform">{item.icon}</span>
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <span className="text-[10px] text-slate-500 font-medium whitespace-nowrap px-2">
-            (click to edit prompt)
-          </span>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="flex gap-2 items-end relative">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            placeholder={rateLimit && rateLimit.seconds > 0 ? `Rate limit active... wait ${rateLimit.seconds}s` : "Type your message..."}
-            className={`flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:ring-1 focus:ring-brand-500 focus:border-brand-500 outline-none text-slate-200 resize-none min-h-[50px] max-h-[150px] transition-all ${rateLimit && rateLimit.seconds > 0 ? 'bg-brand-500/5' : ''}`}
-            rows={1}
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            disabled={loading || !prompt.trim() || !!(rateLimit && rateLimit.seconds > 0)}
-            className="w-12 h-12 shrink-0 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 disabled:bg-slate-700 text-white rounded-xl flex items-center justify-center transition-colors group relative overflow-hidden"
-          >
-            {loading ? (
-              <RefreshCw className="w-5 h-5 animate-spin text-brand-400" />
-            ) : (
-              <Send className="w-5 h-5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-            )}
-          </button>
-        </form>
       </div>
 
       {/* Lead Selection Modal */}
       {pendingAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
               <div>
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
                   <Target className="w-5 h-5 text-brand-400" />
                   Confirm Lead for Action
                 </h3>
-                <p className="text-xs text-slate-400 mt-0.5 capitalize">Intent: {pendingAction.intent.replace('_', ' ')}</p>
+                <p className="text-[10px] text-slate-500 mt-0.5 uppercase tracking-wider font-bold">Intent: {pendingAction.intent.replace('_', ' ')}</p>
               </div>
               <button 
                 onClick={() => { setPendingAction(null); setLoading(false); }}
-                className="p-2 hover:bg-slate-700 rounded-lg text-slate-400 transition-colors"
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-4 bg-slate-800/30 border-b border-slate-700">
+            <div className="p-4 bg-slate-900/30 border-b border-slate-800">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
                 <input 
                   autoFocus
                   type="text"
                   value={leadSearch}
                   onChange={(e) => setLeadSearch(e.target.value)}
-                  placeholder="Search leads by name or address..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder:text-slate-500 focus:ring-1 focus:ring-brand-500 outline-none"
+                  placeholder="Search leads..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none transition-all"
                 />
               </div>
             </div>
@@ -806,124 +773,302 @@ export function AITest() {
                   <button
                     key={lead.id}
                     onClick={() => executeAction(pendingAction.intent, pendingAction.data, pendingAction.response, lead.id)}
-                    className="w-full flex items-center justify-between p-3 hover:bg-slate-800 rounded-xl transition-all border border-transparent hover:border-slate-700 group text-left"
+                    className="w-full flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-xl transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-300 text-sm">
+                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 text-xs border border-slate-700">
                         {lead.name?.charAt(0) || 'U'}
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-white group-hover:text-brand-400 transition-colors">
                           {lead.name || 'Unknown Lead'}
                         </p>
-                        <p className="text-xs text-slate-500 truncate max-w-[200px]">{lead.propertyAddress || 'No address'}</p>
+                        <p className="text-[10px] text-slate-500 truncate max-w-[200px]">{lead.propertyAddress || 'No address'}</p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${
-                        lead.status === 'new' ? 'bg-blue-500/10 text-blue-400' :
-                        lead.status === 'closed-won' ? 'bg-emerald-500/10 text-emerald-400' :
-                        'bg-slate-700 text-slate-400'
-                      }`}>
-                        {lead.status}
-                      </span>
-                      <p className="text-[10px] text-slate-500">{lead.phone || 'No phone'}</p>
-                    </div>
+                    <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
+                      lead.status === 'new' ? 'bg-blue-500/10 text-blue-400' :
+                      lead.status === 'closed-won' ? 'bg-brand-500/10 text-brand-400' :
+                      'bg-slate-800 text-slate-500'
+                    }`}>
+                      {lead.status}
+                    </span>
                   </button>
                 ))
               }
-              {leads.filter(l => 
-                  (l.name?.toLowerCase().includes(leadSearch.toLowerCase())) || 
-                  (l.propertyAddress?.toLowerCase().includes(leadSearch.toLowerCase()))
-                ).length === 0 && (
-                <div className="p-8 text-center bg-slate-900/50 rounded-xl border border-dashed border-slate-700">
-                  <UserPlus className="w-10 h-10 text-slate-700 mx-auto mb-2" />
-                  <p className="text-sm text-slate-400">No matching leads found.</p>
-                  <p className="text-xs text-slate-600 mt-1">Try a different search term or add a new lead.</p>
-                </div>
-              )}
             </div>
 
-            <div className="p-4 border-t border-slate-800 bg-slate-800/20 flex gap-3">
+            <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex gap-3">
               <button 
                 onClick={() => { setPendingAction(null); setLoading(false); }}
-                className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors text-sm font-medium"
+                className="flex-1 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold uppercase tracking-wider"
               >
                 Cancel
               </button>
               <button 
                 onClick={() => executeAction(pendingAction.intent, pendingAction.data, pendingAction.response)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white transition-colors text-sm font-medium"
+                className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-colors text-xs font-bold uppercase tracking-wider"
               >
-                Execute Without Lead
+                Skip Lead
               </button>
             </div>
           </div>
         </div>
       )}
-      {debug && (
-        <div className="mt-8 p-4 bg-slate-800/80 border border-slate-700 rounded-2xl text-xs font-mono backdrop-blur-sm animate-in fade-in slide-in-from-bottom-4">
-          <div className="flex items-center gap-2 font-bold mb-3 text-brand-400">
-            <RefreshCw className="w-3 h-3" />
-            🔧 DEBUG MODE
-          </div>
-          <div className="space-y-1 text-slate-300">
-            <div><span className="text-slate-500">User ID:</span> {currentUser?.id || 'Not logged in'}</div>
-            <div><span className="text-slate-500">Loading:</span> {loading ? 'Yes' : 'No'}</div>
-            <div><span className="text-slate-500">Has API Key:</span> {hasKey ? 'Yes' : 'No'}</div>
-            <div><span className="text-slate-500">Rate Limit Active:</span> {rateLimit ? 'Yes' : 'No'}</div>
-            <div><span className="text-slate-500">Timer:</span> {rateLimit ? `${rateLimit.seconds}s` : 'None'}</div>
-            <div><span className="text-slate-500">Model:</span> <span className="text-brand-400">{currentModel}</span></div>
-            <div className="pt-2 flex flex-col gap-2 border-t border-slate-700/50 mt-2">
+
+      {/* Guided Action Wizards */}
+      {activeWizard === 'lead' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-brand-400" />
+                Add New Lead
+              </h3>
               <button 
-                onClick={async () => {
-                  let key = localStorage.getItem('user_gemini_api_key');
-                  
-                  // Try Supabase if not in local storage
-                  if (!key && isSupabaseConfigured && supabase && currentUser?.id) {
-                    try {
-                      const { data } = await supabase
-                        .from('user_connections')
-                        .select('refresh_token')
-                        .eq('user_id', currentUser.id)
-                        .eq('provider', 'gemini')
-                        .maybeSingle();
-                      if (data?.refresh_token) key = data.refresh_token;
-                    } catch (err) {}
-                  }
-
-                  if (!key) {
-                    alert('No API key found. Please configure it in Settings first.');
-                    return;
-                  }
-                  const models = await listAvailableModels(key);
-                  setAvailableModels(models);
-                  console.log('Available Models:', models);
-                }}
-                className="text-[10px] bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 px-2 py-1 rounded transition-colors text-center"
+                onClick={() => setActiveWizard(null)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
               >
-                Fetch Available Models (Check Console)
+                <X size={20} />
               </button>
-              
-              {availableModels.length > 0 && (
-                <div className="max-h-32 overflow-y-auto bg-black/20 rounded p-1 text-[9px] text-slate-400">
-                  {availableModels.map(m => (
-                    <div key={m.name} className="border-b border-white/5 py-0.5 last:border-0">
-                      {m.name.split('/').pop()}
-                    </div>
-                  ))}
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Full Name</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Jessica Taylor"
+                  onChange={(e) => setWizardData({ ...wizardData, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Phone</label>
+                  <input 
+                    type="tel" 
+                    placeholder="555-0199"
+                    onChange={(e) => setWizardData({ ...wizardData, phone: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  />
                 </div>
-              )}
-
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Email</label>
+                  <input 
+                    type="email" 
+                    placeholder="jessica@example.com"
+                    onChange={(e) => setWizardData({ ...wizardData, email: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Property Address</label>
+                <input 
+                  type="text" 
+                  placeholder="123 Main St, Anytown"
+                  onChange={(e) => setWizardData({ ...wizardData, propertyAddress: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
+              <button 
+                onClick={() => setActiveWizard(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold"
+              >
+                Cancel
+              </button>
               <button 
                 onClick={() => {
-                  localStorage.removeItem('ai_rate_limit_expiry');
-                  localStorage.removeItem('ai_rate_limit_prompt');
-                  setRateLimit(null);
+                  executeAction('create_lead', wizardData, "I've added the new lead for you.");
+                  setActiveWizard(null);
                 }}
-                className="text-[10px] bg-red-500/10 hover:bg-red-500/20 text-red-400 px-2 py-1 rounded transition-colors"
+                className="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-colors text-xs font-bold"
               >
-                Force Clear Rate Limit
+                Create Lead
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeWizard === 'sms' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-brand-400" />
+                Send SMS Message
+              </h3>
+              <button 
+                onClick={() => setActiveWizard(null)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-4 bg-slate-900/30 border-b border-slate-800">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 w-4 h-4" />
+                <input 
+                  type="text"
+                  placeholder="Search lead to text..."
+                  value={leadSearch}
+                  onChange={(e) => setLeadSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {leads
+                .filter(l => l.name?.toLowerCase().includes(leadSearch.toLowerCase()) || l.phone?.includes(leadSearch))
+                .slice(0, 10)
+                .map(lead => (
+                  <button
+                    key={lead.id}
+                    onClick={() => setWizardData({ ...wizardData, leadId: lead.id, leadName: lead.name })}
+                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all ${
+                      wizardData.leadId === lead.id ? 'bg-brand-500/10 border border-brand-500/20' : 'hover:bg-slate-800/50 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-400 text-[10px]">
+                        {lead.name?.charAt(0) || 'U'}
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-white">{lead.name || 'Unknown'}</p>
+                        <p className="text-[10px] text-slate-500">{lead.phone || 'No phone'}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              }
+            </div>
+
+            <div className="p-4 space-y-3 border-t border-slate-800">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Message Content</label>
+                <textarea 
+                  rows={3}
+                  placeholder={`Hi ${wizardData.leadName || 'there'}, ...`}
+                  onChange={(e) => setWizardData({ ...wizardData, message: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none resize-none"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setActiveWizard(null)}
+                  className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button 
+                  disabled={!wizardData.leadId || !wizardData.message}
+                  onClick={() => {
+                    executeAction('send_sms', { target: wizardData.leadId, message: wizardData.message }, "I've sent that SMS message for you.");
+                    setActiveWizard(null);
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white transition-colors text-xs font-bold"
+                >
+                  Send SMS
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeWizard === 'task' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Check className="w-5 h-5 text-brand-400" />
+                Schedule New Task
+              </h3>
+              <button 
+                onClick={() => setActiveWizard(null)}
+                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Task Title</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Call John Smith"
+                  onChange={(e) => setWizardData({ ...wizardData, title: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Due Date</label>
+                  <input 
+                    type="date" 
+                    onChange={(e) => setWizardData({ ...wizardData, dueDate: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Priority</label>
+                  <select 
+                    onChange={(e) => setWizardData({ ...wizardData, priority: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-brand-500/50 outline-none"
+                  >
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 bg-slate-900/50 border-t border-slate-800 flex gap-3">
+              <button 
+                onClick={() => setActiveWizard(null)}
+                className="flex-1 py-2 rounded-xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-colors text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  executeAction('create_task', wizardData, "I've scheduled that task for you.");
+                  setActiveWizard(null);
+                }}
+                className="flex-1 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-colors text-xs font-bold"
+              >
+                Create Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {debug && (
+        <div className="fixed bottom-24 right-4 z-50 p-4 bg-slate-900/90 border border-slate-800 rounded-2xl text-[10px] font-mono backdrop-blur-xl shadow-2xl max-w-xs animate-in slide-in-from-right-4">
+          <div className="flex items-center gap-2 font-bold mb-3 text-brand-400 uppercase tracking-widest">
+            <RefreshCw className="w-3 h-3 animate-spin-slow" /> DEBUG CONSOLE
+          </div>
+          <div className="space-y-1 text-slate-400">
+            <div className="flex justify-between"><span>Thread ID:</span> <span className="text-white truncate max-w-[120px]">{currentAiThreadId}</span></div>
+            <div className="flex justify-between"><span>Messages:</span> <span className="text-white">{messages.length}</span></div>
+            <div className="flex justify-between"><span>Rate Limit:</span> <span className={rateLimit ? 'text-rose-400' : 'text-emerald-400'}>{rateLimit ? 'ACTIVE' : 'READY'}</span></div>
+            <div className="flex justify-between border-t border-slate-800 mt-2 pt-2">
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('ai_threads');
+                  localStorage.removeItem('ai_messages_map');
+                  window.location.reload();
+                }}
+                className="text-rose-400 hover:text-rose-300 underline"
+              >
+                Factory Reset Threads
               </button>
             </div>
           </div>

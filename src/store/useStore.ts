@@ -52,6 +52,30 @@ export interface ChatMessage {
   deleted: boolean;
 }
 
+// ─── AI Bot Types ──────────────────────────────────────────────────────────
+
+export interface AIUsage {
+  used: number;
+  limit: number;
+}
+
+export interface AIThread {
+  id: string;
+  title: string;
+  createdAt: string;
+  lastMessageAt: string;
+}
+
+export interface AIBotMessage {
+  id: string;
+  role: 'user' | 'ai';
+  content: string;
+  timestamp: string;
+  intent?: string;
+  data?: any;
+  systemLog?: string;
+}
+
 export interface ChatChannel {
   id: string;
   name: string;
@@ -1353,6 +1377,17 @@ interface AppState {
   aiUsage: Record<string, AIUsage>;
   incrementAiUsage: (model: string) => void;
   setAiUsage: (model: string, used: number, limit?: number) => void;
+
+  // AI Threads
+  aiThreads: AIThread[];
+  currentAiThreadId: string | null;
+  aiMessages: Record<string, AIBotMessage[]>;
+  createAiThread: (title?: string) => string;
+  deleteAiThread: (id: string) => void;
+  setCurrentAiThread: (id: string) => void;
+  updateAiThreadTitle: (id: string, title: string) => void;
+  addAiMessage: (threadId: string, message: AIBotMessage) => void;
+  clearAiThreadMessages: (threadId: string) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1368,6 +1403,25 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('ai_usage_map');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return {};
+  })(),
+  aiThreads: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('ai_threads');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return [];
+  })(),
+  currentAiThreadId: typeof window !== 'undefined' ? localStorage.getItem('current_ai_thread_id') : null,
+  aiMessages: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('ai_messages_map');
         if (saved) return JSON.parse(saved);
       }
     } catch (e) {}
@@ -2784,6 +2838,102 @@ deleteChannel: (channelId) => {
         localStorage.setItem('ai_usage_map', JSON.stringify(newUsage));
       }
       return { aiUsage: newUsage };
+    });
+  },
+
+  createAiThread: (title) => {
+    const id = uuidv4();
+    const newThread: AIThread = {
+      id,
+      title: title || 'New Conversation',
+      createdAt: new Date().toISOString(),
+      lastMessageAt: new Date().toISOString(),
+    };
+    set((s) => {
+      const updatedThreads = [newThread, ...s.aiThreads];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+        localStorage.setItem('current_ai_thread_id', id);
+      }
+      return { 
+        aiThreads: updatedThreads, 
+        currentAiThreadId: id,
+        aiMessages: { ...s.aiMessages, [id]: [] }
+      };
+    });
+    return id;
+  },
+
+  deleteAiThread: (id) => {
+    set((s) => {
+      const updatedThreads = s.aiThreads.filter(t => t.id !== id);
+      const newMessages = { ...s.aiMessages };
+      delete newMessages[id];
+      
+      let newCurrentId = s.currentAiThreadId;
+      if (s.currentAiThreadId === id) {
+        newCurrentId = updatedThreads.length > 0 ? updatedThreads[0].id : null;
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+        if (newCurrentId) localStorage.setItem('current_ai_thread_id', newCurrentId);
+        else localStorage.removeItem('current_ai_thread_id');
+        localStorage.setItem('ai_messages_map', JSON.stringify(newMessages));
+      }
+
+      return { 
+        aiThreads: updatedThreads, 
+        currentAiThreadId: newCurrentId,
+        aiMessages: newMessages
+      };
+    });
+  },
+
+  setCurrentAiThread: (id) => {
+    set({ currentAiThreadId: id });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('current_ai_thread_id', id);
+    }
+  },
+
+  updateAiThreadTitle: (id, title) => {
+    set((s) => {
+      const updatedThreads = s.aiThreads.map(t => t.id === id ? { ...t, title } : t);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+      }
+      return { aiThreads: updatedThreads };
+    });
+  },
+
+  addAiMessage: (threadId, message) => {
+    set((s) => {
+      const threadMessages = s.aiMessages[threadId] || [];
+      const updatedMessages = [...threadMessages, message];
+      const newMessagesMap = { ...s.aiMessages, [threadId]: updatedMessages };
+      
+      // Update lastMessageAt for the thread
+      const updatedThreads = s.aiThreads.map(t => 
+        t.id === threadId ? { ...t, lastMessageAt: new Date().toISOString() } : t
+      ).sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_messages_map', JSON.stringify(newMessagesMap));
+        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+      }
+
+      return { aiMessages: newMessagesMap, aiThreads: updatedThreads };
+    });
+  },
+
+  clearAiThreadMessages: (threadId) => {
+    set((s) => {
+      const newMessagesMap = { ...s.aiMessages, [threadId]: [] };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai_messages_map', JSON.stringify(newMessagesMap));
+      }
+      return { aiMessages: newMessagesMap };
     });
   },
 }));
