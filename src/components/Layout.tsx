@@ -13,7 +13,7 @@ import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
-  Smartphone
+  Smartphone, Bell
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 
@@ -24,6 +24,7 @@ const navSections: Record<string, { to: string; label: string; icon: any }[]> = 
     { to: '/leads', label: 'Leads', icon: Users },
     { to: '/tasks', label: 'Tasks', icon: ListTodo },
     { to: '/calendar', label: 'Calendar', icon: Calendar },
+    { to: '/notifications', label: 'Notifications', icon: Bell },
   ],
   Messages: [
     { to: '/sms', label: 'SMS', icon: Smartphone },
@@ -87,12 +88,20 @@ export function Layout() {
           .eq('id', currentUser.id)
           .maybeSingle();
         
-        // Floating widget visibility is now handled by route (hiding on /ai-test)
+        // Floating widget visibility sync
+        if (profile?.settings?.show_floating_widget !== undefined) {
+          useStore.getState().setShowFloatingAIWidget(profile.settings.show_floating_widget);
+        }
+        
         if (profile?.settings?.shortcuts) {
           setUserShortcuts(profile.settings.shortcuts);
         }
       } else {
-        // LocalStorage override for widget visibility is no longer needed
+        // LocalStorage fallback sync
+        const localShowWidget = localStorage.getItem('user_show_floating_widget');
+        if (localShowWidget) {
+          useStore.getState().setShowFloatingAIWidget(localShowWidget === 'true');
+        }
         
         const localShortcuts = localStorage.getItem('user_shortcuts');
         if (localShortcuts) setUserShortcuts(JSON.parse(localShortcuts));
@@ -508,6 +517,7 @@ export function Layout() {
           style={{
             background: 'color-mix(in srgb, var(--t-sidebar-bg) 80%, transparent)',
             borderColor: 'var(--t-border)',
+            zIndex: 5000,
           }}
         >
           <div className="flex items-center gap-4">

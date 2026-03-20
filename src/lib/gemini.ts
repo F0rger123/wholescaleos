@@ -189,7 +189,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   const res = await sendEmail({
     to: targetEmail,
     subject: 'SMS via WholeScale AI',
-    html: `<p>${message}</p>`,
+    text: message,
     from: 'WholeScale OS <alerts@wholescale.work>'
   });
 
@@ -280,6 +280,32 @@ export async function hasUserApiKey(): Promise<boolean> {
   } else {
     return !!localStorage.getItem('user_gemini_api_key');
   }
+}
+
+/**
+ * Generates a call script based on lead information and conversation history.
+ */
+export async function generateCallScript(lead: Lead, customContext?: string): Promise<string> {
+  const prompt = `Generate a persuasive and professional real estate call script for the follow lead:
+Lead Name: ${lead.name}
+Property: ${lead.propertyAddress} (${lead.propertyType})
+Estimated Value: $${lead.estimatedValue}
+Status: ${STATUS_LABELS[lead.status] || lead.status}
+Notes: ${lead.notes}
+
+${customContext ? `Additional Context: ${customContext}` : ''}
+
+The script should include:
+1. A warm opening.
+2. A clear reason for the call (discussing their property/interest).
+3. Discovery questions to uncover pain points or motivation.
+4. Handling potential objections based on the lead status.
+5. A clear call to action (next appointment/follow-up).
+
+Return ONLY the script content, formatted for readability.`;
+
+  const res = await processPrompt(prompt, { lead });
+  return res.response;
 }
 
 /**

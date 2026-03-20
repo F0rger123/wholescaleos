@@ -340,6 +340,11 @@ export const notificationsService = {
     await supabase.from('notifications').delete().eq('user_id', userId);
   },
 
+  async remove(id: string) {
+    if (!supabase) return;
+    await supabase.from('notifications').delete().eq('id', id);
+  },
+
   async create(notification: Record<string, unknown>) {
     if (!supabase) return;
     await supabase.from('notifications').insert(notification);

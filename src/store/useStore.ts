@@ -187,6 +187,14 @@ export interface SMSMessage {
   created_at: string;
 }
 
+export interface SavedContact {
+  id: string;
+  name: string;
+  phone: string;
+  notes?: string;
+  createdAt: string;
+}
+
 export interface TeamConfig {
   id: string;
   name: string;
@@ -385,6 +393,26 @@ export interface AppNotification {
   read: boolean;
   link?: string;
 }
+
+export interface NotificationSettings {
+  newLead: boolean;
+  taskDue: boolean;
+  smsReceived: boolean;
+  appointmentReminder: boolean;
+  systemUpdates: boolean;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+}
+
+export const defaultNotificationSettings: NotificationSettings = {
+  newLead: true,
+  taskDue: true,
+  smsReceived: true,
+  appointmentReminder: true,
+  systemUpdates: true,
+  emailNotifications: true,
+  smsNotifications: true,
+};
 
 // ─── Calculator Types ────────────────────────────────────────────────────────
 
@@ -1346,6 +1374,7 @@ interface AppState {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   clearAllNotifications: () => void;
+  deleteNotification: (id: string) => void;
 
   // Streaks
   loginStreak: number;
@@ -1390,6 +1419,26 @@ interface AppState {
   toggleAiThreadPin: (id: string) => void;
   addAiMessage: (threadId: string, message: AIBotMessage) => void;
   clearAiThreadMessages: (threadId: string) => void;
+
+  // Notification Settings
+  notificationSettings: NotificationSettings;
+  updateNotificationSettings: (updates: Partial<NotificationSettings>) => void;
+
+  // SMS Auto-Reply
+  smsAutoReplyEnabled: boolean;
+  smsAutoReplyMessage: string;
+  setSMSAutoReplyEnabled: (v: boolean) => void;
+  setSMSAutoReplyMessage: (msg: string) => void;
+
+  // Saved Contacts (SMS)
+  contacts: SavedContact[];
+  addContact: (contact: Omit<SavedContact, 'id' | 'createdAt'>) => void;
+  removeContact: (id: string) => void;
+  updateContact: (id: string, updates: Partial<SavedContact>) => void;
+
+  // Quick Notes
+  quickNotes: string;
+  setQuickNotes: (v: string) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1429,6 +1478,31 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (e) {}
     return {};
   })(),
+
+  notificationSettings: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('wholescale-notification-settings');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return defaultNotificationSettings;
+  })(),
+
+  smsAutoReplyEnabled: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-enabled') === 'true' : false,
+  smsAutoReplyMessage: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-message') || "I'm with a client right now but will get back to you soon!" : "I'm with a client right now but will get back to you soon!",
+
+  contacts: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('sms_contacts');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return [];
+  })(),
+
+  quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks_quick_notes') || '' : '',
 
   login: (email, _password) =>
     set(() => {
@@ -1488,6 +1562,28 @@ export const useStore = create<AppState>((set, get) => ({
     }),
   clearAuthError: () => set({ authError: null }),
 
+  updateNotificationSettings: (updates) => set((s) => {
+    const newSettings = { ...s.notificationSettings, ...updates };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-notification-settings', JSON.stringify(newSettings));
+    }
+    return { notificationSettings: newSettings };
+  }),
+
+  setSMSAutoReplyEnabled: (v: boolean) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sms-auto-reply-enabled', v.toString());
+    }
+    set({ smsAutoReplyEnabled: v });
+  },
+
+  setSMSAutoReplyMessage: (msg: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sms-auto-reply-message', msg);
+    }
+    set({ smsAutoReplyMessage: msg });
+  },
+
   // ── Sync ──────────────────────────────────────────────────
   teamId: null,
   dataLoaded: false,
@@ -1518,6 +1614,17 @@ export const useStore = create<AppState>((set, get) => ({
         timeline_urgency: lead.timelineUrgency, competition_level: lead.competitionLevel,
         import_source: lead.importSource || null, photos: lead.photos || [],
       }).catch(() => {});
+    }
+
+    // Trigger Notification
+    const { notificationSettings, addNotification } = get();
+    if (notificationSettings.newLead) {
+      addNotification({
+        type: 'lead-assigned',
+        title: 'New Lead Added',
+        message: `${lead.name} has been added to your pipeline.`,
+        link: '/leads'
+      });
     }
   },
 
@@ -1690,6 +1797,17 @@ export const useStore = create<AppState>((set, get) => ({
         lead_id: task.leadId || null, status: task.status, priority: task.priority,
         due_date: task.dueDate || null,
       }).catch(() => {});
+    }
+
+    // Trigger Notification
+    const { notificationSettings, addNotification } = get();
+    if (notificationSettings.taskDue) {
+      addNotification({
+        type: 'task-assigned',
+        title: 'New Task Created',
+        message: `Task: ${task.title}`,
+        link: '/tasks'
+      });
     }
   },
 
@@ -2577,6 +2695,11 @@ deleteChannel: (channelId) => {
     if (isSupabaseConfigured && supabase && currentUser) notificationsService.clearAll(currentUser.id).catch(() => {});
   },
 
+  deleteNotification: (id: string) => {
+    set((s) => ({ notifications: s.notifications.filter(n => n.id !== id) }));
+    if (isSupabaseConfigured && supabase) notificationsService.remove(id).catch(() => {});
+  },
+
   // ── Import ──────────────────────────────────────────────
   importTemplates: [],
   importHistory: [],
@@ -2957,5 +3080,67 @@ deleteChannel: (channelId) => {
       }
       return { aiMessages: newMessagesMap };
     });
+  },
+
+  addContact: (contact) => {
+    const newContact: SavedContact = {
+      ...contact,
+      id: uuidv4(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state: AppState) => {
+      const next = [...state.contacts, newContact];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sms_contacts', JSON.stringify(next));
+      }
+      return { contacts: next };
+    });
+  },
+
+  removeContact: (id) => {
+    set((state: AppState) => {
+      const next = state.contacts.filter((c) => c.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sms_contacts', JSON.stringify(next));
+      }
+      return { contacts: next };
+    });
+  },
+
+  updateContact: (id, updates) => {
+    set((state: AppState) => {
+      const next = state.contacts.map((c) =>
+        c.id === id ? { ...c, ...updates } : c
+      );
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sms_contacts', JSON.stringify(next));
+      }
+      return { contacts: next };
+    });
+  },
+
+  setQuickNotes: (v: string) => {
+    set({ quickNotes: v });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks_quick_notes', v);
+    }
+    
+    // Sync to Supabase profile settings
+    const { currentUser } = get();
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      supabase.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const settings = data?.settings || {};
+          if (isSupabaseConfigured && supabase) {
+            supabase.from('profiles')
+              .update({ settings: { ...settings, quick_notes: v } })
+              .eq('id', currentUser.id)
+              .then();
+          }
+        });
+    }
   },
 }));

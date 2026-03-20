@@ -57,6 +57,63 @@ async function getAccessToken(userId: string): Promise<string | null> {
 }
 
 /**
+ * Sends an email (or SMS via email gateway) using Gmail API.
+ */
+async function sendGmail(accessToken: string, to: string, subject: string, body: string) {
+  const message = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    '',
+    body
+  ].join('\n');
+
+  const base64EncodedEmail = btoa(message).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+  try {
+    await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ raw: base64EncodedEmail }),
+    });
+  } catch (err) {
+    console.error('Failed to send auto-reply via Gmail:', err);
+  }
+}
+
+/**
+ * Checks for tasks/appointments due within the next 30 minutes.
+ */
+let notifiedTasks = new Set<string>();
+function checkScheduledReminders() {
+  const store = useStore.getState();
+  const { tasks, notificationSettings, addNotification } = store;
+  if (!notificationSettings) return;
+  if (!notificationSettings.appointmentReminder && !notificationSettings.taskDue) return;
+
+  const now = new Date();
+  const upcomingThreshold = new Date(now.getTime() + 30 * 60 * 1000);
+
+  tasks.forEach(task => {
+    if (task.status === 'done' || !task.dueDate || notifiedTasks.has(task.id)) return;
+    const dueDate = new Date(task.dueDate);
+    
+    if (dueDate > now && dueDate <= upcomingThreshold) {
+      addNotification({
+        type: 'task-due',
+        title: 'Task Due Soon',
+        message: `"${task.title}" is due at ${dueDate.toLocaleTimeString()}`,
+        link: '/tasks'
+      });
+      notifiedTasks.add(task.id);
+    }
+  });
+}
+
+/**
  * Polls Gmail for new messages from SMS gateways.
  */
 export async function pollSMSMessages() {
@@ -67,9 +124,10 @@ export async function pollSMSMessages() {
   const accessToken = await getAccessToken(userId);
   if (!accessToken) return;
 
+  // Also check reminders while we're at it
+  checkScheduledReminders();
+
   try {
-    // 1. Search for messages from SMS gateways
-    // query: from:(@vtext.com OR @txt.att.net ...)
     const query = `from:(${SMS_GATEWAYS.join(' OR ')})`;
     const listResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=20`, {
       headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -79,10 +137,8 @@ export async function pollSMSMessages() {
     const { messages } = await listResponse.json();
     if (!messages || messages.length === 0) return;
 
-    // 2. Process each message
     for (const msg of messages) {
       if (!supabase) continue;
-      // Check if we already have this message
       const { data: existing } = await supabase
         .from('sms_messages')
         .select('id')
@@ -91,7 +147,6 @@ export async function pollSMSMessages() {
 
       if (existing) continue;
 
-      // Fetch full message details
       const detailResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
@@ -99,17 +154,14 @@ export async function pollSMSMessages() {
       if (!detailResponse.ok) continue;
       const detail = await detailResponse.json();
 
-      // Parse headers
       const headers = detail.payload.headers;
       const fromHeader = headers.find((h: any) => h.name === 'From')?.value || '';
       const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
       const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || '';
 
-      // Extract phone number from From (e.g. "1234567890@vtext.com")
       const phoneMatch = fromHeader.match(/(\d+)@/);
       const phoneNumber = phoneMatch ? phoneMatch[1] : fromHeader;
 
-      // Extract content
       let content = '';
       if (detail.payload.parts) {
         const textPart = detail.payload.parts.find((p: any) => p.mimeType === 'text/plain');
@@ -120,10 +172,9 @@ export async function pollSMSMessages() {
         content = atob(detail.payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
       }
 
-      if (!content && subject) content = subject; // Fallback to subject if body is empty (common in some gateways)
+      if (!content && subject) content = subject;
 
       if (!supabase) continue;
-      // 3. Store in Supabase
       const { error: insertError } = await supabase.from('sms_messages').insert({
         agent_id: userId,
         phone_number: phoneNumber,
@@ -137,8 +188,32 @@ export async function pollSMSMessages() {
       if (insertError) {
         console.error('Error storing inbound SMS:', insertError);
       } else {
-        if (!supabase) continue;
-        // Find lead linkage if exists
+        const { smsAutoReplyEnabled, smsAutoReplyMessage, addNotification, notificationSettings } = useStore.getState();
+        
+        // Trigger In-app notification
+        if (notificationSettings?.smsReceived) {
+          addNotification({
+            type: 'message',
+            title: 'New SMS Received',
+            message: `From ${phoneNumber}: ${content.trim().substring(0, 50)}...`,
+            link: '/sms'
+          });
+        }
+
+        // Trigger Auto-reply
+        if (smsAutoReplyEnabled && fromHeader.includes('@')) {
+          await sendGmail(accessToken, fromHeader, 'Auto-Reply', smsAutoReplyMessage);
+          
+          await supabase.from('sms_messages').insert({
+            agent_id: userId,
+            phone_number: phoneNumber,
+            content: smsAutoReplyMessage,
+            direction: 'outbound',
+            created_at: new Date().toISOString(),
+            is_read: true
+          });
+        }
+
         const leads = useStore.getState().leads;
         const matchingLead = leads.find(l => l.phone?.replace(/\D/g, '') === phoneNumber.replace(/\D/g, ''));
         if (matchingLead) {
@@ -156,12 +231,9 @@ export async function pollSMSMessages() {
  */
 export function startSMSPolling(intervalMs = 60000) {
   if (pollingInterval) return;
-  
-  // Initial poll
   pollSMSMessages();
-  
   pollingInterval = setInterval(pollSMSMessages, intervalMs);
-  console.log('SMS Polling started.');
+  console.log('SMS Polling & Reminder service started.');
 }
 
 /**
@@ -171,6 +243,7 @@ export function stopSMSPolling() {
   if (pollingInterval) {
     clearInterval(pollingInterval);
     pollingInterval = null;
-    console.log('SMS Polling stopped.');
+    console.log('SMS Polling & Reminder service stopped.');
   }
 }
+

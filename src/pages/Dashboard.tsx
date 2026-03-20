@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
+import { LeadHoverCard } from '../components/LeadHoverCard';
 import {
   TrendingUp, DollarSign, Users, Target, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, Zap,
   PieChart, BarChart3, Flame,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { StreakBadge } from '../components/StreakBadge';
+import { TeamLeaderboard } from '../components/TeamLeaderboard';
+import { useNavigate } from 'react-router-dom';
 
 // ─── Money Formatter ─────────────────────────────────────────────────────────
 
@@ -53,13 +56,17 @@ function AnimatedCounter({ value, formatter, duration = 1200 }: {
 // ─── Stat Card ───────────────────────────────────────────────────────────────
 
 function StatCard({
-  title, value, change, changeType, icon: Icon, color, animated, formatter,
+  title, value, change, changeType, icon: Icon, color, animated, formatter, onClick,
 }: {
   title: string; value: number; change: string; changeType: 'up' | 'down'; icon: React.ElementType; color: string;
   animated?: boolean; formatter?: (val: number) => string;
+  onClick?: () => void;
 }) {
   return (
-    <div className="bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 hover:border-[var(--t-border-strong)] transition-colors theme-transition">
+    <div 
+      onClick={onClick}
+      className={`bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 hover:border-[var(--t-border-strong)] transition-all theme-transition ${onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-[var(--t-text-secondary)] font-medium">{title}</p>
@@ -110,6 +117,8 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; lab
 
 export function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
+  const navigate = useNavigate();
+  const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
 
   // ─── Calculations ────────────────────────────────────────
   const totalPipeline = leads
@@ -214,6 +223,7 @@ export function Dashboard() {
           color="bg-[var(--t-primary-dim)] text-[var(--t-primary-text)]"
           animated={true}
           formatter={formatMoney}
+          onClick={() => navigate('/leads')}
         />
         <StatCard
           title="Closed Revenue" value={closedRevenue}
@@ -223,18 +233,21 @@ export function Dashboard() {
           color="bg-[var(--t-success)]/20 text-[var(--t-success)]"
           animated={true}
           formatter={formatMoney}
+          onClick={() => navigate('/leads')}
         />
         <StatCard
           title="Active Leads" value={activeLeads}
           change="+3 this month" changeType="up" icon={Users}
           color="bg-[var(--t-accent)]/20 text-[var(--t-accent)]"
           animated={true}
+          onClick={() => navigate('/leads')}
         />
         <StatCard
           title="Avg Deal Score" value={avgScore}
           change={`${winRate}% win rate`} changeType={winRate > 50 ? 'up' : 'down'} icon={Target}
           color="bg-[var(--t-warning)]/20 text-[var(--t-warning)]"
           animated={true}
+          onClick={() => navigate('/leads')}
         />
       </div>
 
@@ -383,8 +396,21 @@ export function Dashboard() {
                   >
                     {lead.name.split(' ').map((n) => n[0]).join('')}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-[var(--t-on-surface)] truncate">{lead.name}</p>
+                  <div className="flex-1 min-w-0 relative">
+                    <div 
+                      className="relative"
+                      onMouseEnter={() => setHoveredLeadId(lead.id)}
+                      onMouseLeave={() => setHoveredLeadId(null)}
+                    >
+                      <p className="text-sm font-medium text-[var(--t-on-surface)] truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
+                        {lead.name}
+                      </p>
+                      {hoveredLeadId === lead.id && (
+                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000]">
+                          <LeadHoverCard lead={lead} />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-xs text-[var(--t-text-secondary)]">{STATUS_LABELS[lead.status]}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -418,8 +444,21 @@ export function Dashboard() {
                       <Clock size={16} className="text-[var(--t-text-muted)]" />
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[var(--t-on-surface)] font-medium truncate">{lead.name}</p>
+                  <div className="flex-1 min-w-0 relative">
+                    <div 
+                      className="relative"
+                      onMouseEnter={() => setHoveredLeadId(lead.id)}
+                      onMouseLeave={() => setHoveredLeadId(null)}
+                    >
+                      <p className="text-sm text-[var(--t-on-surface)] font-medium truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
+                        {lead.name}
+                      </p>
+                      {hoveredLeadId === lead.id && (
+                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000]">
+                          <LeadHoverCard lead={lead} />
+                        </div>
+                      )}
+                    </div>
                     <p className="text-xs text-[var(--t-text-secondary)] truncate">{lead.propertyAddress}</p>
                   </div>
                   <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${sc.bg} ${sc.text}`}>
@@ -435,37 +474,8 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Team Leaderboard + Streaks */}
         <div className="space-y-4">
-          <div className="bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 theme-transition">
-            <h2 className="text-lg font-semibold text-[var(--t-on-surface)] mb-4">Team Leaderboard</h2>
-            <div className="space-y-3">
-              {[...team]
-                .sort((a, b) => b.revenue - a.revenue)
-                .slice(0, 5)
-                .map((member, i) => (
-                  <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-colors">
-                    <span className="text-sm font-bold text-[var(--t-text-muted)] w-5">{i + 1}</span>
-                    <div 
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-[var(--t-on-primary)] shrink-0 shadow-sm"
-                      style={{ background: 'var(--t-gradient)' }}
-                    >
-                      {member.avatar}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--t-on-surface)] truncate">{member.name}</p>
-                      <p className="text-xs text-[var(--t-text-secondary)]">{member.dealsCount} deals</p>
-                    </div>
-                    <span className="text-sm font-semibold text-[var(--t-success)]">
-                      {formatMoney(member.revenue)}
-                    </span>
-                  </div>
-                ))}
-              {team.length === 0 && (
-                <p className="text-sm text-[var(--t-text-muted)] text-center py-4">No team members</p>
-              )}
-            </div>
-          </div>
+          <TeamLeaderboard />
 
           {/* Mini Streak Panel */}
           <div className="bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 theme-transition">

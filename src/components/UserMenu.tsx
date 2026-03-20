@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { LogOut, User, Settings, ChevronDown, Moon, Sun } from 'lucide-react';
+import { LogOut, Settings, ChevronDown } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export function UserMenu() {
-  const { currentUser, currentTheme, setTheme } = useStore();
+  const { currentUser } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -51,7 +52,7 @@ export function UserMenu() {
             onClick={() => setIsOpen(false)}
           />
           <div
-            className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl z-50 border overflow-hidden"
+            className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl z-[9999] border overflow-hidden"
             style={{
               backgroundColor: 'var(--t-surface)',
               borderColor: 'var(--t-border)',
@@ -72,29 +73,7 @@ export function UserMenu() {
             <div className="p-1">
               <button
                 onClick={() => {
-                  // TODO: Navigate to profile
-                  setIsOpen(false);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
-                style={{
-                  color: 'var(--t-text-secondary)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
-                  e.currentTarget.style.color = 'var(--t-text)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--t-text-secondary)';
-                }}
-              >
-                <User size={16} />
-                Profile
-              </button>
-
-              <button
-                onClick={() => {
-                  // TODO: Navigate to settings
+                  navigate('/settings');
                   setIsOpen(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
@@ -114,35 +93,12 @@ export function UserMenu() {
                 Settings
               </button>
 
-              {/* Theme quick toggle */}
-              <div className="border-t my-1" style={{ borderColor: 'var(--t-border)' }} />
-              
-              <button
-                onClick={() => {
-                  setTheme(currentTheme === 'dark' ? 'light' : 'dark');
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
-                style={{
-                  color: 'var(--t-text-secondary)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
-                  e.currentTarget.style.color = 'var(--t-text)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--t-text-secondary)';
-                }}
-              >
-                {currentTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-                Switch to {currentTheme === 'dark' ? 'Light' : 'Dark'}
-              </button>
-
               <div className="border-t my-1" style={{ borderColor: 'var(--t-border)' }} />
 
               <button
-                onClick={() => {
-                  navigate('/settings');
+                onClick={async () => {
+                  if (supabase) await supabase.auth.signOut();
+                  navigate('/login');
                   setIsOpen(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"

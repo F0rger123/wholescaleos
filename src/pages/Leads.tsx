@@ -11,8 +11,10 @@ import {
   Users, Mic, Play, Pause, Square, Brain,
   Target, Zap, BarChart3,
   FileText, Camera, Navigation, Globe, ArrowRight, Volume2, Eye,
-  Trash, AlertTriangle
+  Trash, AlertTriangle, FileText as ScriptIcon
 } from 'lucide-react';
+import { generateCallScript } from '../lib/gemini';
+import { LeadHoverCard } from '../components/LeadHoverCard';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -57,6 +59,7 @@ export default function Leads() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('priority');
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('timeline');
@@ -75,6 +78,8 @@ export default function Leads() {
   const [newFieldType, setNewFieldType] = useState<'text' | 'number'>('text');
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [generatingScript, setGeneratingScript] = useState<string | null>(null);
+  const [scriptLoading, setScriptLoading] = useState(false);
 
   // NEW: Bulk selection state
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -635,9 +640,22 @@ export default function Leads() {
                   >
                     {(lead.name || 'U')[0].toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 relative">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-white font-medium">{lead.name || 'Unnamed'}</span>
+                      <div 
+                        className="relative"
+                        onMouseEnter={() => setHoveredLeadId(lead.id)}
+                        onMouseLeave={() => setHoveredLeadId(null)}
+                      >
+                        <span className="text-white font-medium hover:text-[var(--t-primary)] transition-colors">
+                          {lead.name || 'Unnamed'}
+                        </span>
+                        {hoveredLeadId === lead.id && (
+                          <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000]">
+                            <LeadHoverCard lead={lead} />
+                          </div>
+                        )}
+                      </div>
                       <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>
                         {STATUS_LABELS[lead.status] || lead.status}
                       </span>
@@ -785,6 +803,29 @@ export default function Leads() {
                             </div>
                           </div>
                         )}
+
+                        {/* AI Call Script Button */}
+                        <div className="px-4 pb-4">
+                          <button
+                            onClick={async () => {
+                              setScriptLoading(true);
+                              try {
+                                const script = await generateCallScript(lead);
+                                setGeneratingScript(script);
+                              } catch (err) {
+                                alert('Failed to generate script');
+                              } finally {
+                                setScriptLoading(false);
+                              }
+                            }}
+                            disabled={scriptLoading}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
+                            style={{ background: 'var(--t-surface-dim)', border: '1px solid var(--t-primary-dim)', color: 'var(--t-primary)' }}
+                          >
+                            {scriptLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScriptIcon className="w-4 h-4" />}
+                            {scriptLoading ? 'Generating AI Call Script...' : 'Generate AI Call Script'}
+                          </button>
+                        </div>
 
                         {/* Custom Fields */}
                         {customFields.length > 0 && (
@@ -1350,6 +1391,58 @@ export default function Leads() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Call Script Modal */}
+      {generatingScript && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+            <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-[var(--t-primary-dim)]">
+                  <Brain className="w-6 h-6 text-[var(--t-primary)]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">AI Generated Call Script</h3>
+                  <p className="text-xs text-[var(--t-text-muted)]">Tailored for {leads.find(l => l.id === expandedLead)?.name}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setGeneratingScript(null)}
+                className="p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-8">
+              <div className="prose prose-invert max-w-none">
+                <div className="whitespace-pre-wrap text-lg leading-relaxed text-[var(--t-text-secondary)]" style={{ fontFamily: 'var(--t-font-mono, monospace)' }}>
+                  {generatingScript}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-[var(--t-surface-dim)] border-t flex gap-3" style={{ borderColor: 'var(--t-border)' }}>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(generatingScript);
+                  alert('Script copied to clipboard!');
+                }}
+                className="flex-1 py-3 rounded-xl font-bold bg-[var(--t-surface-subtle)] text-white hover:bg-[var(--t-surface-hover)] transition-all"
+              >
+                Copy to Clipboard
+              </button>
+              <button
+                onClick={() => setGeneratingScript(null)}
+                className="flex-1 py-3 rounded-xl font-bold text-white transition-all hover:scale-[1.02]"
+                style={{ background: 'var(--t-primary)' }}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
