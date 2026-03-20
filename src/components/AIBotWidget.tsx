@@ -56,6 +56,14 @@ export function AIBotWidget() {
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // SMS Session State — collects target + message without repeat-asking
+  const [smsSession, setSmsSession] = useState<{
+    active: boolean;
+    target?: string;
+    message?: string;
+    waitingFor: 'target' | 'message' | null;
+  }>({ active: false, waitingFor: null });
+
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -234,20 +242,69 @@ export function AIBotWidget() {
     e?.preventDefault();
     if (!prompt.trim() || loading || !hasKey) return;
 
+    const userText = prompt.trim();
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
-      content: prompt.trim(),
+      content: userText,
       timestamp: new Date().toISOString()
     };
-
     setMessages(prev => [...prev, userMsg]);
-    const textToSubmit = prompt;
     setPrompt('');
-    setLoading(true); // Prevent duplicates
+    setLoading(true);
 
     try {
-      const response = await processPrompt(textToSubmit, { 
+      // ── SMS Session: we're waiting for target or message ──────────────────
+      if (smsSession.active && smsSession.waitingFor) {
+        let updatedSession = { ...smsSession };
+
+        if (smsSession.waitingFor === 'target') {
+          updatedSession.target = userText;
+          updatedSession.waitingFor = updatedSession.message ? null : 'message';
+        } else if (smsSession.waitingFor === 'message') {
+          updatedSession.message = userText;
+          updatedSession.waitingFor = null;
+        }
+
+        // Both collected — ready to confirm
+        if (updatedSession.target && updatedSession.message) {
+          setSmsSession({ active: false, waitingFor: null });
+          const confirmText = `Send this SMS?\n\nTo: ${updatedSession.target}\nMessage: "${updatedSession.message}"`;
+          setConfirmModal({
+            isOpen: true,
+            title: 'Confirm SMS',
+            message: confirmText,
+            onConfirm: () => handleExecuteAction('send_sms', {
+              target: updatedSession.target,
+              message: updatedSession.message
+            })
+          });
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: confirmText,
+            timestamp: new Date().toISOString(),
+            intent: 'confirm_action'
+          }]);
+        } else {
+          // Still need more info
+          setSmsSession(updatedSession);
+          const nextAsk = updatedSession.waitingFor === 'message'
+            ? `Got it! What message should I send to ${updatedSession.target}?`
+            : 'What phone number or lead name should I text?';
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: nextAsk,
+            timestamp: new Date().toISOString()
+          }]);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // ── Normal AI processing ──────────────────────────────────────────────
+      const response = await processPrompt(userText, { 
         page: location.pathname,
         currentTime: new Date().toISOString()
       });
@@ -260,23 +317,48 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString()
         }]);
         setTimeout(() => navigate('/settings/ai'), 1500);
-      } else if ((response.intent === 'confirm_action' || response.intent === 'send_sms') && response.data) {
-        // Trigger modal for confirm_action or direct send_sms
-        setConfirmModal({
-          isOpen: true,
-          title: response.intent === 'send_sms' ? 'Confirm Sending SMS' : 'Confirm AI Action',
-          message: response.response,
-          onConfirm: () => handleExecuteAction(response.data.intent || response.intent, response.data)
-        });
-        // Still add the message so user sees the context
-        setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
-          role: 'ai',
-          content: response.response,
-          timestamp: new Date().toISOString(),
-          intent: response.intent,
-          data: response.data
-        }]);
+
+      } else if (response.intent === 'send_sms' || response.intent === 'confirm_action') {
+        const d = response.data || {};
+        const hasTarget = !!(d.target || d.leadId || d.phone);
+        const hasMessage = !!d.message;
+
+        if (hasTarget && hasMessage) {
+          // All info present — show confirm modal immediately
+          setConfirmModal({
+            isOpen: true,
+            title: 'Confirm SMS',
+            message: response.response,
+            onConfirm: () => handleExecuteAction(d.intent || response.intent, d)
+          });
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: response.response,
+            timestamp: new Date().toISOString(),
+            intent: response.intent,
+            data: d
+          }]);
+        } else {
+          // Missing info — start SMS session to collect it conversationally
+          const newSession = {
+            active: true,
+            target: hasTarget ? (d.target || d.leadId || d.phone) : undefined,
+            message: hasMessage ? d.message : undefined,
+            waitingFor: hasTarget ? 'message' as const : 'target' as const
+          };
+          setSmsSession(newSession);
+
+          // Show the AI's message (which should be asking for the missing piece)
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: response.response,
+            timestamp: new Date().toISOString(),
+            intent: 'ask_question'
+          }]);
+        }
+
       } else {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
