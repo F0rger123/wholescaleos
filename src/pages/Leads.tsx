@@ -133,7 +133,13 @@ export default function Leads() {
   const fmt$ = (v: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(v || 0);
   const fmtDate = (d: string) => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return 'N/A'; } };
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-  const scoreBadge = (s: number) => s >= 70 ? 'bg-[var(--t-success)]/20 text-[var(--t-success)] border-[var(--t-success)]/40' : s >= 40 ? 'bg-[var(--t-warning)]/20 text-[var(--t-warning)] border-[var(--t-warning)]/40' : 'bg-[var(--t-error)]/20 text-[var(--t-error)] border-[var(--t-error)]/40';
+  const scoreBadge = (s: number) => {
+    if (s >= 80) return { className: 'border-green-500/40', style: { backgroundColor: 'rgba(0, 128, 0, 0.2)', color: '#00FF00' } };
+    if (s >= 60) return { className: 'border-yellow-500/40', style: { backgroundColor: 'rgba(154, 205, 50, 0.2)', color: '#ADFF2F' } };
+    if (s >= 40) return { className: 'border-orange-500/40', style: { backgroundColor: 'rgba(255, 165, 0, 0.2)', color: '#FFA500' } };
+    if (s >= 20) return { className: 'border-orange-600/40', style: { backgroundColor: 'rgba(255, 69, 0, 0.2)', color: '#FF4500' } };
+    return { className: 'border-red-900/40', style: { backgroundColor: 'rgba(139, 0, 0, 0.2)', color: '#FF0000' } };
+  };
   const priBadge = (l: string) => l === 'high' ? { c: 'bg-[var(--t-error)]/20 text-[var(--t-error)]', l: 'High' } : l === 'medium' ? { c: 'bg-[var(--t-warning)]/20 text-[var(--t-warning)]', l: 'Medium' } : { c: 'bg-[var(--t-success)]/20 text-[var(--t-success)]', l: 'Low' };
 
   const filtered = leads
@@ -634,7 +640,10 @@ export default function Leads() {
                       <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>
                         {STATUS_LABELS[lead.status] || lead.status}
                       </span>
-                      <span className={`px-2 py-0.5 text-xs rounded-full border ${scoreBadge(ds)}`}>⚡ {ds}</span>
+                      {(() => {
+                        const sb = scoreBadge(ds);
+                        return <span className={`px-2 py-0.5 text-xs rounded-full border ${sb.className}`} style={sb.style}>⚡ {ds}</span>;
+                      })()}
                       <span className={`px-2 py-0.5 text-xs rounded-full ${pb.c}`}>🧠 {pb.l}</span>
                       {lead.importSource && (
                         <span className={`px-2 py-0.5 text-xs rounded-full ${SOURCE_BADGE[lead.importSource] || SOURCE_BADGE['manual']}`}>
@@ -1201,7 +1210,7 @@ export default function Leads() {
                     type="email" 
                     value={formData.email} 
                     onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                   />
                 </div>
                 <div>
@@ -1210,7 +1219,7 @@ export default function Leads() {
                     type="tel" 
                     value={formData.phone} 
                     onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                   />
                 </div>
                 <div>
@@ -1218,7 +1227,7 @@ export default function Leads() {
                   <select 
                     value={formData.status} 
                     onChange={e => setFormData({ ...formData, status: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
                   >
                     <option value="new">New</option>
                     <option value="contacted">Contacted</option>
@@ -1234,6 +1243,7 @@ export default function Leads() {
                     value={formData.assignedTo} 
                     onChange={e => setFormData({ ...formData, assignedTo: e.target.value })} 
                     className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white"
+                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="">Unassigned</option>
                     {team.map(m => (
@@ -1246,7 +1256,7 @@ export default function Leads() {
                   <input 
                     value={formData.propertyAddress} 
                     onChange={e => setFormData({ ...formData, propertyAddress: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                   />
                 </div>
                 <div>
@@ -1254,7 +1264,7 @@ export default function Leads() {
                   <select 
                     value={formData.propertyType} 
                     onChange={e => setFormData({ ...formData, propertyType: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
                   >
                     <option value="single-family">Single Family</option>
                     <option value="multi-family">Multi Family</option>
@@ -1269,7 +1279,7 @@ export default function Leads() {
                     type="number" 
                     value={formData.estimatedValue} 
                     onChange={e => setFormData({ ...formData, estimatedValue: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                   />
                 </div>
                 <div>
@@ -1278,7 +1288,7 @@ export default function Leads() {
                     type="number" 
                     value={formData.offerAmount} 
                     onChange={e => setFormData({ ...formData, offerAmount: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -1287,13 +1297,13 @@ export default function Leads() {
                     value={formData.notes} 
                     onChange={e => setFormData({ ...formData, notes: e.target.value })} 
                     rows={3} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white resize-none" 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)] resize-none" 
                   />
                 </div>
               </div>
               
               <div className="border-t border-[var(--t-border)] pt-4">
-                <h3 className="text-white font-medium mb-3 flex items-center gap-2">
+                <h3 className="text-[var(--t-text)] font-medium mb-3 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4" /> Deal Score Parameters
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1305,7 +1315,7 @@ export default function Leads() {
                       max="100" 
                       value={formData.probability} 
                       onChange={e => setFormData({ ...formData, probability: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                     />
                   </div>
                   <div>
@@ -1316,7 +1326,7 @@ export default function Leads() {
                       max="5" 
                       value={formData.engagementLevel} 
                       onChange={e => setFormData({ ...formData, engagementLevel: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                     />
                   </div>
                   <div>
@@ -1327,7 +1337,7 @@ export default function Leads() {
                       max="5" 
                       value={formData.timelineUrgency} 
                       onChange={e => setFormData({ ...formData, timelineUrgency: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                     />
                   </div>
                   <div>
@@ -1338,7 +1348,7 @@ export default function Leads() {
                       max="5" 
                       value={formData.competitionLevel} 
                       onChange={e => setFormData({ ...formData, competitionLevel: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
+                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
                     />
                   </div>
                 </div>
@@ -1352,8 +1362,9 @@ export default function Leads() {
                       timelineUrgency: parseInt(formData.timelineUrgency) || 3,
                       competitionLevel: parseInt(formData.competitionLevel) || 3
                     } as any);
+                    const sb = scoreBadge(previewScore);
                     return (
-                      <span className={`px-3 py-1 rounded-full text-sm font-bold border ${scoreBadge(previewScore)}`}>
+                      <span className={`px-3 py-1 rounded-full text-sm font-bold border ${sb.className}`} style={sb.style}>
                         ⚡ {previewScore}
                       </span>
                     );

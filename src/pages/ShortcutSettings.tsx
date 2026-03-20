@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Keyboard, Save, RotateCcw, HelpCircle, Loader2, Check, AlertCircle, Info 
+  Keyboard, Save, RotateCcw, HelpCircle, Loader2, Check, AlertCircle, Info, Plus, Trash2, X
 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
@@ -10,19 +10,20 @@ interface Shortcut {
   label: string;
   keys: string;
   description: string;
+  enabled?: boolean;
 }
 
 const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { id: 'new_lead', label: 'New Lead', keys: 'n', description: 'Open the New Lead modal' },
-  { id: 'new_task', label: 'New Task', keys: 't', description: 'Open the New Task modal' },
-  { id: 'open_ai', label: 'Open AI Assistant', keys: 'j', description: 'Toggle the AI Bot bubble' },
-  { id: 'send_sms', label: 'Send SMS', keys: 's', description: 'Quick jump to SMS inbox' },
-  { id: 'view_calendar', label: 'View Calendar', keys: 'c', description: 'Go to Calendar page' },
-  { id: 'save', label: 'Save', keys: 'mod+s', description: 'Universal save action' },
-  { id: 'clear_chat', label: 'Clear Chat', keys: 'mod+l', description: 'Clear active chat history' },
-  { id: 'toggle_dark', label: 'Toggle Dark Mode', keys: 'd', description: 'Switch theme between light/dark' },
-  { id: 'settings', label: 'Open Settings', keys: ',', description: 'Go to Settings page' },
-  { id: 'dashboard', label: 'View Dashboard', keys: 'h', description: 'Back to home dashboard' },
+  { id: 'new_lead', label: 'New Lead', keys: 'n', description: 'Open the New Lead modal', enabled: true },
+  { id: 'new_task', label: 'New Task', keys: 't', description: 'Open the New Task modal', enabled: true },
+  { id: 'open_ai', label: 'Open AI Assistant', keys: 'j', description: 'Toggle the AI Bot bubble', enabled: true },
+  { id: 'send_sms', label: 'Send SMS', keys: 's', description: 'Quick jump to SMS inbox', enabled: true },
+  { id: 'view_calendar', label: 'View Calendar', keys: 'c', description: 'Go to Calendar page', enabled: true },
+  { id: 'save', label: 'Save', keys: 'mod+s', description: 'Universal save action', enabled: true },
+  { id: 'clear_chat', label: 'Clear Chat', keys: 'mod+l', description: 'Clear active chat history', enabled: true },
+  { id: 'toggle_dark', label: 'Toggle Dark Mode', keys: 'd', description: 'Switch theme between light/dark', enabled: true },
+  { id: 'settings', label: 'Open Settings', keys: ',', description: 'Go to Settings page', enabled: true },
+  { id: 'dashboard', label: 'View Dashboard', keys: 'h', description: 'Back to home dashboard', enabled: true },
 ];
 
 export function ShortcutSettings() {
@@ -30,6 +31,8 @@ export function ShortcutSettings() {
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newShortcut, setNewShortcut] = useState({ label: '', keys: '', description: '' });
   const { currentUser, shortcutsEnabled, setShortcutsEnabled } = useStore();
 
   useEffect(() => {
@@ -44,12 +47,16 @@ export function ShortcutSettings() {
           .maybeSingle();
         
         if (data?.settings?.shortcuts) {
-          // Merge user shortcuts with defaults to ensure new actions are always visible
+          // Merge user shortcuts with defaults and include custom ones
+          const userShortcuts = data.settings.shortcuts;
           const merged = DEFAULT_SHORTCUTS.map(def => {
-            const userSet = data.settings.shortcuts.find((s: any) => s.id === def.id);
-            return userSet ? { ...def, keys: userSet.keys } : def;
+            const userSet = userShortcuts.find((s: any) => s.id === def.id);
+            return userSet ? { ...def, ...userSet } : def;
           });
-          setShortcuts(merged);
+          
+          // Add custom shortcuts (those not in DEFAULT_SHORTCUTS)
+          const custom = userShortcuts.filter((us: any) => !DEFAULT_SHORTCUTS.some(ds => ds.id === us.id));
+          setShortcuts([...merged, ...custom]);
         }
       } else {
         const local = localStorage.getItem('user_shortcuts');
@@ -89,6 +96,24 @@ export function ShortcutSettings() {
       }
     };
     window.addEventListener('keydown', handler);
+  };
+
+  const handleToggle = (id: string) => {
+    setShortcuts(prev => prev.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
+  };
+
+  const handleCreate = () => {
+    if (!newShortcut.label || !newShortcut.keys) return;
+    const s: Shortcut = {
+      id: `custom_${Date.now()}`,
+      label: newShortcut.label,
+      keys: newShortcut.keys,
+      description: newShortcut.description || 'Custom user shortcut',
+      enabled: true
+    };
+    setShortcuts(prev => [...prev, s]);
+    setShowCreateModal(false);
+    setNewShortcut({ label: '', keys: '', description: '' });
   };
 
   const handleReset = () => {
@@ -148,6 +173,14 @@ export function ShortcutSettings() {
           >
             <RotateCcw size={14} />
             Reset to Defaults
+          </button>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="px-4 py-2 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg"
+            style={{ background: 'var(--t-secondary)' }}
+          >
+            <Plus size={14} />
+            Create New
           </button>
           <button
             onClick={handleSave}
@@ -213,39 +246,131 @@ export function ShortcutSettings() {
                 <p className="text-xs line-clamp-1" style={{ color: 'var(--t-text-muted)' }}>{s.description}</p>
               </div>
 
-              <button
-                onClick={() => handleRecord(s.id)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all"
-                style={recordingId === s.id ? {
-                  backgroundColor: 'var(--t-primary-dim)',
-                  borderColor: 'var(--t-primary)',
-                  boxShadow: '0 0 0 2px var(--t-primary-dim)'
-                } : {
-                  backgroundColor: 'var(--t-surface)',
-                  borderColor: 'var(--t-border)'
-                }}
-              >
-                {recordingId === s.id ? (
-                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--t-primary)' }}>Press Keys...</span>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    {s.keys.split('+').map((k, i) => (
-                      <React.Fragment key={i}>
-                        <kbd className="min-w-[20px] h-6 px-1.5 flex items-center justify-center rounded text-[10px] font-mono font-bold shadow-sm"
-                          style={{ backgroundColor: 'var(--t-surface-dim)', border: '1px solid var(--t-border)', color: 'var(--t-text-muted)' }}
-                        >
-                          {k === 'mod' ? (navigator.platform.includes('Mac') ? '⌘' : 'Ctrl') : k.toUpperCase()}
-                        </kbd>
-                        {i < s.keys.split('+').length - 1 && <span className="text-[10px]" style={{ color: 'rgba(var(--t-text-rgb), 0.3)' }}>+</span>}
-                      </React.Fragment>
-                    ))}
-                  </div>
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-8 h-4 rounded-full relative transition-all duration-300 cursor-pointer ${s.enabled !== false ? 'bg-[var(--t-primary)]' : 'bg-slate-600'}`}
+                  onClick={(e) => { e.stopPropagation(); handleToggle(s.id); }}
+                >
+                  <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all duration-300 ${s.enabled !== false ? 'left-4.5' : 'left-0.5'}`} />
+                </div>
+
+                <button
+                  onClick={() => handleRecord(s.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all"
+                  style={recordingId === s.id ? {
+                    backgroundColor: 'var(--t-primary-dim)',
+                    borderColor: 'var(--t-primary)',
+                    boxShadow: '0 0 0 2px var(--t-primary-dim)'
+                  } : {
+                    backgroundColor: 'var(--t-surface)',
+                    borderColor: 'var(--t-border)',
+                    opacity: s.enabled === false ? 0.5 : 1
+                  }}
+                  disabled={s.enabled === false}
+                >
+                  {recordingId === s.id ? (
+                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--t-primary)' }}>Press Keys...</span>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      {s.keys.split('+').map((k, i) => (
+                        <React.Fragment key={i}>
+                          <kbd className="min-w-[20px] h-6 px-1.5 flex items-center justify-center rounded text-[10px] font-mono font-bold shadow-sm"
+                            style={{ backgroundColor: 'var(--t-surface-dim)', border: '1px solid var(--t-border)', color: 'var(--t-text-muted)' }}
+                          >
+                            {k === 'mod' ? (navigator.platform.includes('Mac') ? '⌘' : 'Ctrl') : k.toUpperCase()}
+                          </kbd>
+                          {i < s.keys.split('+').length - 1 && <span className="text-[10px]" style={{ color: 'rgba(var(--t-text-rgb), 0.3)' }}>+</span>}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+                </button>
+                {s.id.startsWith('custom_') && (
+                  <button 
+                    onClick={() => setShortcuts(prev => prev.filter(x => x.id !== s.id))}
+                    className="p-1.5 text-slate-500 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 )}
-              </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+            <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
+              <h3 className="text-white font-bold flex items-center gap-2">
+                <Plus size={18} className="text-[var(--t-primary)]" />
+                New Shortcut
+              </h3>
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors text-[var(--t-text-muted)]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-1 ml-1">Label</label>
+                <input 
+                  type="text" 
+                  value={newShortcut.label}
+                  onChange={e => setNewShortcut({ ...newShortcut, label: e.target.value })}
+                  placeholder="e.g. Open Maps"
+                  className="w-full px-3 py-2 rounded-xl border outline-none text-sm transition-all"
+                  style={{ background: 'var(--t-surface-dim)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-1 ml-1">Key Combination</label>
+                <input 
+                  type="text" 
+                  value={newShortcut.keys}
+                  onChange={e => setNewShortcut({ ...newShortcut, keys: e.target.value })}
+                  placeholder="e.g. m or mod+m"
+                  className="w-full px-3 py-2 rounded-xl border outline-none text-sm transition-all font-mono"
+                  style={{ background: 'var(--t-surface-dim)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                />
+                <p className="text-[10px] mt-1 text-[var(--t-text-muted)]">Use '+' to combine keys (e.g. mod+shift+k)</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-1 ml-1">Description</label>
+                <input 
+                  type="text" 
+                  value={newShortcut.description}
+                  onChange={e => setNewShortcut({ ...newShortcut, description: e.target.value })}
+                  placeholder="What does this do?"
+                  className="w-full px-3 py-2 rounded-xl border outline-none text-sm transition-all"
+                  style={{ background: 'var(--t-surface-dim)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                />
+              </div>
+            </div>
+            <div className="p-4 bg-[var(--t-surface-dim)] border-t flex gap-3" style={{ borderColor: 'var(--t-border)' }}>
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="flex-1 py-2 text-xs font-bold uppercase rounded-xl border transition-all"
+                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreate}
+                disabled={!newShortcut.label || !newShortcut.keys}
+                className="flex-1 py-2 text-white text-xs font-bold uppercase rounded-xl transition-all disabled:opacity-50"
+                style={{ background: 'var(--t-primary)' }}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 rounded-xl border" style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}>
         <div className="flex gap-3">

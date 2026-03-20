@@ -641,7 +641,9 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     const contentType = payload.html ? 'text/html' : 'text/plain';
     const bodyContent = payload.html || payload.text || '';
 
+    const fromHeader = payload.from || store.currentUser?.email || 'me';
     const strMessage = [
+      `From: ${fromHeader}`,
       `To: ${payload.to}`,
       `Subject: ${payload.subject}`,
       `Content-Type: ${contentType}; charset="UTF-8"`,

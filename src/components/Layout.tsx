@@ -13,7 +13,8 @@ import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
-  Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon
+  Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
+  Layout as LayoutIcon
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 
@@ -24,9 +25,9 @@ const navSections: Record<string, { to: string; label: string; icon: any }[]> = 
     { to: '/leads', label: 'Leads', icon: Users },
     { to: '/tasks', label: 'Tasks', icon: ListTodo },
     { to: '/calendar', label: 'Calendar', icon: Calendar },
-    { to: '/notifications', label: 'Notifications', icon: Bell },
   ],
   Messages: [
+    { to: '/notifications', label: 'Notification Inbox', icon: Bell },
     { to: '/sms', label: 'SMS', icon: Smartphone },
     { to: '/chat', label: 'Team Chat', icon: MessageSquare },
     { to: '/ai-test', label: 'AI Bot', icon: Bot },
@@ -79,6 +80,8 @@ export function Layout() {
   const { quickNotes, setQuickNotes } = useStore();
 
   const [userShortcuts, setUserShortcuts] = useState<any[]>([]);
+  const [aiDocked, setAiDocked] = useState(() => localStorage.getItem('ai_widget_docked') === 'true');
+  const [notesDocked, setNotesDocked] = useState(() => localStorage.getItem('quick_notes_docked') === 'true');
   const navigate = useNavigate();
 
   // Load Preferences
@@ -188,15 +191,30 @@ export function Layout() {
         }
       }
 
-      // Global Quick Notes Toggle (Ctrl+Shift+N)
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         setShowNotes(prev => !prev);
       }
     };
 
+    const handleAIDock = () => setAiDocked(true);
+    const handleAIUndock = () => setAiDocked(false);
+    const handleNotesDock = () => setNotesDocked(true);
+    const handleNotesUndock = () => setNotesDocked(false);
+
+    window.addEventListener('dock-ai-widget', handleAIDock);
+    window.addEventListener('undock-ai-widget', handleAIUndock);
+    window.addEventListener('dock-notes', handleNotesDock);
+    window.addEventListener('undock-notes', handleNotesUndock);
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('dock-ai-widget', handleAIDock);
+      window.removeEventListener('undock-ai-widget', handleAIUndock);
+      window.removeEventListener('dock-notes', handleNotesDock);
+      window.removeEventListener('undock-notes', handleNotesUndock);
+    };
   }, [userShortcuts, navigate, shortcutsEnabled]);
 
   const toggleSection = (section: string) => {
@@ -557,16 +575,35 @@ export function Layout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {/* Bookshelf Docked Button (Relocated) */}
-            <button
-               onClick={() => window.dispatchEvent(new CustomEvent('undock-ai-widget'))}
-               className="p-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
-               style={{ color: 'var(--t-primary)' }}
-               title="Undock AI Widget"
-            >
-              <BookshelfIcon size={20} />
-            </button>
-            <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
+            {/* Bookshelf Docked Buttons */}
+            <div className="flex items-center gap-1">
+              {aiDocked && (
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('undock-ai-widget'))}
+                  className="p-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
+                  style={{ color: 'var(--t-primary)' }}
+                  title="Undock AI Widget"
+                >
+                  <BookshelfIcon size={20} />
+                </button>
+              )}
+              {notesDocked && (
+                <button
+                  onClick={() => {
+                    setNotesDocked(false);
+                    localStorage.setItem('quick_notes_docked', 'false');
+                    setShowNotes(true);
+                    window.dispatchEvent(new CustomEvent('undock-notes'));
+                  }}
+                  className="p-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
+                  style={{ color: 'var(--t-warning)' }}
+                  title="Undock Quick Notes"
+                >
+                  <StickyNote size={20} />
+                </button>
+              )}
+            </div>
+            {(aiDocked || notesDocked) && <div className="w-px h-6 mx-1" style={{ background: 'var(--t-border)' }} />}
             <ThemeSwitcher />
             <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
             <NotificationPanel />
@@ -589,7 +626,7 @@ export function Layout() {
       <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
 
       {/* Global Quick Notes Floating Notepad */}
-      {showQuickNotes && (
+      {showQuickNotes && !notesDocked && (
         <div className={`fixed bottom-6 right-6 z-[8000] flex flex-col items-end gap-3 transition-all duration-300 ${showNotes ? 'w-80 md:w-96' : 'w-12 h-12'}`}>
           {!showNotes ? (
             <button
@@ -608,6 +645,17 @@ export function Layout() {
                   <span className="text-sm font-semibold text-white">Quick Notes</span>
                 </div>
                 <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => {
+                      setNotesDocked(true);
+                      localStorage.setItem('quick_notes_docked', 'true');
+                      window.dispatchEvent(new CustomEvent('dock-notes'));
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors group"
+                    title="Dock to side"
+                  >
+                    <LayoutIcon size={14} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-warning)]" />
+                  </button>
                   <button 
                     onClick={() => setIsNotesExpanded(!isNotesExpanded)}
                     className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors"

@@ -399,14 +399,14 @@ export function Dashboard() {
                   <div className="flex-1 min-w-0 relative">
                     <div 
                       className="relative"
-                      onMouseEnter={() => setHoveredLeadId(lead.id)}
+                      onMouseEnter={() => setHoveredLeadId(lead.id + '-top')}
                       onMouseLeave={() => setHoveredLeadId(null)}
                     >
                       <p className="text-sm font-medium text-[var(--t-on-surface)] truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
                         {lead.name}
                       </p>
-                      {hoveredLeadId === lead.id && (
-                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000]">
+                      {hoveredLeadId === lead.id + '-top' && (
+                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000] pointer-events-none">
                           <LeadHoverCard lead={lead} />
                         </div>
                       )}
@@ -447,14 +447,14 @@ export function Dashboard() {
                   <div className="flex-1 min-w-0 relative">
                     <div 
                       className="relative"
-                      onMouseEnter={() => setHoveredLeadId(lead.id)}
+                      onMouseEnter={() => setHoveredLeadId(lead.id + '-recent')}
                       onMouseLeave={() => setHoveredLeadId(null)}
                     >
                       <p className="text-sm text-[var(--t-on-surface)] font-medium truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
                         {lead.name}
                       </p>
-                      {hoveredLeadId === lead.id && (
-                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000]">
+                      {hoveredLeadId === lead.id + '-recent' && (
+                        <div className="absolute left-0 top-full mt-2 w-max shadow-2xl z-[3000] pointer-events-none">
                           <LeadHoverCard lead={lead} />
                         </div>
                       )}

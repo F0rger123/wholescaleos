@@ -41,7 +41,9 @@ export function AIBotWidget() {
   // const [position, setPosition] = useState({ x: 20, y: 20 }); // Bottom-right offsets
   
   const { currentUser, showFloatingAIWidget } = useStore();
-  const [isDocked, setIsDocked] = useState(false);
+  const [isDocked, setIsDocked] = useState(() => {
+    return localStorage.getItem('ai_widget_docked') === 'true';
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -144,6 +146,12 @@ export function AIBotWidget() {
     loadPrefs();
 
     window.addEventListener('ai-settings-updated', loadPrefs);
+    
+    // Sync initial docked state
+    if (isDocked) {
+      window.dispatchEvent(new CustomEvent('dock-ai-widget'));
+    }
+
     return () => window.removeEventListener('ai-settings-updated', loadPrefs);
   }, [currentUser?.id]);
 
@@ -153,18 +161,26 @@ export function AIBotWidget() {
     const handleClear = () => setMessages([]);
     const handleUndock = () => {
       setIsDocked(false);
+      localStorage.setItem('ai_widget_docked', 'false');
       setIsOpen(true);
       setIsMinimized(false);
+    };
+    
+    const handleDock = () => {
+      setIsDocked(true);
+      localStorage.setItem('ai_widget_docked', 'true');
     };
     
     window.addEventListener('toggle-ai-widget', handleToggle);
     window.addEventListener('clear-ai-chat', handleClear);
     window.addEventListener('undock-ai-widget', handleUndock);
+    window.addEventListener('dock-ai-widget', handleDock);
     
     return () => {
       window.removeEventListener('toggle-ai-widget', handleToggle);
       window.removeEventListener('clear-ai-chat', handleClear);
       window.removeEventListener('undock-ai-widget', handleUndock);
+      window.removeEventListener('dock-ai-widget', handleDock);
     };
   }, []);
 
@@ -238,13 +254,13 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString()
         }]);
         setTimeout(() => navigate('/settings/ai'), 1500);
-      } else if (response.intent === 'confirm_action' && response.data) {
-        // Trigger modal immediately for confirm_action instead of inline
+      } else if ((response.intent === 'confirm_action' || response.intent === 'send_sms') && response.data) {
+        // Trigger modal for confirm_action or direct send_sms
         setConfirmModal({
           isOpen: true,
-          title: 'Confirm AI Action',
+          title: response.intent === 'send_sms' ? 'Confirm Sending SMS' : 'Confirm AI Action',
           message: response.response,
-          onConfirm: () => handleExecuteAction(response.data.intent || 'send_sms', response.data)
+          onConfirm: () => handleExecuteAction(response.data.intent || response.intent, response.data)
         });
         // Still add the message so user sees the context
         setMessages(prev => [...prev, {
@@ -340,7 +356,7 @@ export function AIBotWidget() {
           >
             Configure Now
           </button>
-          <button onClick={() => setIsOpen(false)} className="absolute top-2 right-2 p-1 text-[var(--t-text-muted)]"><X size={16}/></button>
+
         </div>
       </div>
     );
@@ -386,7 +402,11 @@ export function AIBotWidget() {
             </div>
             <div className="flex items-center gap-1">
               <button 
-                onClick={() => setIsDocked(true)}
+                onClick={() => {
+                  setIsDocked(true);
+                  localStorage.setItem('ai_widget_docked', 'true');
+                  window.dispatchEvent(new CustomEvent('dock-ai-widget'));
+                }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
                 title="Dock to side"
               >

@@ -492,9 +492,41 @@ export function calculateDealScore(lead: Lead): number {
 }
 
 export function getScoreColor(score: number) {
-  if (score >= 70) return { bg: 'color-mix(in srgb, var(--t-success) 15%, transparent)', text: 'var(--t-success)', ring: 'box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-success) 40%, transparent)', bar: 'var(--t-success)', label: 'Hot' };
-  if (score >= 40) return { bg: 'color-mix(in srgb, var(--t-warning) 15%, transparent)', text: 'var(--t-warning)', ring: 'box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-warning) 40%, transparent)', bar: 'var(--t-warning)', label: 'Warm' };
-  return { bg: 'color-mix(in srgb, var(--t-error) 15%, transparent)', text: 'var(--t-error)', ring: 'box-shadow: 0 0 0 3px color-mix(in srgb, var(--t-error) 40%, transparent)', bar: 'var(--t-error)', label: 'Cold' };
+  if (score >= 80) return { 
+    bg: 'rgba(22, 163, 74, 0.15)', 
+    text: '#16A34A', 
+    ring: 'box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.4)', 
+    bar: '#16A34A', 
+    label: 'Elite' 
+  };
+  if (score >= 60) return { 
+    bg: 'rgba(132, 204, 22, 0.15)', 
+    text: '#84CC16', 
+    ring: 'box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.4)', 
+    bar: '#84CC16', 
+    label: 'High' 
+  };
+  if (score >= 40) return { 
+    bg: 'rgba(245, 158, 11, 0.15)', 
+    text: '#F59E0B', 
+    ring: 'box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4)', 
+    bar: '#F59E0B', 
+    label: 'Warn' 
+  };
+  if (score >= 20) return { 
+    bg: 'rgba(234, 88, 12, 0.15)', 
+    text: '#EA580C', 
+    ring: 'box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.4)', 
+    bar: '#EA580C', 
+    label: 'Cold' 
+  };
+  return { 
+    bg: 'rgba(153, 27, 27, 0.15)', 
+    text: '#991B1B', 
+    ring: 'box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.4)', 
+    bar: '#991B1B', 
+    label: 'Dead' 
+  };
 }
 
 export function isPointInPolygon(point: [number, number], polygon: [number, number][]): boolean {
@@ -2853,7 +2885,13 @@ deleteChannel: (channelId) => {
   taskStreak: 0,
   lastLoginDate: new Date().toISOString(),
   longestStreak: 0,
-  memberStreaks: {},
+  memberStreaks: {
+    '1': { login: 5, task: 12 },
+    '2': { login: 3, task: 8 },
+    '3': { login: 0, task: 0 },
+    '4': { login: 12, task: 45 },
+    '5': { login: 1, task: 2 },
+  },
 
   incrementLoginStreak: () =>
     set((s) => {
