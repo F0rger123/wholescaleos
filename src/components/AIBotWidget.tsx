@@ -3,13 +3,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Bot, X, Send, 
   User, Key, Mic,
-  Layout as LayoutIcon
+  Layout as LayoutIcon, Loader2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
-import { processPrompt, hasUserApiKey, createTask, updateLeadStatusViaAI, createLeadViaAI, updateLeadViaAI, deleteLeadViaAI, sendSMSViaAI } from '../lib/gemini';
+import { processPrompt, hasUserApiKey, createTask, updateLeadStatusViaAI, createLeadViaAI, updateLeadViaAI, deleteLeadViaAI, sendSMSViaAI, generatePageInsights } from '../lib/gemini';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SaveLeadModal } from './SaveLeadModal';
+import { RateLimitModal } from './RateLimitModal';
 
 interface ChatMessage {
   id: string;
@@ -27,11 +28,15 @@ export function AIBotWidget() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
-  const [aiName, setAiName] = useState('AI Assistant');
+  const [aiName, setAiName] = useState('OS Bot');
+  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash-lite');
+  const [showRateLimitModal, setShowRateLimitModal] = useState(false);
+  const [insights, setInsights] = useState<string[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
   // const [isDragging, setIsDragging] = useState(false);
   // const [position, setPosition] = useState({ x: 20, y: 20 }); // Bottom-right offsets
   
-  const { currentUser, showFloatingAIWidget } = useStore();
+  const { currentUser, showFloatingAIWidget, incrementAiUsage } = useStore();
   const [isDocked, setIsDocked] = useState(() => {
     return localStorage.getItem('ai_widget_docked') === 'true';
   });
@@ -238,6 +243,24 @@ export function AIBotWidget() {
     }
   }, [messages, isOpen]);
 
+  // Proactive Insights based on page
+  useEffect(() => {
+    if (isOpen && !isMinimized && hasKey) {
+      const loadInsights = async () => {
+        setInsightsLoading(true);
+        try {
+          const res = await generatePageInsights(location.pathname);
+          setInsights(res);
+        } catch (err) {
+          console.error("Failed to load insights:", err);
+        } finally {
+          setInsightsLoading(false);
+        }
+      };
+      loadInsights();
+    }
+  }, [location.pathname, isOpen, hasKey]);
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!prompt.trim() || loading || !hasKey) return;
@@ -307,7 +330,22 @@ export function AIBotWidget() {
       const response = await processPrompt(userText, { 
         page: location.pathname,
         currentTime: new Date().toISOString()
-      });
+      }, currentModel);
+
+      if (response.intent === 'rate_limit') {
+        setShowRateLimitModal(true);
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: response.response,
+          timestamp: new Date().toISOString(),
+          intent: 'rate_limit'
+        }]);
+        setLoading(false);
+        return;
+      }
+
+      incrementAiUsage(currentModel);
 
       if (response.intent === 'redirect_setup') {
         setMessages(prev => [...prev, {
@@ -529,6 +567,26 @@ export function AIBotWidget() {
             className="flex-1 overflow-y-auto p-4 space-y-4"
             style={{ background: 'var(--t-background)' }}
           >
+            {/* Proactive Insights */}
+            {insights.length > 0 && (
+              <div className="bg-[var(--t-primary)]/5 border border-[var(--t-primary)]/10 rounded-2xl p-3 mb-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-primary)] flex items-center gap-1.5">
+                    <Bot size={12} /> Proactive Insights
+                  </span>
+                  {insightsLoading && <Loader2 size={10} className="animate-spin text-[var(--t-primary)]" />}
+                </div>
+                <div className="space-y-1.5">
+                  {insights.map((insight, i) => (
+                    <div key={i} className="flex gap-2 items-start text-[11px] text-[var(--t-text)] leading-snug">
+                      <div className="w-1 h-1 rounded-full bg-[var(--t-primary)] mt-1.5 shrink-0" />
+                      <p>{insight}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {messages.map((msg) => (
               <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" 
@@ -634,6 +692,18 @@ export function AIBotWidget() {
           </div>
         )}
       </button>
+
+      <RateLimitModal
+        isOpen={showRateLimitModal}
+        onClose={() => setShowRateLimitModal(false)}
+        currentModel={currentModel}
+        onSwitchModel={(modelId) => {
+          setCurrentModel(modelId);
+          setShowRateLimitModal(false);
+          localStorage.setItem('user_gemini_model', modelId);
+          window.dispatchEvent(new CustomEvent('ai-settings-updated'));
+        }}
+      />
 
       {/* Confirmation Modal */}
       <ConfirmModal

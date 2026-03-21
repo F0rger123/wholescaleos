@@ -481,13 +481,31 @@ export const AI_PRIORITY_COLORS: Record<AIPriorityLevel, { bg: string; text: str
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 export function calculateDealScore(lead: Lead): number {
-  const valueCap = 500000;
-  const valueScore = Math.min(lead.estimatedValue / valueCap, 1) * 100;
-  const probScore = lead.probability;
-  const engageScore = ((lead.engagementLevel - 1) / 4) * 100;
-  const urgencyScore = ((lead.timelineUrgency - 1) / 4) * 100;
-  const competitionScore = ((5 - lead.competitionLevel) / 4) * 100;
-  const raw = valueScore * 0.30 + probScore * 0.25 + engageScore * 0.20 + urgencyScore * 0.15 + competitionScore * 0.10;
+  // Value component: Logarithmic scaling for property value (more sensitive to lower values, capped at $1.5M)
+  const valueCap = 1500000;
+  const valueScore = Math.min(Math.log10(Math.max(1, lead.estimatedValue)) / Math.log10(valueCap), 1) * 100;
+  
+  // Probability component: Direct from lead data
+  const probScore = lead.probability || 40;
+  
+  // Engagement component: (Level 1-5)
+  const engageScore = ((lead.engagementLevel || 3) - 1) * 25;
+  
+  // Urgency component: (Level 1-5)
+  const urgencyScore = ((lead.timelineUrgency || 3) - 1) * 25;
+  
+  // Competition component: (Level 1-5, inverted as lower competition is better)
+  const competitionScore = (5 - (lead.competitionLevel || 3)) * 25;
+
+  // Weighted Average
+  const raw = (
+    valueScore * 0.35 + 
+    probScore * 0.25 + 
+    engageScore * 0.15 + 
+    urgencyScore * 0.15 + 
+    competitionScore * 0.10
+  );
+
   return Math.round(Math.min(Math.max(raw, 0), 100));
 }
 
@@ -1473,6 +1491,14 @@ interface AppState {
   setQuickNotes: (v: string) => void;
   showQuickNotes: boolean;
   setShowQuickNotes: (v: boolean) => void;
+
+  // Search
+  searchResults: {
+    leads: Lead[];
+    tasks: Task[];
+    sms: SMSMessage[];
+  };
+  performSearch: (query: string) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1537,7 +1563,7 @@ export const useStore = create<AppState>((set, get) => ({
   })(),
 
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks_quick_notes') || '' : '',
-  showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('show_quick_notes') !== 'false' : true,
+  showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('show_quick_notes') === 'true' : false,
 
   setShowQuickNotes: (v: boolean) => {
     if (typeof window !== 'undefined') {
@@ -1632,6 +1658,37 @@ export const useStore = create<AppState>((set, get) => ({
   setTeamId: (id) => set({ teamId: id }),
   setDataLoaded: (loaded) => set({ dataLoaded: loaded }),
   setBulkData: (data) => set(data as Partial<AppState>),
+
+  // Search
+  searchResults: { leads: [], tasks: [], sms: [] },
+  performSearch: (query) => {
+    const q = query.toLowerCase().trim();
+    if (!q) {
+      set({ searchResults: { leads: [], tasks: [], sms: [] } });
+      return;
+    }
+
+    const { leads, tasks, smsMessages } = get();
+    
+    set({ 
+      searchResults: {
+        leads: leads.filter(l => 
+          (l.name && l.name.toLowerCase().includes(q)) ||
+          (l.email && l.email.toLowerCase().includes(q)) ||
+          (l.phone && l.phone.includes(q)) ||
+          (l.propertyAddress && l.propertyAddress.toLowerCase().includes(q))
+        ),
+        tasks: tasks.filter(t => 
+          (t.title && t.title.toLowerCase().includes(q)) ||
+          (t.description && t.description.toLowerCase().includes(q))
+        ),
+        sms: smsMessages.filter(m => 
+          (m.content && m.content.toLowerCase().includes(q)) ||
+          (m.phone_number && m.phone_number.includes(q))
+        )
+      }
+    });
+  },
 
   // ── Leads (empty — loaded from Supabase) ──────────────────
   leads: [],
@@ -2980,7 +3037,7 @@ deleteChannel: (channelId) => {
 
   incrementAiUsage: (model) => {
     set((s) => {
-      const today = new Date().toLocaleDateString();
+      const today = new Date().toISOString().split('T')[0];
       const current = s.aiUsage[model] || { used: 0, limit: model.includes('pro') ? 10 : 20, lastReset: today };
       
       const updated = {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
@@ -14,7 +14,7 @@ import {
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
-  Layout as LayoutIcon
+  Layout as LayoutIcon, CheckCircle
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 
@@ -53,7 +53,8 @@ export function Layout() {
     teamConfig, currentUser,
     shortcutsEnabled,
     currentTheme, setTheme,
-    showQuickNotes
+    showQuickNotes,
+    searchResults, performSearch
   } = useStore();
 
   const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
@@ -84,6 +85,11 @@ export function Layout() {
   const [aiDocked, setAiDocked] = useState(() => localStorage.getItem('ai_widget_docked') === 'true');
   const [notesDocked, setNotesDocked] = useState(() => localStorage.getItem('quick_notes_docked') === 'true');
   const navigate = useNavigate();
+
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Load Preferences
   useEffect(() => {
@@ -166,8 +172,11 @@ export function Layout() {
       // Default/Fallback shortcuts
       if (comboStr === 'mod+k') {
         e.preventDefault();
-        const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
-        searchInput?.focus();
+        setIsSearchExpanded(true);
+        setTimeout(() => {
+          const searchInput = searchRef.current?.querySelector('input') as HTMLInputElement;
+          searchInput?.focus();
+        }, 100);
         return;
       }
 
@@ -203,20 +212,29 @@ export function Layout() {
     const handleNotesDock = () => setNotesDocked(true);
     const handleNotesUndock = () => setNotesDocked(false);
 
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+        if (searchQuery === '') setIsSearchExpanded(false);
+      }
+    };
+
     window.addEventListener('dock-ai-widget', handleAIDock);
     window.addEventListener('undock-ai-widget', handleAIUndock);
     window.addEventListener('dock-notes', handleNotesDock);
     window.addEventListener('undock-notes', handleNotesUndock);
-
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('mousedown', handleClickOutside);
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('mousedown', handleClickOutside);
       window.removeEventListener('dock-ai-widget', handleAIDock);
       window.removeEventListener('undock-ai-widget', handleAIUndock);
       window.removeEventListener('dock-notes', handleNotesDock);
       window.removeEventListener('undock-notes', handleNotesUndock);
     };
-  }, [userShortcuts, navigate, shortcutsEnabled]);
+  }, [userShortcuts, navigate, shortcutsEnabled, searchQuery]);
 
   const toggleSection = (section: string) => {
     const nextState = { ...collapsedSections, [section]: !collapsedSections[section] };
@@ -558,21 +576,136 @@ export function Layout() {
             >
               {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
-              <input
-                type="text"
-                placeholder="Search leads, tasks, team..."
-                className="w-72 pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2"
-                style={{
-                  borderRadius: 'var(--t-radius)',
-                  background: 'var(--t-input-bg)',
-                  border: '1px solid var(--t-input-border)',
-                  color: 'var(--t-text)',
-                  // @ts-expect-error CSS custom property
-                  '--tw-ring-color': 'var(--t-input-focus)',
+            <div className="relative flex items-center" ref={searchRef}>
+              <button
+                onClick={() => {
+                  setIsSearchExpanded(!isSearchExpanded);
+                  if (!isSearchExpanded) {
+                    setTimeout(() => {
+                      const input = searchRef.current?.querySelector('input');
+                      input?.focus();
+                    }, 100);
+                  }
                 }}
-              />
+                className="p-2 rounded-lg transition-colors hover:bg-[var(--t-surface-hover)]"
+                style={{ color: 'var(--t-text-muted)' }}
+              >
+                <Search size={20} />
+              </button>
+              <div 
+                className={`overflow-hidden transition-all duration-300 ease-in-out flex items-center ${
+                  isSearchExpanded ? 'w-72 opacity-100 ml-2' : 'w-0 opacity-0'
+                }`}
+              >
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    performSearch(e.target.value);
+                    setShowSearchResults(true);
+                  }}
+                  onFocus={() => setShowSearchResults(true)}
+                  placeholder="Search leads, tasks, threads..."
+                  className="w-full px-4 py-2 text-sm focus:outline-none focus:ring-2"
+                  style={{
+                    borderRadius: 'var(--t-radius)',
+                    background: 'var(--t-input-bg)',
+                    border: '1px solid var(--t-input-border)',
+                    color: 'var(--t-text)',
+                    // @ts-expect-error CSS custom property
+                    '--tw-ring-color': 'var(--t-input-focus)',
+                  }}
+                />
+              </div>
+
+              {/* Search Results Dropdown */}
+              {showSearchResults && searchQuery && (
+                <div className="absolute top-full left-0 mt-2 w-96 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl overflow-hidden z-[6000]">
+                  <div className="max-h-[min(500px,70vh)] overflow-y-auto p-2 space-y-4">
+                    {/* Leads Results */}
+                    {searchResults.leads.length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--t-text-muted)] px-3 mb-1">Leads</p>
+                        {searchResults.leads.map(lead => (
+                          <button
+                            key={lead.id}
+                            onClick={() => {
+                              navigate(`/leads/${lead.id}`);
+                              setShowSearchResults(false);
+                            }}
+                            className="w-full flex items-center gap-3 p-2 hover:bg-[var(--t-surface-hover)] rounded-lg transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--t-primary-dim)] text-[var(--t-primary)] font-bold text-xs uppercase">
+                              {lead.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">{lead.name}</p>
+                              <p className="text-[10px] text-[var(--t-text-muted)] truncate">{lead.propertyAddress}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Tasks Results */}
+                    {searchResults.tasks.length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--t-text-muted)] px-3 mb-1">Tasks</p>
+                        {searchResults.tasks.map(task => (
+                          <button
+                            key={task.id}
+                            onClick={() => {
+                              navigate(`/tasks?id=${task.id}`);
+                              setShowSearchResults(false);
+                            }}
+                            className="w-full flex items-center gap-3 p-2 hover:bg-[var(--t-surface-hover)] rounded-lg transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)]">
+                              <CheckCircle size={14} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">{task.title}</p>
+                              <p className="text-[10px] text-[var(--t-text-muted)] truncate">{task.description || 'No description'}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* SMS Results */}
+                    {searchResults.sms.length > 0 && (
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-[var(--t-text-muted)] px-3 mb-1">Messages</p>
+                        {searchResults.sms.map(msg => (
+                          <button
+                            key={msg.id}
+                            onClick={() => {
+                              navigate(`/sms?phone=${msg.phone_number}`);
+                              setShowSearchResults(false);
+                            }}
+                            className="w-full flex items-center gap-3 p-2 hover:bg-[var(--t-surface-hover)] rounded-lg transition-colors text-left"
+                          >
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[var(--t-success-dim)] text-[var(--t-success)]">
+                              <MessageSquare size={14} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">{msg.content}</p>
+                              <p className="text-[10px] text-[var(--t-text-muted)] truncate">{msg.phone_number}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {searchResults.leads.length === 0 && searchResults.tasks.length === 0 && searchResults.sms.length === 0 && (
+                      <div className="p-8 text-center">
+                        <p className="text-sm text-[var(--t-text-muted)]">No results found for "{searchQuery}"</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
