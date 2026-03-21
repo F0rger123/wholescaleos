@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { RateLimitModal } from '../components/RateLimitModal';
 
 interface AIBotMessage {
   id: string;
@@ -38,7 +39,7 @@ export function AITest() {
   } = useStore();
   
   const [debug, setDebug] = useState(false);
-  const [currentModel, setCurrentModel] = useState('gemini-1.5-flash');
+  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash-lite');
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
@@ -49,8 +50,9 @@ export function AITest() {
     response: string;
   } | null>(null);
   const [leadSearch, setLeadSearch] = useState('');
-  const [aiName, setAiName] = useState('AI Assistant');
+  const [aiName, setAiName] = useState('OS Bot');
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
+  const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Thread Sidebar Search & Editing
@@ -259,6 +261,7 @@ export function AITest() {
       if (response.intent === 'rate_limit') {
         const retry = response.data?.retryAfter || 60;
         setRateLimit({ seconds: retry, originalPrompt: text });
+        setShowRateLimitModal(true);
         localStorage.setItem('ai_rate_limit_expiry', (Date.now() + retry * 1000).toString());
         pushMessage({ role: 'ai', content: `⚠️ Rate Limit Hit: ${response.response}` });
       } else {
@@ -568,7 +571,7 @@ export function AITest() {
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
               <Sparkles className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
-              {currentAiThreadId ? aiThreads.find(t => t.id === currentAiThreadId)?.title || aiName : aiName}
+              {aiName}
               <div className="ml-2 flex items-center gap-2 px-2 py-1 rounded-lg border" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
                 <div className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Usage</div>
                 <div className="text-xs font-bold" style={{ color: 'var(--t-primary)' }}>
@@ -576,7 +579,7 @@ export function AITest() {
                 </div>
                 <div className="group relative">
                   <AlertTriangle className="w-3 h-3 cursor-help" style={{ color: 'var(--t-text-muted)' }} />
-                  <div className="absolute top-8 left-1/2 -translate-x-1/2 mt-2 p-3 border rounded-xl text-[10px] w-56 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[100] shadow-2xl leading-relaxed" 
+                  <div className="absolute top-8 left-1/2 -translate-x-1/2 mt-2 p-3 border rounded-xl text-[10px] w-56 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[8000] shadow-2xl leading-relaxed" 
                     style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text-secondary)' }}>
                     <div className="font-bold mb-1 uppercase tracking-wider" style={{ color: 'var(--t-text)' }}>Daily Quota Status</div>
                     <div className="flex justify-between mb-1">
@@ -1243,6 +1246,20 @@ export function AITest() {
         variant={confirmModal.variant}
         onConfirm={confirmModal.onConfirm}
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <RateLimitModal
+        isOpen={showRateLimitModal}
+        onClose={() => setShowRateLimitModal(false)}
+        currentModel={currentModel}
+        onSwitchModel={(modelId) => {
+          setCurrentModel(modelId);
+          setShowRateLimitModal(false);
+          setRateLimit(null);
+          localStorage.removeItem('ai_rate_limit_expiry');
+          localStorage.setItem('user_gemini_model', modelId);
+          window.dispatchEvent(new CustomEvent('ai-settings-updated'));
+        }}
       />
     </div>
   );

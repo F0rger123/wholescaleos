@@ -318,6 +318,7 @@ export async function pollSMSMessages() {
       // ── Insert inbound SMS ──
       const { error: insertError } = await supabase.from('sms_messages').insert({
         user_id: userId,
+        agent_id: userId, // Set both for maximum compatibility across query variants
         phone_number: phoneNumber,
         content,
         direction: 'inbound',
@@ -328,21 +329,7 @@ export async function pollSMSMessages() {
 
       if (insertError) {
         console.error(`[SMS Polling] Insert error for message ${msg.id}:`, insertError);
-        // Fallback to agent_id if user_id column doesn't exist
-        if (insertError.code === '42703' || insertError.message?.includes('user_id')) {
-          console.log('[SMS Polling] retrying insert with agent_id column...');
-          await supabase.from('sms_messages').insert({
-            agent_id: userId,
-            phone_number: phoneNumber,
-            content,
-            direction: 'inbound',
-            gmail_message_id: msg.id,
-            created_at: receivedAt,
-            is_read: false
-          });
-        } else {
-          continue;
-        }
+        continue;
       }
 
       console.log(`[SMS Polling] Successfully stored message ${msg.id} from ${phoneNumber}`);

@@ -20,6 +20,87 @@ export async function listAvailableModels(apiKey: string) {
   }
 }
 
+export async function generateLeadInsight(lead: Lead): Promise<string> {
+  const prompt = `As an expert real estate investment analyst, provide a deep strategic insight for this lead.
+  
+Lead Details:
+- Name: ${lead.name}
+- Address: ${lead.propertyAddress}
+- Type: ${lead.propertyType}
+- Estimated Value: $${lead.estimatedValue}
+- Status: ${lead.status}
+- Notes: ${lead.notes}
+
+Consider the status, property type, and any notes. Identify one key opportunity or risk, and suggest a specific tactical next step. Keep the insight under 3 sentences and be highly professional.`;
+
+  try {
+    const res = await processPrompt(prompt, { lead });
+    return res.response || "Unable to generate insight at this time.";
+  } catch (err) {
+    console.error('Lead insight generation failed:', err);
+    return "Error generating AI insight. Please check your connection and API key.";
+  }
+}
+
+export async function generatePageInsights(page: string): Promise<string[]> {
+  const store = useStore.getState();
+  const leadsCount = store.leads.length;
+  const hotLeads = store.leads.filter(l => l.status === 'negotiating' || l.status === 'qualified').length;
+  const tasksDue = store.tasks.filter(t => t.status === 'todo').length;
+  
+  const prompt = `As an AI assistant for a real estate wholesaler, provide 3 short, high-value insights for the user.
+Current Page: ${page}
+Context: User has ${leadsCount} total leads, ${hotLeads} hot prospects, and ${tasksDue} tasks pending.
+
+Rules:
+- Be proactive and tactical.
+- Mention specific actions the user should take.
+- Keep each insight under 15 words.
+- Return ONLY a JSON array of strings.`;
+
+  try {
+    const res = await processPrompt(prompt, { page, leadsCount, hotLeads, tasksDue });
+    const text = res.response || "[]";
+    const jsonStr = text.includes('[') ? text.substring(text.indexOf('['), text.lastIndexOf(']') + 1) : "[]";
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    console.error('Page insights failed:', err);
+    return ["Focus on following up with your hottest leads today.", "Complete your pending tasks to keep the momentum going."];
+  }
+}
+
+export interface CallScriptTemplate {
+  name: string;
+  category: string;
+  script: string;
+  description: string;
+}
+
+export async function generateCallScriptTemplates(lead: Lead): Promise<CallScriptTemplate[]> {
+  const prompt = `Generate 3 distinct call script templates for a real estate investor calling this lead.
+  
+Lead Info:
+- Name: ${lead.name}
+- Status: ${lead.status}
+- Property: ${lead.propertyAddress}
+
+Return ONLY a JSON array of objects with "name", "category", "script", and "description" fields.
+- "description" should be a short paragraph of "Tactical Notes" on how to best use this specific script.
+Categories: "Introductory", "Follow-up", "Urgent/Closer".
+Make the scripts personalized to the lead's name and status.`;
+
+  try {
+    const res = await processPrompt(prompt, { lead });
+    const text = res.response || "[]";
+    // Basic extraction of JSON from markdown backticks if present
+    const jsonStr = text.includes('```json') ? text.split('```json')[1].split('```')[0] : text;
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    console.error('Call script generation failed:', err);
+    return [];
+  }
+}
+
 export function getTodaysTasks() {
   const store = useStore.getState();
   const today = new Date().toISOString().split('T')[0];
@@ -205,7 +286,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   const { sendEmail } = await import('./email');
   const res = await sendEmail({
     to: targetEmail,
-    subject: 'SMS',
+    subject: 'WholeScale OS Message', // Subject line helps iPhone/carrier delivery
     text: message,
     from: `${store.currentUser?.name} <${store.currentUser?.email}>`
   });
@@ -335,35 +416,57 @@ Return ONLY the script content, formatted for readability.`;
 export async function processPrompt(prompt: string, context: Record<string, any> = {}, modelOverride?: string, signal?: AbortSignal): Promise<GeminiResponse> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
+  
+  let provider: 'gemini'|'openai'|'anthropic' = 'gemini';
   let apiKey = '';
+  let model = modelOverride || '';
 
-  // Only use user-specific key
+  // 1. Resolve Provider, Model, and Key
   if (userId) {
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data } = await supabase
+        // Get active provider from profile
+        const { data: profile } = await supabase.from('profiles').select('settings').eq('id', userId).maybeSingle();
+        provider = profile?.settings?.active_ai_provider || 'gemini';
+        if (!model) model = profile?.settings?.active_ai_model || '';
+
+        // Get key for that provider
+        const { data: conn } = await supabase
           .from('user_connections')
-          .select('refresh_token')
+          .select('refresh_token, access_token')
           .eq('user_id', userId)
-          .eq('provider', 'gemini')
+          .eq('provider', provider)
           .maybeSingle();
-        if (data?.refresh_token) {
-          apiKey = data.refresh_token;
-        }
+        
+        if (conn?.refresh_token) apiKey = conn.refresh_token;
+        if (!model && conn?.access_token && conn.access_token !== 'active') model = conn.access_token;
       } catch (err) {
-        console.error('Error fetching user API key:', err);
+        console.error('Error fetching provider/key:', err);
       }
-    } else {
-      const localKey = localStorage.getItem('user_gemini_api_key');
-      if (localKey) apiKey = localKey;
+    }
+    
+    // Fallback to local storage
+    if (!apiKey) {
+      provider = (localStorage.getItem('user_ai_provider') as any) || 'gemini';
+      if (!model) model = localStorage.getItem('user_ai_model') || '';
+      
+      if (provider === 'gemini') {
+        apiKey = localStorage.getItem('user_gemini_api_key') || '';
+        if (!model) model = 'gemini-1.5-flash';
+      } else if (provider === 'openai') {
+        apiKey = localStorage.getItem('user_openai_api_key') || '';
+        if (!model) model = 'gpt-4o';
+      } else if (provider === 'anthropic') {
+        apiKey = localStorage.getItem('user_anthropic_api_key') || '';
+        if (!model) model = 'claude-3-5-sonnet';
+      }
     }
   }
-  
+
   if (!apiKey) {
-    console.warn('Gemini API key is missing.');
     return {
       intent: 'redirect_setup',
-      response: 'Gemini API key is missing. Please configure your personal API key in the AI Settings page to use the assistant.'
+      response: `Your AI provider (${provider}) API key is missing. Please configure it in the AI Settings page.`
     };
   }
 
@@ -371,28 +474,8 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   const leadsRaw = context.test ? [] : lookupLeads();
   const todaysTasks = context.test ? [] : getTodaysTasks();
   const allTasks = context.test ? [] : useStore.getState().tasks;
-  
-  // Get preferred model
-  let model = modelOverride || '';
-  if (!model && userId) {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data } = await supabase
-          .from('user_connections')
-          .select('access_token')
-          .eq('user_id', userId)
-          .eq('provider', 'gemini')
-          .maybeSingle();
-        if (data?.access_token && data.access_token !== 'active') model = data.access_token;
-      } catch (err) {}
-    }
-    if (!model) model = localStorage.getItem('user_gemini_model') || 'gemini-2.5-flash-lite';
-  } else {
-    model = 'gemini-2.5-flash-lite';
-  }
-  
   // Get AI Personality from profiles.settings
-  let aiName = localStorage.getItem('user_ai_name') || 'AI Assistant';
+  let aiName = localStorage.getItem('user_ai_name') || 'OS Bot';
   let aiTone = localStorage.getItem('user_ai_tone') || 'friendly';
 
   if (userId && isSupabaseConfigured && supabase) {
@@ -512,82 +595,89 @@ Page: ${context.page || 'unknown'}
 Time: ${context.currentTime || new Date().toISOString()}`;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-  // Combine internal timeout signal with external caller signal if provided
+  const timeoutId = setTimeout(() => controller.abort(), 30000); 
   const combinedSignal = signal ? ((AbortSignal as any).any ? (AbortSignal as any).any([controller.signal, signal]) : signal) : controller.signal;
 
   try {
-    // Determine the correct API version (v1 for stable 1.5 models, v1beta for 2.x/3.x experimental)
-    const apiVersion = (model.includes('2.0') || model.includes('2.5') || model.includes('3.') || model.includes('exp')) ? 'v1beta' : 'v1';
-    const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json' 
-      },
-      signal: combinedSignal,
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: `${systemInstruction}\n\nContext: ${JSON.stringify(enhancedContext)}\n\nUser Prompt: ${prompt}` }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.2,
+    let textData = '';
+
+    if (provider === 'gemini') {
+      const apiVersion = (model.includes('2.0') || model.includes('2.5') || model.includes('3.') || model.includes('exp')) ? 'v1beta' : 'v1';
+      const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: combinedSignal,
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: `${systemInstruction}\n\nContext: ${JSON.stringify(enhancedContext)}\n\nUser Prompt: ${prompt}` }] }],
+          generationConfig: { temperature: 0.2 },
+          safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+          ]
+        })
+      });
+
+      if (!res.ok) {
+        if (res.status === 429) throw new Error("RATE_LIMIT");
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error?.message || res.statusText);
+      }
+      const data = await res.json();
+      textData = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    } else if (provider === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        signal: combinedSignal,
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: `Context: ${JSON.stringify(enhancedContext)}\n\nUser Prompt: ${prompt}` }
+          ],
+          temperature: 0.2
+        })
+      });
+      if (!res.ok) throw new Error(res.statusText);
+      const data = await res.json();
+      textData = data.choices?.[0]?.message?.content;
+    } else if (provider === 'anthropic') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'dangerously-allow-browser': 'true'
         },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
-      })
-    });
+        signal: combinedSignal,
+        body: JSON.stringify({
+          model,
+          system: systemInstruction,
+          messages: [{ role: 'user', content: `Context: ${JSON.stringify(enhancedContext)}\n\nUser Prompt: ${prompt}` }],
+          max_tokens: 1500,
+          temperature: 0.2
+        })
+      });
+      if (!res.ok) throw new Error(res.statusText);
+      const data = await res.json();
+      textData = data.content?.[0]?.text;
+    }
 
     clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      if (res.status === 429) {
-        const errorData = await res.json().catch(() => null);
-        console.error('Gemini Rate Limit Hit [429]:', errorData?.error);
-        return {
-          intent: 'rate_limit',
-          response: errorData?.error?.message || "You've reached your rate limit for the Gemini API. Please wait a moment before trying again.",
-          data: { 
-            retryAfter: 60,
-            error: errorData?.error
-          }
-        };
-      }
-      
-      const errorData = await res.json().catch(() => null);
-      console.error('Gemini API Error Response:', {
-        status: res.status,
-        statusText: res.statusText,
-        error: errorData?.error
-      });
-      
-      throw new Error(`Gemini API Error [${res.status}]: ${errorData?.error?.message || res.statusText}`);
-    }
-
-    const data = await res.json();
-    const textData = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
     if (!textData) {
-      throw new Error('Received an empty valid response from Gemini API');
+      throw new Error(`Received an empty response from ${provider}`);
     }
 
     // Attempt to extract and parse the valid JSON
     try {
-      // Find the JSON-like structure (between { and })
-      // This handles triple backticks and other surrounding text
       const jsonMatch = textData.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : textData;
-      
       const parsed = JSON.parse(jsonStr);
       
-      // If the parsed response is still an object-like string, clean it again
       let finalResponse = parsed.response || textData;
       if (typeof finalResponse === 'string' && finalResponse.trim().startsWith('{')) {
         try {
@@ -602,7 +692,7 @@ Time: ${context.currentTime || new Date().toISOString()}`;
         data: parsed.data
       };
     } catch (parseError) {
-      console.error('Failed to parse Gemini response as JSON:', textData);
+      console.error(`Failed to parse ${provider} response as JSON:`, textData);
       return {
         intent: 'unknown',
         response: textData
@@ -611,8 +701,16 @@ Time: ${context.currentTime || new Date().toISOString()}`;
 
   } catch (error: any) {
     clearTimeout(timeoutId);
-    console.error('Error processing prompt with Gemini:', error);
+    console.error(`Error processing prompt with ${provider}:`, error);
     
+    if (error.message === "RATE_LIMIT") {
+      return {
+        intent: 'rate_limit',
+        response: `You've reached your rate limit for ${provider}. Please wait a moment or switch models.`,
+        data: { retryAfter: 60 }
+      };
+    }
+
     if (error.name === 'AbortError') {
       return {
         intent: 'error',
@@ -622,7 +720,7 @@ Time: ${context.currentTime || new Date().toISOString()}`;
 
     return {
       intent: 'error',
-      response: error instanceof Error ? error.message : 'An unexpected error occurred while communicating with Gemini.'
+      response: error instanceof Error ? error.message : `An unexpected error occurred while communicating with ${provider}.`
     };
   }
 }

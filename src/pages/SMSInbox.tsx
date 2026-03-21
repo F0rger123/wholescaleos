@@ -64,23 +64,11 @@ export function SMSInbox() {
     if (!isSupabaseConfigured || !supabase || !currentUser?.id) return;
     try {
       // Try user_id first (correct column name)
-      let { data, error } = await supabase
+      const { data, error: _error } = await supabase
         .from('sms_messages')
         .select('*')
-        .eq('user_id', currentUser.id)
+        .or(`user_id.eq.${currentUser.id},agent_id.eq.${currentUser.id}`)
         .order('created_at', { ascending: false });
-
-      // If user_id column doesn't exist or returned nothing, try agent_id fallback
-      if (error || !data || data.length === 0) {
-        const fallback = await supabase
-          .from('sms_messages')
-          .select('*')
-          .eq('agent_id', currentUser.id)
-          .order('created_at', { ascending: false });
-        if (!fallback.error && fallback.data && fallback.data.length > 0) {
-          data = fallback.data;
-        }
-      }
 
       setMessages(data || []);
     } catch (err) {
@@ -184,17 +172,31 @@ export function SMSInbox() {
           if (result.success) {
             if (isSupabaseConfigured && supabase && currentUser?.id) {
               const lead = leads.find(l => l.phone?.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''));
-              await supabase.from('sms_messages').insert({
+              const { data: inserted, error: insertError } = await supabase.from('sms_messages').insert({
                 user_id: currentUser.id,
                 lead_id: lead?.id,
                 phone_number: selectedPhone,
                 content: replyText.trim(),
                 direction: 'outbound',
                 is_read: true
-              });
+              }).select().single();
+
+              if (!insertError && inserted) {
+                setMessages(prev => [inserted, ...prev]);
+              }
+            } else {
+              // Fallback for non-supabase or demo mode
+              const demoMsg: SMSMessage = {
+                id: Date.now().toString(),
+                phone_number: selectedPhone,
+                content: replyText.trim(),
+                direction: 'outbound',
+                is_read: true,
+                created_at: new Date().toISOString()
+              };
+              setMessages(prev => [demoMsg, ...prev]);
             }
             setReplyText('');
-            fetchMessages();
           } else {
             alert(`Failed: ${result.message}`);
           }

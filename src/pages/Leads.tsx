@@ -13,7 +13,8 @@ import {
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
   Trash, AlertTriangle, FileText as ScriptIcon
 } from 'lucide-react';
-import { generateCallScript } from '../lib/gemini';
+import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
+import { CallScriptModal } from '../components/CallScriptModal';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -78,11 +79,17 @@ export default function Leads() {
   const [generatingScript, setGeneratingScript] = useState<string | null>(null);
   const [scriptLoading, setScriptLoading] = useState(false);
 
-  // NEW: Bulk selection state
+  // AI Intelligence state
+  const [aiInsight, setAiInsight] = useState<Record<string, string>>({});
+  const [isGeneratingInsight, setIsGeneratingInsight] = useState<string | null>(null);
+  const [scriptTemplates, setScriptTemplates] = useState<Record<string, CallScriptTemplate[]>>({});
+  const [isGeneratingTemplates, setIsGeneratingTemplates] = useState<string | null>(null);
+
+  // Bulk selection state
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-
+  const [showScriptLibrary, setShowScriptLibrary] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const recordingInterval = useRef<any>(null);
 
   const [formData, setFormData] = useState({
@@ -296,6 +303,30 @@ export default function Leads() {
   const stopRec = (lid: string) => { 
     setIsRecording(false); 
     addCallRecording(lid, recordingTime); 
+  };
+
+  const handleGenerateInsight = async (lead: Lead) => {
+    setIsGeneratingInsight(lead.id);
+    try {
+      const insight = await generateLeadInsight(lead);
+      setAiInsight(prev => ({ ...prev, [lead.id]: insight }));
+    } catch (err) {
+      alert('Failed to generate AI insight');
+    } finally {
+      setIsGeneratingInsight(null);
+    }
+  };
+
+  const handleGenerateTemplates = async (lead: Lead) => {
+    setIsGeneratingTemplates(lead.id);
+    try {
+      const templates = await generateCallScriptTemplates(lead);
+      setScriptTemplates(prev => ({ ...prev, [lead.id]: templates }));
+    } catch (err) {
+      alert('Failed to generate call script templates');
+    } finally {
+      setIsGeneratingTemplates(null);
+    }
   };
   
 
@@ -1047,46 +1078,110 @@ export default function Leads() {
 
                           {/* AI INSIGHTS */}
                           {activeTab === 'aiInsights' && (
-                            <div>
-                              <div className="flex items-center justify-center mb-6">
-                                <div className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${
-                                  pri.level === 'high' ? 'border-[var(--t-error)]' : pri.level === 'medium' ? 'border-[var(--t-warning)]' : 'border-[var(--t-success)]'
-                                }`}>
-                                  <div className="text-center">
-                                    <span className="text-2xl font-bold text-white">{pri.score}</span>
-                                    <p className="text-xs text-[var(--t-text-muted)]">{pri.level}</p>
+                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                              {/* Strategy Section */}
+                              <div className="p-5 rounded-2xl border border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)] shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-[var(--t-primary-dim)]/50">
+                                      <Brain className="w-5 h-5 text-[var(--t-primary)]" />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-bold text-white text-lg">AI Analyst Insight</h4>
+                                      <p className="text-xs text-[var(--t-text-muted)]">Strategic tactical advantage</p>
+                                    </div>
                                   </div>
+                                  <button 
+                                    onClick={() => handleGenerateInsight(lead)}
+                                    disabled={isGeneratingInsight === lead.id}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg shadow-[var(--t-primary)]/20"
+                                    style={{ background: 'var(--t-primary)' }}
+                                  >
+                                    {isGeneratingInsight === lead.id ? (
+                                      <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing Lead...</>
+                                    ) : (
+                                      <><Sparkles className="w-4 h-4" /> Generate Insight</>
+                                    )}
+                                  </button>
                                 </div>
+                                
+                                {aiInsight[lead.id] ? (
+                                  <div className="p-5 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] shadow-inner relative overflow-hidden group">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-[var(--t-primary)] opacity-50"></div>
+                                    <p className="text-[var(--t-text-secondary)] leading-relaxed text-sm md:text-base italic">
+                                      "{aiInsight[lead.id]}"
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
+                                    <Brain className="w-10 h-10 text-[var(--t-text-muted)] mx-auto mb-3 opacity-20" />
+                                    <p className="text-[var(--t-text-muted)] text-sm max-w-sm mx-auto">Need a tactical edge? Generate a dynamic AI insight based on this lead's specific motivation and status.</p>
+                                  </div>
+                                )}
                               </div>
-                              <div className="space-y-3 mb-6">
-                                {[
-                                  { l: 'Deal Score', w: '40%', v: ds },
-                                  { l: 'Contact Urgency', w: '25%', v: Math.max(0, 100 - days * 5) },
-                                  { l: 'Source Quality', w: '15%', v: 70 },
-                                  { l: 'Engagement', w: '20%', v: ((lead.engagementLevel || 3) / 5) * 100 }
-                                ].map((f, i) => (
-                                  <div key={i}>
-                                    <div className="flex justify-between text-sm mb-1">
-                                      <span className="text-[var(--t-text-muted)]">{f.l}</span>
-                                      <span className="text-[var(--t-text-muted)]">{f.w}</span>
+
+                              {/* Script Library Section */}
+                              <div className="p-5 rounded-2xl border border-[var(--t-accent-dim)] bg-[var(--t-surface-dim)] shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2.5 rounded-xl bg-[var(--t-accent-dim)]/50">
+                                      <ScriptIcon className="w-5 h-5 text-[var(--t-accent)]" />
                                     </div>
-                                    <div className="h-2 bg-[var(--t-surface-subtle)] rounded-full">
-                                      <div className="h-full bg-[var(--t-accent)] rounded-full" style={{ width: `${f.v}%` }} />
+                                    <div>
+                                      <h4 className="font-bold text-white text-lg">Personalized Call Scripts</h4>
+                                      <p className="text-xs text-[var(--t-text-muted)]">Tailored communication templates</p>
                                     </div>
                                   </div>
-                                ))}
-                              </div>
-                              <div className="grid grid-cols-3 gap-3">
-                                {[
-                                  { v: lead.timeline?.length || 0, l: 'Activities' },
-                                  { v: recs.length, l: 'Recordings' },
-                                  { v: `${days}d`, l: 'In Status' }
-                                ].map((s, i) => (
-                                  <div key={i} className="p-3 rounded-lg text-center" style={{ backgroundColor: 'var(--t-surface-dim)' }}>
-                                    <p className="text-2xl font-bold text-white">{s.v}</p>
-                                    <p className="text-xs text-[var(--t-text-muted)]">{s.l}</p>
+                                  <button 
+                                    onClick={() => handleGenerateTemplates(lead)}
+                                    disabled={isGeneratingTemplates === lead.id}
+                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg shadow-[var(--t-accent)]/20"
+                                    style={{ background: 'var(--t-accent)' }}
+                                  >
+                                    {isGeneratingTemplates === lead.id ? (
+                                      <><Loader2 className="w-4 h-4 animate-spin" /> Developing Scripts...</>
+                                    ) : (
+                                      <><Zap className="w-4 h-4" /> Generate Templates</>
+                                    )}
+                                  </button>
+                                </div>
+
+                                {scriptTemplates[lead.id]?.length > 0 ? (
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {scriptTemplates[lead.id].map((tmpl, idx) => (
+                                      <div key={idx} className="flex flex-col p-5 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-accent-dim)] transition-all group/card shadow-sm hover:shadow-md">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--t-accent-dim)] text-[var(--t-accent)]">{tmpl.category}</span>
+                                          <button 
+                                            onClick={() => {
+                                              navigator.clipboard.writeText(tmpl.script);
+                                              alert('Script copied to clipboard!');
+                                            }}
+                                            className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors text-[var(--t-text-muted)] hover:text-[var(--t-accent)]"
+                                            title="Copy to clipboard"
+                                          >
+                                            <Save className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                        <h5 className="text-white font-bold text-sm mb-2 group-hover/card:text-[var(--t-accent)] transition-colors">{tmpl.name}</h5>
+                                        <p className="text-xs text-[var(--t-text-muted)] line-clamp-4 leading-relaxed flex-1 mb-4">
+                                          {tmpl.script}
+                                        </p>
+                                        <button 
+                                          onClick={() => setShowScriptLibrary({ isOpen: true, lead: lead })}
+                                          className="w-full py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-[var(--t-accent)] hover:text-white border border-[var(--t-accent)]/30 text-[var(--t-accent)] flex items-center justify-center gap-2"
+                                        >
+                                          <ScriptIcon className="w-3.5 h-3.5" /> Open Library
+                                        </button>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
+                                ) : (
+                                  <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
+                                    <ScriptIcon className="w-10 h-10 text-[var(--t-text-muted)] mx-auto mb-3 opacity-20" />
+                                    <p className="text-[var(--t-text-muted)] text-sm max-w-sm mx-auto">Create a library of 3 personalized call scripts tailored specifically to this lead's motivations.</p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
@@ -1453,6 +1548,14 @@ export default function Leads() {
           </div>
         </div>
       )}
+
+      {/* CALL SCRIPT LIBRARY MODAL */}
+      <CallScriptModal
+        isOpen={showScriptLibrary.isOpen}
+        onClose={() => setShowScriptLibrary({ isOpen: false, lead: null })}
+        leadName={showScriptLibrary.lead?.name || 'Selected Lead'}
+        templates={showScriptLibrary.lead ? (scriptTemplates[showScriptLibrary.lead.id] || []) : []}
+      />
     </div>
   );
 }
