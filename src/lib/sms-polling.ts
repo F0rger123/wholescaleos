@@ -1,5 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { useStore } from '../store/useStore';
+import { processPrompt } from './gemini';
+import { notificationsService } from './supabase-service';
 
 // ── Gateway domains we might receive INBOUND replies FROM ──────────────────
 const ALL_GATEWAY_DOMAINS = [
@@ -61,6 +63,16 @@ async function getAccessToken(userId: string): Promise<string | null> {
       return null;
     }
     const { access_token } = await response.json();
+    
+    // Save the new access_token to user_connections
+    if (isSupabaseConfigured && supabase) {
+      await supabase
+        .from('user_connections')
+        .update({ access_token, updated_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('provider', 'google');
+    }
+    
     return access_token;
   } catch (err) {
     console.error('Failed to refresh Google token for polling:', err);
@@ -99,13 +111,11 @@ async function sendGmail(accessToken: string, to: string, body: string) {
 }
 
 // ── AI Auto-reply generation (calls Gemini API directly) ──────────────────
+// ── AI Auto-reply generation (calls Gemini API directly) ──────────────────
 async function generateAutoReply(incomingMessage: string, senderPhone: string): Promise<string> {
   const store = useStore.getState();
   const fallback = store.smsAutoReplyMessage || "Thanks for reaching out! We'll be in touch soon.";
   try {
-    const apiKey = localStorage.getItem('gemini_api_key');
-    if (!apiKey) return fallback;
-
     const lead = store.leads.find((l: any) => l.phone?.replace(/\D/g, '') === senderPhone.replace(/\D/g, ''));
     const context = lead ? `The sender is a lead named ${lead.name} (status: ${lead.status}).` : 'The sender is unknown.';
 
@@ -114,27 +124,16 @@ async function generateAutoReply(incomingMessage: string, senderPhone: string): 
 An incoming SMS was received: "${incomingMessage}"
 
 Write a SHORT, professional, friendly SMS auto-reply (1-2 sentences max, no emojis). 
-Don't promise immediate response — the agent will follow up soon. Sign off naturally.`;
+Don't promise immediate response — the agent will follow up soon. Sign off naturally.
+Remember to return ONLY valid JSON with 'intent' and 'response'.`;
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 100, temperature: 0.7 },
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
-      })
-    });
-
-    if (!res.ok) throw new Error('API call failed');
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || fallback;
-  } catch {
+    const res = await processPrompt(prompt, { test: true });
+    if (res && res.response && res.intent !== 'redirect_setup') {
+      return res.response;
+    }
+    return fallback;
+  } catch (err) {
+    console.error('[SMS Auto-Reply] Generation failed:', err);
     return fallback;
   }
 }
@@ -234,6 +233,14 @@ export async function pollSMSMessages() {
       );
 
       if (!listResponse.ok) {
+        if (listResponse.status === 403) {
+          notificationsService.create({
+            user_id: userId,
+            type: 'error',
+            title: 'SMS Error',
+            message: 'Gmail connection expired or missing permissions. Please reconnect in Settings.',
+          }).catch(console.error);
+        }
         console.error(`[SMS Polling] Gmail list failed for query "${query}":`, listResponse.status);
         continue;
       }
@@ -295,7 +302,10 @@ export async function pollSMSMessages() {
 
       // Extract phone number from sender address
       const phoneMatch = fromHeader.match(/(\d{10,})/);
-      const phoneNumber = phoneMatch ? phoneMatch[1] : '';
+      let phoneNumber = phoneMatch ? phoneMatch[1] : '';
+      if (phoneNumber.length === 11 && phoneNumber.startsWith('1')) {
+        phoneNumber = phoneNumber.substring(1);
+      }
       if (!phoneNumber) {
         console.warn(`[SMS Polling] Could not extract phone number from ${fromHeader}`);
         continue;

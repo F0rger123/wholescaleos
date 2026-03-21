@@ -1505,6 +1505,10 @@ interface AppState {
   setAiName: (name: string) => void;
   aiModel: string;
   setAiModel: (model: string) => void;
+
+  // Global Lead Modal State
+  activeLeadModalId: string | null;
+  setActiveLeadModalId: (id: string | null) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1515,6 +1519,8 @@ export const useStore = create<AppState>((set, get) => ({
   authLoading: false,
   authError: null,
   showFloatingAIWidget: false,
+  activeLeadModalId: null,
+  setActiveLeadModalId: (id) => set({ activeLeadModalId: id }),
   shortcutsEnabled: (typeof window !== 'undefined' && localStorage.getItem('wholescale-shortcuts-enabled') !== 'false'),
   aiUsage: (() => {
     try {
@@ -2148,7 +2154,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  editMessage: (channelId, messageId, newContent) =>
+  editMessage: (channelId, messageId, newContent) => {
     set((s) => {
       const msgs = s.messages[channelId] || [];
       return {
@@ -2157,9 +2163,13 @@ export const useStore = create<AppState>((set, get) => ({
           [channelId]: msgs.map(m => m.id === messageId ? { ...m, content: newContent, edited: true } : m),
         },
       };
-    }),
+    });
+    if (isSupabaseConfigured && supabase) {
+      chatService.editMessage(messageId, newContent).catch(() => {});
+    }
+  },
 
-  deleteMessage: (channelId, messageId) =>
+  deleteMessage: (channelId, messageId) => {
     set((s) => {
       const msgs = s.messages[channelId] || [];
       return {
@@ -2168,7 +2178,11 @@ export const useStore = create<AppState>((set, get) => ({
           [channelId]: msgs.map(m => m.id === messageId ? { ...m, deleted: true, content: 'This message was deleted' } : m),
         },
       };
-    }),
+    });
+    if (isSupabaseConfigured && supabase) {
+      chatService.deleteMessage(messageId).catch(() => {});
+    }
+  },
 
   addReaction: (channelId, messageId, emoji, userId) =>
     set((s) => {

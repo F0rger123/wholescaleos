@@ -651,7 +651,7 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       `Content-Transfer-Encoding: 7bit`,
       '',
       bodyContent
-    ].join('\n');
+    ].join('\r\n');
 
     const encodedMessage = btoa(unescape(encodeURIComponent(strMessage)))
       .replace(/\+/g, '-')
@@ -672,10 +672,13 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
 
     if (!gmailResponse.ok) {
       const errData = await gmailResponse.json();
+      console.error('❌ Gmail API Error Detail:', errData);
       throw new Error(`Gmail API Error: ${errData.error?.message || gmailResponse.statusText}`);
     }
 
     const result = await gmailResponse.json();
+    console.log(`✅ Gmail API Success! Message ID: ${result.id}`);
+    
     return {
       success: true,
       messageId: result.id || `msg-${Date.now()}`,
