@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { useStore, Lead, LeadStatus, calculateDealScore, calculatePriorityScore, generateNextAction, STATUS_LABELS, STATUS_FLOW } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import { geocodeAddress } from '../lib/geocoding';
@@ -52,6 +53,7 @@ interface CustomField {
 }
 
 export default function Leads() {
+  const { id } = useParams<{ id: string }>();
   const store = useStore();
   const { leads, addLead, updateLead, deleteLead, teamId, team, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto } = store;
   const saveStatus = (store as any).saveStatus || 'idle';
@@ -119,6 +121,12 @@ export default function Leads() {
     
     loadCustomFields();
   }, [teamId]);
+
+  useEffect(() => {
+    if (id) {
+      setExpandedLead(id);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (isRecording) { 

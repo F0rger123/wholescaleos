@@ -164,6 +164,7 @@ export function App() {
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/leads" element={<Leads />} />
+          <Route path="/leads/:id" element={<Leads />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/team" element={<Team />} />
           <Route path="/tasks" element={<Tasks />} />

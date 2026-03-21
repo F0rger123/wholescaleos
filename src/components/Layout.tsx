@@ -18,28 +18,6 @@ import {
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 
-const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
-  Core: [
-    { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/map', label: 'Map', icon: Map },
-    { to: '/leads', label: 'Leads', icon: Users },
-    { to: '/tasks', label: 'Tasks', icon: ListTodo },
-    { to: '/calendar', label: 'Calendar', icon: Calendar },
-  ],
-  Messages: [
-    { to: '/notifications', label: 'Notification Inbox', icon: Bell },
-    { to: '/sms', label: 'SMS', icon: Smartphone },
-    { to: '/chat', label: 'Team Chat', icon: MessageSquare },
-    { to: '/ai-test', label: 'AI Bot', icon: Bot },
-  ],
-  Tools: [
-    { to: '/imports', label: 'Imports', icon: Download },
-    { to: '/calculators', label: 'Calculators', icon: Calculator },
-    { to: '/team', label: 'Team', icon: UserCog },
-    { to: '/settings', label: 'Settings', icon: Settings },
-  ],
-};
-
 interface UserTeam {
   teamId: string;
   teamName: string;
@@ -54,8 +32,31 @@ export function Layout() {
     shortcutsEnabled,
     currentTheme, setTheme,
     showQuickNotes,
-    searchResults, performSearch
+    searchResults, performSearch,
+    aiName
   } = useStore();
+
+  const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
+    Core: [
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/map', label: 'Map', icon: Map },
+      { to: '/leads', label: 'Leads', icon: Users },
+      { to: '/tasks', label: 'Tasks', icon: ListTodo },
+      { to: '/calendar', label: 'Calendar', icon: Calendar },
+    ],
+    Messages: [
+      { to: '/notifications', label: 'Notification Inbox', icon: Bell },
+      { to: '/sms', label: 'SMS', icon: Smartphone },
+      { to: '/chat', label: 'Team Chat', icon: MessageSquare },
+      { to: '/ai-test', label: aiName || 'OS Bot', icon: Bot },
+    ],
+    Tools: [
+      { to: '/imports', label: 'Imports', icon: Download },
+      { to: '/calculators', label: 'Calculators', icon: Calculator },
+      { to: '/team', label: 'Team', icon: UserCog },
+      { to: '/settings', label: 'Settings', icon: Settings },
+    ],
+  };
 
   const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
   const pendingTaskCount = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
@@ -154,8 +155,16 @@ export function Layout() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger if shortcuts are disabled
       if (!shortcutsEnabled) return;
-      // Don't trigger if typing in an input
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+
+      // Robust check for typing in any input/editable element
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable ||
+        target.closest('[contenteditable]')
+      ) return;
 
       // Normalize key combo
       let combo = [];

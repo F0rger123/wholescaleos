@@ -35,22 +35,22 @@ export function AITest() {
     aiUsage, incrementAiUsage,
     aiThreads, currentAiThreadId, aiMessages,
     createAiThread, deleteAiThread, setCurrentAiThread,
-    updateAiThreadTitle, toggleAiThreadPin, addAiMessage, clearAiThreadMessages
+    updateAiThreadTitle, toggleAiThreadPin, addAiMessage, clearAiThreadMessages,
+    aiName, aiModel, setAiModel
   } = useStore();
   
   const [debug, setDebug] = useState(false);
-  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash-lite');
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
   const [pendingAction, setPendingAction] = useState<{
     intent: string;
     data: any;
     response: string;
   } | null>(null);
   const [leadSearch, setLeadSearch] = useState('');
-  const [aiName, setAiName] = useState('OS Bot');
   const [rateLimit, setRateLimit] = useState<{ seconds: number; originalPrompt: string } | null>(null);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -102,14 +102,11 @@ export function AITest() {
 
   // Load AI personality and model
   const fetchModel = async () => {
-    if (!currentUser?.id) return;
-    const localModel = localStorage.getItem('user_gemini_model');
-    if (localModel) setCurrentModel(localModel);
+    // Handled by global store
   };
 
   const loadPersonality = async () => {
-    const localAiName = localStorage.getItem('user_ai_name');
-    if (localAiName) setAiName(localAiName);
+    // Handled by global store
   };
 
   useEffect(() => {
@@ -255,8 +252,11 @@ export function AITest() {
     abortControllerRef.current = controller;
 
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const response = await processPrompt(text.trim(), history, currentModel, controller.signal);
+      const response = await processPrompt(text.trim(), {
+        threadId: currentAiThreadId,
+        history: messages.map(m => ({ role: m.role, content: m.content })),
+        currentTime: new Date().toISOString()
+      }, aiModel, controller.signal);
       
       if (response.intent === 'rate_limit') {
         const retry = response.data?.retryAfter || 60;
@@ -265,7 +265,7 @@ export function AITest() {
         localStorage.setItem('ai_rate_limit_expiry', (Date.now() + retry * 1000).toString());
         pushMessage({ role: 'ai', content: `⚠️ Rate Limit Hit: ${response.response}` });
       } else {
-        incrementAiUsage(currentModel);
+        incrementAiUsage(aiModel);
         let clean = response.response || '';
         if (typeof clean === 'string' && clean.trim().startsWith('{')) {
           try {
@@ -362,7 +362,7 @@ export function AITest() {
     if (loading) return;
     setLoading(true);
     try {
-      const resp = await processPrompt('ping', [], currentModel);
+      const resp = await processPrompt('ping', [], aiModel);
       pushMessage({ role: 'ai', content: `Test: ${resp.response}`, intent: 'test' });
     } catch (err: any) {
       pushMessage({ role: 'ai', content: `Test failed: ${err.message}`, intent: 'error' });
@@ -575,7 +575,7 @@ export function AITest() {
               <div className="ml-2 flex items-center gap-2 px-2 py-1 rounded-lg border" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
                 <div className="text-[9px] font-medium uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Usage</div>
                 <div className="text-xs font-bold" style={{ color: 'var(--t-primary)' }}>
-                  {aiUsage[currentModel]?.used || 0}/{aiUsage[currentModel]?.limit || (currentModel.includes('pro') ? 10 : 20)}
+                  {aiUsage[aiModel]?.used || 0}/{aiUsage[aiModel]?.limit || (aiModel.includes('pro') ? 10 : 20)}
                 </div>
                 <div className="group relative">
                   <AlertTriangle className="w-3 h-3 cursor-help" style={{ color: 'var(--t-text-muted)' }} />
@@ -584,11 +584,11 @@ export function AITest() {
                     <div className="font-bold mb-1 uppercase tracking-wider" style={{ color: 'var(--t-text)' }}>Daily Quota Status</div>
                     <div className="flex justify-between mb-1">
                       <span>Model:</span>
-                      <span style={{ color: 'var(--t-text)' }}>{currentModel}</span>
+                      <span style={{ color: 'var(--t-text)' }}>{aiModel}</span>
                     </div>
                     <div className="flex justify-between mb-2">
                       <span>Available:</span>
-                      <span style={{ color: 'var(--t-primary)' }}>{aiUsage[currentModel]?.limit || 20}/day</span>
+                      <span style={{ color: 'var(--t-primary)' }}>{aiUsage[aiModel]?.limit || 20}/day</span>
                     </div>
                     <div className="pt-2 border-t flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
                       <span style={{ color: 'var(--t-text-muted)' }}>Resets in:</span>
@@ -1251,13 +1251,12 @@ export function AITest() {
       <RateLimitModal
         isOpen={showRateLimitModal}
         onClose={() => setShowRateLimitModal(false)}
-        currentModel={currentModel}
+        currentModel={aiModel}
         onSwitchModel={(modelId) => {
-          setCurrentModel(modelId);
+          setAiModel(modelId);
           setShowRateLimitModal(false);
           setRateLimit(null);
           localStorage.removeItem('ai_rate_limit_expiry');
-          localStorage.setItem('user_gemini_model', modelId);
           window.dispatchEvent(new CustomEvent('ai-settings-updated'));
         }}
       />

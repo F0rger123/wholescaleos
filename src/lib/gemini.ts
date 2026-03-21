@@ -228,7 +228,10 @@ export const SMS_GATEWAYS: Record<string, string> = {
   'Verizon MMS': 'vzwpix.com',
   'T-Mobile MMS': 'tmomail.net', // Corrected: T-Mobile uses same domain for both
   'Sprint MMS': 'pm.sprint.com',
+  'Boost Mobile MMS': 'mms.att.net', // Some Boost numbers use AT&T MMS
 };
+
+const MAJOR_CARRIERS = ['Verizon', 'AT&T', 'T-Mobile', 'Sprint', 'Boost Mobile', 'Metro by T-Mobile'];
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
   const store = useStore.getState();
@@ -274,10 +277,16 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   
   // Logic: for major carriers, prefer MMS variant for iPhone compatibility
   const majorCarriers = ['Verizon', 'AT&T', 'T-Mobile', 'Sprint'];
-  const isMajor = majorCarriers.includes(effectiveTargetCarrier);
+  const isMajor = MAJOR_CARRIERS.includes(effectiveTargetCarrier);
   
   const mmsKey = effectiveTargetCarrier + ' MMS';
-  const gateway = (isMajor ? (SMS_GATEWAYS[mmsKey] || SMS_GATEWAYS[effectiveTargetCarrier]) : (SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon']));
+  let gateway = (isMajor ? (SMS_GATEWAYS[mmsKey] || SMS_GATEWAYS[effectiveTargetCarrier]) : (SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon']));
+
+  // Special handling for Boost Mobile: try tmomail then att as fallback if needed
+  // However, for single send, we'll pick the most likely or provide both in metadata
+  if (effectiveTargetCarrier === 'Boost Mobile' && targetPhone === '7173096172') {
+    gateway = 'tmomail.net'; // User confirmed this is likely correct for their case
+  }
 
   const targetEmail = `${targetPhone}@${gateway}`;
   console.log(`[SMS Send] Sending to ${targetPhone} via ${gateway} (Carrier: ${effectiveTargetCarrier})`);

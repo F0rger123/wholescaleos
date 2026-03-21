@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
@@ -32,6 +33,9 @@ interface Conversation {
 }
 
 export function SMSInbox() {
+  const [searchParams] = useSearchParams();
+  const phoneParam = searchParams.get('phone');
+
   const [messages, setMessages] = useState<SMSMessage[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
@@ -92,6 +96,12 @@ export function SMSInbox() {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    if (phoneParam) {
+      setSelectedPhone(phoneParam);
+    }
+  }, [phoneParam]);
 
   useEffect(() => {
     fetchMessages();
