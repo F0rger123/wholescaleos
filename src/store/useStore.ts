@@ -1499,6 +1499,12 @@ interface AppState {
     sms: SMSMessage[];
   };
   performSearch: (query: string) => void;
+
+  // AI Bot Name & Model
+  aiName: string;
+  setAiName: (name: string) => void;
+  aiModel: string;
+  setAiModel: (model: string) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -3246,6 +3252,23 @@ deleteChannel: (channelId) => {
               .then();
           }
         });
+    }
+  },
+
+  // AI Bot Name
+  aiName: typeof window !== 'undefined' ? localStorage.getItem('user_ai_name') || 'OS Bot' : 'OS Bot',
+  setAiName: (name) => {
+    set({ aiName: name });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user_ai_name', name);
+    }
+  },
+
+  aiModel: typeof window !== 'undefined' ? localStorage.getItem('user_ai_model') || 'gemini-2.0-flash-lite' : 'gemini-2.0-flash-lite',
+  setAiModel: (model) => {
+    set({ aiModel: model });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user_ai_model', model);
     }
   },
 }));

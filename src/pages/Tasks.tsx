@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Plus, CheckCircle2, Circle, Clock, AlertTriangle, X, Calendar,
   User, ChevronDown, Filter, Zap, Search, Flag, Link2, ArrowUpDown
@@ -34,6 +35,9 @@ const inputStyle = {
 };
 
 export function Tasks() {
+  const [searchParams] = useSearchParams();
+  const taskId = searchParams.get('id');
+
   const { 
     tasks, team, leads, addTask, updateTask, deleteTask, completeTask,
   } = useStore();
@@ -46,6 +50,15 @@ export function Tasks() {
   const [sortBy, setSortBy] = useState<'priority' | 'due' | 'status'>('priority');
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    if (taskId) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setSearch(task.title);
+      }
+    }
+  }, [taskId, tasks]);
 
   const emptyForm = (): Omit<Task, 'id' | 'createdAt' | 'completedAt'> => ({
     title: '', description: '', assignedTo: team[0]?.id || '',

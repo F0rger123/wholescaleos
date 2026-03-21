@@ -28,15 +28,14 @@ export function AIBotWidget() {
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
-  const [aiName, setAiName] = useState('OS Bot');
-  const [currentModel, setCurrentModel] = useState('gemini-2.5-flash-lite');
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
   const [insightsLoading, setInsightsLoading] = useState(false);
-  // const [isDragging, setIsDragging] = useState(false);
-  // const [position, setPosition] = useState({ x: 20, y: 20 }); // Bottom-right offsets
   
-  const { currentUser, showFloatingAIWidget, incrementAiUsage } = useStore();
+  const { 
+    currentUser, showFloatingAIWidget, incrementAiUsage,
+    aiName, aiModel, setAiModel 
+  } = useStore();
   const [isDocked, setIsDocked] = useState(() => {
     return localStorage.getItem('ai_widget_docked') === 'true';
   });
@@ -144,7 +143,8 @@ export function AIBotWidget() {
           .eq('id', currentUser.id)
           .maybeSingle();
         
-        if (data?.settings?.ai_name) setAiName(data.settings.ai_name);
+        // No longer using local aiName setAiName since it's global
+        // if (data?.settings?.ai_name) setAiName(data.settings.ai_name);
         
         // Load chat history if available
         const savedHistory = localStorage.getItem(`ai_widget_history_${currentUser.id}`);
@@ -330,7 +330,7 @@ export function AIBotWidget() {
       const response = await processPrompt(userText, { 
         page: location.pathname,
         currentTime: new Date().toISOString()
-      }, currentModel);
+      }, aiModel);
 
       if (response.intent === 'rate_limit') {
         setShowRateLimitModal(true);
@@ -345,7 +345,7 @@ export function AIBotWidget() {
         return;
       }
 
-      incrementAiUsage(currentModel);
+      incrementAiUsage(aiModel);
 
       if (response.intent === 'redirect_setup') {
         setMessages(prev => [...prev, {
@@ -696,11 +696,10 @@ export function AIBotWidget() {
       <RateLimitModal
         isOpen={showRateLimitModal}
         onClose={() => setShowRateLimitModal(false)}
-        currentModel={currentModel}
+        currentModel={aiModel}
         onSwitchModel={(modelId) => {
-          setCurrentModel(modelId);
+          setAiModel(modelId);
           setShowRateLimitModal(false);
-          localStorage.setItem('user_gemini_model', modelId);
           window.dispatchEvent(new CustomEvent('ai-settings-updated'));
         }}
       />
