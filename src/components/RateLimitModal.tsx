@@ -1,5 +1,6 @@
 import { AlertTriangle, Zap, Sparkles, ChevronRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { useNavigate } from 'react-router-dom';
 
 interface RateLimitModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface RateLimitModalProps {
 
 export function RateLimitModal({ isOpen, onClose, currentModel, onSwitchModel }: RateLimitModalProps) {
   const { aiUsage } = useStore();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
@@ -22,7 +24,7 @@ export function RateLimitModal({ isOpen, onClose, currentModel, onSwitchModel }:
   ];
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 pointer-events-auto">
       <div 
         className="w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
@@ -100,13 +102,16 @@ export function RateLimitModal({ isOpen, onClose, currentModel, onSwitchModel }:
           >
             Close
           </button>
-          <a 
-            href="/settings/ai"
+          <button 
+            onClick={() => {
+              onClose();
+              navigate('/settings/ai');
+            }}
             className="flex-1 py-3 rounded-2xl text-white text-sm font-bold text-center transition-all hover:shadow-lg hover:shadow-[var(--t-primary-dim)]"
             style={{ background: 'var(--t-primary)' }}
           >
             Upgrade Plan
-          </a>
+          </button>
         </div>
       </div>
     </div>

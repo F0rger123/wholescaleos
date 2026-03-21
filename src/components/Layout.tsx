@@ -17,6 +17,7 @@ import {
   Layout as LayoutIcon, CheckCircle
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
+import { LeadFormModal } from './LeadFormModal';
 
 interface UserTeam {
   teamId: string;
@@ -33,7 +34,9 @@ export function Layout() {
     currentTheme, setTheme,
     showQuickNotes,
     searchResults, performSearch,
-    aiName
+    aiName,
+    activeLeadModalId,
+    setActiveLeadModalId
   } = useStore();
 
   const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
@@ -640,7 +643,7 @@ export function Layout() {
                           <button
                             key={lead.id}
                             onClick={() => {
-                              navigate(`/leads/${lead.id}`);
+                              setActiveLeadModalId(lead.id);
                               setShowSearchResults(false);
                             }}
                             className="w-full flex items-center gap-3 p-2 hover:bg-[var(--t-surface-hover)] rounded-lg transition-colors text-left"
@@ -767,6 +770,11 @@ export function Layout() {
       {/* Modals */}
       <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />
       <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
+      <LeadFormModal 
+        isOpen={activeLeadModalId !== null} 
+        leadId={activeLeadModalId} 
+        onClose={() => setActiveLeadModalId(null)} 
+      />
 
       {/* Global Quick Notes Floating Notepad */}
       {showQuickNotes && !notesDocked && (

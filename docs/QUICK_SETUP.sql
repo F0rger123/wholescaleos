@@ -282,6 +282,18 @@ CREATE TABLE IF NOT EXISTS referral_earnings (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- SMS Messages
+CREATE TABLE IF NOT EXISTS sms_messages (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  agent_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  phone_number TEXT NOT NULL,
+  direction TEXT NOT NULL,
+  content TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Access Codes
 CREATE TABLE IF NOT EXISTS access_codes (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -431,6 +443,7 @@ ALTER TABLE buyers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE call_recordings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE referral_earnings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE access_codes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sms_messages DISABLE ROW LEVEL SECURITY;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -454,6 +467,8 @@ CREATE INDEX IF NOT EXISTS idx_tm_user ON team_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_cm_user ON channel_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_buyers_team ON buyers(team_id);
 CREATE INDEX IF NOT EXISTS idx_ca_team ON coverage_areas(team_id);
+CREATE INDEX IF NOT EXISTS idx_sms_user ON sms_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_sms_phone ON sms_messages(phone_number);
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
@@ -474,6 +489,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE team_members; EXCEPTIO
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE notifications; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE leads; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE sms_messages; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════

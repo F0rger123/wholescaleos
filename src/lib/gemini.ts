@@ -77,28 +77,29 @@ export interface CallScriptTemplate {
 }
 
 export async function generateCallScriptTemplates(lead: Lead): Promise<CallScriptTemplate[]> {
-  const prompt = `Generate 3 distinct call script templates for a real estate investor calling this lead.
-  
-Lead Info:
-- Name: ${lead.name}
-- Status: ${lead.status}
-- Property: ${lead.propertyAddress}
+  const firstName = lead.name ? lead.name.split(' ')[0] : 'there';
+  const address = lead.propertyAddress || 'your property';
 
-Return ONLY a JSON array of objects with "name", "category", "script", and "description" fields.
-- "description" should be a short paragraph of "Tactical Notes" on how to best use this specific script.
-Categories: "Introductory", "Follow-up", "Urgent/Closer".
-Make the scripts personalized to the lead's name and status.`;
-
-  try {
-    const res = await processPrompt(prompt, { lead });
-    const text = res.response || "[]";
-    // Basic extraction of JSON from markdown backticks if present
-    const jsonStr = text.includes('```json') ? text.split('```json')[1].split('```')[0] : text;
-    return JSON.parse(jsonStr);
-  } catch (err) {
-    console.error('Call script generation failed:', err);
-    return [];
-  }
+  return [
+    {
+      name: "Introductory Outreach",
+      category: "Introductory",
+      description: "A straightforward, professional opening to gauge initial interest.",
+      script: `Hi ${firstName}, my name is [Your Name] and I'm a local real estate investor. I was calling about your property at ${address}. Are you open to receiving a quick, no-obligation cash offer for it?`
+    },
+    {
+      name: "Follow-up Check-in",
+      category: "Follow-up",
+      description: "Use this when reconnecting with a lead who wasn't ready before or needs a nudge.",
+      script: `Hey ${firstName}, it's [Your Name] following up regarding ${address}. I know timing is everything in real estate, so I just wanted to see if your timeline has changed or if you're ready to explore an offer.`
+    },
+    {
+      name: "Urgent Closer",
+      category: "Urgent/Closer",
+      description: "A more direct script for leads showing high motivation or distressed properties.",
+      script: `Hello ${firstName}, this is [Your Name]. I'm looking to close on a property in your neighborhood this month, and ${address} caught my eye. If I pay cash and cover all closing costs, what's a number that would make sense for you?`
+    }
+  ];
 }
 
 export function getTodaysTasks() {
@@ -276,7 +277,6 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   const effectiveTargetCarrier = targetCarrier || userCarrier;
   
   // Logic: for major carriers, prefer MMS variant for iPhone compatibility
-  const majorCarriers = ['Verizon', 'AT&T', 'T-Mobile', 'Sprint'];
   const isMajor = MAJOR_CARRIERS.includes(effectiveTargetCarrier);
   
   const mmsKey = effectiveTargetCarrier + ' MMS';
@@ -392,30 +392,9 @@ export async function hasUserApiKey(): Promise<boolean> {
   }
 }
 
-/**
- * Generates a call script based on lead information and conversation history.
- */
-export async function generateCallScript(lead: Lead, customContext?: string): Promise<string> {
-  const prompt = `Generate a persuasive and professional real estate call script for the follow lead:
-Lead Name: ${lead.name}
-Property: ${lead.propertyAddress} (${lead.propertyType})
-Estimated Value: $${lead.estimatedValue}
-Status: ${STATUS_LABELS[lead.status] || lead.status}
-Notes: ${lead.notes}
-
-${customContext ? `Additional Context: ${customContext}` : ''}
-
-The script should include:
-1. A warm opening.
-2. A clear reason for the call (discussing their property/interest).
-3. Discovery questions to uncover pain points or motivation.
-4. Handling potential objections based on the lead status.
-5. A clear call to action (next appointment/follow-up).
-
-Return ONLY the script content, formatted for readability.`;
-
-  const res = await processPrompt(prompt, { lead });
-  return res.response;
+export async function generateCallScript(lead: Lead, _customContext?: string): Promise<string> {
+  const templates = await generateCallScriptTemplates(lead);
+  return templates[0].script;
 }
 
 /**

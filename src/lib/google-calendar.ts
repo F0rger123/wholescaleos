@@ -44,7 +44,7 @@ export class GoogleCalendarService {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send',
+      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly',
       access_type: 'offline',
       prompt: 'consent',
       include_granted_scopes: 'true',
@@ -102,7 +102,7 @@ export class GoogleCalendarService {
       if (!response.ok) return false;
       const info = await response.json();
       const scopes = info.scope || '';
-      return scopes.includes('https://www.googleapis.com/auth/gmail.send');
+      return scopes.includes('https://www.googleapis.com/auth/gmail.send') && scopes.includes('https://www.googleapis.com/auth/gmail.readonly');
     } catch (err) {
       console.error('Error checking Gmail permission:', err);
       return false;

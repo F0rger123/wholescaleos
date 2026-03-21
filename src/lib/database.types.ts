@@ -595,6 +595,37 @@ export interface Database {
           uses?: number;
         };
       };
+      sms_messages: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          agent_id: string | null;
+          phone_number: string;
+          direction: string;
+          content: string;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          agent_id?: string | null;
+          phone_number: string;
+          direction: string;
+          content: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string | null;
+          agent_id?: string | null;
+          phone_number?: string;
+          direction?: string;
+          content?: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+      };
       call_recordings: {
         Row: {
           id: string;
@@ -675,3 +706,4 @@ export type DbCoverageArea = Tables['coverage_areas']['Row'];
 export type DbBuyer = Tables['buyers']['Row'];
 export type DbCallRecording = Tables['call_recordings']['Row'];
 export type DbAccessCode = Tables['access_codes']['Row'];
+export type DbSmsMessage = Tables['sms_messages']['Row'];
