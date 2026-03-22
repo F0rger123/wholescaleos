@@ -1,6 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 import { useStore } from '../store/useStore';
-import { processPrompt } from './gemini';
 import { notificationsService } from './supabase-service';
 
 // ── Gateway domains we might receive INBOUND replies FROM ──────────────────
@@ -111,31 +110,22 @@ async function sendGmail(accessToken: string, to: string, body: string) {
 }
 
 // ── AI Auto-reply generation (calls Gemini API directly) ──────────────────
-// ── AI Auto-reply generation (calls Gemini API directly) ──────────────────
-async function generateAutoReply(incomingMessage: string, senderPhone: string): Promise<string> {
-  const store = useStore.getState();
-  const fallback = store.smsAutoReplyMessage || "Thanks for reaching out! We'll be in touch soon.";
+async function generateAutoReply(_incomingMessage: string, _senderPhone: string): Promise<string> {
+  let fallback = "I'm sorry, I'm currently with a client or away from my desk. I'll get back to you as soon as possible!";
   try {
-    const lead = store.leads.find((l: any) => l.phone?.replace(/\D/g, '') === senderPhone.replace(/\D/g, ''));
-    const context = lead ? `The sender is a lead named ${lead.name} (status: ${lead.status}).` : 'The sender is unknown.';
-
-    const prompt = `You are a real estate professional's AI assistant. ${context}
-
-An incoming SMS was received: "${incomingMessage}"
-
-Write a SHORT, professional, friendly SMS auto-reply (1-2 sentences max, no emojis). 
-Don't promise immediate response — the agent will follow up soon. Sign off naturally.
-Remember to return ONLY valid JSON with 'intent' and 'response'.`;
-
-    const res = await processPrompt(prompt, { test: true });
-    if (res && res.response && res.intent !== 'redirect_setup') {
-      return res.response;
+    const store = useStore.getState();
+    const userId = store.currentUser?.id;
+    if (userId && isSupabaseConfigured && supabase) {
+      const { data } = await supabase.from('agent_preferences').select('sms_auto_reply_message').eq('user_id', userId).maybeSingle();
+      if (data?.sms_auto_reply_message) fallback = data.sms_auto_reply_message;
+    } else {
+      const localMsg = localStorage.getItem('user_sms_auto_reply_message');
+      if (localMsg) fallback = localMsg;
     }
-    return fallback;
   } catch (err) {
-    console.error('[SMS Auto-Reply] Generation failed:', err);
-    return fallback;
+    console.error('[SMS Auto-Reply] Failed to load custom message:', err);
   }
+  return fallback;
 }
 
 // ── Task Reminders ─────────────────────────────────────────────────────────
@@ -344,7 +334,18 @@ export async function pollSMSMessages() {
 
       console.log(`[SMS Polling] Successfully stored message ${msg.id} from ${phoneNumber}`);
 
-      const { smsAutoReplyEnabled, notificationSettings, addNotification } = useStore.getState();
+      const { notificationSettings, addNotification } = useStore.getState();
+
+      // Fetch auto-reply preferences dynamically
+      let isAutoReplyEnabled = false;
+      try {
+        if (userId && isSupabaseConfigured && supabase) {
+          const { data } = await supabase.from('agent_preferences').select('sms_auto_reply').eq('user_id', userId).maybeSingle();
+          isAutoReplyEnabled = !!data?.sms_auto_reply;
+        } else {
+          isAutoReplyEnabled = localStorage.getItem('user_sms_auto_reply') === 'true';
+        }
+      } catch (err) {}
 
       // ── In-app notification ──
       if (notificationSettings?.smsReceived) {
@@ -356,8 +357,8 @@ export async function pollSMSMessages() {
         });
       }
 
-      // ── AI-powered auto-reply ──
-      if (smsAutoReplyEnabled) {
+      // ── Auto-reply ──
+      if (isAutoReplyEnabled) {
         const replyGateway = getReplyGateway(fromHeader, phoneNumber);
         if (replyGateway) {
           // Generate AI response based on message content

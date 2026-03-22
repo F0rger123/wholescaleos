@@ -4,23 +4,17 @@ import { useStore } from '../store/useStore';
 import { Smartphone, Send, Loader2, Check, AlertCircle, Save, ExternalLink, RefreshCw } from 'lucide-react';
 import { sendEmail } from '../lib/email';
 import { GoogleCalendarService } from '../lib/google-calendar';
+import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
 
-export const SMS_GATEWAYS: Record<string, string> = {
-  'AT&T': 'txt.att.net',
-  'Verizon': 'vtext.com',
-  'T-Mobile': 'tmomail.net',
-  'Sprint': 'messaging.sprintpcs.com',
-  'Boost Mobile': 'myboostmobile.com',
-  'Cricket Wireless': 'sms.cricketwireless.net',
-  'Google Fi': 'msg.fi.google.com',
-  'Republic Wireless': 'text.republicwireless.com',
-  'U.S. Cellular': 'email.uscc.net',
-  'Virgin Mobile': 'vmobl.com'
-};
+export const UNIVERSAL_GATEWAYS = [
+  'tmomail.net',   // T-Mobile / Boost
+  'vtext.com',     // Verizon
+  'mms.att.net',   // AT&T
+  'pm.sprint.com'  // Sprint
+];
 
 export function SMSSettings() {
-   const [phone, setPhone] = useState('');
-  const [carrier, setCarrier] = useState('');
+  const [phone, setPhone] = useState('');
   const [autoReply, setAutoReply] = useState(false);
   const [autoReplyMessage, setAutoReplyMessage] = useState("I'm sorry, I'm currently with a client or away from my desk. I'll get back to you as soon as possible!");
   const [loading, setLoading] = useState(true);
@@ -53,7 +47,6 @@ export function SMSSettings() {
 
           if (data) {
             setPhone(data.phone_number || '');
-            setCarrier(data.carrier || '');
             setAutoReply(!!data.sms_auto_reply);
             if (data.sms_auto_reply_message) setAutoReplyMessage(data.sms_auto_reply_message);
           }
@@ -62,11 +55,9 @@ export function SMSSettings() {
         }
       } else {
         const localPhone = localStorage.getItem('user_sms_phone');
-        const localCarrier = localStorage.getItem('user_sms_carrier');
         const localAutoReply = localStorage.getItem('user_sms_auto_reply');
         const localAutoReplyMsg = localStorage.getItem('user_sms_auto_reply_message');
         if (localPhone) setPhone(localPhone);
-        if (localCarrier) setCarrier(localCarrier);
         if (localAutoReply) setAutoReply(localAutoReply === 'true');
         if (localAutoReplyMsg) setAutoReplyMessage(localAutoReplyMsg);
       }
@@ -76,36 +67,24 @@ export function SMSSettings() {
     loadPreferences();
   }, [currentUser]);
 
-  const handleReconnectGoogle = () => {
-    const googleService = GoogleCalendarService.getInstance();
-    window.location.href = googleService.getAuthUrl();
-  };
-
   const handleTestSMS = async () => {
-    if (!phone || !carrier) return;
+    if (!phone) return;
     setTesting(true);
     setTestResult(null);
 
-    const gateway = SMS_GATEWAYS[carrier];
-    if (!gateway) {
-      setTestResult({ success: false, message: 'Invalid carrier selection.' });
-      setTesting(false);
-      return;
-    }
-
     const cleanPhone = phone.replace(/\D/g, '');
-    const toAddress = `${cleanPhone}@${gateway}`;
+    const toAddresses = UNIVERSAL_GATEWAYS.map(gw => `${cleanPhone}@${gw}`).join(', ');
 
     try {
       const res = await sendEmail({
-        to: toAddress,
+        to: toAddresses,
         subject: 'WholeScale OS: Test SMS',
-        html: `<p>Your SMS connection for WholeScale OS is working! Phone: ${phone}, Carrier: ${carrier}</p>`,
+        html: `<p>Your SMS connection for WholeScale OS is working! Phone: ${phone}</p>`,
         from: 'WholeScale OS <alerts@wholescale.work>'
       });
 
       if (res.success) {
-        setTestResult({ success: true, message: `Test message sent to ${toAddress}. Check your phone!` });
+        setTestResult({ success: true, message: `Test message sent to ${phone}. Check your phone!` });
       } else {
         setTestResult({ success: false, message: `Failed to send: ${res.error}` });
       }
@@ -121,8 +100,6 @@ export function SMSSettings() {
     setSaving(true);
     setSaveResult(null);
 
-    const gateway = SMS_GATEWAYS[carrier] || '';
-
     if (isSupabaseConfigured && supabase) {
       try {
         const { error } = await supabase
@@ -131,8 +108,8 @@ export function SMSSettings() {
             {
               user_id: currentUser.id,
               phone_number: phone,
-              carrier: carrier,
-              sms_gateway: gateway,
+              carrier: 'Auto-Detect',
+              sms_gateway: 'auto',
               sms_auto_reply: autoReply,
               sms_auto_reply_message: autoReplyMessage,
               updated_at: new Date().toISOString(),
@@ -147,7 +124,7 @@ export function SMSSettings() {
       }
     } else {
       localStorage.setItem('user_sms_phone', phone);
-      localStorage.setItem('user_sms_carrier', carrier);
+      localStorage.setItem('user_sms_carrier', 'auto');
       localStorage.setItem('user_sms_auto_reply', autoReply.toString());
       localStorage.setItem('user_sms_auto_reply_message', autoReplyMessage);
       setSaveResult({ success: true, message: 'SMS settings saved locally to browser storage.' });
@@ -195,25 +172,26 @@ export function SMSSettings() {
             <div className="flex items-start gap-3" style={{ color: 'var(--t-warning)' }}>
               <AlertCircle className="w-5 h-5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold">Gmail Send Permission Required</p>
-                <p className="text-xs opacity-80">You need to grant permission to send emails to use the SMS gateway.</p>
+                <p className="text-sm font-semibold">Gmail Connection Missing</p>
+                <p className="text-xs opacity-80 mb-3">You need to connect Google and grant permission to send emails to use the SMS gateway.</p>
+                <GoogleCalendarConnect />
               </div>
             </div>
-            <button
-              onClick={handleReconnectGoogle}
-              style={{ backgroundColor: 'var(--t-warning)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--t-warning) 80%, black)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-warning)'}
-              className="w-full py-2 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Reconnect Google Account
-            </button>
+          </div>
+        )}
+        
+        {hasGmailPerm === true && (
+          <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--t-success-dim)] border border-[var(--t-success-border)]">
+             <div className="flex items-center gap-2 text-[var(--t-success)]">
+               <Check className="w-5 h-5" />
+               <span className="text-sm font-medium">Google Connection Active</span>
+             </div>
+             <GoogleCalendarConnect />
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
+          <div className="col-span-1 md:col-span-2">
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--t-text-muted)' }}>Phone Number</label>
             <input
               type="tel"
@@ -228,26 +206,7 @@ export function SMSSettings() {
                 '--tw-ring-color': 'var(--t-primary-dim)' 
               } as any}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--t-text-muted)' }}>Mobile Carrier</label>
-            <select
-              value={carrier}
-              onChange={(e) => setCarrier(e.target.value)}
-              className="w-full rounded-xl px-4 py-2.5 outline-none focus:ring-2 transition-all appearance-none"
-              style={{ 
-                backgroundColor: 'var(--t-background)', 
-                border: '1px solid var(--t-border)', 
-                color: 'var(--t-text)',
-                '--tw-ring-color': 'var(--t-primary-dim)' 
-              } as any}
-            >
-              <option value="">Select Carrier</option>
-              {Object.keys(SMS_GATEWAYS).map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>Note: The system automatically detects your carrier routing in the background.</p>
           </div>
         </div>
 
@@ -276,7 +235,7 @@ export function SMSSettings() {
         <div className="flex gap-3 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
           <button
             onClick={handleTestSMS}
-            disabled={testing || !phone || !carrier}
+            disabled={testing || !phone}
             style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface)'}
@@ -287,7 +246,7 @@ export function SMSSettings() {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving || !phone || !carrier}
+            disabled={saving || !phone}
             className="flex-1 px-4 py-2.5 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             style={{ background: 'var(--t-primary)' }}
           >
