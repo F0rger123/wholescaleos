@@ -21,52 +21,28 @@ export async function listAvailableModels(apiKey: string) {
 }
 
 export async function generateLeadInsight(lead: Lead): Promise<string> {
-  const prompt = `As an expert real estate investment analyst, provide a deep strategic insight for this lead.
+  const isHot = lead.status === 'negotiating' || lead.status === 'qualified';
+  const statusNote = lead.status === 'new' ? 'Fast follow-up recommended.' :
+                     lead.status === 'contacted' ? 'Keep momentum with a touchpoint.' :
+                     isHot ? 'Active deal - prioritize this lead.' : 'Monitor for future opportunities.';
+  const valNote = lead.estimatedValue > 250000 ? ` High-value target ($${lead.estimatedValue.toLocaleString()}).` : '';
   
-Lead Details:
-- Name: ${lead.name}
-- Address: ${lead.propertyAddress}
-- Type: ${lead.propertyType}
-- Estimated Value: $${lead.estimatedValue}
-- Status: ${lead.status}
-- Notes: ${lead.notes}
-
-Consider the status, property type, and any notes. Identify one key opportunity or risk, and suggest a specific tactical next step. Keep the insight under 3 sentences and be highly professional.`;
-
-  try {
-    const res = await processPrompt(prompt, { lead });
-    return res.response || "Unable to generate insight at this time.";
-  } catch (err) {
-    console.error('Lead insight generation failed:', err);
-    return "Error generating AI insight. Please check your connection and API key.";
-  }
+  return `[⚡ Local] ${statusNote}${valNote} Review their notes and reach out when ready.`;
 }
 
-export async function generatePageInsights(page: string): Promise<string[]> {
+export async function generatePageInsights(_page: string): Promise<string[]> {
   const store = useStore.getState();
-  const leadsCount = store.leads.length;
-  const hotLeads = store.leads.filter(l => l.status === 'negotiating' || l.status === 'qualified').length;
-  const tasksDue = store.tasks.filter(t => t.status === 'todo').length;
+  const leadsCount = store.leads?.length || 0;
+  const hotLeads = store.leads?.filter(l => l.status === 'negotiating' || l.status === 'qualified').length || 0;
+  const tasksDue = store.tasks?.filter(t => t.status === 'todo').length || 0;
   
-  const prompt = `As an AI assistant for a real estate wholesaler, provide 3 short, high-value insights for the user.
-Current Page: ${page}
-Context: User has ${leadsCount} total leads, ${hotLeads} hot prospects, and ${tasksDue} tasks pending.
+  const insights = [];
+  insights.push(`[⚡ Local] You have ${hotLeads} hot leads out of ${leadsCount} total leads.`);
+  if (tasksDue > 0) insights.push(`[⚡ Local] Focus on clearing your ${tasksDue} pending tasks today.`);
+  else insights.push(`[⚡ Local] Your task list is clear. Great time to prospect!`);
+  insights.push(`[⚡ Local] Consider reviewing any leads stuck in "Contacted" status.`);
 
-Rules:
-- Be proactive and tactical.
-- Mention specific actions the user should take.
-- Keep each insight under 15 words.
-- Return ONLY a JSON array of strings.`;
-
-  try {
-    const res = await processPrompt(prompt, { page, leadsCount, hotLeads, tasksDue });
-    const text = res.response || "[]";
-    const jsonStr = text.includes('[') ? text.substring(text.indexOf('['), text.lastIndexOf(']') + 1) : "[]";
-    return JSON.parse(jsonStr);
-  } catch (err) {
-    console.error('Page insights failed:', err);
-    return ["Focus on following up with your hottest leads today.", "Complete your pending tasks to keep the momentum going."];
-  }
+  return insights;
 }
 
 export interface CallScriptTemplate {
@@ -80,26 +56,45 @@ export async function generateCallScriptTemplates(lead: Lead): Promise<CallScrip
   const firstName = lead.name ? lead.name.split(' ')[0] : 'there';
   const address = lead.propertyAddress || 'your property';
 
-  return [
+  const defaults: CallScriptTemplate[] = [
     {
       name: "Introductory Outreach",
       category: "Introductory",
       description: "A straightforward, professional opening to gauge initial interest.",
-      script: `Hi ${firstName}, my name is [Your Name] and I'm a local real estate investor. I was calling about your property at ${address}. Are you open to receiving a quick, no-obligation cash offer for it?`
+      script: `Hi {{lead.name}}, my name is [Your Name] and I'm a local real estate investor. I was calling about your property at {{lead.address}}. Are you open to receiving a quick, no-obligation cash offer for it?`
     },
     {
       name: "Follow-up Check-in",
       category: "Follow-up",
       description: "Use this when reconnecting with a lead who wasn't ready before or needs a nudge.",
-      script: `Hey ${firstName}, it's [Your Name] following up regarding ${address}. I know timing is everything in real estate, so I just wanted to see if your timeline has changed or if you're ready to explore an offer.`
+      script: `Hey {{lead.name}}, it's [Your Name] following up regarding {{lead.address}}. I know timing is everything in real estate, so I just wanted to see if your timeline has changed or if you're ready to explore an offer.`
     },
     {
       name: "Urgent Closer",
       category: "Urgent/Closer",
       description: "A more direct script for leads showing high motivation or distressed properties.",
-      script: `Hello ${firstName}, this is [Your Name]. I'm looking to close on a property in your neighborhood this month, and ${address} caught my eye. If I pay cash and cover all closing costs, what's a number that would make sense for you?`
+      script: `Hello {{lead.name}}, this is [Your Name]. I'm looking to close on a property in your neighborhood this month, and {{lead.address}} caught my eye. If I pay cash and cover all closing costs, what's a number that would make sense for you?`
     }
   ];
+
+  let customScripts: CallScriptTemplate[] = [];
+  try {
+    const saved = localStorage.getItem('user_custom_scripts');
+    if (saved) customScripts = JSON.parse(saved);
+  } catch (err) {
+    console.error('Failed to parse custom scripts', err);
+  }
+
+  const allScripts = [...defaults, ...customScripts];
+
+  // Apply template replacements
+  return allScripts.map(t => ({
+    ...t,
+    script: t.script
+      .replace(/\{\{lead\.name\}\}/gi, firstName)
+      .replace(/\{\{lead\.address\}\}/gi, address)
+      .replace(/\{\{lead\.score\}\}/gi, String(lead.engagementLevel || 0))
+  }));
 }
 
 export function getTodaysTasks() {
@@ -404,6 +399,37 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
 export async function processPrompt(prompt: string, context: Record<string, any> = {}, modelOverride?: string, signal?: AbortSignal): Promise<GeminiResponse> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
+  
+  // ── LOCAL AI TASK ENGINE (NO API CREDITS) ──────────────────────────────
+  const cleanPrompt = prompt.toLowerCase();
+  if (!context?.test) { // Do not intercept internal system test prompts
+    if (cleanPrompt.includes('hot lead') || cleanPrompt.includes('best lead')) {
+      const hotLeads = store.leads?.filter(l => l.status === 'negotiating' || l.status === 'qualified') || [];
+      const names = hotLeads.map((l: any) => l.name).join(', ');
+      return {
+        intent: 'general_response',
+        response: `[⚡ Local AI] I found ${hotLeads.length} hot leads in your pipeline. ${names ? `They are: ${names}.` : ''}`
+      };
+    }
+    
+    if (cleanPrompt.includes('my task') || cleanPrompt.includes('schedule')) {
+      const dueTasks = store.tasks?.filter(t => t.status === 'todo') || [];
+      return {
+        intent: 'navigate',
+        response: `[⚡ Local AI] You have ${dueTasks.length} pending tasks. Navigating to your tasks list.`,
+        data: { path: '/tasks' }
+      };
+    }
+
+    if (cleanPrompt.includes('sms setting') || cleanPrompt.includes('text setting')) {
+      return {
+        intent: 'navigate',
+        response: `[⚡ Local AI] Taking you to the SMS settings page.`,
+        data: { path: '/settings/sms' }
+      };
+    }
+  }
+  // ───────────────────────────────────────────────────────────────────────
   
   let provider: 'gemini'|'openai'|'anthropic' = 'gemini';
   let apiKey = '';
