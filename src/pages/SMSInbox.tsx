@@ -122,10 +122,16 @@ export function SMSInbox() {
     localStorage.setItem('sms_carrier_map', JSON.stringify(next));
 
     // Persist to Supabase if it's a lead via store action
-    const lead = leads.find(l => normalizePhone(l.phone || '') === rawPhone);
+    const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === rawPhone);
+    const lead = matchingLeads[0]; // TODO: Add better tie-breaker if needed
+    
+    if (matchingLeads.length > 1) {
+      console.warn(`[SMS] Multiple leads found for ${phone}:`, matchingLeads.map(l => `${l.name} (${l.id})`));
+    }
+
     if (lead) {
+      console.log(`[SMS] updateLead ${lead.id} ('${lead.name}') with carrier: ${carrier}`);
       updateLead(lead.id, { carrier });
-      console.log(`[SMS] Triggered store update for lead carrier: ${lead.name} -> ${carrier}`);
     }
   };
 
@@ -298,9 +304,10 @@ export function SMSInbox() {
     if (selectedPhone) {
       const raw = normalizePhone(selectedPhone);
       const c = carrierMap[raw];
-      const lead = leads.find(l => normalizePhone(l.phone || '') === raw);
+      const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === raw);
+      const lead = matchingLeads[0];
       
-      console.log(`[SMS] Conversation opened for ${selectedPhone} (raw: ${raw}). Map: '${c || "undefined"}', Lead: '${lead?.carrier || "null"}'`);
+      console.log(`[SMS] Conversation opened for ${selectedPhone}. Map: '${c || "undefined"}', Lead Match Count: ${matchingLeads.length}, Lead ID: ${lead?.id || "none"}`);
       
       if (!c || c === 'Auto-Detect (Universal Blast)') {
         handleAutoDetect(selectedPhone);
@@ -319,7 +326,7 @@ export function SMSInbox() {
       if (!msg.phone_number) return;
       const rawPhone = msg.phone_number.replace(/\D/g, '');
       if (!groups[rawPhone]) {
-        const lead = leads.find(l => l.phone?.replace(/\D/g, '') === rawPhone);
+        const lead = leads.find(l => normalizePhone(l.phone || '') === rawPhone);
         groups[rawPhone] = {
           phone: rawPhone,
           lastMessage: msg.content,
