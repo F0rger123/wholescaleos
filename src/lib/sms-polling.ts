@@ -2,25 +2,8 @@ import { supabase, isSupabaseConfigured } from './supabase';
 import { useStore } from '../store/useStore';
 import { notificationsService } from './supabase-service';
 
-// ── Gateway domains we might receive INBOUND replies FROM ──────────────────
-const ALL_GATEWAY_DOMAINS = [
-  // Standard SMS gateways
-  'vtext.com',
-  'txt.att.net',
-  'tmomail.net',
-  'messaging.sprintpcs.com',
-  'myboostmobile.com',
-  'sms.cricketwireless.net',
-  'msg.fi.google.com',
-  'text.republicwireless.com',
-  'email.uscc.net',
-  'vmobl.com',
-  // MMS gateways (iPhone-compatible)
-  'vzwpix.com',
-  'mms.att.net',
-  'pm.sprint.com',
-  'mmst5.tracfone.com',
-];
+import { ALL_GATEWAY_DOMAINS } from './sms-gateways';
+
 
 // Gmail API query — use broad carrier domain matching
 // Gmail query syntax: OR-join each domain. Use `from:(@domain)` for partial match.
