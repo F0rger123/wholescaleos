@@ -412,61 +412,116 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * Sends a prompt and context to the Gemini API and returns a parsed intent and response.
  * Strictly requires a user-configured API key from settings.
  */
+import { PREBUILT_RULES, getEnabledPrebuiltRules } from './prebuilt-rules';
+
 export async function processPrompt(prompt: string, context: Record<string, any> = {}, modelOverride?: string, signal?: AbortSignal): Promise<GeminiResponse> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   
   // ── LOCAL AI TASK ENGINE (NO API CREDITS) ──────────────────────────────
-  const cleanPrompt = prompt.toLowerCase();
+  const cleanPrompt = prompt.toLowerCase().trim();
   
   if (!context?.test) { // Do not intercept internal system test prompts
-    // Check Custom User Training Rules First
+    // 1. Intercept "create a rule" requests
+    const ruleMatch = cleanPrompt.match(/create a rule that when i say ['"]?(.*?)['"]?,? (.*)/) 
+                   || cleanPrompt.match(/create a rule that (.*?) then (.*)/);
+                   
+    if (ruleMatch) {
+      const trigger = ruleMatch[1].trim();
+      let rawAction = ruleMatch[2].trim().replace(/['"]/g, '');
+      
+      // Auto-map natural language to internal action intents
+      let actionIntent = 'navigate_dashboard';
+      if (rawAction.includes('task')) actionIntent = 'navigate_tasks';
+      else if (rawAction.includes('calendar') || rawAction.includes('meeting')) actionIntent = 'navigate_calendar';
+      else if (rawAction.includes('setting')) actionIntent = 'navigate_settings';
+      else if (rawAction.includes('hot lead')) actionIntent = 'show_hot_leads';
+      else if (rawAction.includes('text') || rawAction.includes('sms')) actionIntent = 'navigate_sms';
+      else if (rawAction.includes('lead')) actionIntent = 'navigate_leads';
+      
+      try {
+        const savedRules = localStorage.getItem('ai_training_rules');
+        const customRules = savedRules ? JSON.parse(savedRules) : [];
+        customRules.push({ trigger, action: actionIntent });
+        localStorage.setItem('ai_training_rules', JSON.stringify(customRules));
+        window.dispatchEvent(new CustomEvent('ai-settings-updated'));
+        
+        return {
+          intent: 'general_response',
+          response: `[⚡ Local Rules] Successfully created a new training rule! When you say "${trigger}", I will execute "${actionIntent}".`
+        };
+      } catch (e) {
+        console.error('Failed to save AI rule:', e);
+      }
+    }
+
+    // 2. Execute Local Rules (Supports multi-step via 'and')
+    const commands = cleanPrompt.split(/\s+and\s+/);
+    let matchedActions: { intent: string, response: string, data?: any }[] = [];
+    
     try {
+      const activePrebuilt = getEnabledPrebuiltRules();
       const savedRules = localStorage.getItem('ai_training_rules');
-      if (savedRules) {
-        const rules = JSON.parse(savedRules);
-        for (const rule of rules) {
-          if (cleanPrompt.includes(rule.trigger)) {
-            if (rule.action === 'navigate_tasks') return { intent: 'navigate', response: '[⚡ Local Rules] Navigating to tasks.', data: { path: '/tasks' } };
-            if (rule.action === 'navigate_settings') return { intent: 'navigate', response: '[⚡ Local Rules] Opening settings.', data: { path: '/settings' } };
-            if (rule.action === 'navigate_calendar') return { intent: 'navigate', response: '[⚡ Local Rules] Accessing calendar schedule.', data: { path: '/calendar' } };
-            if (rule.action === 'show_hot_leads') {
-              const hl = store.leads?.filter((l:any) => l.status === 'negotiating' || l.status === 'qualified') || [];
-              return { intent: 'general_response', response: `[⚡ Local Rules] You have ${hl.length} hot leads ready for engagement.` };
-            }
+      const customRules = savedRules ? JSON.parse(savedRules) : [];
+      
+      const allRules = [
+        ...PREBUILT_RULES.filter(r => activePrebuilt.includes(r.id)), 
+        ...customRules
+      ];
+      
+      // Also inject implicit fallback rules
+      allRules.push(
+        { trigger: 'hot lead', action: 'show_hot_leads' },
+        { trigger: 'best lead', action: 'show_hot_leads' },
+        { trigger: 'my task', action: 'navigate_tasks' },
+        { trigger: 'sms setting', action: 'navigate_settings_sms' },
+        { trigger: 'text setting', action: 'navigate_settings_sms' }
+      );
+
+      for (const cmd of commands) {
+        const matchedRule = allRules.find(r => cmd.includes(r.trigger));
+        if (matchedRule) {
+          if (matchedRule.action === 'navigate_tasks') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening tasks.', data: { path: '/tasks' } });
+          } else if (matchedRule.action === 'navigate_settings') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening settings.', data: { path: '/settings' } });
+          } else if (matchedRule.action === 'navigate_settings_sms') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening SMS settings.', data: { path: '/settings/sms' } });
+          } else if (matchedRule.action === 'navigate_calendar') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Accessing calendar schedule.', data: { path: '/calendar' } });
+          } else if (matchedRule.action === 'navigate_dashboard') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Going to Dashboard.', data: { path: '/' } });
+          } else if (matchedRule.action === 'navigate_leads') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening Leads.', data: { path: '/leads' } });
+          } else if (matchedRule.action === 'navigate_sms') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening SMS Inbox.', data: { path: '/sms' } });
+          } else if (matchedRule.action === 'show_hot_leads') {
+            const hl = store.leads?.filter((l:any) => l.status === 'negotiating' || l.status === 'qualified') || [];
+            matchedActions.push({ intent: 'general_response', response: `[⚡ Local Rules] You have ${hl.length} hot leads ready for engagement.` });
+          } else if (matchedRule.action === 'create_task') {
+            matchedActions.push({ intent: 'create_task', response: '[⚡ Local Rules] Initiated task creation.', data: { title: cmd, priority: 'medium' } });
+          } else if (matchedRule.action === 'send_sms') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening compose box.', data: { path: '/sms?compose=true' } });
           }
         }
       }
-    } catch (e) {}
-
-    // Fallback Local Core Rules
-    if (cleanPrompt.includes('hot lead') || cleanPrompt.includes('best lead')) {
-      const hotLeads = store.leads?.filter(l => l.status === 'negotiating' || l.status === 'qualified') || [];
-      const names = hotLeads.map((l: any) => l.name).join(', ');
-      return {
-        intent: 'general_response',
-        response: `[⚡ Local AI] I found ${hotLeads.length} hot leads in your pipeline. ${names ? `They are: ${names}.` : ''}`
-      };
-    }
-    
-    if (cleanPrompt.includes('my task') || cleanPrompt.includes('schedule')) {
-      const dueTasks = store.tasks?.filter(t => t.status === 'todo') || [];
-      return {
-        intent: 'navigate',
-        response: `[⚡ Local AI] You have ${dueTasks.length} pending tasks. Navigating to your tasks list.`,
-        data: { path: '/tasks' }
-      };
-    }
-
-    if (cleanPrompt.includes('sms setting') || cleanPrompt.includes('text setting')) {
-      return {
-        intent: 'navigate',
-        response: `[⚡ Local AI] Taking you to the SMS settings page.`,
-        data: { path: '/settings/sms' }
-      };
+      
+      if (matchedActions.length === 1) {
+        return matchedActions[0];
+      } else if (matchedActions.length > 1) {
+        return {
+          intent: 'multi_action',
+          response: `[⚡ Local Rules] Executing ${matchedActions.length} chained local actions sequentially.`,
+          data: { actions: matchedActions }
+        };
+      }
+    } catch (e) {
+      console.error('Error in local AI task engine:', e);
     }
   }
   // ───────────────────────────────────────────────────────────────────────
+
+
   
   let provider: 'gemini'|'openai'|'anthropic' = 'gemini';
   let apiKey = '';

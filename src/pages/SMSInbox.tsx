@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { sendSMSViaAI } from '../lib/gemini';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { pollSMSMessages } from '../lib/sms-polling';
+import { googleEcosystem } from '../lib/google-ecosystem';
 
 interface SMSMessage {
   id: string;
@@ -50,6 +51,7 @@ export function SMSInbox() {
   const addContact = useStore(state => state.addContact);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncingContacts, setSyncingContacts] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
   const [newNumber, setNewNumber] = useState('');
   const [confirmModal, setConfirmModal] = useState<{
@@ -97,6 +99,34 @@ export function SMSInbox() {
     }
   };
 
+  const handleSyncContacts = async () => {
+    if (!currentUser?.id) return;
+    setSyncingContacts(true);
+    try {
+      const data = await googleEcosystem.getContacts(currentUser.id);
+      const connections = data.connections || [];
+      let syncedCount = 0;
+      connections.forEach((conn: any) => {
+        const name = conn.names?.[0]?.displayName || 'Unknown';
+        const phoneObj = conn.phoneNumbers?.find((p: any) => p.value);
+        let phoneValue = phoneObj ? phoneObj.value : '';
+        if (phoneValue) {
+          const rawPhone = phoneValue.replace(/\D/g, '');
+          if (rawPhone && !useStore.getState().contacts.some(c => c.phone.replace(/\D/g, '') === rawPhone)) {
+             useStore.getState().addContact({ name, phone: phoneValue, notes: 'Imported from Google Contacts' });
+             syncedCount++;
+          }
+        }
+      });
+      alert(`Synced ${syncedCount} new contacts from Google!`);
+    } catch (err: any) {
+      console.error('[SMS Inbox] Sync failed:', err);
+      alert('Failed to sync contacts: ' + err.message);
+    } finally {
+      setSyncingContacts(false);
+    }
+  };
+
   useEffect(() => {
     if (phoneParam) {
       setSelectedPhone(phoneParam);
@@ -130,6 +160,7 @@ export function SMSInbox() {
     const groups: Record<string, Conversation> = {};
     
     allMessages.forEach(msg => {
+      if (!msg.phone_number) return;
       const rawPhone = msg.phone_number.replace(/\D/g, '');
       if (!groups[rawPhone]) {
         const lead = leads.find(l => l.phone?.replace(/\D/g, '') === rawPhone);
@@ -249,7 +280,7 @@ export function SMSInbox() {
   };
 
   const selectedMessages = [...messages]
-    .filter(m => m.phone_number.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, ''))
+    .filter(m => m.phone_number && m.phone_number.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, ''))
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   const activeConversation = conversations.find(c => c.phone.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, ''));
@@ -278,6 +309,15 @@ export function SMSInbox() {
                 title="Check for new messages now"
               >
                 <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+              </button>
+              <button 
+                onClick={handleSyncContacts}
+                disabled={syncingContacts}
+                className="p-2 rounded-xl transition-all hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
+                style={{ color: 'var(--t-text-muted)' }}
+                title="Sync Google Contacts"
+              >
+                <UserPlus size={16} className={syncingContacts ? 'animate-pulse text-[var(--t-primary)]' : ''} />
               </button>
               <button 
                 onClick={() => setShowCompose(true)}

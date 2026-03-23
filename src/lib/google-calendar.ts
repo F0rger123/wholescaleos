@@ -44,7 +44,7 @@ export class GoogleCalendarService {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly',
+      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/keep.readonly',
       access_type: 'offline',
       prompt: 'consent',
       include_granted_scopes: 'true',
@@ -93,7 +93,7 @@ export class GoogleCalendarService {
     }
   }
 
-  async hasGmailPermission(userId: string): Promise<boolean> {
+  async hasRequiredPermissions(userId: string): Promise<boolean> {
     const token = await this.getAccessToken(userId);
     if (!token) return false;
 
@@ -102,9 +102,11 @@ export class GoogleCalendarService {
       if (!response.ok) return false;
       const info = await response.json();
       const scopes = info.scope || '';
-      return scopes.includes('https://www.googleapis.com/auth/gmail.send') && scopes.includes('https://www.googleapis.com/auth/gmail.readonly');
+      return scopes.includes('https://www.googleapis.com/auth/gmail.send') 
+          && scopes.includes('https://www.googleapis.com/auth/gmail.readonly')
+          && scopes.includes('https://www.googleapis.com/auth/contacts.readonly');
     } catch (err) {
-      console.error('Error checking Gmail permission:', err);
+      console.error('Error checking Workspace permissions:', err);
       return false;
     }
   }

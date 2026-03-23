@@ -419,6 +419,18 @@ export function AIBotWidget() {
           intent: response.intent,
           data: response.data
         }]);
+
+        if (response.intent === 'navigate' && response.data?.path) {
+          navigate(response.data.path);
+        } else if (response.intent === 'multi_action' && response.data?.actions) {
+          response.data.actions.forEach((act: any) => {
+            if (act.intent === 'navigate' && act.data?.path) {
+              navigate(act.data.path);
+            } else if (act.intent === 'create_task') {
+              handleExecuteAction('create_task', act.data);
+            }
+          });
+        }
       }
     } catch (err) {
       setMessages(prev => [...prev, {
@@ -447,9 +459,9 @@ export function AIBotWidget() {
         result = updateLeadViaAI(data.leadId, data);
       } else if (intent === 'delete_lead' && data?.leadId) {
         result = deleteLeadViaAI(data.leadId);
-      } else if (intent === 'send_sms' && (data?.target || data?.leadId) && data?.message) {
+      } else if (intent === 'send_sms' && (data?.target || data?.leadId || data?.phone) && data?.message) {
         setLoading(true);
-        result = await sendSMSViaAI(data.target || data.leadId, data.message, data.targetCarrier);
+        result = await sendSMSViaAI(data.target || data.leadId || data.phone, data.message, data.targetCarrier);
         setLoading(false);
       } else if (intent === 'confirm_action') {
         const underlyingIntent = data?.intent;

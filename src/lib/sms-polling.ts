@@ -369,6 +369,7 @@ export async function pollSMSMessages() {
           // Log the auto-reply as outbound
           await supabase.from('sms_messages').insert({
             user_id: userId,
+            agent_id: userId,
             phone_number: phoneNumber,
             content: autoReplyText,
             direction: 'outbound',

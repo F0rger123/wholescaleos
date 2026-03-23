@@ -35,7 +35,7 @@ export function SMSSettings() {
 
       // Check Gmail Permission
       const googleService = GoogleCalendarService.getInstance();
-      const hasPerm = await googleService.hasGmailPermission(currentUser.id);
+      const hasPerm = await googleService.hasRequiredPermissions(currentUser.id);
       setHasGmailPerm(hasPerm);
 
       if (isSupabaseConfigured && supabase) {
