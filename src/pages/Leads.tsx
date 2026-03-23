@@ -17,6 +17,7 @@ import {
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
 import { CallScriptModal } from '../components/CallScriptModal';
+import { detectCarrier } from '../lib/carrier-service';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -359,7 +360,18 @@ export default function Leads() {
       timelineUrgency: parseInt(formData.timelineUrgency), 
       competitionLevel: parseInt(formData.competitionLevel) 
     };
-    if (editingLead) updateLead(editingLead.id, d); else addLead(d);
+    if (editingLead) {
+      updateLead(editingLead.id, d);
+      if (d.phone && d.phone !== editingLead.phone) {
+        detectCarrier(d.phone).then(res => {
+          if (res.carrier) updateLead(editingLead.id, { carrier: res.carrier } as any);
+        });
+      }
+    } else {
+      detectCarrier(d.phone).then(res => {
+        addLead({ ...d, carrier: res.carrier });
+      });
+    }
     setSaving(false); 
     setShowModal(false);
   };
