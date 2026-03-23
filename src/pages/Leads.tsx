@@ -10,10 +10,11 @@ import {
   DollarSign, Calendar, Edit2, Trash2, X, Check,
   Sparkles, Loader2, Save, PhoneCall, Send,
   Users, Mic, Play, Pause, Square, Bot as Brain,
-  Target, Zap, BarChart3,
+  Target, Zap, BarChart3, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
-  Trash, AlertTriangle, FileText as ScriptIcon
+  Trash, AlertTriangle, FileText as ScriptIcon, Folder
 } from 'lucide-react';
+import { googleEcosystem } from '../lib/google-ecosystem';
 import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
 import { CallScriptModal } from '../components/CallScriptModal';
 
@@ -81,6 +82,60 @@ export default function Leads() {
   const [generatingScript, setGeneratingScript] = useState<string | null>(null);
   const [scriptLoading, setScriptLoading] = useState(false);
 
+  // Google Drive state
+  const [driveFiles, setDriveFiles] = useState<Record<string, any[]>>({});
+  const [fetchingDrive, setFetchingDrive] = useState<Record<string, boolean>>({});
+
+  const fetchDriveFiles = async (leadId: string, query: string) => {
+    const { currentUser } = useStore.getState();
+    if (!currentUser?.id) return;
+    setFetchingDrive(p => ({ ...p, [leadId]: true }));
+    try {
+      const data = await googleEcosystem.getFiles(currentUser.id, query);
+      setDriveFiles(p => ({ ...p, [leadId]: data.files || [] }));
+    } catch (err) {
+      console.error('Failed to fetch Drive files', err);
+    } finally {
+      setFetchingDrive(p => ({ ...p, [leadId]: false }));
+    }
+  };
+
+  // Google Keep state
+  const [syncingKeep, setSyncingKeep] = useState<Record<string, boolean>>({});
+
+  const fetchKeepNotes = async (leadId: string, query: string) => {
+    const { currentUser } = useStore.getState();
+    if (!currentUser?.id) return;
+    setSyncingKeep(p => ({ ...p, [leadId]: true }));
+    try {
+      const data = await googleEcosystem.getNotes(currentUser.id, query);
+      const notes = data.notes || [];
+      let added = 0;
+      notes.forEach((note: any) => {
+        const title = note.title || '';
+        const bodyValue = note.body?.text?.text || '';
+        const contentStr = `[Keep Note] ${title}: ${bodyValue}`.trim();
+        const lead = useStore.getState().leads.find(l => l.id === leadId);
+        if (lead && !lead.timeline.some(t => t.content === contentStr)) {
+          useStore.getState().addTimelineEntry(leadId, {
+            type: 'note',
+            content: contentStr,
+            user: 'Google Keep',
+            timestamp: note.createTime || new Date().toISOString()
+          });
+          added++;
+        }
+      });
+      if (added > 0) alert(`Synced ${added} new Keep notes!`);
+      else alert('No new Keep notes found for this lead.');
+    } catch (err) {
+      console.error('Failed to sync Keep notes', err);
+      alert('Failed to sync Google Keep');
+    } finally {
+      setSyncingKeep(p => ({ ...p, [leadId]: false }));
+    }
+  };
+
   // AI Intelligence state
   const [aiInsight, setAiInsight] = useState<Record<string, string>>({});
   const [isGeneratingInsight, setIsGeneratingInsight] = useState<string | null>(null);
@@ -89,9 +144,25 @@ export default function Leads() {
 
   // Bulk selection state
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'list'|'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list'|'kanban'|'card'|'compact'|'map'>('list');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const [folders, setFolders] = useState<Record<string, string[]>>(() => {
+    try {
+      const saved = localStorage.getItem('lead_folders');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { 'Favorites': [], 'Follow Up Soon': [] };
+  });
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+
+  const saveFolders = (newFolders: Record<string, string[]>) => {
+    setFolders(newFolders);
+    localStorage.setItem('lead_folders', JSON.stringify(newFolders));
+  };
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
     e.dataTransfer.setData('leadId', leadId);
@@ -182,7 +253,8 @@ export default function Leads() {
       const ms = !q || (l.name || '').toLowerCase().includes(q) || (l.email || '').toLowerCase().includes(q) || (l.phone || '').includes(q) || (l.propertyAddress || '').toLowerCase().includes(q);
       const mst = statusFilter === 'all' || l.status === statusFilter;
       const mp = priorityFilter === 'all' || calculatePriorityScore(l).level === priorityFilter;
-      return ms && mst && mp;
+      const mf = !activeFolder || (folders[activeFolder] || []).includes(l.id);
+      return ms && mst && mp && mf;
     })
     .sort((a, b) => {
       if (sortBy === 'priority') return calculatePriorityScore(b).score - calculatePriorityScore(a).score;
@@ -396,6 +468,24 @@ export default function Leads() {
               className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'kanban' ? 'bg-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:text-white'}`}
             >
               Kanban
+            </button>
+            <button
+              onClick={() => setViewMode('card')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'card' ? 'bg-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:text-white'}`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setViewMode('compact')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'compact' ? 'bg-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:text-white'}`}
+            >
+              Compact
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'map' ? 'bg-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:text-white'}`}
+            >
+              Map
             </button>
           </div>
 
@@ -615,6 +705,88 @@ export default function Leads() {
         </select>
       </div>
 
+      {/* FOLDERS TAB */}
+      <div className="flex gap-2 overflow-x-auto pb-4 mb-2">
+        <button 
+          onClick={() => setActiveFolder(null)} 
+          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!activeFolder ? 'bg-[var(--t-primary)] text-white shadow-md' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 hover:text-white'}`}
+        >
+          All Leads
+        </button>
+        {Object.entries(folders).map(([fName, fIds]) => (
+          <div key={fName} className="relative group flex-shrink-0">
+            <button
+              onDragOver={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--t-primary)'; }}
+              onDragLeave={(e) => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--t-border)'; }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.style.borderColor = 'var(--t-border)';
+                const leadId = e.dataTransfer.getData('leadId');
+                if (leadId && !fIds.includes(leadId)) {
+                   saveFolders({ ...folders, [fName]: [...fIds, leadId] });
+                }
+              }}
+              onClick={() => setActiveFolder(fName)}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeFolder === fName ? 'bg-[var(--t-primary)] text-white shadow-md' : 'bg-[var(--t-surface)] text-[var(--t-text)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50'}`}
+            >
+              <Folder className="w-3.5 h-3.5" style={{ color: activeFolder === fName ? 'white' : 'var(--t-primary)' }} />
+              {fName} 
+              <span className="text-xs opacity-70">({fIds.length})</span>
+            </button>
+            <button 
+              onClick={() => {
+                 if (confirm(`Delete folder "${fName}"? Leads will not be deleted.`)) {
+                     const newFolders = { ...folders };
+                     delete newFolders[fName];
+                     saveFolders(newFolders);
+                     if (activeFolder === fName) setActiveFolder(null); // Return to default map when currently sorting
+                 }
+              }}
+              className="absolute -top-1 -right-1 hidden group-hover:flex w-4 h-4 rounded-full bg-[var(--t-error)] text-white items-center justify-center text-[10px]"
+            >
+              <X className="w-2 h-2" />
+            </button>
+          </div>
+        ))}
+        {isCreatingFolder ? (
+          <div className="flex items-center gap-1 flex-shrink-0 bg-[var(--t-surface)] border border-[var(--t-primary)] rounded-full px-2" style={{ borderColor: 'var(--t-primary)' }}>
+             <Folder className="w-3.5 h-3.5 text-[var(--t-primary)]" />
+             <input 
+               value={newFolderName}
+               onChange={e => setNewFolderName(e.target.value)}
+               placeholder="Folder name..."
+               className="bg-transparent text-sm text-white w-24 outline-none px-1 py-1"
+               autoFocus
+               onKeyDown={e => {
+                  if (e.key === 'Enter' && newFolderName.trim()) {
+                     if (!folders[newFolderName.trim()]) {
+                        saveFolders({ ...folders, [newFolderName.trim()]: [] });
+                     }
+                     setNewFolderName('');
+                     setIsCreatingFolder(false);
+                  } else if (e.key === 'Escape') {
+                     setIsCreatingFolder(false);
+                  }
+               }}
+               onBlur={() => {
+                  if (newFolderName.trim() && !folders[newFolderName.trim()]) {
+                     saveFolders({ ...folders, [newFolderName.trim()]: [] });
+                  }
+                  setNewFolderName('');
+                  setIsCreatingFolder(false);
+               }}
+             />
+          </div>
+        ) : (
+          <button 
+            onClick={() => setIsCreatingFolder(true)} 
+            className="flex-shrink-0 flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-medium border border-dashed border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-[var(--t-primary)] hover:border-[var(--t-primary)] transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Folder
+          </button>
+        )}
+      </div>
+
       {/* LEADS LIST */}
       <div className="space-y-3">
         {/* Bulk selection header */}
@@ -687,8 +859,8 @@ export default function Leads() {
                           key={lead.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, lead.id)}
-                          onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)}
-                          className={`bg-[var(--t-surface)] border border-[var(--t-border)] p-4 rounded-xl shadow-sm cursor-grab active:cursor-grabbing hover:border-[var(--t-primary)]/50 transition-all ${expandedLead === lead.id ? 'ring-2 ring-[var(--t-primary)] relative z-10 scale-[1.02]' : ''}`}
+                          onClick={() => openEdit(lead)}
+                          className={`bg-[var(--t-surface)] border border-[var(--t-border)] p-4 rounded-xl shadow-sm cursor-grab active:cursor-grabbing hover:border-[var(--t-primary)]/50 transition-all`}
                         >
                           <div className="flex justify-between items-start mb-2">
                             <h4 className="font-bold text-white leading-tight pr-2">{lead.name || 'Unnamed'}</h4>
@@ -709,6 +881,98 @@ export default function Leads() {
                 </div>
               );
             })}
+          </div>
+        ) : viewMode === 'card' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filtered.map(lead => {
+              const ds = calculateDealScore(lead);
+              const days = getDaysInStatus(lead);
+              return (
+                <div key={lead.id} className="bg-[var(--t-surface)] border border-[var(--t-border)] p-4 rounded-xl shadow-sm hover:border-[var(--t-primary)]/50 transition-all cursor-pointer relative" onClick={() => openEdit(lead)}>
+                  <div className="absolute top-2 right-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedLeads.has(lead.id)}
+                      onChange={(e) => { e.stopPropagation(); toggleSelectLead(lead.id); }}
+                      className="w-4 h-4 rounded border focus:ring-1"
+                      style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-primary)' }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-start mb-2 pr-6">
+                    <h4 className="font-bold text-white leading-tight">{lead.name || 'Unnamed'}</h4>
+                  </div>
+                  <p className="text-xs text-[var(--t-text-muted)] truncate mb-3">{lead.propertyAddress || 'No Address'}</p>
+                  <div className="flex gap-2 mb-3">
+                    <span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>{STATUS_LABELS[lead.status] || lead.status}</span>
+                    {(() => { const sb = scoreBadge(ds); return <span className={`px-2 py-0.5 text-[10px] rounded-full border ${sb.className}`} style={sb.style}>⚡ {ds}</span>; })()}
+                  </div>
+                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-[var(--t-border)]">
+                    <span className="text-xs text-[var(--t-text-muted)]">{days}d active</span>
+                    <span className="text-sm font-bold text-white">{fmt$(lead.estimatedValue || 0)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : viewMode === 'compact' ? (
+          <div className="border border-[var(--t-border)] rounded-xl overflow-hidden bg-[var(--t-surface)]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-[var(--t-surface-dim)] border-b border-[var(--t-border)] text-[var(--t-text-muted)]">
+                  <tr>
+                    <th className="p-3 w-8"></th>
+                    <th className="p-3 font-medium">Name</th>
+                    <th className="p-3 font-medium">Status</th>
+                    <th className="p-3 font-medium">Score</th>
+                    <th className="p-3 font-medium">Address</th>
+                    <th className="p-3 font-medium text-right">Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--t-border)]">
+                  {filtered.map(lead => {
+                    const ds = calculateDealScore(lead);
+                    return (
+                      <tr key={lead.id} className="hover:bg-[var(--t-surface-hover)] transition-colors cursor-pointer group" onClick={() => openEdit(lead)}>
+                        <td className="p-3" onClick={e => e.stopPropagation()}>
+                          <input type="checkbox" checked={selectedLeads.has(lead.id)} onChange={() => toggleSelectLead(lead.id)} className="w-4 h-4 rounded" style={{ accentColor: 'var(--t-primary)' }} />
+                        </td>
+                        <td className="p-3 font-medium text-white">{lead.name || 'Unnamed'}</td>
+                        <td className="p-3"><span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>{STATUS_LABELS[lead.status] || lead.status}</span></td>
+                        <td className="p-3 text-[var(--t-text-muted)]">⚡ {ds}</td>
+                        <td className="p-3 text-[var(--t-text-muted)] truncate max-w-[200px]">{lead.propertyAddress || 'No Address'}</td>
+                        <td className="p-3 font-medium text-white text-right">{fmt$(lead.estimatedValue || 0)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : viewMode === 'map' ? (
+          <div className="flex flex-col lg:flex-row gap-4 h-[70vh]">
+            <div className="w-full lg:w-1/3 flex flex-col gap-3 overflow-y-auto pr-2">
+              {filtered.map(lead => {
+                return (
+                  <div key={lead.id} onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)} className={`p-3 rounded-xl border cursor-pointer transition-all ${expandedLead === lead.id ? 'border-[var(--t-primary)] bg-[var(--t-surface-hover)]' : 'border-[var(--t-border)] bg-[var(--t-surface)]'}`}>
+                    <h4 className="font-bold text-white text-sm">{lead.name || 'Unnamed'}</h4>
+                    <p className="text-xs text-[var(--t-text-muted)] truncate my-1">{lead.propertyAddress || 'No Address'}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[lead.status] || ''}`}>{STATUS_LABELS[lead.status] || lead.status}</span>
+                      <span className="text-xs font-bold text-white">{fmt$(lead.estimatedValue || 0)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex-1 bg-[var(--t-surface-dim)] rounded-xl border border-[var(--t-border)] overflow-hidden relative">
+              {expandedLead && filtered.find(l => l.id === expandedLead)?.propertyAddress ? (
+                <iframe width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen src={`https://maps.google.com/maps?q=${encodeURIComponent(filtered.find(l => l.id === expandedLead)!.propertyAddress!)}&t=k&z=19&ie=UTF8&iwloc=&output=embed`} />
+              ) : filtered[0]?.propertyAddress ? (
+                <iframe width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen src={`https://maps.google.com/maps?q=${encodeURIComponent(filtered[0].propertyAddress)}&t=k&z=19&ie=UTF8&iwloc=&output=embed`} />
+              ) : (
+                <div className="flex items-center justify-center h-full text-[var(--t-text-muted)]">Select a lead with an address to view map</div>
+              )}
+            </div>
           </div>
         ) : filtered.map(lead => {
           const ds = calculateDealScore(lead);
@@ -880,10 +1144,11 @@ export default function Leads() {
                           ))}
                         </div>
 
-                        {/* Auto Photo Scraper iframe */}
+                        {/* Dual Maps: Satellite & Street View */}
                         {lead.propertyAddress && (
-                          <div className="px-4 pb-4">
-                            <div className="w-full h-48 rounded-xl overflow-hidden shadow-inner border border-[var(--t-border)] bg-[var(--t-surface-dim)]">
+                          <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="w-full h-48 rounded-xl overflow-hidden shadow-inner border border-[var(--t-border)] bg-[var(--t-surface-dim)] group relative">
+                              <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 text-[10px] font-bold rounded z-10 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm tracking-wider uppercase pointer-events-none">Satellite</div>
                               <iframe
                                 width="100%"
                                 height="100%"
@@ -891,6 +1156,17 @@ export default function Leads() {
                                 loading="lazy"
                                 allowFullScreen
                                 src={`https://maps.google.com/maps?q=${encodeURIComponent(lead.propertyAddress)}&t=k&z=20&ie=UTF8&iwloc=&output=embed`}
+                              />
+                            </div>
+                            <div className="w-full h-48 rounded-xl overflow-hidden shadow-inner border border-[var(--t-border)] bg-[var(--t-surface-dim)] group relative">
+                              <div className="absolute top-2 left-2 bg-black/60 text-white px-2 py-1 text-[10px] font-bold rounded z-10 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm tracking-wider uppercase pointer-events-none">Street View</div>
+                              <iframe
+                                width="100%"
+                                height="100%"
+                                style={{ border: 0 }}
+                                loading="lazy"
+                                allowFullScreen
+                                src={`https://maps.google.com/maps?q=${encodeURIComponent(lead.propertyAddress)}&layer=c&z=17&ie=UTF8&iwloc=&output=embed`}
                               />
                             </div>
                           </div>
@@ -977,7 +1253,7 @@ export default function Leads() {
 
                         {/* Tabs */}
                         <div className="flex border-b px-4" style={{ borderColor: 'var(--t-border)' }}>
-                          {['timeline', 'dealScore', 'aiInsights', 'statusHistory'].map(t => (
+                          {['timeline', 'dealScore', 'aiInsights', 'statusHistory', 'googleDrive'].map(t => (
                             <button 
                               key={t} 
                               onClick={() => setActiveTab(t)} 
@@ -994,6 +1270,7 @@ export default function Leads() {
                               {t === 'timeline' ? '📋 Timeline' : 
                                t === 'dealScore' ? '⚡ Deal Score' : 
                                t === 'aiInsights' ? '🧠 AI Insights' : 
+                               t === 'googleDrive' ? '📁 Google Drive' :
                                '📊 Status History'}
                             </button>
                           ))}
@@ -1038,6 +1315,14 @@ export default function Leads() {
                                     <Square className="w-3 h-3" /> Stop {fmtTime(recordingTime)}
                                   </button>
                                 )}
+                                <button
+                                  onClick={() => fetchKeepNotes(lead.id, lead.propertyAddress || lead.name)}
+                                  disabled={syncingKeep[lead.id]}
+                                  className="px-3 py-1.5 border hover:opacity-80 rounded-lg text-sm flex items-center gap-1 transition-all ml-auto"
+                                  style={{ background: 'var(--t-surface-dim)', color: 'var(--t-primary)', borderColor: 'var(--t-border)' }}
+                                >
+                                  <RefreshCw className={`w-3 h-3 ${syncingKeep[lead.id] ? 'animate-spin' : ''}`} /> Sync Keep
+                                </button>
                               </div>
                               
                               <div className="flex gap-2 mb-4">
@@ -1332,6 +1617,53 @@ export default function Leads() {
                                   <p className="text-[var(--t-text-muted)] text-sm text-center py-4">No status changes yet</p>
                                 )}
                               </div>
+                            </div>
+                          )}
+
+                          {/* GOOGLE DRIVE FILES */}
+                          {activeTab === 'googleDrive' && (
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between bg-[var(--t-surface-subtle)] p-4 rounded-xl border border-[var(--t-border)]">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-white mb-1">Google Drive Files</h4>
+                                  <p className="text-xs text-[var(--t-text-muted)]">Find attachments and documents relative to <strong>{lead.propertyAddress || lead.name}</strong></p>
+                                </div>
+                                <button
+                                  onClick={() => fetchDriveFiles(lead.id, lead.propertyAddress || lead.name)}
+                                  disabled={fetchingDrive[lead.id]}
+                                  className="px-4 py-2 bg-[var(--t-primary)] text-white text-sm font-bold rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                                >
+                                  {fetchingDrive[lead.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Folder className="w-4 h-4" />}
+                                  {fetchingDrive[lead.id] ? 'Searching...' : 'Search Drive'}
+                                </button>
+                              </div>
+
+                              {(driveFiles[lead.id] || []).length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {(driveFiles[lead.id] || []).map((file: any) => (
+                                    <a 
+                                      key={file.id} 
+                                      href={`https://drive.google.com/file/d/${file.id}/view`} 
+                                      target="_blank" 
+                                      rel="noreferrer"
+                                      className="flex items-start gap-3 p-3 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)] hover:border-[var(--t-primary-dim)] transition-colors group"
+                                    >
+                                      <div className="p-2 bg-[var(--t-surface-hover)] rounded-lg text-[var(--t-primary)] flex-shrink-0 group-hover:bg-[var(--t-primary-dim)] transition-colors">
+                                        <FileText className="w-5 h-5" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h5 className="text-sm font-medium text-white truncate w-full pr-2 block">{file.name}</h5>
+                                        <p className="text-[10px] text-[var(--t-text-muted)] mt-1 px-1.5 py-0.5 rounded bg-[var(--t-surface-hover)] inline-block uppercase font-medium">{file.mimeType.split('/').pop()?.substring(0,20) || 'FILE'}</p>
+                                      </div>
+                                    </a>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
+                                  <Folder className="w-10 h-10 text-[var(--t-text-muted)] mx-auto mb-3 opacity-20" />
+                                  <p className="text-[var(--t-text-muted)] text-sm">Hit "Search" to trigger a matching contextual query securely via Google REST</p>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

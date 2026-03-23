@@ -2,13 +2,14 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Plus, CheckCircle2, Circle, Clock, AlertTriangle, X, Calendar,
-  User, ChevronDown, Filter, Zap, Search, Flag, Link2, ArrowUpDown
+  User, ChevronDown, Filter, Zap, Search, Flag, Link2, ArrowUpDown, RefreshCw
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isPast, parseISO } from 'date-fns';
 import {
   useStore, type Task, type TaskPriority, type TaskStatus,
   PRIORITY_COLORS, TASK_STATUS_COLORS,
 } from '../store/useStore';
+import { googleEcosystem } from '../lib/google-ecosystem';
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -50,6 +51,7 @@ export function Tasks() {
   const [sortBy, setSortBy] = useState<'priority' | 'due' | 'status'>('priority');
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [showFilters, setShowFilters] = useState(false);
+  const [syncingTasks, setSyncingTasks] = useState(false);
 
   useEffect(() => {
     if (taskId) {
@@ -124,6 +126,45 @@ export function Tasks() {
       setShowAdd(false);
     }
     setForm(emptyForm());
+  };
+
+  const handleSyncTasks = async () => {
+    const { currentUser } = useStore.getState();
+    if (!currentUser?.id) return;
+    setSyncingTasks(true);
+    try {
+      const data = await googleEcosystem.getTasksLists(currentUser.id);
+      const lists = data.items || [];
+      const defaultList = lists.find((l: any) => l.title === '@default' || l.title === 'My Tasks') || lists[0];
+      
+      if (!defaultList) throw new Error('No task lists found on Google');
+
+      const tasksData = await googleEcosystem.getTasks(currentUser.id, defaultList.id);
+      const googleTasks = tasksData.items || [];
+
+      let newTasks = 0;
+      googleTasks.forEach((gt: any) => {
+        const existing = tasks.find(t => t.title === gt.title);
+        if (!existing) {
+          addTask({
+            title: gt.title,
+            description: gt.notes || '',
+            assignedTo: currentUser.id,
+            dueDate: gt.due ? new Date(gt.due).toISOString() : new Date(Date.now() + 86400000).toISOString(),
+            priority: 'medium',
+            status: gt.status === 'completed' ? 'done' : 'todo',
+            createdBy: currentUser.id
+          });
+          newTasks++;
+        }
+      });
+      alert(`Synced ${newTasks} new tasks from Google!`);
+    } catch (err: any) {
+      console.error(err);
+      alert('Failed to sync tasks: ' + err.message);
+    } finally {
+      setSyncingTasks(false);
+    }
   };
 
   const getDueLabel = (d: string) => {
@@ -269,6 +310,17 @@ export function Tasks() {
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
+          <button
+            onClick={handleSyncTasks}
+            disabled={syncingTasks}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border"
+            style={syncingTasks ? { 
+              borderColor: 'var(--t-primary)', color: 'var(--t-primary)' 
+            } : { borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
+          >
+            <RefreshCw size={14} className={syncingTasks ? 'animate-spin' : ''} />
+            Sync Google
+          </button>
           <div className="flex rounded-xl p-0.5" style={{ background: 'var(--t-surface)' }}>
             <button
               onClick={() => setViewMode('list')}

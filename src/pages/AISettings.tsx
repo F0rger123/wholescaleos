@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Key, Loader2, Check, AlertCircle, Save, Sparkles } from 'lucide-react';
+import { Key, Loader2, Check, AlertCircle, Save, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
+import { PREBUILT_RULES, getEnabledPrebuiltRules, setEnabledPrebuiltRules } from '../lib/prebuilt-rules';
 
 export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic'>('gemini');
@@ -20,6 +21,8 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [aiRules, setAiRules] = useState<any[]>([]);
   const [newTrigger, setNewTrigger] = useState('');
   const [newAction, setNewAction] = useState('');
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [enabledPrebuilt, setEnabledPrebuilt] = useState<string[]>([]);
   const { currentUser, setShowFloatingAIWidget } = useStore();
 
   const handleToggleWidget = (val: boolean) => {
@@ -28,6 +31,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   };
 
   useEffect(() => {
+    setEnabledPrebuilt(getEnabledPrebuiltRules());
     async function loadKey() {
       if (!currentUser?.id) {
         setLoading(false);
@@ -485,7 +489,60 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
           These commands bypass the LLM and execute instantly with zero API credits used.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Categories Accordion */}
+        <div className="space-y-3 mb-8">
+          {Array.from(new Set(PREBUILT_RULES.map(r => r.category))).map(category => {
+            const categoryRules = PREBUILT_RULES.filter(r => r.category === category);
+            const enabledCount = categoryRules.filter(r => enabledPrebuilt.includes(r.id)).length;
+            const isExpanded = expandedCategory === category;
+
+            return (
+              <div key={category} className="border border-[var(--t-border)] rounded-xl overflow-hidden bg-[var(--t-surface-hover)]">
+                <button
+                  onClick={() => setExpandedCategory(isExpanded ? null : category)}
+                  className="w-full flex items-center justify-between p-4 bg-transparent outline-none"
+                >
+                  <div className="flex items-center gap-3">
+                    {isExpanded ? <ChevronDown size={18} className="text-[var(--t-text-muted)]"/> : <ChevronRight size={18} className="text-[var(--t-text-muted)]"/>}
+                    <span className="font-semibold text-white">{category}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--t-primary)]/20 text-[var(--t-primary)] border border-[var(--t-primary)]/30">
+                      {enabledCount} / {categoryRules.length} Active
+                    </span>
+                  </div>
+                </button>
+                {isExpanded && (
+                  <div className="p-4 pt-0 border-t border-[var(--t-border)] grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                    {categoryRules.map(rule => (
+                      <div key={rule.id} className="flex items-center justify-between p-3 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)]">
+                        <div>
+                          <p className="text-sm font-medium text-white">"{rule.trigger}"</p>
+                          <p className="text-xs text-[var(--t-text-muted)]">→ {rule.action.replace('_', ' ')}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const active = enabledPrebuilt.includes(rule.id);
+                            const updated = active 
+                              ? enabledPrebuilt.filter(id => id !== rule.id)
+                              : [...enabledPrebuilt, rule.id];
+                            setEnabledPrebuilt(updated);
+                            setEnabledPrebuiltRules(updated);
+                          }}
+                          className={`w-10 h-5 rounded-full transition-colors relative ${enabledPrebuilt.includes(rule.id) ? 'bg-[var(--t-success)]' : 'bg-[var(--t-surface-subtle)]'}`}
+                        >
+                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${enabledPrebuilt.includes(rule.id) ? 'left-[22px]' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="pt-6 border-t border-[var(--t-border)]">
+          <h3 className="text-md font-bold text-white mb-4">Custom Defined Triggers</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-2">When I say (Keyword):</label>
             <input
@@ -551,6 +608,7 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
             ))}
           </div>
         )}
+        </div>
       </div>
 
       <p className="text-center text-xs text-[var(--t-text-muted)]">
