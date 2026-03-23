@@ -229,59 +229,55 @@ export const SMS_GATEWAYS: Record<string, string> = {
 
 /**
  * Per-carrier ordered gateway list.
- * We try these in order — carriers only accept their own domain and silently
- * drop others, so blasting multiple causes no harm and maximises delivery.
+ * Each carrier ONLY accepts messages at their own domain;
+ * sending to wrong domain results in bounce or silent drop.
  */
 const CARRIER_GATEWAYS: Record<string, string[]> = {
-  'AT&T':               ['txt.att.net', 'mms.att.net'],
-  'Verizon':            ['vtext.com', 'vzwpix.com'],
+  'AT&T':               ['txt.att.net'],          // txt.att.net is the primary; mms.att.net is MMS only
+  'AT&T MMS':           ['mms.att.net'],
+  'Verizon':            ['vtext.com'],             // vzwpix.com is MMS only
   'T-Mobile':           ['tmomail.net'],
-  'Sprint':             ['messaging.sprintpcs.com', 'pm.sprint.com'],
-  'Boost Mobile':       ['tmomail.net', 'myboostmobile.com'],
-  'Cricket Wireless':   ['sms.cricketwireless.net', 'mms.cricketwireless.net'],
+  'Sprint':             ['messaging.sprintpcs.com'],
+  'Boost Mobile':       ['tmomail.net'],           // Boost MVNO runs on T-Mobile network
+  'Cricket Wireless':   ['sms.cricketwireless.net'],
   'Metro by T-Mobile':  ['tmomail.net'],
+  'Visible':            ['vtext.com'],             // Visible runs on Verizon
   'Google Fi':          ['msg.fi.google.com'],
   'U.S. Cellular':      ['email.uscc.net'],
   'Virgin Mobile':      ['vmobl.com'],
+  'Republic Wireless':  ['text.republicwireless.com'],
 };
 
-// Universal blast — used when carrier is unknown; covers major US networks
-const UNIVERSAL_SMS_GATEWAYS = [
-  'tmomail.net',          // T-Mobile / Boost
-  'vtext.com',            // Verizon
-  'txt.att.net',          // AT&T
-  'messaging.sprintpcs.com', // Sprint
-];
+// Universal fallback — ONLY use T-Mobile since it's the most permissive
+// and most US MVNOs (Boost, Metro, Mint, etc.) run on T-Mobile network.
+// AT&T/Verizon/Sprint will silently drop messages not sent to their own gateway.
+const UNIVERSAL_SMS_GATEWAYS = ['tmomail.net'];
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   if (!userId) return { success: false, message: 'User not authenticated.' };
 
-  // 1. Get User SMS preferences
+  // 1. Get User SMS preferences (phone used for logging only)
   let userPhone = '';
-  let userCarrier = '';
 
   if (isSupabaseConfigured && supabase) {
     try {
       const { data } = await supabase
         .from('agent_preferences')
-        .select('phone_number, carrier')
+        .select('phone_number')
         .eq('user_id', userId)
         .maybeSingle();
       if (data) {
         userPhone = data.phone_number || '';
-        userCarrier = data.carrier || '';
       }
     } catch (_) {}
   } else {
     userPhone = localStorage.getItem('user_sms_phone') || '';
-    userCarrier = localStorage.getItem('user_sms_carrier') || '';
   }
 
-  // Phone is needed for logging / identifying the sender; warn but don't block
   if (!userPhone) {
-    console.warn('[SMS] No sender phone configured — sending anyway via Gmail gateway.');
+    console.warn('[SMS] No sender phone configured.');
   }
 
   // 2. Resolve Target phone
@@ -300,21 +296,19 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   }
 
   // 3. Determine gateway list
-  const effectiveCarrier = targetCarrier || userCarrier;
+  // Priority: explicit targetCarrier arg > stored carrier map (from inbox UI) > universal
+  const effectiveCarrier = targetCarrier;
   let gateways: string[];
 
   if (effectiveCarrier && CARRIER_GATEWAYS[effectiveCarrier]) {
-    // Known carrier — use its specific gateway list
     gateways = CARRIER_GATEWAYS[effectiveCarrier];
+    console.log(`[SMS] Using carrier '${effectiveCarrier}' gateway: ${gateways.join(', ')}`);
   } else {
-    // Unknown carrier — blast all universal gateways (each carrier filters silently)
+    // No carrier known — default to T-Mobile/tmomail.net only.
+    // Most US MVNOs use T-Mobile; AT&T/Verizon won't deliver via tmomail but
+    // blasting their domains causes 'address not found' bounces.
     gateways = UNIVERSAL_SMS_GATEWAYS;
-    console.log('[SMS] Carrier unknown — using universal gateway blast.');
-  }
-
-  // Hard override for the known Boost test number
-  if (targetPhone === '7173096172') {
-    gateways = ['tmomail.net'];
+    console.warn('[SMS] Carrier unknown — defaulting to tmomail.net. Use the carrier picker in SMS Inbox to set the correct carrier.');
   }
 
   console.log(`[SMS Send] Target: ${targetPhone}, Gateways: ${gateways.join(', ')}`);

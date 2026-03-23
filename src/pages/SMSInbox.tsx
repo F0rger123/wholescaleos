@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { 
   Search, MessageSquare, User, 
   Send, Loader2, ArrowLeft, MoreVertical, 
-  CheckCircle2, UserPlus, Smartphone, ShieldCheck,
+  CheckCircle2, UserPlus, Smartphone,
   Plus, X, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -348,15 +348,17 @@ export function SMSInbox() {
     const rawPhone = selectedPhone.replace(/\D/g, '');
     const knownCarrier = carrierMap[rawPhone];
 
-    if (!knownCarrier) {
-      // First time sending to this number — ask for carrier so we use the right gateway
+    // Show picker if: no carrier saved OR saved as the catch-all universal option
+    const needsPicker = !knownCarrier || knownCarrier === 'Auto-Detect (Universal Blast)';
+
+    if (needsPicker) {
       setCarrierPicker({
         isOpen: true,
         phone: rawPhone,
         message: textToSend,
-        selectedCarrier: 'Auto-Detect (Universal Blast)'
+        selectedCarrier: knownCarrier || 'Auto-Detect (Universal Blast)'
       });
-      return; // executeSend called from carrier picker confirm
+      return;
     }
 
     setReplyText('');
@@ -564,15 +566,35 @@ export function SMSInbox() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{activeConversation?.leadName || formatPhoneNumber(activeConversation?.phone || '')}</h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-mono" style={{ color: 'var(--t-text-muted)' }}>{formatPhoneNumber(activeConversation?.phone || '')}</span>
-                    {activeConversation?.leadId && (
-                      <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--t-success)' }}>
-                        <ShieldCheck size={10} /> Linked to Lead
-                      </span>
-                    )}
+                    {/* Clickable carrier badge */}
+                    <button
+                      onClick={() => {
+                        const rawPhone = selectedPhone?.replace(/\D/g, '') || '';
+                        setCarrierPicker({
+                          isOpen: true,
+                          phone: rawPhone,
+                          message: '',
+                          selectedCarrier: carrierMap[rawPhone] || 'Auto-Detect (Universal Blast)'
+                        });
+                      }}
+                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80"
+                      style={
+                        carrierMap[selectedPhone?.replace(/\D/g, '') || ''] &&
+                        carrierMap[selectedPhone?.replace(/\D/g, '') || ''] !== 'Auto-Detect (Universal Blast)'
+                          ? { background: 'color-mix(in srgb, var(--t-success) 15%, transparent)', color: 'var(--t-success)', border: '1px solid color-mix(in srgb, var(--t-success) 30%, transparent)' }
+                          : { background: 'color-mix(in srgb, var(--t-warning) 15%, transparent)', color: 'var(--t-warning)', border: '1px solid color-mix(in srgb, var(--t-warning) 30%, transparent)' }
+                      }
+                      title="Click to set carrier for correct SMS routing"
+                    >
+                      📡 {carrierMap[selectedPhone?.replace(/\D/g, '') || ''] && carrierMap[selectedPhone?.replace(/\D/g, '') || ''] !== 'Auto-Detect (Universal Blast)'
+                        ? carrierMap[selectedPhone?.replace(/\D/g, '') || '']
+                        : '⚠️ Carrier unknown — tap to set'}
+                    </button>
                   </div>
                 </div>
+
               </div>
                 <div className="flex gap-2 items-center">
                 {!activeConversation?.leadId && (
