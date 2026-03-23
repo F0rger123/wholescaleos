@@ -92,30 +92,35 @@ export function SMSInbox() {
     try { return JSON.parse(localStorage.getItem('sms_carrier_map') || '{}'); } catch { return {}; }
   });
 
+  const normalizePhone = (p: string) => {
+    const raw = p.replace(/\D/g, '');
+    return raw.length === 11 && raw.startsWith('1') ? raw.slice(1) : raw;
+  };
+
   // Sync carrierMap from leads state on load
   useEffect(() => {
     const mapFromLeads: Record<string, string> = { ...carrierMap };
     leads.forEach(l => {
       if (l.phone && (l as any).carrier) {
-        mapFromLeads[l.phone.replace(/\D/g, '')] = (l as any).carrier;
+        mapFromLeads[normalizePhone(l.phone)] = (l as any).carrier;
       }
     });
-    // Add any from localStorage that might not be leads
     setCarrierMap(mapFromLeads);
   }, [leads]);
 
   const saveCarrier = async (phone: string, carrier: string) => {
-    const rawPhone = phone.replace(/\D/g, '');
+    const rawPhone = normalizePhone(phone);
     const next = { ...carrierMap, [rawPhone]: carrier };
     setCarrierMap(next);
     localStorage.setItem('sms_carrier_map', JSON.stringify(next));
 
     // Persist to Supabase if it's a lead
     if (isSupabaseConfigured && supabase) {
-      const lead = leads.find(l => l.phone?.replace(/\D/g, '') === rawPhone);
+      const lead = leads.find(l => normalizePhone(l.phone || '') === rawPhone);
       if (lead) {
         try {
-          await supabase.from('leads').update({ carrier }).eq('id', lead.id);
+          const { error } = await supabase.from('leads').update({ carrier }).eq('id', lead.id);
+          if (error) throw error;
           console.log(`[SMS] Persisted carrier '${carrier}' to lead: ${lead.name}`);
         } catch (err) {
           console.warn('[SMS] Failed to persist carrier to lead:', err);
@@ -123,6 +128,7 @@ export function SMSInbox() {
       }
     }
   };
+
 
   // Pinned / archived / blocked sets persisted in localStorage
   const [pinnedPhones, setPinnedPhones] = useState<Set<string>>(() => {
@@ -336,13 +342,14 @@ export function SMSInbox() {
 
       if (result.success) {
         if (isSupabaseConfigured && supabase && currentUser?.id) {
-          const lead = leads.find(l => l.phone?.replace(/\D/g, '') === phone.replace(/\D/g, ''));
+          const lead = leads.find(l => normalizePhone(l.phone || '') === normalizePhone(phone));
           supabase.from('sms_messages').insert({
             user_id: currentUser.id,
             lead_id: lead?.id ?? null,
             phone_number: phone,
             content: textToSend,
             direction: 'outbound',
+            carrier: effectiveCarrier || carrier,
             is_read: true
           }).select().single().then(({ data: inserted, error: insertError }) => {
             if (!insertError && inserted) {
@@ -352,6 +359,7 @@ export function SMSInbox() {
             }
           });
         }
+
       } else {
         setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
         setReplyText(textToSend);
