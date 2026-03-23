@@ -296,6 +296,22 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   });
 
   if (res.success) {
+    if (store.currentUser?.id && isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('sms_messages').insert([{
+          user_id: store.currentUser.id,
+          lead_id: lead?.id || null,
+          phone_number: targetPhone,
+          content: message,
+          direction: 'outbound',
+          is_read: true,
+          created_at: new Date().toISOString()
+        }]);
+      } catch (err) {
+        console.error('Failed to log outbound SMS to DB:', err);
+      }
+    }
+
     return { 
       success: true, 
       message: `SMS sent to ${targetPhone} via ${effectiveTargetCarrier} gateway (${gateway}).` 
@@ -402,7 +418,28 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   
   // ── LOCAL AI TASK ENGINE (NO API CREDITS) ──────────────────────────────
   const cleanPrompt = prompt.toLowerCase();
+  
   if (!context?.test) { // Do not intercept internal system test prompts
+    // Check Custom User Training Rules First
+    try {
+      const savedRules = localStorage.getItem('ai_training_rules');
+      if (savedRules) {
+        const rules = JSON.parse(savedRules);
+        for (const rule of rules) {
+          if (cleanPrompt.includes(rule.trigger)) {
+            if (rule.action === 'navigate_tasks') return { intent: 'navigate', response: '[⚡ Local Rules] Navigating to tasks.', data: { path: '/tasks' } };
+            if (rule.action === 'navigate_settings') return { intent: 'navigate', response: '[⚡ Local Rules] Opening settings.', data: { path: '/settings' } };
+            if (rule.action === 'navigate_calendar') return { intent: 'navigate', response: '[⚡ Local Rules] Accessing calendar schedule.', data: { path: '/calendar' } };
+            if (rule.action === 'show_hot_leads') {
+              const hl = store.leads?.filter((l:any) => l.status === 'negotiating' || l.status === 'qualified') || [];
+              return { intent: 'general_response', response: `[⚡ Local Rules] You have ${hl.length} hot leads ready for engagement.` };
+            }
+          }
+        }
+      }
+    } catch (e) {}
+
+    // Fallback Local Core Rules
     if (cleanPrompt.includes('hot lead') || cleanPrompt.includes('best lead')) {
       const hotLeads = store.leads?.filter(l => l.status === 'negotiating' || l.status === 'qualified') || [];
       const names = hotLeads.map((l: any) => l.name).join(', ');

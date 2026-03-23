@@ -67,7 +67,7 @@ export function GoogleCalendarConnect() {
       >
         <Calendar size={18} />
         <span className="text-sm font-medium">
-          {isConnected ? 'Calendar Connected' : 'Connect Google Calendar'}
+          {isConnected ? 'Google Connected' : 'Connect Google Account'}
         </span>
         {isConnected && <ChevronDown size={16} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />}
       </button>
@@ -87,7 +87,7 @@ export function GoogleCalendarConnect() {
           >
             <div className="p-4 border-b" style={{ borderColor: 'var(--t-sidebar-border)' }}>
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold" style={{ color: 'var(--t-text)' }}>Google Calendar</h3>
+                <h3 className="font-semibold" style={{ color: 'var(--t-text)' }}>Google Services</h3>
                 <button
                   onClick={handleDisconnect}
                   className="flex items-center gap-1 px-2 py-1 text-xs bg-[var(--t-error)]/10 text-[var(--t-error)] rounded hover:bg-[var(--t-error)]/20"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Copy, Check, Download, Phone, MessageSquare, Zap } from 'lucide-react';
+import { X, Copy, Check, Download, Phone, MessageSquare, Zap, Plus, Save } from 'lucide-react';
 
 interface CallScriptTemplate {
   name: string;
@@ -13,6 +13,7 @@ interface CallScriptModalProps {
   onClose: () => void;
   leadName: string;
   templates: CallScriptTemplate[];
+  onChange?: () => void;
 }
 
 export function CallScriptModal({ isOpen, onClose, leadName, templates }: CallScriptModalProps) {
@@ -24,6 +25,23 @@ export function CallScriptModal({ isOpen, onClose, leadName, templates }: CallSc
     navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const [isAdding, setIsAdding] = React.useState(false);
+  const [newTmpl, setNewTmpl] = React.useState({ name: '', category: 'Custom', description: '', script: '' });
+
+  const handleSaveCustom = () => {
+    try {
+      const existing = localStorage.getItem('user_custom_scripts');
+      const parsed = existing ? JSON.parse(existing) : [];
+      parsed.push(newTmpl);
+      localStorage.setItem('user_custom_scripts', JSON.stringify(parsed));
+      setIsAdding(false);
+      setNewTmpl({ name: '', category: 'Custom', description: '', script: '' });
+      if (typeof window !== 'undefined') window.location.reload(); // Quick refresh to show templates
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -43,16 +61,69 @@ export function CallScriptModal({ isOpen, onClose, leadName, templates }: CallSc
               <p className="text-sm text-[var(--t-text-muted)]">Customized templates for <span className="text-white font-medium">{leadName}</span></p>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-black/10 transition-colors text-[var(--t-text-muted)] hover:text-white"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsAdding(!isAdding)}
+              className="px-4 py-2 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all"
+            >
+              <Plus size={16} /> Add Custom
+            </button>
+            <button 
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-black/10 transition-colors text-[var(--t-text-muted)] hover:text-white"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {isAdding && (
+            <div className="bg-[var(--t-surface-dim)] border border-[var(--t-primary)] p-5 rounded-xl space-y-4 mb-6 relative shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.1)]">
+              <h3 className="text-white font-bold text-lg mb-2 flex items-center gap-2"><Plus size={18} className="text-[var(--t-primary)]"/> Create Custom Script</h3>
+              <p className="text-xs text-[var(--t-text-muted)]">Use <code className="bg-black/30 px-1 py-0.5 rounded text-[var(--t-accent)]">{`{{lead.name}}`}</code> and <code className="bg-black/30 px-1 py-0.5 rounded text-[var(--t-accent)]">{`{{lead.address}}`}</code> as dynamic placeholders.</p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <input 
+                  type="text" 
+                  placeholder="Template Name" 
+                  value={newTmpl.name}
+                  onChange={e => setNewTmpl(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-primary)]"
+                />
+                <input 
+                  type="text" 
+                  placeholder="Category (e.g., Creative Finance)" 
+                  value={newTmpl.category}
+                  onChange={e => setNewTmpl(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-primary)]"
+                />
+              </div>
+              <textarea 
+                placeholder="Tactical Description / Internal Notes..."
+                value={newTmpl.description}
+                onChange={e => setNewTmpl(prev => ({ ...prev, description: e.target.value }))}
+                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-primary)] min-h-[60px]"
+              />
+              <textarea 
+                placeholder="Hi {{lead.name}}, I'm looking to buy your property at {{lead.address}}..."
+                value={newTmpl.script}
+                onChange={e => setNewTmpl(prev => ({ ...prev, script: e.target.value }))}
+                className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-primary)] min-h-[100px]"
+              />
+              <div className="flex justify-end gap-3 pt-2">
+                <button onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm text-[var(--t-text-muted)] hover:text-white transition-colors">Cancel</button>
+                <button 
+                  onClick={handleSaveCustom}
+                  disabled={!newTmpl.name || !newTmpl.script}
+                  className="px-6 py-2 bg-[var(--t-success)] hover:bg-[var(--t-success-hover)] disabled:opacity-50 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-xl shadow-[var(--t-success)]/20"
+                >
+                  <Save size={16} /> Save Template
+                </button>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-6">
             {templates.map((tmpl, idx) => (
               <div 

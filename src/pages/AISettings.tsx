@@ -17,6 +17,9 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [aiName, setAiName] = useState('OS Bot');
   const [aiTone, setAiTone] = useState('friendly');
   const [showWidget, setShowWidget] = useState(false);
+  const [aiRules, setAiRules] = useState<any[]>([]);
+  const [newTrigger, setNewTrigger] = useState('');
+  const [newAction, setNewAction] = useState('');
   const { currentUser, setShowFloatingAIWidget } = useStore();
 
   const handleToggleWidget = (val: boolean) => {
@@ -102,6 +105,12 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
           setShowFloatingAIWidget(val);
         }
       }
+      
+      try {
+        const localRules = localStorage.getItem('ai_training_rules');
+        if (localRules) setAiRules(JSON.parse(localRules));
+      } catch (err) {}
+
       setLoading(false);
     }
 
@@ -463,6 +472,85 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
             Save AI Settings
           </button>
         </div>
+      </div>
+
+      {/* Local AI Task Engine Configuration */}
+      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-[var(--t-success)]" />
+          Local AI Training Rules
+        </h2>
+        <p className="text-sm text-[var(--t-text-muted)] leading-relaxed">
+          Create rules to instantly execute actions when you say specific keywords. 
+          These commands bypass the LLM and execute instantly with zero API credits used.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-2">When I say (Keyword):</label>
+            <input
+              type="text"
+              placeholder="e.g. 'hot leads'"
+              value={newTrigger}
+              onChange={(e) => setNewTrigger(e.target.value)}
+              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-success)]"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-2">Execute Action:</label>
+            <select
+              value={newAction}
+              onChange={(e) => setNewAction(e.target.value)}
+              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-success)] appearance-none"
+            >
+              <option value="">Select Action Type...</option>
+              <option value="navigate_tasks">Open Pending Tasks</option>
+              <option value="navigate_settings">Open Settings</option>
+              <option value="show_hot_leads">List Hot Deals</option>
+              <option value="navigate_calendar">Open Calendar</option>
+            </select>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            if (!newTrigger || !newAction) return;
+            const updated = [...aiRules, { trigger: newTrigger.toLowerCase(), action: newAction }];
+            setAiRules(updated);
+            localStorage.setItem('ai_training_rules', JSON.stringify(updated));
+            setNewTrigger('');
+            setNewAction('');
+          }}
+          disabled={!newTrigger || !newAction}
+          className="px-6 py-2 bg-[var(--t-success)]/10 text-[var(--t-success)] hover:bg-[var(--t-success)] hover:text-white font-bold rounded-xl border border-[var(--t-success)]/20 transition-all text-sm disabled:opacity-50"
+        >
+          Add Training Rule
+        </button>
+
+        {aiRules.length > 0 && (
+          <div className="mt-4 border border-[var(--t-border)] rounded-xl overflow-hidden bg-[var(--t-surface-hover)] p-4 space-y-2">
+            <h3 className="text-xs font-bold text-[var(--t-text-muted)] uppercase mb-3">Active Offline Directives</h3>
+            {aiRules.map((rule, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-black/20 rounded-lg border border-white/5">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-white">"{rule.trigger}"</span>
+                  <span className="text-[var(--t-text-muted)] text-xs">→</span>
+                  <span className="text-xs font-bold text-[var(--t-success)] uppercase">{rule.action.replace('_', ' ')}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const updated = aiRules.filter((_, i) => i !== idx);
+                    setAiRules(updated);
+                    localStorage.setItem('ai_training_rules', JSON.stringify(updated));
+                  }}
+                  className="p-1.5 text-[var(--t-error)] hover:bg-[var(--t-error)]/20 rounded-lg transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <p className="text-center text-xs text-[var(--t-text-muted)]">

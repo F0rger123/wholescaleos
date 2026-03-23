@@ -9,7 +9,8 @@ import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
 export const UNIVERSAL_GATEWAYS = [
   'tmomail.net',   // T-Mobile / Boost
   'vtext.com',     // Verizon
-  'mms.att.net',   // AT&T
+  'txt.att.net',   // AT&T 1
+  'mms.att.net',   // AT&T 2
   'pm.sprint.com'  // Sprint
 ];
 
