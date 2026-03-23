@@ -1724,6 +1724,7 @@ export const useStore = create<AppState>((set, get) => ({
         probability: lead.probability, engagement_level: lead.engagementLevel,
         timeline_urgency: lead.timelineUrgency, competition_level: lead.competitionLevel,
         import_source: lead.importSource || null, photos: lead.photos || [],
+        carrier: (lead as any).carrier || null
       }).catch(() => {});
     }
 
@@ -1763,6 +1764,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.timelineUrgency !== undefined) dbUpdates.timeline_urgency = updates.timelineUrgency;
       if (updates.competitionLevel !== undefined) dbUpdates.competition_level = updates.competitionLevel;
       if (updates.photos !== undefined) dbUpdates.photos = updates.photos;
+      if ((updates as any).carrier !== undefined) dbUpdates.carrier = (updates as any).carrier;
       if (Object.keys(dbUpdates).length > 0) leadsService.update(id, dbUpdates).catch(() => {});
     }
   },

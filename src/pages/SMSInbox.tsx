@@ -13,6 +13,7 @@ import { sendSMSViaAI } from '../lib/gemini';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { pollSMSMessages } from '../lib/sms-polling';
 import { googleEcosystem } from '../lib/google-ecosystem';
+import { detectCarrier } from '../lib/carrier-service';
 
 interface SMSMessage {
   id: string;
@@ -58,6 +59,7 @@ export function SMSInbox() {
   const leads = useStore(state => state.leads);
   const currentUser = useStore(state => state.currentUser);
   const addLead = useStore(state => state.addLead);
+  const updateLead = useStore(state => state.updateLead);
   const contacts = useStore(state => state.contacts);
   const addContact = useStore(state => state.addContact);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -114,18 +116,19 @@ export function SMSInbox() {
     setCarrierMap(next);
     localStorage.setItem('sms_carrier_map', JSON.stringify(next));
 
-    // Persist to Supabase if it's a lead
-    if (isSupabaseConfigured && supabase) {
-      const lead = leads.find(l => normalizePhone(l.phone || '') === rawPhone);
-      if (lead) {
-        try {
-          const { error } = await supabase.from('leads').update({ carrier }).eq('id', lead.id);
-          if (error) throw error;
-          console.log(`[SMS] Persisted carrier '${carrier}' to lead: ${lead.name}`);
-        } catch (err) {
-          console.warn('[SMS] Failed to persist carrier to lead:', err);
-        }
-      }
+    // Persist to Supabase if it's a lead via store action
+    const lead = leads.find(l => normalizePhone(l.phone || '') === rawPhone);
+    if (lead) {
+      updateLead(lead.id, { carrier } as any);
+      console.log(`[SMS] Triggered store update for lead carrier: ${lead.name} -> ${carrier}`);
+    }
+  };
+
+  const handleAutoDetect = async (phone: string) => {
+    const result = await detectCarrier(phone);
+    if (result.carrier) {
+      await saveCarrier(phone, result.carrier);
+      console.log(`[SMS] Auto-detected carrier for ${phone}: ${result.carrier} (${result.source})`);
     }
   };
 
@@ -281,6 +284,17 @@ export function SMSInbox() {
       clearInterval(refreshInterval);
     };
   }, [fetchMessages]);
+  
+  // Auto-detect carrier when opening a conversation if unknown
+  useEffect(() => {
+    if (selectedPhone) {
+      const raw = normalizePhone(selectedPhone);
+      const c = carrierMap[raw];
+      if (!c || c === 'Auto-Detect (Universal Blast)') {
+        handleAutoDetect(selectedPhone);
+      }
+    }
+  }, [selectedPhone, carrierMap]);
 
   const processConversations = (allMessages: SMSMessage[]) => {
     const groups: Record<string, Conversation> = {};

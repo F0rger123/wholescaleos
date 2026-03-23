@@ -1,6 +1,8 @@
 import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '../store/useStore';
 import type { Lead } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { CARRIER_GATEWAYS, UNIVERSAL_SMS_GATEWAYS } from './sms-gateways';
+import { detectCarrier } from './carrier-service';
 
 export interface GeminiResponse {
   intent: string;
@@ -206,8 +208,6 @@ export function getTeamAvailability() {
   return store.team.map(m => ({ name: m.name, role: m.role, status: m.presenceStatus }));
 }
 
-import { CARRIER_GATEWAYS, UNIVERSAL_SMS_GATEWAYS } from './sms-gateways';
-
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
   const store = useStore.getState();
@@ -252,22 +252,26 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   }
 
   // 3. Determine gateway list
-  // Priority: explicit targetCarrier arg > stored carrier map (from inbox UI) > universal
-  const effectiveCarrier = targetCarrier;
-  let gateways: string[];
+  let gateways: string[] = UNIVERSAL_SMS_GATEWAYS;
+  let carrierToUse = targetCarrier || (lead as any)?.carrier;
 
-  if (effectiveCarrier && CARRIER_GATEWAYS[effectiveCarrier]) {
-    gateways = CARRIER_GATEWAYS[effectiveCarrier];
-    console.log(`[SMS] Using carrier '${effectiveCarrier}' gateway: ${gateways.join(', ')}`);
+  if (carrierToUse && CARRIER_GATEWAYS[carrierToUse]) {
+    gateways = CARRIER_GATEWAYS[carrierToUse];
+    console.log(`[SMS AI] Using carrier '${carrierToUse}' gateway: ${gateways.join(', ')}`);
   } else {
-    // No carrier known — default to T-Mobile/tmomail.net only.
-    // Most US MVNOs use T-Mobile; AT&T/Verizon won't deliver via tmomail but
-    // blasting their domains causes 'address not found' bounces.
-    gateways = UNIVERSAL_SMS_GATEWAYS;
-    console.warn('[SMS] Carrier unknown — defaulting to tmomail.net. Use the carrier picker in SMS Inbox to set the correct carrier.');
+    // Try auto-detection
+    console.log(`[SMS AI] Carrier unknown for ${targetPhone}, attempting auto-detect...`);
+    const detection = await detectCarrier(targetPhone);
+    gateways = detection.gateway;
+    console.log(`[SMS AI] Auto-detected carrier: ${detection.carrier} -> ${gateways.join(', ')}`);
+    
+    // Save detected carrier back to lead if possible
+    if (lead && detection.source !== 'default') {
+      store.updateLead(lead.id, { carrier: detection.carrier } as any);
+    }
   }
 
-  console.log(`[SMS Send] Target: ${targetPhone}, Gateways: ${gateways.join(', ')}`);
+  console.log(`[SMS AI Send] Target: ${targetPhone}, Gateways: ${gateways.join(', ')}`);
 
   // 4. Send via Gmail API to all gateway addresses
   const { sendEmail } = await import('./email');
@@ -291,6 +295,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
         phone_number: targetPhone,
         content: message,
         direction: 'outbound',
+        carrier: carrierToUse ?? 'T-Mobile',
         is_read: true,
         created_at: new Date().toISOString()
       }).then(({ error }) => {
@@ -301,7 +306,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
     return {
       success: true,
       message: `✅ SMS sent to ${targetPhone} via ${gateways.length > 1 ? 'multiple gateways' : gateways[0]}.${
-        effectiveCarrier ? ` Carrier: ${effectiveCarrier}.` : ' (Universal delivery mode)'
+        carrierToUse ? ` Carrier: ${carrierToUse}.` : ' (Universal delivery mode)'
       }`
     };
   } else {
