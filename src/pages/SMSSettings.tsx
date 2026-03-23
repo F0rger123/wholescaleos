@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Smartphone, Send, Loader2, Check, AlertCircle, Save, ExternalLink, RefreshCw } from 'lucide-react';
+import {
+  Smartphone, Save, RefreshCw,
+  Loader2, AlertCircle, Send,
+  ExternalLink, Check
+} from 'lucide-react';
+import { CARRIER_GATEWAYS, UNIVERSAL_SMS_GATEWAYS } from '../lib/sms-gateways';
 import { sendEmail } from '../lib/email';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
-
-export const UNIVERSAL_GATEWAYS = [
-  'tmomail.net',   // T-Mobile / Boost
-  'vtext.com',     // Verizon
-  'txt.att.net',   // AT&T 1
-  'mms.att.net',   // AT&T 2
-  'pm.sprint.com'  // Sprint
-];
 
 export function SMSSettings() {
   const [phone, setPhone] = useState('');
@@ -90,18 +87,10 @@ export function SMSSettings() {
       carrier = localStorage.getItem('user_sms_carrier') || '';
     }
 
-    // Build gateway list for this carrier
-    const CARRIER_GW: Record<string, string[]> = {
-      'AT&T':              ['txt.att.net', 'mms.att.net'],
-      'Verizon':           ['vtext.com', 'vzwpix.com'],
-      'T-Mobile':          ['tmomail.net'],
-      'Sprint':            ['messaging.sprintpcs.com', 'pm.sprint.com'],
-      'Boost Mobile':      ['tmomail.net'],
-      'Cricket Wireless':  ['sms.cricketwireless.net'],
-      'Metro by T-Mobile': ['tmomail.net'],
-      'Google Fi':         ['msg.fi.google.com'],
-    };
-    const gateways = CARRIER_GW[carrier] || ['tmomail.net', 'vtext.com', 'txt.att.net'];
+    const gateways = carrier && CARRIER_GATEWAYS[carrier] 
+      ? CARRIER_GATEWAYS[carrier] 
+      : UNIVERSAL_SMS_GATEWAYS;
+
     const toAddresses = gateways.map(gw => `${cleanPhone}@${gw}`).join(', ');
 
     try {

@@ -24,11 +24,11 @@ interface SMSMessage {
   lead_id?: string;
 }
 
+import { CARRIER_GATEWAYS } from '../lib/sms-gateways';
+
 const CARRIER_OPTIONS = [
   'Auto-Detect (Universal Blast)',
-  'AT&T', 'Verizon', 'T-Mobile', 'Sprint',
-  'Boost Mobile', 'Cricket Wireless', 'Metro by T-Mobile',
-  'Google Fi', 'U.S. Cellular', 'Virgin Mobile'
+  ...Object.keys(CARRIER_GATEWAYS)
 ];
 
 interface Conversation {
@@ -87,14 +87,41 @@ export function SMSInbox() {
   );
   const [editNameValue, setEditNameValue] = useState('');
 
-  // Carrier map: phone → carrier string, persisted in localStorage
+  // Carrier map: phone → carrier string, persisted in localStorage + Supabase leads
   const [carrierMap, setCarrierMap] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem('sms_carrier_map') || '{}'); } catch { return {}; }
   });
-  const saveCarrier = (phone: string, carrier: string) => {
-    const next = { ...carrierMap, [phone.replace(/\D/g, '')]: carrier };
+
+  // Sync carrierMap from leads state on load
+  useEffect(() => {
+    const mapFromLeads: Record<string, string> = { ...carrierMap };
+    leads.forEach(l => {
+      if (l.phone && (l as any).carrier) {
+        mapFromLeads[l.phone.replace(/\D/g, '')] = (l as any).carrier;
+      }
+    });
+    // Add any from localStorage that might not be leads
+    setCarrierMap(mapFromLeads);
+  }, [leads]);
+
+  const saveCarrier = async (phone: string, carrier: string) => {
+    const rawPhone = phone.replace(/\D/g, '');
+    const next = { ...carrierMap, [rawPhone]: carrier };
     setCarrierMap(next);
     localStorage.setItem('sms_carrier_map', JSON.stringify(next));
+
+    // Persist to Supabase if it's a lead
+    if (isSupabaseConfigured && supabase) {
+      const lead = leads.find(l => l.phone?.replace(/\D/g, '') === rawPhone);
+      if (lead) {
+        try {
+          await supabase.from('leads').update({ carrier }).eq('id', lead.id);
+          console.log(`[SMS] Persisted carrier '${carrier}' to lead: ${lead.name}`);
+        } catch (err) {
+          console.warn('[SMS] Failed to persist carrier to lead:', err);
+        }
+      }
+    }
   };
 
   // Pinned / archived / blocked sets persisted in localStorage

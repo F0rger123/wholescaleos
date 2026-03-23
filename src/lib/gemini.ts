@@ -206,52 +206,8 @@ export function getTeamAvailability() {
   return store.team.map(m => ({ name: m.name, role: m.role, status: m.presenceStatus }));
 }
 
-export const SMS_GATEWAYS: Record<string, string> = {
-  // Standard SMS-to-email gateways (primary domain)
-  'AT&T':                'txt.att.net',
-  'Verizon':             'vtext.com',
-  'T-Mobile':            'tmomail.net',
-  'Sprint':              'messaging.sprintpcs.com',
-  'Boost Mobile':        'tmomail.net',   // Boost uses T-Mobile network
-  'Cricket Wireless':    'sms.cricketwireless.net',
-  'Metro by T-Mobile':   'tmomail.net',
-  'Google Fi':           'msg.fi.google.com',
-  'Republic Wireless':   'text.republicwireless.com',
-  'U.S. Cellular':       'email.uscc.net',
-  'Virgin Mobile':       'vmobl.com',
-  // MMS gateways
-  'AT&T MMS':            'mms.att.net',
-  'Verizon MMS':         'vzwpix.com',
-  'T-Mobile MMS':        'tmomail.net',
-  'Sprint MMS':          'pm.sprint.com',
-  'Boost Mobile MMS':    'myboostmobile.com',
-};
+import { CARRIER_GATEWAYS, UNIVERSAL_SMS_GATEWAYS } from './sms-gateways';
 
-/**
- * Per-carrier ordered gateway list.
- * Each carrier ONLY accepts messages at their own domain;
- * sending to wrong domain results in bounce or silent drop.
- */
-const CARRIER_GATEWAYS: Record<string, string[]> = {
-  'AT&T':               ['txt.att.net'],          // txt.att.net is the primary; mms.att.net is MMS only
-  'AT&T MMS':           ['mms.att.net'],
-  'Verizon':            ['vtext.com'],             // vzwpix.com is MMS only
-  'T-Mobile':           ['tmomail.net'],
-  'Sprint':             ['messaging.sprintpcs.com'],
-  'Boost Mobile':       ['tmomail.net'],           // Boost MVNO runs on T-Mobile network
-  'Cricket Wireless':   ['sms.cricketwireless.net'],
-  'Metro by T-Mobile':  ['tmomail.net'],
-  'Visible':            ['vtext.com'],             // Visible runs on Verizon
-  'Google Fi':          ['msg.fi.google.com'],
-  'U.S. Cellular':      ['email.uscc.net'],
-  'Virgin Mobile':      ['vmobl.com'],
-  'Republic Wireless':  ['text.republicwireless.com'],
-};
-
-// Universal fallback — ONLY use T-Mobile since it's the most permissive
-// and most US MVNOs (Boost, Metro, Mint, etc.) run on T-Mobile network.
-// AT&T/Verizon/Sprint will silently drop messages not sent to their own gateway.
-const UNIVERSAL_SMS_GATEWAYS = ['tmomail.net'];
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
   const store = useStore.getState();
