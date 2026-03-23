@@ -89,8 +89,27 @@ export default function Leads() {
 
   // Bulk selection state
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'list'|'kanban'>('list');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    e.dataTransfer.setData('leadId', leadId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // allow drop
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
+    e.preventDefault();
+    const leadId = e.dataTransfer.getData('leadId');
+    if (!leadId) return;
+    const lead = leads.find(l => l.id === leadId);
+    if (lead && lead.status !== targetStatus) {
+      updateLeadStatus(leadId, targetStatus as any, 'Dragged & Dropped');
+    }
+  };
   const [showScriptLibrary, setShowScriptLibrary] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const recordingInterval = useRef<any>(null);
 
@@ -365,6 +384,21 @@ export default function Leads() {
             </button>
           )}
           
+          <div className="flex bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg overflow-hidden shrink-0">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'list' ? 'bg-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:text-white'}`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${viewMode === 'kanban' ? 'bg-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:text-white'}`}
+            >
+              Kanban
+            </button>
+          </div>
+
           <button 
             onClick={openAdd} 
             className="flex items-center gap-2 px-4 py-2 text-white rounded-lg"
@@ -629,6 +663,53 @@ export default function Leads() {
               Add Your First Lead
             </button>
           </div>
+        ) : viewMode === 'kanban' ? (
+          <div className="flex gap-4 overflow-x-auto pb-6 pt-2 snap-x">
+            {Object.entries(STATUS_LABELS).map(([statusKey, statusName]) => {
+              const columnLeads = filtered.filter(l => l.status === statusKey);
+              return (
+                <div 
+                  key={statusKey}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, statusKey)}
+                  className="flex-shrink-0 w-[320px] bg-[var(--t-surface-dim)] rounded-xl border border-[var(--t-border)] flex flex-col snap-start"
+                >
+                  <div className={`p-3 border-b border-[var(--t-border)] font-bold text-sm tracking-wide uppercase flex items-center justify-between ${STATUS_BADGE[statusKey] || 'text-white'}`}>
+                    <span>{statusName as string}</span>
+                    <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs">{columnLeads.length}</span>
+                  </div>
+                  <div className="p-3 flex flex-col gap-3 min-h-[150px] overflow-y-auto max-h-[70vh]">
+                    {columnLeads.map(lead => {
+                      const ds = calculateDealScore(lead);
+                      const pri = calculatePriorityScore(lead);
+                      return (
+                        <div 
+                          key={lead.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, lead.id)}
+                          onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)}
+                          className={`bg-[var(--t-surface)] border border-[var(--t-border)] p-4 rounded-xl shadow-sm cursor-grab active:cursor-grabbing hover:border-[var(--t-primary)]/50 transition-all ${expandedLead === lead.id ? 'ring-2 ring-[var(--t-primary)] relative z-10 scale-[1.02]' : ''}`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-bold text-white leading-tight pr-2">{lead.name || 'Unnamed'}</h4>
+                            <span className="text-xs bg-[var(--t-surface-hover)] p-1 rounded hover:bg-[var(--t-error)]/20 hover:text-[var(--t-error)] transition-colors" onClick={(e) => { e.stopPropagation(); handleDel(lead.id); }}><Trash2 className="w-3 h-3 text-[var(--t-text-muted)]" /></span>
+                          </div>
+                          <p className="text-xs text-[var(--t-text-muted)] truncate mb-3">{lead.propertyAddress || 'No Address'}</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-1.5">
+                              {(() => { const sb = scoreBadge(ds); return <span className={`px-1.5 py-0.5 text-[10px] rounded border font-medium ${sb.className}`} style={sb.style}>⚡ {ds}</span>; })()}
+                              <span className={`px-1.5 py-0.5 text-[10px] rounded font-medium ${priBadge(pri.level).c}`}>{priBadge(pri.level).l}</span>
+                            </div>
+                            <span className="text-xs font-bold text-white">{fmt$(lead.estimatedValue || 0)}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : filtered.map(lead => {
           const ds = calculateDealScore(lead);
           const pri = calculatePriorityScore(lead);
@@ -798,6 +879,22 @@ export default function Leads() {
                             </div>
                           ))}
                         </div>
+
+                        {/* Auto Photo Scraper iframe */}
+                        {lead.propertyAddress && (
+                          <div className="px-4 pb-4">
+                            <div className="w-full h-48 rounded-xl overflow-hidden shadow-inner border border-[var(--t-border)] bg-[var(--t-surface-dim)]">
+                              <iframe
+                                width="100%"
+                                height="100%"
+                                style={{ border: 0 }}
+                                loading="lazy"
+                                allowFullScreen
+                                src={`https://maps.google.com/maps?q=${encodeURIComponent(lead.propertyAddress)}&t=k&z=20&ie=UTF8&iwloc=&output=embed`}
+                              />
+                            </div>
+                          </div>
+                        )}
 
                         {/* Photos */}
                         {lead.photos && lead.photos.length > 0 && (

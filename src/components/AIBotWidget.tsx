@@ -451,6 +451,13 @@ export function AIBotWidget() {
         setLoading(true);
         result = await sendSMSViaAI(data.target || data.leadId, data.message, data.targetCarrier);
         setLoading(false);
+      } else if (intent === 'confirm_action') {
+        const underlyingIntent = data?.intent;
+        if (underlyingIntent && underlyingIntent !== 'confirm_action') {
+          return handleExecuteAction(underlyingIntent, data);
+        } else {
+          result = { success: false, message: 'Invalid confirmation target.' };
+        }
       }
 
       setMessages(prev => [...prev, {
