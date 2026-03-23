@@ -364,7 +364,7 @@ export default function Leads() {
       updateLead(editingLead.id, d);
       if (d.phone && d.phone !== editingLead.phone) {
         detectCarrier(d.phone).then(res => {
-          if (res.carrier) updateLead(editingLead.id, { carrier: res.carrier } as any);
+          if (res.carrier) updateLead(editingLead.id, { carrier: res.carrier });
         });
       }
     } else {

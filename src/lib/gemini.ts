@@ -253,7 +253,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
 
   // 3. Determine gateway list
   let gateways: string[] = UNIVERSAL_SMS_GATEWAYS;
-  let carrierToUse = targetCarrier || (lead as any)?.carrier;
+  let carrierToUse = targetCarrier || lead?.carrier;
 
   if (carrierToUse && CARRIER_GATEWAYS[carrierToUse]) {
     gateways = CARRIER_GATEWAYS[carrierToUse];
@@ -267,7 +267,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
     
     // Save detected carrier back to lead if possible
     if (lead && detection.source !== 'default') {
-      store.updateLead(lead.id, { carrier: detection.carrier } as any);
+      store.updateLead(lead.id, { carrier: detection.carrier });
     }
   }
 
