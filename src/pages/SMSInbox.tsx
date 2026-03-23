@@ -24,6 +24,13 @@ interface SMSMessage {
   lead_id?: string;
 }
 
+const CARRIER_OPTIONS = [
+  'Auto-Detect (Universal Blast)',
+  'AT&T', 'Verizon', 'T-Mobile', 'Sprint',
+  'Boost Mobile', 'Cricket Wireless', 'Metro by T-Mobile',
+  'Google Fi', 'U.S. Cellular', 'Virgin Mobile'
+];
+
 interface Conversation {
   phone: string;
   lastMessage: string;
@@ -31,6 +38,10 @@ interface Conversation {
   unreadCount: number;
   leadName?: string;
   leadId?: string;
+  pinned?: boolean;
+  archived?: boolean;
+  blocked?: boolean;
+  carrierHint?: string;
 }
 
 export function SMSInbox() {
@@ -75,6 +86,56 @@ export function SMSInbox() {
     { isOpen: false, currentName: '', phone: '' }
   );
   const [editNameValue, setEditNameValue] = useState('');
+
+  // Carrier map: phone → carrier string, persisted in localStorage
+  const [carrierMap, setCarrierMap] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem('sms_carrier_map') || '{}'); } catch { return {}; }
+  });
+  const saveCarrier = (phone: string, carrier: string) => {
+    const next = { ...carrierMap, [phone.replace(/\D/g, '')]: carrier };
+    setCarrierMap(next);
+    localStorage.setItem('sms_carrier_map', JSON.stringify(next));
+  };
+
+  // Pinned / archived / blocked sets persisted in localStorage
+  const [pinnedPhones, setPinnedPhones] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('sms_pinned') || '[]')); } catch { return new Set(); }
+  });
+  const [archivedPhones, setArchivedPhones] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('sms_archived') || '[]')); } catch { return new Set(); }
+  });
+  const [blockedPhones, setBlockedPhones] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('sms_blocked') || '[]')); } catch { return new Set(); }
+  });
+  const togglePin = (phone: string) => {
+    const next = new Set(pinnedPhones);
+    next.has(phone) ? next.delete(phone) : next.add(phone);
+    setPinnedPhones(next);
+    localStorage.setItem('sms_pinned', JSON.stringify([...next]));
+  };
+  const toggleArchive = (phone: string) => {
+    const next = new Set(archivedPhones);
+    next.has(phone) ? next.delete(phone) : next.add(phone);
+    setArchivedPhones(next);
+    localStorage.setItem('sms_archived', JSON.stringify([...next]));
+    if (next.has(phone) && selectedPhone === phone) setSelectedPhone(null);
+  };
+  const toggleBlock = (phone: string) => {
+    if (!blockedPhones.has(phone) && !confirm(`Block ${formatPhoneNumber(phone)}? You won't receive messages from this number.`)) return;
+    const next = new Set(blockedPhones);
+    next.has(phone) ? next.delete(phone) : next.add(phone);
+    setBlockedPhones(next);
+    localStorage.setItem('sms_blocked', JSON.stringify([...next]));
+    if (next.has(phone) && selectedPhone === phone) setSelectedPhone(null);
+  };
+
+  // Carrier picker modal: shown before sending to a phone with unknown carrier
+  const [carrierPicker, setCarrierPicker] = useState<{
+    isOpen: boolean;
+    phone: string;
+    message: string;
+    selectedCarrier: string;
+  }>({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' });
 
   // Contact search in compose
   const [contactSearch, setContactSearch] = useState('');
@@ -229,80 +290,79 @@ export function SMSInbox() {
     }
   };
 
+  const executeSend = async (phone: string, textToSend: string, carrier?: string) => {
+    setSending(true);
+    const optimisticMsg: SMSMessage = {
+      id: `optimistic-${Date.now()}`,
+      phone_number: phone,
+      content: textToSend,
+      direction: 'outbound',
+      is_read: true,
+      created_at: new Date().toISOString()
+    };
+    setMessages(prev => [...prev, optimisticMsg]);
+
+    try {
+      // Pass carrier (undefined = universal blast, string = specific CARRIER_GATEWAYS key)
+      const effectiveCarrier = carrier === 'Auto-Detect (Universal Blast)' ? undefined : carrier;
+      const result = await sendSMSViaAI(phone, textToSend, effectiveCarrier);
+
+      if (result.success) {
+        if (isSupabaseConfigured && supabase && currentUser?.id) {
+          const lead = leads.find(l => l.phone?.replace(/\D/g, '') === phone.replace(/\D/g, ''));
+          supabase.from('sms_messages').insert({
+            user_id: currentUser.id,
+            lead_id: lead?.id ?? null,
+            phone_number: phone,
+            content: textToSend,
+            direction: 'outbound',
+            is_read: true
+          }).select().single().then(({ data: inserted, error: insertError }) => {
+            if (!insertError && inserted) {
+              setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? inserted : m));
+            } else if (insertError) {
+              console.warn('[SMS] DB insert error (message still sent):', insertError.message);
+            }
+          });
+        }
+      } else {
+        setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+        setReplyText(textToSend);
+        alert(`❌ Send failed: ${result.message}`);
+      }
+    } catch (err: any) {
+      console.error('[SMS] Failed to send:', err);
+      setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+      setReplyText(textToSend);
+      alert(`❌ SMS Error: ${err?.message || 'Check your Google connection in Settings.'}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!replyText.trim() || !selectedPhone || sending) return;
 
     const textToSend = replyText.trim();
+    const rawPhone = selectedPhone.replace(/\D/g, '');
+    const knownCarrier = carrierMap[rawPhone];
 
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirm SMS',
-      message: `Send this text to ${selectedPhone}?\n\n"${textToSend}"`,
-      onConfirm: async () => {
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        setSending(true);
-        // Optimistic update — show the message immediately in the thread
-        const optimisticMsg: SMSMessage = {
-          id: `optimistic-${Date.now()}`,
-          phone_number: selectedPhone,
-          content: textToSend,
-          direction: 'outbound',
-          is_read: true,
-          created_at: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, optimisticMsg]);
-        setReplyText('');
+    if (!knownCarrier) {
+      // First time sending to this number — ask for carrier so we use the right gateway
+      setCarrierPicker({
+        isOpen: true,
+        phone: rawPhone,
+        message: textToSend,
+        selectedCarrier: 'Auto-Detect (Universal Blast)'
+      });
+      return; // executeSend called from carrier picker confirm
+    }
 
-        try {
-          const result = await sendSMSViaAI(selectedPhone, textToSend);
-          if (result.success) {
-            // Try to persist to DB and replace optimistic entry with real one
-            if (isSupabaseConfigured && supabase && currentUser?.id) {
-              const lead = leads.find(l => l.phone?.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''));
-              try {
-                const { data: inserted, error: insertError } = await supabase
-                  .from('sms_messages')
-                  .insert({
-                    user_id: currentUser.id,
-                    lead_id: lead?.id ?? null,
-                    phone_number: selectedPhone,
-                    content: textToSend,
-                    direction: 'outbound',
-                    is_read: true
-                  })
-                  .select()
-                  .single();
-
-                if (!insertError && inserted) {
-                  // Swap optimistic with real DB record
-                  setMessages(prev =>
-                    prev.map(m => m.id === optimisticMsg.id ? inserted : m)
-                  );
-                } else if (insertError) {
-                  console.warn('[SMS] DB insert error (message still sent):', insertError.message);
-                }
-              } catch (dbErr) {
-                console.warn('[SMS] DB save failed (message still sent):', dbErr);
-              }
-            }
-          } else {
-            // Remove optimistic message on failure
-            setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-            setReplyText(textToSend); // Restore text
-            alert(`Send failed: ${result.message}`);
-          }
-        } catch (err) {
-          console.error('[SMS] Failed to send:', err);
-          setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-          setReplyText(textToSend);
-          alert('Failed to send SMS. Check your Google connection in Settings.');
-        } finally {
-          setSending(false);
-        }
-      }
-    });
+    setReplyText('');
+    executeSend(rawPhone, textToSend, knownCarrier);
   };
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -319,11 +379,24 @@ export function SMSInbox() {
     }
   }, [selectedPhone, messages]);
 
-  const filteredConversations = conversations.filter(c => 
-    c.phone.includes(searchQuery) || 
-    c.leadName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConversations = conversations
+    .filter(c => {
+      const raw = c.phone.replace(/\D/g, '');
+      if (blockedPhones.has(raw)) return false;     // Never show blocked
+      if (archivedPhones.has(raw) && !searchQuery) return false; // Hide archived unless searching
+      return (
+        c.phone.includes(searchQuery) ||
+        c.leadName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    })
+    .sort((a, b) => {
+      const aPin = pinnedPhones.has(a.phone.replace(/\D/g, ''));
+      const bPin = pinnedPhones.has(b.phone.replace(/\D/g, ''));
+      if (aPin && !bPin) return -1;
+      if (!aPin && bPin) return 1;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
 
   const formatPhoneNumber = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
@@ -580,6 +653,98 @@ export function SMSInbox() {
                         </button>
                       )}
                       <div style={{ borderTop: '1px solid var(--t-border)', margin: '4px 0' }} />
+                      {/* Mark read / unread */}
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                        style={{ color: 'var(--t-text)' }}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          if (activeConversation?.unreadCount && activeConversation.unreadCount > 0) {
+                            markAsRead(selectedPhone || '');
+                          } else {
+                            // Mark as unread: bump unread count locally
+                            setConversations(prev => prev.map(c =>
+                              c.phone === activeConversation?.phone ? { ...c, unreadCount: 1 } : c
+                            ));
+                          }
+                        }}
+                      >
+                        {activeConversation?.unreadCount ? '✅ Mark as Read' : '🔵 Mark as Unread'}
+                      </button>
+                      {/* Pin to top */}
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                        style={{ color: 'var(--t-text)' }}
+                        onClick={() => { setMenuOpen(false); if (selectedPhone) togglePin(selectedPhone.replace(/\D/g, '')); }}
+                      >
+                        {pinnedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? '📌 Unpin' : '📌 Pin to Top'}
+                      </button>
+                      {/* Archive */}
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                        style={{ color: 'var(--t-text)' }}
+                        onClick={() => { setMenuOpen(false); if (selectedPhone) toggleArchive(selectedPhone.replace(/\D/g, '')); }}
+                      >
+                        {archivedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? '📥 Unarchive' : '📦 Archive'}
+                      </button>
+                      {/* Set carrier */}
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                        style={{ color: 'var(--t-text)' }}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          const rawPhone = selectedPhone?.replace(/\D/g, '') || '';
+                          setCarrierPicker({
+                            isOpen: true,
+                            phone: rawPhone,
+                            message: '',  // empty = carrier-only save (no send)
+                            selectedCarrier: carrierMap[rawPhone] || 'Auto-Detect (Universal Blast)'
+                          });
+                        }}
+                      >
+                        📡 Set Carrier ({carrierMap[selectedPhone?.replace(/\D/g, '') || ''] || 'Unknown'})
+                      </button>
+                      {/* Add to lead / View lead */}
+                      {!activeConversation?.leadId ? (
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                          style={{ color: 'var(--t-primary)' }}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            const name = prompt('Enter name for new lead:');
+                            if (name && selectedPhone) {
+                              addLead({ name, email: '', phone: selectedPhone, status: 'new', source: 'other',
+                                propertyAddress: 'Unknown', propertyType: 'single-family',
+                                estimatedValue: 0, offerAmount: 0, lat: 0, lng: 0,
+                                notes: 'Added from SMS inbox', assignedTo: currentUser?.id || '',
+                                probability: 50, engagementLevel: 3, timelineUrgency: 3, competitionLevel: 1 });
+                            }
+                          }}
+                        >
+                          <UserPlus size={14} /> Add to Leads
+                        </button>
+                      ) : (
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                          style={{ color: 'var(--t-primary)' }}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            window.location.href = `/leads?id=${activeConversation.leadId}`;
+                          }}
+                        >
+                          👤 View Lead Profile
+                        </button>
+                      )}
+                      <div style={{ borderTop: '1px solid var(--t-border)', margin: '4px 0' }} />
+                      {/* Block */}
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                        style={{ color: 'var(--t-error)' }}
+                        onClick={() => { setMenuOpen(false); if (selectedPhone) toggleBlock(selectedPhone.replace(/\D/g, '')); }}
+                      >
+                        🚫 {blockedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? 'Unblock Number' : 'Block Number'}
+                      </button>
+                      {/* Delete */}
                       <button
                         className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
                         style={{ color: 'var(--t-error)' }}
@@ -830,12 +995,7 @@ export function SMSInbox() {
               <button
                 onClick={() => {
                   if (editNameValue.trim() && editNameModal.phone) {
-                    const existing = contacts.find(c => c.phone.replace(/\D/g, '') === editNameModal.phone.replace(/\D/g, ''));
-                    if (existing) {
-                      useStore.getState().updateContact?.(existing.id, { name: editNameValue.trim() });
-                    } else {
-                      addContact({ name: editNameValue.trim(), phone: editNameModal.phone });
-                    }
+                    addContact({ name: editNameValue.trim(), phone: editNameModal.phone });
                     setConversations(prev => prev.map(c =>
                       c.phone.replace(/\D/g, '') === editNameModal.phone.replace(/\D/g, '')
                         ? { ...c, leadName: editNameValue.trim() }
@@ -847,6 +1007,53 @@ export function SMSInbox() {
                 className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
                 style={{ background: 'var(--t-primary)' }}
               >Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Carrier Picker Modal */}
+      {carrierPicker.isOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="rounded-2xl border shadow-2xl p-6 w-96 space-y-5 animate-in fade-in zoom-in-95" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+            <div>
+              <h3 className="font-bold text-base mb-1" style={{ color: 'var(--t-text)' }}>Select Carrier for {formatPhoneNumber(carrierPicker.phone)}</h3>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
+                Choose the recipient's carrier so we route through the correct SMS gateway.
+                This is saved so you won't be asked again.
+              </p>
+            </div>
+            <select
+              value={carrierPicker.selectedCarrier}
+              onChange={(e) => setCarrierPicker(prev => ({ ...prev, selectedCarrier: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+              style={{ backgroundColor: 'var(--t-background)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+            >
+              {CARRIER_OPTIONS.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCarrierPicker({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' })}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium"
+                style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}
+              >Cancel</button>
+              <button
+                onClick={() => {
+                  const { phone, message, selectedCarrier } = carrierPicker;
+                  // Save carrier for this phone
+                  saveCarrier(phone, selectedCarrier);
+                  setCarrierPicker({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' });
+                  // Only send if we have a message (not just a carrier-save from the menu)
+                  if (message) {
+                    setReplyText('');
+                    executeSend(phone, message, selectedCarrier === 'Auto-Detect (Universal Blast)' ? undefined : selectedCarrier);
+                  }
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+                style={{ background: 'var(--t-primary)' }}
+              >{carrierPicker.message ? 'Save & Send' : 'Save Carrier'}</button>
             </div>
           </div>
         </div>
