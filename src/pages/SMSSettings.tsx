@@ -74,23 +74,51 @@ export function SMSSettings() {
     setTestResult(null);
 
     const cleanPhone = phone.replace(/\D/g, '');
-    const toAddresses = UNIVERSAL_GATEWAYS.map(gw => `${cleanPhone}@${gw}`).join(', ');
+
+    // Read carrier from DB so we only target the correct gateway
+    let carrier = '';
+    if (isSupabaseConfigured && supabase && currentUser?.id) {
+      try {
+        const { data } = await supabase
+          .from('agent_preferences')
+          .select('carrier')
+          .eq('user_id', currentUser.id)
+          .maybeSingle();
+        carrier = data?.carrier || '';
+      } catch (_) {}
+    } else {
+      carrier = localStorage.getItem('user_sms_carrier') || '';
+    }
+
+    // Build gateway list for this carrier
+    const CARRIER_GW: Record<string, string[]> = {
+      'AT&T':              ['txt.att.net', 'mms.att.net'],
+      'Verizon':           ['vtext.com', 'vzwpix.com'],
+      'T-Mobile':          ['tmomail.net'],
+      'Sprint':            ['messaging.sprintpcs.com', 'pm.sprint.com'],
+      'Boost Mobile':      ['tmomail.net'],
+      'Cricket Wireless':  ['sms.cricketwireless.net'],
+      'Metro by T-Mobile': ['tmomail.net'],
+      'Google Fi':         ['msg.fi.google.com'],
+    };
+    const gateways = CARRIER_GW[carrier] || ['tmomail.net', 'vtext.com', 'txt.att.net'];
+    const toAddresses = gateways.map(gw => `${cleanPhone}@${gw}`).join(', ');
 
     try {
       const res = await sendEmail({
         to: toAddresses,
         subject: 'WholeScale OS: Test SMS',
-        html: `<p>Your SMS connection for WholeScale OS is working! Phone: ${phone}</p>`,
+        html: `<p>Your SMS connection for WholeScale OS is working! Phone: ${phone}${carrier ? ` (${carrier})` : ''}</p>`,
         from: 'WholeScale OS <alerts@wholescale.work>'
       });
 
       if (res.success) {
-        setTestResult({ success: true, message: `Test message sent to ${phone}. Check your phone!` });
+        setTestResult({ success: true, message: `Test message sent to ${phone} via ${carrier || 'universal gateway'}. Check your phone!` });
       } else {
         setTestResult({ success: false, message: `Failed to send: ${res.error}` });
       }
     } catch (err) {
-      setTestResult({ success: false, message: 'Failed to send test SMS. Check your connection.' });
+      setTestResult({ success: false, message: 'Failed to send test SMS. Check your Google connection.' });
     } finally {
       setTesting(false);
     }
