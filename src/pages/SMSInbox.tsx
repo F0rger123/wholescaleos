@@ -102,12 +102,17 @@ export function SMSInbox() {
   // Sync carrierMap from leads state on load
   useEffect(() => {
     const mapFromLeads: Record<string, string> = { ...carrierMap };
+    let synced = 0;
     leads.forEach(l => {
-      if (l.phone && (l as any).carrier) {
-        mapFromLeads[normalizePhone(l.phone)] = (l as any).carrier;
+      if (l.phone && l.carrier) {
+        mapFromLeads[normalizePhone(l.phone)] = l.carrier;
+        synced++;
       }
     });
-    setCarrierMap(mapFromLeads);
+    if (synced > 0) {
+      console.log(`[SMS] Synced ${synced} carriers from leads into local map.`);
+      setCarrierMap(mapFromLeads);
+    }
   }, [leads]);
 
   const saveCarrier = async (phone: string, carrier: string) => {
@@ -119,16 +124,19 @@ export function SMSInbox() {
     // Persist to Supabase if it's a lead via store action
     const lead = leads.find(l => normalizePhone(l.phone || '') === rawPhone);
     if (lead) {
-      updateLead(lead.id, { carrier } as any);
+      updateLead(lead.id, { carrier });
       console.log(`[SMS] Triggered store update for lead carrier: ${lead.name} -> ${carrier}`);
     }
   };
 
   const handleAutoDetect = async (phone: string) => {
+    console.log(`[SMS] Starting auto-detection for ${phone}...`);
     const result = await detectCarrier(phone);
     if (result.carrier) {
+      console.log(`[SMS] detectCarrier result for ${phone}:`, result);
       await saveCarrier(phone, result.carrier);
-      console.log(`[SMS] Auto-detected carrier for ${phone}: ${result.carrier} (${result.source})`);
+    } else {
+      console.warn(`[SMS] detectCarrier returned no result for ${phone}`);
     }
   };
 
@@ -290,6 +298,7 @@ export function SMSInbox() {
     if (selectedPhone) {
       const raw = normalizePhone(selectedPhone);
       const c = carrierMap[raw];
+      console.log(`[SMS] Conversation opened for ${selectedPhone} (raw: ${raw}). Current carrier in map: '${c || "undefined"}'`);
       if (!c || c === 'Auto-Detect (Universal Blast)') {
         handleAutoDetect(selectedPhone);
       }

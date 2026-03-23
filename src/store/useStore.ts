@@ -131,6 +131,7 @@ export interface Lead {
   competitionLevel: number;
   importSource?: string;
   photos?: string[];
+  carrier?: string;
   timeline: TimelineEntry[];
   statusHistory: StatusHistoryEntry[];
 }
