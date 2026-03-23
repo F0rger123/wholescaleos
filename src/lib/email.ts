@@ -594,10 +594,14 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     console.log('📧 [DEV] Email would be sent:', {
       to: payload.to,
       subject: payload.subject,
-      htmlLength: (payload.html || payload.text || '').length,
+      userId: userId,
+      supabase: !!supabase,
+      config: isSupabaseConfigured
     });
     return { success: true, messageId: `dev-${Date.now()}` };
   }
+
+  console.log(`📧 [EmailService] Attempting to send to: ${payload.to}`);
 
   try {
     // 1. Get Google OAuth tokens for Gmail
@@ -677,7 +681,7 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     }
 
     const result = await gmailResponse.json();
-    console.log(`✅ Gmail API Success! Message ID: ${result.id}`);
+    console.log(`✅ [EmailService] Gmail API Success! Message ID: ${result.id}`);
     
     return {
       success: true,
