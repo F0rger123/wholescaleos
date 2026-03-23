@@ -66,10 +66,10 @@ export function GoogleCalendarConnect() {
         }`}
       >
         <Calendar size={18} />
-        <span className="text-sm font-medium">
-          {isConnected ? 'Connected to Workspace' : 'Connect Google Workspace'}
+        <span className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+          {isConnected ? 'Connected to: Calendar + Gmail + Contacts + Tasks + Drive' : 'Connect Google Workspace'}
         </span>
-        {isConnected && <ChevronDown size={16} className={`transition-transform ${showDropdown ? 'rotate-180' : ''}`} />}
+        {isConnected && <ChevronDown size={16} className={`transition-transform flex-shrink-0 ${showDropdown ? 'rotate-180' : ''}`} />}
       </button>
 
       {showDropdown && isConnected && (

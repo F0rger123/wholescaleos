@@ -23,10 +23,14 @@ export class GoogleEcosystemService {
     const token = await this.getToken(userId);
     if (!token) throw new Error('Not connected to Google Account');
 
-    const res = await fetch('https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,phoneNumbers', {
+    const res = await fetch('https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,phoneNumbers&pageSize=1000', {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('Failed to fetch contacts');
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('Contacts API Error:', txt);
+      throw new Error(`Failed to fetch contacts: ${res.status}`);
+    }
     return res.json();
   }
 
