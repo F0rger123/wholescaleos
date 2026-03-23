@@ -275,10 +275,13 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
 
   // 4. Send via Gmail API to all gateway addresses
   const { sendEmail } = await import('./email');
-  const toAddresses = gateways.map(gw => `${targetPhone}@${gw}`).join(', ');
+  const toAddresses = gateways.map(gw => `${targetPhone}@${gw}`);
+  const toRecipient = toAddresses.join(',');
   
+  console.log(`[SMS AI Send] Final recipient string: ${toRecipient}`);
+
   const res = await sendEmail({
-    to: toAddresses,
+    to: toRecipient,
     subject: 'WholeScale OS Message',
     text: message,
     from: store.currentUser?.name

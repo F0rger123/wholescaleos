@@ -375,24 +375,31 @@ export function SMSInbox() {
     try {
       // Pass carrier (undefined = universal blast, string = specific CARRIER_GATEWAYS key)
       const effectiveCarrier = carrier === 'Auto-Detect (Universal Blast)' ? undefined : carrier;
+      console.log(`[SMS Inbox] Calling sendSMSViaAI for ${phone} with carrier: ${effectiveCarrier || 'Auto-Detect'}`);
       const result = await sendSMSViaAI(phone, textToSend, effectiveCarrier);
 
       if (result.success) {
+        console.log(`[SMS Inbox] sendSMSViaAI success! result:`, result);
         if (isSupabaseConfigured && supabase && currentUser?.id) {
-          const lead = leads.find(l => normalizePhone(l.phone || '') === normalizePhone(phone));
+          const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === normalizePhone(phone));
+          const lead = matchingLeads[0];
+          
+          const carrierToRecord = effectiveCarrier || carrier || 'T-Mobile';
+          console.log(`[SMS Inbox] Recording outbound SMS to DB with carrier: ${carrierToRecord}`);
+          
           supabase.from('sms_messages').insert({
             user_id: currentUser.id,
             lead_id: lead?.id ?? null,
             phone_number: phone,
             content: textToSend,
             direction: 'outbound',
-            carrier: effectiveCarrier || carrier,
+            carrier: carrierToRecord,
             is_read: true
           }).select().single().then(({ data: inserted, error: insertError }) => {
             if (!insertError && inserted) {
               setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? inserted : m));
             } else if (insertError) {
-              console.warn('[SMS] DB insert error (message still sent):', insertError.message);
+              console.warn('[SMS Inbox] DB insert error (message still sent):', insertError.message);
             }
           });
         }
