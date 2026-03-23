@@ -298,12 +298,19 @@ export function SMSInbox() {
     if (selectedPhone) {
       const raw = normalizePhone(selectedPhone);
       const c = carrierMap[raw];
-      console.log(`[SMS] Conversation opened for ${selectedPhone} (raw: ${raw}). Current carrier in map: '${c || "undefined"}'`);
+      const lead = leads.find(l => normalizePhone(l.phone || '') === raw);
+      
+      console.log(`[SMS] Conversation opened for ${selectedPhone} (raw: ${raw}). Map: '${c || "undefined"}', Lead: '${lead?.carrier || "null"}'`);
+      
       if (!c || c === 'Auto-Detect (Universal Blast)') {
         handleAutoDetect(selectedPhone);
+      } else if (lead && !lead.carrier) {
+        // Map has it but lead (Supabase) doesn't - push it to the lead record
+        console.log(`[SMS] Pushing local carrier '${c}' to lead record for ${lead.name}`);
+        updateLead(lead.id, { carrier: c });
       }
     }
-  }, [selectedPhone, carrierMap]);
+  }, [selectedPhone, carrierMap, leads]);
 
   const processConversations = (allMessages: SMSMessage[]) => {
     const groups: Record<string, Conversation> = {};
