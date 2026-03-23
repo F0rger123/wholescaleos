@@ -550,7 +550,8 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
               placeholder="e.g. 'hot leads'"
               value={newTrigger}
               onChange={(e) => setNewTrigger(e.target.value)}
-              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-success)]"
+              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[var(--t-success)]"
+              style={{ color: 'var(--t-text)' }}
             />
           </div>
           <div>
@@ -558,13 +559,15 @@ export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
             <select
               value={newAction}
               onChange={(e) => setNewAction(e.target.value)}
-              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-[var(--t-success)] appearance-none"
+              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[var(--t-success)] appearance-none"
+              style={{ color: 'var(--t-text)' }}
             >
-              <option value="">Select Action Type...</option>
-              <option value="navigate_tasks">Open Pending Tasks</option>
-              <option value="navigate_settings">Open Settings</option>
-              <option value="show_hot_leads">List Hot Deals</option>
-              <option value="navigate_calendar">Open Calendar</option>
+              <option value="" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Select Action Type...</option>
+              <option value="navigate_tasks" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Open Pending Tasks</option>
+              <option value="navigate_settings" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Open Settings</option>
+              <option value="show_hot_leads" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>List Hot Deals</option>
+              <option value="navigate_calendar" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Open Calendar</option>
+              <option value="send_sms" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Send a Text</option>
             </select>
           </div>
         </div>

@@ -501,7 +501,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
           } else if (matchedRule.action === 'create_task') {
             matchedActions.push({ intent: 'create_task', response: '[⚡ Local Rules] Initiated task creation.', data: { title: cmd, priority: 'medium' } });
           } else if (matchedRule.action === 'send_sms') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening compose box.', data: { path: '/sms?compose=true' } });
+            matchedActions.push({ intent: 'send_sms', response: '[⚡ Local Rules] Preparing to send text. What phone number or lead name should I text?', data: {} });
           }
         }
       }

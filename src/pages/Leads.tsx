@@ -103,12 +103,12 @@ export default function Leads() {
   // Google Keep state
   const [syncingKeep, setSyncingKeep] = useState<Record<string, boolean>>({});
 
-  const fetchKeepNotes = async (leadId: string, query: string) => {
+  const fetchKeepNotes = async (leadId: string) => {
     const { currentUser } = useStore.getState();
     if (!currentUser?.id) return;
     setSyncingKeep(p => ({ ...p, [leadId]: true }));
     try {
-      const data = await googleEcosystem.getNotes(currentUser.id, query);
+      const data = await googleEcosystem.getNotes(currentUser.id);
       const notes = data.notes || [];
       let added = 0;
       notes.forEach((note: any) => {
@@ -1166,7 +1166,7 @@ export default function Leads() {
                                 style={{ border: 0 }}
                                 loading="lazy"
                                 allowFullScreen
-                                src={`https://maps.google.com/maps?q=${encodeURIComponent(lead.propertyAddress)}&layer=c&z=17&ie=UTF8&iwloc=&output=embed`}
+                                src={`https://maps.google.com/maps?q=&layer=c&cbll=${lead.lat || 30.2672},${lead.lng || -97.7431}&cbp=11,0,0,0,0&output=svembed`}
                               />
                             </div>
                           </div>
@@ -1316,7 +1316,7 @@ export default function Leads() {
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => fetchKeepNotes(lead.id, lead.propertyAddress || lead.name)}
+                                  onClick={() => fetchKeepNotes(lead.id)}
                                   disabled={syncingKeep[lead.id]}
                                   className="px-3 py-1.5 border hover:opacity-80 rounded-lg text-sm flex items-center gap-1 transition-all ml-auto"
                                   style={{ background: 'var(--t-surface-dim)', color: 'var(--t-primary)', borderColor: 'var(--t-border)' }}
