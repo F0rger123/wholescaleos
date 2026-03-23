@@ -66,6 +66,26 @@ export function SMSInbox() {
     onConfirm: () => {},
   });
 
+  // 3-dot dropdown menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Edit-name modal state  
+  const [editNameModal, setEditNameModal] = useState<{ isOpen: boolean; currentName: string; phone: string }>(
+    { isOpen: false, currentName: '', phone: '' }
+  );
+  const [editNameValue, setEditNameValue] = useState('');
+
+  // Contact search in compose
+  const [contactSearch, setContactSearch] = useState('');
+  const allContacts = [...contacts, ...leads.filter(l => l.phone).map(l => ({ name: l.name, phone: l.phone! }))];
+  const filteredContactSearch = contactSearch
+    ? allContacts.filter(c =>
+        c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+        c.phone.includes(contactSearch)
+      ).slice(0, 8)
+    : [];
+
   const fetchMessages = useCallback(async () => {
     if (!isSupabaseConfigured || !supabase || !currentUser?.id) return;
     try {
@@ -132,6 +152,18 @@ export function SMSInbox() {
       setSelectedPhone(phoneParam);
     }
   }, [phoneParam]);
+
+  // Close 3-dot menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   useEffect(() => {
     fetchMessages();
@@ -469,7 +501,7 @@ export function SMSInbox() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                 {!activeConversation?.leadId && (
                   <button 
                     onClick={() => {
@@ -485,7 +517,7 @@ export function SMSInbox() {
                           propertyType: 'single-family',
                           estimatedValue: 0,
                           offerAmount: 0,
-                          lat: 34.0522, // Default to LA for now or 0
+                          lat: 34.0522,
                           lng: -118.2437,
                           notes: 'Saved from SMS inbox',
                           assignedTo: currentUser?.id || '',
@@ -502,24 +534,68 @@ export function SMSInbox() {
                     <UserPlus size={14} /> Save as Lead
                   </button>
                 )}
-                <button className="p-2 rounded-lg transition-colors" style={{ color: 'var(--t-text-muted)' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                  <MoreVertical size={20} />
-                </button>
-                {!contacts.find(c => c.phone.replace(/\D/g, '') === selectedPhone.replace(/\D/g, '')) && !activeConversation?.leadId && (
-                  <button 
-                    onClick={() => {
-                      const name = prompt("Enter contact name:");
-                      if (name && selectedPhone) {
-                        addContact({ name, phone: selectedPhone });
-                      }
-                    }}
+                {/* 3-dot dropdown menu */}
+                <div className="relative" ref={menuRef}>
+                  <button
                     className="p-2 rounded-lg transition-colors"
-                    style={{ color: 'var(--t-primary)' }}
-                    title="Save Contact"
+                    style={{ color: 'var(--t-text-muted)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    onClick={() => setMenuOpen(prev => !prev)}
+                    title="More options"
                   >
-                    <UserPlus size={20} />
+                    <MoreVertical size={20} />
                   </button>
-                )}
+                  {menuOpen && (
+                    <div
+                      className="absolute right-0 top-full mt-1 z-50 rounded-xl border shadow-xl py-1 min-w-[170px] animate-in fade-in zoom-in-95 duration-100"
+                      style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+                    >
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                        style={{ color: 'var(--t-text)' }}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setEditNameModal({
+                            isOpen: true,
+                            currentName: activeConversation?.leadName || '',
+                            phone: selectedPhone || ''
+                          });
+                          setEditNameValue(activeConversation?.leadName || '');
+                        }}
+                      >
+                        ✏️ Edit Contact Name
+                      </button>
+                      {!contacts.find(c => c.phone.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, '')) && !activeConversation?.leadId && (
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                          style={{ color: 'var(--t-primary)' }}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            const name = prompt("Enter contact name:");
+                            if (name && selectedPhone) addContact({ name, phone: selectedPhone });
+                          }}
+                        >
+                          <UserPlus size={14} /> Save Contact
+                        </button>
+                      )}
+                      <div style={{ borderTop: '1px solid var(--t-border)', margin: '4px 0' }} />
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
+                        style={{ color: 'var(--t-error)' }}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          if (confirm(`Delete all messages with ${formatPhoneNumber(selectedPhone || '')}?`)) {
+                            setMessages(prev => prev.filter(m => m.phone_number.replace(/\D/g, '') !== selectedPhone?.replace(/\D/g, '')));
+                            setSelectedPhone(null);
+                          }
+                        }}
+                      >
+                        🗑️ Delete Conversation
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -629,35 +705,71 @@ export function SMSInbox() {
                 </div>
               </div>
 
-              {contacts.length > 0 && (
-                <div>
-                  <label className="block text-xs font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Saved Contacts</label>
-                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1">
-                    {contacts.map(contact => (
+              {/* Contact / Lead search */}
+              <div>
+                <label className="block text-xs font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Search Contacts &amp; Leads</label>
+                <div className="relative mb-2">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
+                  <input
+                    type="text"
+                    value={contactSearch}
+                    onChange={(e) => { setContactSearch(e.target.value); }}
+                    placeholder="Search by name or number..."
+                    className="w-full pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-1 transition-all"
+                    style={{
+                      backgroundColor: 'var(--t-background)',
+                      border: '1px solid var(--t-border)',
+                      color: 'var(--t-text)',
+                      // @ts-expect-error
+                      '--tw-ring-color': 'var(--t-primary)'
+                    }}
+                  />
+                </div>
+                {filteredContactSearch.length > 0 && (
+                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                    {filteredContactSearch.map((c, i) => (
                       <button
-                        key={contact.id}
+                        key={i}
                         onClick={() => {
-                          setSelectedPhone(contact.phone);
-                          setShowCompose(false);
+                          setNewNumber(c.phone);
+                          setContactSearch('');
                         }}
-                        className="flex items-center justify-between p-2.5 rounded-xl text-left transition-colors hover:bg-[var(--t-surface-hover)] border border-transparent hover:border-[var(--t-border)]"
+                        className="flex items-center gap-2 p-2 rounded-xl text-left transition-colors hover:bg-[var(--t-surface-hover)] border border-transparent hover:border-[var(--t-border)]"
                         style={{ backgroundColor: 'var(--t-background)' }}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-[var(--t-primary-dim)] flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--t-primary)' }}>
-                            {contact.name.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>{contact.name}</p>
-                            <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{contact.phone}</p>
-                          </div>
+                        <div className="w-7 h-7 rounded-lg bg-[var(--t-primary-dim)] flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--t-primary)' }}>
+                          {c.name.charAt(0)}
                         </div>
-                        <Plus size={14} style={{ color: 'var(--t-text-muted)' }} />
+                        <div>
+                          <p className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>{c.name}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{c.phone}</p>
+                        </div>
                       </button>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+                {/* Fallback: show all contacts when not searching */}
+                {!contactSearch && contacts.length > 0 && (
+                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
+                    {contacts.slice(0, 6).map(contact => (
+                      <button
+                        key={contact.id}
+                        onClick={() => { setSelectedPhone(contact.phone); setShowCompose(false); }}
+                        className="flex items-center gap-2 p-2 rounded-xl text-left transition-colors hover:bg-[var(--t-surface-hover)] border border-transparent hover:border-[var(--t-border)]"
+                        style={{ backgroundColor: 'var(--t-background)' }}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-[var(--t-primary-dim)] flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--t-primary)' }}>
+                          {contact.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>{contact.name}</p>
+                          <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{contact.phone}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <button 
                 onClick={() => {
@@ -673,6 +785,68 @@ export function SMSInbox() {
               >
                 Start Conversation
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Contact Name Modal */}
+      {editNameModal.isOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="rounded-2xl border shadow-2xl p-6 w-80 space-y-4 animate-in fade-in zoom-in-95" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+            <h3 className="font-bold text-base" style={{ color: 'var(--t-text)' }}>Edit Contact Name</h3>
+            <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{formatPhoneNumber(editNameModal.phone)}</p>
+            <input
+              autoFocus
+              type="text"
+              value={editNameValue}
+              onChange={(e) => setEditNameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (editNameValue.trim() && editNameModal.phone) {
+                    // Save / update contact name — addContact is idempotent for UI purposes
+                    addContact({ name: editNameValue.trim(), phone: editNameModal.phone });
+                    // Update conversations list immediately
+                    setConversations(prev => prev.map(c =>
+                      c.phone.replace(/\D/g, '') === editNameModal.phone.replace(/\D/g, '')
+                        ? { ...c, leadName: editNameValue.trim() }
+                        : c
+                    ));
+                    setEditNameModal({ isOpen: false, currentName: '', phone: '' });
+                  }
+                }
+                if (e.key === 'Escape') setEditNameModal({ isOpen: false, currentName: '', phone: '' });
+              }}
+              placeholder="Enter name..."
+              className="w-full px-4 py-2 rounded-xl text-sm outline-none focus:ring-1"
+              style={{ backgroundColor: 'var(--t-background)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditNameModal({ isOpen: false, currentName: '', phone: '' })}
+                className="flex-1 py-2 rounded-xl text-sm font-medium"
+                style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}
+              >Cancel</button>
+              <button
+                onClick={() => {
+                  if (editNameValue.trim() && editNameModal.phone) {
+                    const existing = contacts.find(c => c.phone.replace(/\D/g, '') === editNameModal.phone.replace(/\D/g, ''));
+                    if (existing) {
+                      useStore.getState().updateContact?.(existing.id, { name: editNameValue.trim() });
+                    } else {
+                      addContact({ name: editNameValue.trim(), phone: editNameModal.phone });
+                    }
+                    setConversations(prev => prev.map(c =>
+                      c.phone.replace(/\D/g, '') === editNameModal.phone.replace(/\D/g, '')
+                        ? { ...c, leadName: editNameValue.trim() }
+                        : c
+                    ));
+                    setEditNameModal({ isOpen: false, currentName: '', phone: '' });
+                  }
+                }}
+                className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
+                style={{ background: 'var(--t-primary)' }}
+              >Save</button>
             </div>
           </div>
         </div>

@@ -207,33 +207,50 @@ export function getTeamAvailability() {
 }
 
 export const SMS_GATEWAYS: Record<string, string> = {
-  // Standard SMS-to-email gateways
-  'AT&T': 'txt.att.net',
-  'Verizon': 'vtext.com',
-  'T-Mobile': 'tmomail.net',
-  'Sprint': 'messaging.sprintpcs.com',
-  'Boost Mobile': 'tmomail.net', // Boost uses T-Mobile
-  'Cricket Wireless': 'mms.att.net', // Cricket uses AT&T MMS
-  'Metro by T-Mobile': 'tmomail.net',
-  'Google Fi': 'msg.fi.google.com',
-  'Republic Wireless': 'text.republicwireless.com',
-  'U.S. Cellular': 'email.uscc.net',
-  'Virgin Mobile': 'vmobl.com',
-  // MMS gateways (more reliable for iPhones)
-  'AT&T MMS': 'mms.att.net',
-  'Verizon MMS': 'vzwpix.com',
-  'T-Mobile MMS': 'tmomail.net', // Corrected: T-Mobile uses same domain for both
-  'Sprint MMS': 'pm.sprint.com',
-  'Boost Mobile MMS': 'mms.att.net', // Some Boost numbers use AT&T MMS
+  // Standard SMS-to-email gateways (primary domain)
+  'AT&T':                'txt.att.net',
+  'Verizon':             'vtext.com',
+  'T-Mobile':            'tmomail.net',
+  'Sprint':              'messaging.sprintpcs.com',
+  'Boost Mobile':        'tmomail.net',   // Boost uses T-Mobile network
+  'Cricket Wireless':    'sms.cricketwireless.net',
+  'Metro by T-Mobile':   'tmomail.net',
+  'Google Fi':           'msg.fi.google.com',
+  'Republic Wireless':   'text.republicwireless.com',
+  'U.S. Cellular':       'email.uscc.net',
+  'Virgin Mobile':       'vmobl.com',
+  // MMS gateways
+  'AT&T MMS':            'mms.att.net',
+  'Verizon MMS':         'vzwpix.com',
+  'T-Mobile MMS':        'tmomail.net',
+  'Sprint MMS':          'pm.sprint.com',
+  'Boost Mobile MMS':    'myboostmobile.com',
 };
 
-// Universal SMS gateways — try all for maximum delivery (used when carrier unknown)
+/**
+ * Per-carrier ordered gateway list.
+ * We try these in order — carriers only accept their own domain and silently
+ * drop others, so blasting multiple causes no harm and maximises delivery.
+ */
+const CARRIER_GATEWAYS: Record<string, string[]> = {
+  'AT&T':               ['txt.att.net', 'mms.att.net'],
+  'Verizon':            ['vtext.com', 'vzwpix.com'],
+  'T-Mobile':           ['tmomail.net'],
+  'Sprint':             ['messaging.sprintpcs.com', 'pm.sprint.com'],
+  'Boost Mobile':       ['tmomail.net', 'myboostmobile.com'],
+  'Cricket Wireless':   ['sms.cricketwireless.net', 'mms.cricketwireless.net'],
+  'Metro by T-Mobile':  ['tmomail.net'],
+  'Google Fi':          ['msg.fi.google.com'],
+  'U.S. Cellular':      ['email.uscc.net'],
+  'Virgin Mobile':      ['vmobl.com'],
+};
+
+// Universal blast — used when carrier is unknown; covers major US networks
 const UNIVERSAL_SMS_GATEWAYS = [
-  'tmomail.net',   // T-Mobile / Boost (most reliable)
-  'vtext.com',     // Verizon
-  'txt.att.net',   // AT&T
-  'mms.att.net',   // AT&T MMS
-  'pm.sprint.com'  // Sprint
+  'tmomail.net',          // T-Mobile / Boost
+  'vtext.com',            // Verizon
+  'txt.att.net',          // AT&T
+  'messaging.sprintpcs.com', // Sprint
 ];
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
@@ -282,24 +299,22 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
     return { success: false, message: `Could not find a valid phone number for '${target}'. Please provide a 10-digit number.` };
   }
 
-  // 3. Determine gateway
+  // 3. Determine gateway list
   const effectiveCarrier = targetCarrier || userCarrier;
-  let gateways: string[] = [];
+  let gateways: string[];
 
-  if (effectiveCarrier && SMS_GATEWAYS[effectiveCarrier]) {
-    // Known carrier — try carrier gateway first, then MMS variant
-    const mmsGateway = SMS_GATEWAYS[effectiveCarrier + ' MMS'];
-    gateways = [SMS_GATEWAYS[effectiveCarrier]];
-    if (mmsGateway && mmsGateway !== gateways[0]) gateways.push(mmsGateway);
+  if (effectiveCarrier && CARRIER_GATEWAYS[effectiveCarrier]) {
+    // Known carrier — use its specific gateway list
+    gateways = CARRIER_GATEWAYS[effectiveCarrier];
   } else {
-    // Unknown carrier — blast all universal gateways (carrier filters silently)
+    // Unknown carrier — blast all universal gateways (each carrier filters silently)
     gateways = UNIVERSAL_SMS_GATEWAYS;
-    console.log('[SMS] No carrier known — using universal gateway blast.');
+    console.log('[SMS] Carrier unknown — using universal gateway blast.');
   }
 
-  // Special override: Boost Mobile 717-309-6172 uses tmomail.net
+  // Hard override for the known Boost test number
   if (targetPhone === '7173096172') {
-    gateways = ['tmomail.net', 'mms.att.net'];
+    gateways = ['tmomail.net'];
   }
 
   console.log(`[SMS Send] Target: ${targetPhone}, Gateways: ${gateways.join(', ')}`);
