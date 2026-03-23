@@ -201,48 +201,70 @@ export function SMSInbox() {
     e?.preventDefault();
     if (!replyText.trim() || !selectedPhone || sending) return;
 
+    const textToSend = replyText.trim();
+
     setConfirmModal({
       isOpen: true,
       title: 'Confirm SMS',
-      message: `Send this text to ${selectedPhone}?\n\n"${replyText.trim()}"`,
+      message: `Send this text to ${selectedPhone}?\n\n"${textToSend}"`,
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setSending(true);
+        // Optimistic update — show the message immediately in the thread
+        const optimisticMsg: SMSMessage = {
+          id: `optimistic-${Date.now()}`,
+          phone_number: selectedPhone,
+          content: textToSend,
+          direction: 'outbound',
+          is_read: true,
+          created_at: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, optimisticMsg]);
+        setReplyText('');
+
         try {
-          const result = await sendSMSViaAI(selectedPhone, replyText.trim());
+          const result = await sendSMSViaAI(selectedPhone, textToSend);
           if (result.success) {
+            // Try to persist to DB and replace optimistic entry with real one
             if (isSupabaseConfigured && supabase && currentUser?.id) {
               const lead = leads.find(l => l.phone?.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''));
-              const { data: inserted, error: insertError } = await supabase.from('sms_messages').insert({
-                user_id: currentUser.id,
-                lead_id: lead?.id,
-                phone_number: selectedPhone,
-                content: replyText.trim(),
-                direction: 'outbound',
-                is_read: true
-              }).select().single();
+              try {
+                const { data: inserted, error: insertError } = await supabase
+                  .from('sms_messages')
+                  .insert({
+                    user_id: currentUser.id,
+                    lead_id: lead?.id ?? null,
+                    phone_number: selectedPhone,
+                    content: textToSend,
+                    direction: 'outbound',
+                    is_read: true
+                  })
+                  .select()
+                  .single();
 
-              if (!insertError && inserted) {
-                setMessages(prev => [inserted, ...prev]);
+                if (!insertError && inserted) {
+                  // Swap optimistic with real DB record
+                  setMessages(prev =>
+                    prev.map(m => m.id === optimisticMsg.id ? inserted : m)
+                  );
+                } else if (insertError) {
+                  console.warn('[SMS] DB insert error (message still sent):', insertError.message);
+                }
+              } catch (dbErr) {
+                console.warn('[SMS] DB save failed (message still sent):', dbErr);
               }
-            } else {
-              // Fallback for non-supabase or demo mode
-              const demoMsg: SMSMessage = {
-                id: Date.now().toString(),
-                phone_number: selectedPhone,
-                content: replyText.trim(),
-                direction: 'outbound',
-                is_read: true,
-                created_at: new Date().toISOString()
-              };
-              setMessages(prev => [demoMsg, ...prev]);
             }
-            setReplyText('');
           } else {
-            alert(`Failed: ${result.message}`);
+            // Remove optimistic message on failure
+            setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+            setReplyText(textToSend); // Restore text
+            alert(`Send failed: ${result.message}`);
           }
         } catch (err) {
-          console.error('Failed to send SMS:', err);
+          console.error('[SMS] Failed to send:', err);
+          setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+          setReplyText(textToSend);
+          alert('Failed to send SMS. Check your Google connection in Settings.');
         } finally {
           setSending(false);
         }

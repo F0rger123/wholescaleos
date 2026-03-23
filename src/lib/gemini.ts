@@ -227,97 +227,121 @@ export const SMS_GATEWAYS: Record<string, string> = {
   'Boost Mobile MMS': 'mms.att.net', // Some Boost numbers use AT&T MMS
 };
 
-const MAJOR_CARRIERS = ['Verizon', 'AT&T', 'T-Mobile', 'Sprint', 'Boost Mobile', 'Metro by T-Mobile'];
+// Universal SMS gateways — try all for maximum delivery (used when carrier unknown)
+const UNIVERSAL_SMS_GATEWAYS = [
+  'tmomail.net',   // T-Mobile / Boost (most reliable)
+  'vtext.com',     // Verizon
+  'txt.att.net',   // AT&T
+  'mms.att.net',   // AT&T MMS
+  'pm.sprint.com'  // Sprint
+];
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   if (!userId) return { success: false, message: 'User not authenticated.' };
 
-  // 1. Get User Preferences for SMS
+  // 1. Get User SMS preferences
   let userPhone = '';
   let userCarrier = '';
 
   if (isSupabaseConfigured && supabase) {
-    const { data } = await supabase.from('agent_preferences').select('phone_number, carrier').eq('user_id', userId).maybeSingle();
-    if (data) {
-      userPhone = data.phone_number;
-      userCarrier = data.carrier;
-    }
+    try {
+      const { data } = await supabase
+        .from('agent_preferences')
+        .select('phone_number, carrier')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (data) {
+        userPhone = data.phone_number || '';
+        userCarrier = data.carrier || '';
+      }
+    } catch (_) {}
   } else {
     userPhone = localStorage.getItem('user_sms_phone') || '';
     userCarrier = localStorage.getItem('user_sms_carrier') || '';
   }
 
-  if (!userPhone || !userCarrier) {
-    return { success: false, message: 'SMS settings not configured. Please set your phone and carrier in SMS Settings.' };
+  // Phone is needed for logging / identifying the sender; warn but don't block
+  if (!userPhone) {
+    console.warn('[SMS] No sender phone configured — sending anyway via Gmail gateway.');
   }
 
-  // 2. Resolve Target
+  // 2. Resolve Target phone
   let targetPhone = '';
-  const lead = store.leads.find(l => 
-    (l.name && l.name.toLowerCase().includes(target.toLowerCase())) || 
-    (l.phone && l.phone.includes(target.replace(/\D/g, '')))
+  const lead = store.leads.find(l =>
+    (l.name && l.name.toLowerCase().includes(target.toLowerCase())) ||
+    (l.phone && l.phone.replace(/\D/g, '').includes(target.replace(/\D/g, '')))
   );
-  
+
   if (lead && lead.phone) {
     targetPhone = lead.phone.replace(/\D/g, '');
   } else if (target.replace(/\D/g, '').length >= 10) {
     targetPhone = target.replace(/\D/g, '');
   } else {
-    return { success: false, message: `Could not find a valid phone number for '${target}'.` };
+    return { success: false, message: `Could not find a valid phone number for '${target}'. Please provide a 10-digit number.` };
   }
 
-  // Use explicit target carrier if provided, otherwise fallback to user's carrier
-  const effectiveTargetCarrier = targetCarrier || userCarrier;
-  
-  // Logic: for major carriers, prefer MMS variant for iPhone compatibility
-  const isMajor = MAJOR_CARRIERS.includes(effectiveTargetCarrier);
-  
-  const mmsKey = effectiveTargetCarrier + ' MMS';
-  let gateway = (isMajor ? (SMS_GATEWAYS[mmsKey] || SMS_GATEWAYS[effectiveTargetCarrier]) : (SMS_GATEWAYS[effectiveTargetCarrier] || SMS_GATEWAYS['Verizon']));
+  // 3. Determine gateway
+  const effectiveCarrier = targetCarrier || userCarrier;
+  let gateways: string[] = [];
 
-  // Special handling for Boost Mobile: try tmomail then att as fallback if needed
-  // However, for single send, we'll pick the most likely or provide both in metadata
-  if (effectiveTargetCarrier === 'Boost Mobile' && targetPhone === '7173096172') {
-    gateway = 'tmomail.net'; // User confirmed this is likely correct for their case
+  if (effectiveCarrier && SMS_GATEWAYS[effectiveCarrier]) {
+    // Known carrier — try carrier gateway first, then MMS variant
+    const mmsGateway = SMS_GATEWAYS[effectiveCarrier + ' MMS'];
+    gateways = [SMS_GATEWAYS[effectiveCarrier]];
+    if (mmsGateway && mmsGateway !== gateways[0]) gateways.push(mmsGateway);
+  } else {
+    // Unknown carrier — blast all universal gateways (carrier filters silently)
+    gateways = UNIVERSAL_SMS_GATEWAYS;
+    console.log('[SMS] No carrier known — using universal gateway blast.');
   }
 
-  const targetEmail = `${targetPhone}@${gateway}`;
-  console.log(`[SMS Send] Sending to ${targetPhone} via ${gateway} (Carrier: ${effectiveTargetCarrier})`);
+  // Special override: Boost Mobile 717-309-6172 uses tmomail.net
+  if (targetPhone === '7173096172') {
+    gateways = ['tmomail.net', 'mms.att.net'];
+  }
 
-  // 3. Send via Gmail API
+  console.log(`[SMS Send] Target: ${targetPhone}, Gateways: ${gateways.join(', ')}`);
+
+  // 4. Send via Gmail API to all gateway addresses
   const { sendEmail } = await import('./email');
+  const toAddresses = gateways.map(gw => `${targetPhone}@${gw}`).join(', ');
+  
   const res = await sendEmail({
-    to: targetEmail,
-    subject: 'WholeScale OS Message', // Subject line helps iPhone/carrier delivery
+    to: toAddresses,
+    subject: 'WholeScale OS Message',
     text: message,
-    from: `${store.currentUser?.name} <${store.currentUser?.email}>`
+    from: store.currentUser?.name
+      ? `${store.currentUser.name} <${store.currentUser.email}>`
+      : store.currentUser?.email || 'me'
   });
 
   if (res.success) {
+    // Log to DB (non-blocking — message was already sent)
     if (store.currentUser?.id && isSupabaseConfigured && supabase) {
-      try {
-        await supabase.from('sms_messages').insert([{
-          user_id: store.currentUser.id,
-          lead_id: lead?.id || null,
-          phone_number: targetPhone,
-          content: message,
-          direction: 'outbound',
-          is_read: true,
-          created_at: new Date().toISOString()
-        }]);
-      } catch (err) {
-        console.error('Failed to log outbound SMS to DB:', err);
-      }
+      supabase.from('sms_messages').insert({
+        user_id: store.currentUser.id,
+        lead_id: lead?.id ?? null,
+        phone_number: targetPhone,
+        content: message,
+        direction: 'outbound',
+        is_read: true,
+        created_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('[SMS] DB log failed (message was still sent):', error.message);
+      });
     }
 
-    return { 
-      success: true, 
-      message: `SMS sent to ${targetPhone} via ${effectiveTargetCarrier} gateway (${gateway}).` 
+    return {
+      success: true,
+      message: `✅ SMS sent to ${targetPhone} via ${gateways.length > 1 ? 'multiple gateways' : gateways[0]}.${
+        effectiveCarrier ? ` Carrier: ${effectiveCarrier}.` : ' (Universal delivery mode)'
+      }`
     };
   } else {
-    return { success: false, message: `Failed to send SMS: ${res.error}` };
+    console.error('[SMS] Gmail send failed:', res.error);
+    return { success: false, message: `Failed to send SMS: ${res.error || 'Gmail API error. Check Google connection in Settings.'}` };
   }
 }
 

@@ -459,10 +459,21 @@ export function AIBotWidget() {
         result = updateLeadViaAI(data.leadId, data);
       } else if (intent === 'delete_lead' && data?.leadId) {
         result = deleteLeadViaAI(data.leadId);
-      } else if (intent === 'send_sms' && (data?.target || data?.leadId || data?.phone) && data?.message) {
-        setLoading(true);
-        result = await sendSMSViaAI(data.target || data.leadId || data.phone, data.message, data.targetCarrier);
-        setLoading(false);
+      } else if (intent === 'send_sms') {
+        const target = data?.target || data?.leadId || data?.phone;
+        const message = data?.message;
+        if (!target || !message) {
+          result = { success: false, message: "Missing phone/target or message content for SMS." };
+        } else {
+          setLoading(true);
+          try {
+            result = await sendSMSViaAI(target, message, data?.targetCarrier);
+          } catch (smsErr: any) {
+            result = { success: false, message: smsErr?.message || 'SMS send failed. Check Google connection in Settings.' };
+          } finally {
+            setLoading(false);
+          }
+        }
       } else if (intent === 'confirm_action') {
         const underlyingIntent = data?.intent;
         if (underlyingIntent && underlyingIntent !== 'confirm_action') {
@@ -475,17 +486,19 @@ export function AIBotWidget() {
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'ai',
-        content: result?.message || "Action successfully completed.",
+        content: result
+          ? (result.success ? result.message : `❌ ${result.message}`)
+          : 'Action completed.',
         timestamp: new Date().toISOString(),
         intent: intent
       }]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Widget action failed:', err);
       setLoading(false);
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: 'ai',
-        content: "Sorry, I couldn't complete that action. Please check your settings and try again.",
+        content: `❌ ${err?.message || "Couldn't complete that action. Please check your Google/SMS settings."}`,
         timestamp: new Date().toISOString()
       }]);
     }
