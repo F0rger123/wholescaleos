@@ -21,14 +21,29 @@ export class GoogleEcosystemService {
   // --- CONTACTS API (googleapis.com/people/v1/connections) ---
   async getContacts(userId: string) {
     const token = await this.getToken(userId);
-    if (!token) throw new Error('Not connected to Google Account');
+    if (!token) throw new Error('Google account not connected. Please reconnect in Settings.');
 
-    const res = await fetch('https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,phoneNumbers&pageSize=1000', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    // The contacts.readonly scope must have been granted during OAuth.
+    // If you get a 403, disconnect and reconnect Google to re-grant all scopes.
+    const res = await fetch(
+      'https://people.googleapis.com/v1/people/me/connections' +
+      '?personFields=names,emailAddresses,phoneNumbers&pageSize=1000&sortOrder=LAST_NAME_ASCENDING',
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
     if (!res.ok) {
-      const txt = await res.text();
-      console.error('Contacts API Error:', txt);
+      let errBody = '';
+      try { errBody = await res.text(); } catch (_) {}
+      console.error(`[Contacts API] ${res.status} error:`, errBody);
+      if (res.status === 403) {
+        throw new Error(
+          'Google Contacts permission denied (403). ' +
+          'Please disconnect and reconnect your Google account in Settings to grant the contacts.readonly scope.'
+        );
+      }
+      if (res.status === 401) {
+        throw new Error('Google token expired. Please reconnect your Google account in Settings.');
+      }
       throw new Error(`Failed to fetch contacts: ${res.status}`);
     }
     return res.json();
