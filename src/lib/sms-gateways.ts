@@ -14,6 +14,7 @@ export const CARRIER_GATEWAYS: Record<string, string[]> = {
   'Metro by T-Mobile':  ['tmomail.net'],
   'Visible':            ['vtext.com'],
   'Google Fi':          ['msg.fi.google.com'],
+  'Unknown':            ['tmomail.net', 'vtext.com'],
 };
 
 /**

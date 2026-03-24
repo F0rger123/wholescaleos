@@ -7,8 +7,7 @@ import { CARRIER_GATEWAYS } from './sms-gateways';
 const CARRIER_PREFIX_MAP: Record<string, string> = {
   // Common T-Mobile / Boost / Metro ranges
   '223667': 'T-Mobile',
-  '717309': 'Boost Mobile',
-  '213': 'AT&T',
+  '717309': 'Verizon',
   '310': 'Verizon',
   '212': 'Verizon',
   '917': 'T-Mobile',
@@ -65,9 +64,8 @@ export async function detectCarrier(phone: string): Promise<CarrierDetectionResu
         let carrierName = data.carrier;
         if (carrierName.toLowerCase().includes('t-mobile')) carrierName = 'T-Mobile';
         else if (carrierName.toLowerCase().includes('verizon')) carrierName = 'Verizon';
-        else if (carrierName.toLowerCase().includes('at&t')) carrierName = 'AT&T';
-        else if (carrierName.toLowerCase().includes('boost')) carrierName = 'Boost Mobile';
-        else if (carrierName.toLowerCase().includes('cricket')) carrierName = 'Cricket Wireless';
+        else if (carrierName.toLowerCase().includes('boost')) carrierName = 'T-Mobile';
+        else if (carrierName.toLowerCase().includes('cricket')) carrierName = 'T-Mobile';
         
         return {
           carrier: carrierName,

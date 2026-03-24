@@ -1,10 +1,6 @@
 import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '../store/useStore';
 import type { Lead } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
-import { 
-  CARRIER_GATEWAYS, 
-  UNIVERSAL_SMS_GATEWAYS 
-} from './sms-gateways';
 import { sendSMS } from './sms-service';
 
 export interface GeminiResponse {
@@ -600,7 +596,7 @@ Choose the most appropriate intent:
   - In the data field, include { phone: "the-phone-number" }.
   - If the user says "Yes", the system will open a lead creation modal.
   - If the user says "No", proceed with the SMS send.
-- **iPhone Delivery**: For best iPhone compatibility, specify carrier as "AT&T MMS", "Verizon MMS", or "T-Mobile MMS" in targetCarrier. If the user just says "AT&T", use "AT&T MMS" for MMS gateway which works better with iPhones.
+- **iPhone Delivery**: For best iPhone compatibility, specify carrier as "Verizon MMS" or "T-Mobile MMS" in targetCarrier. 
 - **Carrier Inference**: Default to "Verizon MMS" if no carrier is specified — it has the broadest coverage. Ask the carrier ONLY if the first attempt fails.
 
 ### 4. Confirmation Before Mutations
@@ -626,7 +622,7 @@ Choose the most appropriate intent:
 - Acknowledge completed actions and move to the next step.
 
 ## INTENT DATA SCHEMAS
-- send_sms: { target: "name or phone number", message: "exact text to send", targetCarrier?: "Verizon MMS|AT&T MMS|T-Mobile MMS|Verizon|AT&T|T-Mobile|Sprint" }
+- send_sms: { target: "name or phone number", message: "exact text to send", targetCarrier?: "Verizon MMS|T-Mobile MMS|Verizon|T-Mobile" }
 - create_task: { title: string, dueDate: "YYYY-MM-DD", priority: "low|medium|high|urgent", leadId?: string }
 - update_status: { leadId: string, newStatus: "new|contacted|qualified|negotiating|closed-won|closed-lost" }
 - create_lead: { name: string, phone?: string, email?: string, propertyAddress?: string, estimatedValue?: number, notes?: string }
