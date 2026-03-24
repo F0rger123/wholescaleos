@@ -6,7 +6,7 @@ import {
   Loader2, AlertCircle, Send,
   Check
 } from 'lucide-react';
-import { sendSMS, testBrevoConnection } from '../lib/sms-service';
+import { sendSMS } from '../lib/sms-service';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
 
@@ -15,9 +15,6 @@ export function SMSSettings() {
   const [carrier, setCarrier] = useState('Auto-Detect');
   const [autoReply, setAutoReply] = useState(false);
   const [autoReplyMessage, setAutoReplyMessage] = useState('Thanks for your message! I will get back to you soon.');
-  const [brevoApiKey, setBrevoApiKey] = useState('');
-  const [brevoStatus, setBrevoStatus] = useState<'disconnected' | 'testing' | 'connected' | 'error'>('disconnected');
-  const [brevoError, setBrevoError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -43,7 +40,7 @@ export function SMSSettings() {
         try {
           const { data } = await supabase
             .from('agent_preferences')
-            .select('phone_number, carrier, sms_auto_reply_enabled, sms_auto_reply_message, brevo_api_key')
+            .select('phone_number, carrier, sms_auto_reply_enabled, sms_auto_reply_message')
             .eq('user_id', currentUser.id)
             .maybeSingle();
 
@@ -52,10 +49,6 @@ export function SMSSettings() {
             setCarrier(data.carrier || 'Auto-Detect');
             setAutoReply(!!data.sms_auto_reply_enabled);
             if (data.sms_auto_reply_message) setAutoReplyMessage(data.sms_auto_reply_message);
-            if (data.brevo_api_key) {
-              setBrevoApiKey(data.brevo_api_key);
-              setBrevoStatus('connected');
-            }
           }
         } catch (err) {
           console.error('Failed to load SMS preferences:', err);
@@ -77,8 +70,6 @@ export function SMSSettings() {
   const handleTestSMS = async () => {
     if (!phone) return;
     setTesting(true);
-    setTestResult(null);
-
     setTestResult(null);
 
     // Read carrier from DB so we only target the correct gateway
@@ -131,7 +122,6 @@ export function SMSSettings() {
               carrier: carrier,
               sms_auto_reply_enabled: finalAutoReply,
               sms_auto_reply_message: autoReplyMessage,
-              brevo_api_key: brevoApiKey,
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'user_id' }
@@ -294,85 +284,6 @@ export function SMSSettings() {
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Settings
           </button>
-        </div>
-      </div>
-
-      {/* Brevo SMS Section */}
-      <div className="bg-[var(--t-surface-hover)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center border"
-              style={{ background: 'color-mix(in srgb, #0092FF 15%, transparent)', borderColor: 'rgba(0, 146, 255, 0.2)' }}
-            >
-              <Send className="w-5 h-5 text-[#0092FF]" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text-primary)' }}>Brevo SMS</h2>
-              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Primary outgoing provider for higher reliability.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-              brevoStatus === 'connected' ? 'bg-[var(--t-success-dim)] text-[var(--t-success)]' : 
-              brevoStatus === 'error' ? 'bg-[var(--t-error-dim)] text-[var(--t-error)]' :
-              'bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)]'
-            }`}>
-              {brevoStatus === 'connected' ? 'Connected' : brevoStatus === 'testing' ? 'Testing...' : brevoStatus === 'error' ? 'Error' : 'Not Configured'}
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>
-                Brevo API Key
-              </label>
-              <a 
-                href="https://app.brevo.com/settings/keys" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-[10px] text-[#0092FF] hover:underline"
-              >
-                Get your key →
-              </a>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={brevoApiKey}
-                onChange={(e) => setBrevoApiKey(e.target.value)}
-                placeholder="xkeysib-..."
-                className="flex-1 px-4 py-2 text-sm rounded-xl border bg-[var(--t-background)] transition-all outline-none"
-                style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-primary)' }}
-              />
-              <button
-                onClick={async () => {
-                  setBrevoStatus('testing');
-                  setBrevoError(null);
-                  const res = await testBrevoConnection(brevoApiKey);
-                  if (res.success) {
-                    setBrevoStatus('connected');
-                    setTestResult({ success: true, message: res.message });
-                  } else {
-                    setBrevoStatus('error');
-                    setBrevoError(res.message);
-                    setTestResult({ success: false, message: res.message });
-                  }
-                }}
-                disabled={!brevoApiKey || brevoStatus === 'testing'}
-                className="px-4 py-2 text-xs font-medium rounded-xl border border-[var(--t-border)] hover:bg-[var(--t-surface-subtle)] transition-all flex items-center gap-2 disabled:opacity-50"
-              >
-                {brevoStatus === 'testing' ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                Test
-              </button>
-            </div>
-            {brevoError && (
-              <p className="text-[10px] text-[var(--t-error)] mt-1 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> {brevoError}
-              </p>
-            )}
-          </div>
         </div>
       </div>
 
