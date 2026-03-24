@@ -6,8 +6,7 @@ import {
   Loader2, AlertCircle, Send,
   ExternalLink, Check
 } from 'lucide-react';
-import { CARRIER_GATEWAYS, UNIVERSAL_SMS_GATEWAYS } from '../lib/sms-gateways';
-import { sendEmail } from '../lib/email';
+import { sendSMS } from '../lib/sms-service';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
 
@@ -70,7 +69,7 @@ export function SMSSettings() {
     setTesting(true);
     setTestResult(null);
 
-    const cleanPhone = phone.replace(/\D/g, '');
+    setTestResult(null);
 
     // Read carrier from DB so we only target the correct gateway
     let carrier = '';
@@ -87,24 +86,15 @@ export function SMSSettings() {
       carrier = localStorage.getItem('user_sms_carrier') || '';
     }
 
-    const gateways = carrier && CARRIER_GATEWAYS[carrier] 
-      ? CARRIER_GATEWAYS[carrier] 
-      : UNIVERSAL_SMS_GATEWAYS;
-
-    const toAddresses = gateways.map(gw => `${cleanPhone}@${gw}`).join(', ');
-
+    const testMessage = `WholeScale OS: Your SMS connection is working! Phone: ${phone}${carrier ? ` (${carrier})` : ''}`;
+    
     try {
-      const res = await sendEmail({
-        to: toAddresses,
-        subject: 'WholeScale OS: Test SMS',
-        html: `<p>Your SMS connection for WholeScale OS is working! Phone: ${phone}${carrier ? ` (${carrier})` : ''}</p>`,
-        from: 'WholeScale OS <alerts@wholescale.work>'
-      });
+      const res = await sendSMS(phone, testMessage, carrier || 'Unknown');
 
       if (res.success) {
-        setTestResult({ success: true, message: `Test message sent to ${phone} via ${carrier || 'universal gateway'}. Check your phone!` });
+        setTestResult({ success: true, message: res.message });
       } else {
-        setTestResult({ success: false, message: `Failed to send: ${res.error}` });
+        setTestResult({ success: false, message: `Failed: ${res.message}` });
       }
     } catch (err) {
       setTestResult({ success: false, message: 'Failed to send test SMS. Check your Google connection.' });

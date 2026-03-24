@@ -42,37 +42,61 @@ export async function sendSMS(
   }
 
   // Step 2: Get gateways for this carrier
+  const isUnknown = carrier === 'Unknown' || !CARRIER_GATEWAYS[carrier];
   const gateways = CARRIER_GATEWAYS[carrier] || CARRIER_GATEWAYS['Unknown'];
   
   console.log(`[SMS] Sending to ${cleanPhone} (${carrier}) using gateways: ${gateways.join(', ')}`);
 
-  // Step 3: Try each gateway until one works
+  // Step 3: Try gateways. For unknown carriers, we blast all to ensure delivery.
+  // For known carriers, we try one by one.
   let lastError = '';
-  for (const gateway of gateways) {
-    const to = `${cleanPhone}@${gateway}`;
-    console.log(`[SMS] Attempting to send to ${to}`);
-    
-    try {
-      // For SMS, we want text/plain and NO subject for best compatibility
-      const result = await sendEmail({
-        to,
-        subject: '', 
-        text: message,
-        html: undefined // Force text/plain
-      });
-      
-      if (result.success) {
-        return {
-          success: true,
-          message: `✅ SMS sent to ${cleanPhone} via ${gateway}`,
-          formattedPhone: cleanPhone,
-          gatewaysUsed: [gateway]
-        };
+  const successfulGateways: string[] = [];
+
+  if (isUnknown) {
+    console.log(`[SMS] Unknown carrier - blasting all gateways: ${gateways.join(', ')}`);
+    const results = await Promise.all(gateways.map(async (gateway) => {
+      const to = `${cleanPhone}@${gateway}`;
+      try {
+        const res = await sendEmail({ to, subject: '', text: message });
+        return { gateway, success: res.success, error: res.error };
+      } catch (e: any) {
+        return { gateway, success: false, error: e.message };
       }
-      lastError = result.error || 'Unknown email error';
-    } catch (error: any) {
-      lastError = error.message;
-      console.error(`[SMS] Failed via ${gateway}:`, error);
+    }));
+    
+    results.forEach(r => {
+      if (r.success) successfulGateways.push(r.gateway);
+      else lastError = r.error || lastError;
+    });
+
+    if (successfulGateways.length > 0) {
+      return {
+        success: true,
+        message: `✅ SMS sent to ${cleanPhone} via ${successfulGateways.join(', ')}`,
+        formattedPhone: cleanPhone,
+        gatewaysUsed: successfulGateways
+      };
+    }
+  } else {
+    for (const gateway of gateways) {
+      const to = `${cleanPhone}@${gateway}`;
+      console.log(`[SMS] Attempting to send to ${to}`);
+      
+      try {
+        const result = await sendEmail({ to, subject: '', text: message });
+        if (result.success) {
+          return {
+            success: true,
+            message: `✅ SMS sent to ${cleanPhone} via ${gateway}`,
+            formattedPhone: cleanPhone,
+            gatewaysUsed: [gateway]
+          };
+        }
+        lastError = result.error || 'Unknown email error';
+      } catch (error: any) {
+        lastError = error.message;
+        console.error(`[SMS] Failed via ${gateway}:`, error);
+      }
     }
   }
   
