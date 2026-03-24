@@ -13,6 +13,7 @@ export const CARRIER_GATEWAYS: Record<string, string[]> = {
   'Verizon':            ['vtext.com'],
   'Verizon MMS':        ['vzwpix.com'],
   'T-Mobile':           ['tmomail.net'],
+  'T-Mobile MMS':       ['tmomail.net'],           // T-Mobile uses tmomail.net for both
   'Sprint':             ['messaging.sprintpcs.com'],
   'Sprint MMS':         ['pm.sprint.com'],
   'Boost Mobile':       ['tmomail.net'],           // Boost runs on T-Mobile network
