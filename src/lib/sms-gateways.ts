@@ -8,22 +8,17 @@
  */
 
 export const CARRIER_GATEWAYS: Record<string, string[]> = {
-  'AT&T':               ['txt.att.net'],
-  'AT&T MMS':           ['mms.att.net'],
+  'T-Mobile':           ['tmomail.net'],
+  'T-Mobile MMS':       ['tmomail.net'],
   'Verizon':            ['vtext.com'],
   'Verizon MMS':        ['vzwpix.com'],
-  'T-Mobile':           ['tmomail.net'],
-  'T-Mobile MMS':       ['tmomail.net'],           // T-Mobile uses tmomail.net for both
-  'Sprint':             ['messaging.sprintpcs.com'],
-  'Sprint MMS':         ['pm.sprint.com'],
-  'Boost Mobile':       ['tmomail.net'],           // Boost runs on T-Mobile network
-  'Cricket Wireless':   ['sms.cricketwireless.net'],
+  'Boost Mobile':       ['tmomail.net'],
+  'Cricket Wireless':   ['mms.att.net'],           // Cricket often still supports MMS gateway
   'Metro by T-Mobile':  ['tmomail.net'],
-  'Visible':            ['vtext.com'],             // Visible runs on Verizon
+  'Visible':            ['vtext.com'],
   'Google Fi':          ['msg.fi.google.com'],
   'U.S. Cellular':      ['email.uscc.net'],
   'Virgin Mobile':      ['vmobl.com'],
-  'Republic Wireless':  ['text.republicwireless.com'],
 };
 
 /**
@@ -38,12 +33,9 @@ export const UNIVERSAL_SMS_GATEWAYS = ['tmomail.net'];
  */
 export const ALL_GATEWAY_DOMAINS = [
   'vtext.com', 'vzwpix.com',
-  'txt.att.net', 'mms.att.net',
+  'mms.att.net',
   'tmomail.net',
-  'messaging.sprintpcs.com', 'pm.sprint.com',
-  'sms.cricketwireless.net',
   'msg.fi.google.com',
-  'text.republicwireless.com',
   'email.uscc.net',
   'vmobl.com'
 ];

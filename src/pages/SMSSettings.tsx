@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import {
   Smartphone, Save, RefreshCw,
   Loader2, AlertCircle, Send,
-  ExternalLink, Check
+  Check
 } from 'lucide-react';
 import { sendSMS } from '../lib/sms-service';
 import { GoogleCalendarService } from '../lib/google-calendar';
@@ -316,22 +316,25 @@ export function SMSSettings() {
 
       <div className="rounded-2xl p-6 border border-dashed" style={{ backgroundColor: 'rgba(var(--t-background-rgb), 0.5)', borderColor: 'var(--t-border)' }}>
         <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-3">
-          <AlertCircle className="w-4 h-4" style={{ color: 'var(--t-primary)' }} />
-          How it works
+          <AlertCircle className="w-4 h-4" style={{ color: 'var(--t-warning)' }} />
+          Legacy System Warning (2025-2026)
         </h3>
         <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--t-text-muted)' }}>
-          Most mobile carriers provide a free email address that forwards to your phone as an SMS. 
-          For example, 555-123-4567 on Verizon becomes <code>5551234567@vtext.com</code>.
+          Major US carriers (including AT&T, T-Mobile, and Verizon) have officially discontinued or severely restricted free email-to-SMS gateways as of late 2025. 
+          As result, messages sent via this "Free" method are often <strong>silently dropped</strong> or rejected by carrier spam filters.
         </p>
-        <a 
-          href="https://ai.google.dev/gemini-api/docs/rate-limits" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-xs hover:opacity-80 inline-flex items-center gap-1"
-          style={{ color: 'var(--t-primary)' }}
-        >
-          View supported gateways <ExternalLink className="w-3 h-3" />
-        </a>
+        <div className="flex items-center gap-2 text-xs font-semibold" style={{ color: 'var(--t-warning)' }}>
+          <AlertCircle className="w-3.5 h-3.5" />
+          Reliability is not guaranteed. 
+          <a 
+            href="https://www.twilio.com/en-us/sms" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="ml-1 underline hover:opacity-80 transition-opacity"
+          >
+            Switch to a professional SMS API for 100% delivery.
+          </a>
+        </div>
       </div>
     </div>
   );

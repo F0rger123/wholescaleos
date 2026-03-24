@@ -151,14 +151,25 @@ function decodeGmailBody(data: string): string {
 
 function extractTextContent(payload: any): string {
   if (!payload) return '';
-  if (payload.mimeType === 'text/plain' && payload.body?.data) return decodeGmailBody(payload.body.data);
+  
+  // 1. Direct body data
+  if (payload.mimeType === 'text/plain' && payload.body?.data) {
+    return decodeGmailBody(payload.body.data);
+  }
+  
+  // 2. Recursive search in parts
   if (payload.parts && Array.isArray(payload.parts)) {
     for (const part of payload.parts) {
       const text = extractTextContent(part);
       if (text.trim()) return text;
     }
   }
-  if (payload.body?.data) return decodeGmailBody(payload.body.data);
+  
+  // 3. Last resort: check if there's any data at the top level body
+  if (payload.body?.data) {
+    return decodeGmailBody(payload.body.data);
+  }
+  
   return '';
 }
 
@@ -286,11 +297,22 @@ export async function pollSMSMessages() {
 
       // Extract message content
       let content = extractTextContent(detail.payload);
-      if (!content.trim() && subject) content = subject;
+      
+      // Fallback 1: Use subject if content is empty (common for some gateways)
+      if (!content.trim() && subject && !subject.toLowerCase().includes('(no subject)')) {
+        content = subject;
+      }
+      
+      // Fallback 2: Use snippet (Gmail's pre-rendered text preview)
+      // This is VERY reliable for SMS, as they are usually short and don't require full attachment parsing.
+      if (!content.trim() && detail.snippet) {
+        content = detail.snippet;
+      }
+      
       content = content.trim();
       
       if (!content) {
-        console.log(`[SMS Polling] Skipping empty message content from ${phoneNumber}`);
+        console.log(`[SMS Polling] Skipping empty message content from ${phoneNumber} for message ${msg.id}`);
         continue;
       }
 
