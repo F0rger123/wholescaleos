@@ -462,12 +462,14 @@ export function AIBotWidget() {
       } else if (intent === 'send_sms') {
         const target = data?.target || data?.leadId || data?.phone;
         const message = data?.message;
-        if (!target || !message) {
+        
+        if (!target || !target.toString().trim() || !message) {
           result = { success: false, message: "Missing phone/target or message content for SMS." };
         } else {
           setLoading(true);
           try {
-            result = await sendSMSViaAI(target, message, data?.targetCarrier);
+            console.log(`[AIBotWidget] Executing send_sms to ${target}`);
+            result = await sendSMSViaAI(target.toString(), message, data?.targetCarrier);
           } catch (smsErr: any) {
             result = { success: false, message: smsErr?.message || 'SMS send failed. Check Google connection in Settings.' };
           } finally {

@@ -252,8 +252,8 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
     ? rawDigits.slice(1) 
     : rawDigits;
 
-  if (targetPhone.length < 10) {
-    return { success: false, message: `Could not find a valid phone number for '${target}'. Please provide a 10-digit number.` };
+  if (!target || !target.trim() || targetPhone.length < 10) {
+    return { success: false, message: `Could not find a valid phone number for '${target || 'this recipient'}'. Please provide a 10-digit number.` };
   }
 
   // 3. Determine gateway list
@@ -467,6 +467,16 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       for (const cmd of commands) {
         const matchedRule = allRules.find(r => cmd.includes(r.trigger));
         if (matchedRule) {
+          // INTERCEPTION GUARD: If the command is much longer than the trigger, 
+          // it likely contains specific data (names, numbers, messages).
+          // Local rules are simple triggers; data extraction requires the real AI.
+          const isSimpleTrigger = cmd.length < (matchedRule.trigger.length + 5);
+          
+          if (!isSimpleTrigger && matchedRule.action !== 'navigate_dashboard' && matchedRule.action !== 'navigate_tasks') {
+             // Pass to real AI for data extraction
+             continue;
+          }
+
           if (matchedRule.action === 'navigate_tasks') {
             matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening tasks.', data: { path: '/tasks' } });
           } else if (matchedRule.action === 'navigate_settings') {
@@ -485,9 +495,15 @@ export async function processPrompt(prompt: string, context: Record<string, any>
             const hl = store.leads?.filter((l:any) => l.status === 'negotiating' || l.status === 'qualified') || [];
             matchedActions.push({ intent: 'general_response', response: `[⚡ Local Rules] You have ${hl.length} hot leads ready for engagement.` });
           } else if (matchedRule.action === 'create_task') {
-            matchedActions.push({ intent: 'create_task', response: '[⚡ Local Rules] Initiated task creation.', data: { title: cmd, priority: 'medium' } });
+            // Only use local task creation for VERY simple prompts
+            if (cmd === matchedRule.trigger) {
+              matchedActions.push({ intent: 'create_task', response: '[⚡ Local Rules] Initiated task creation.', data: { title: cmd, priority: 'medium' } });
+            } else continue;
           } else if (matchedRule.action === 'send_sms') {
-            matchedActions.push({ intent: 'send_sms', response: '[⚡ Local Rules] Preparing to send text. What phone number or lead name should I text?', data: {} });
+            // Only use local SMS flow if NO target is provided in the prompt
+            if (cmd === matchedRule.trigger || cmd === 'text') {
+              matchedActions.push({ intent: 'send_sms', response: '[⚡ Local Rules] Preparing to send text. What phone number or lead name should I text?', data: {} });
+            } else continue;
           }
         }
       }
