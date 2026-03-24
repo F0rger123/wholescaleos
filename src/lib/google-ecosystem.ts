@@ -36,15 +36,17 @@ export class GoogleEcosystemService {
       try { errBody = await res.text(); } catch (_) {}
       console.error(`[Contacts API] ${res.status} error:`, errBody);
       if (res.status === 403) {
+        console.error('[Contacts API] 403 Permission Denied. Scopes might be missing or revoked.');
         throw new Error(
           'Google Contacts permission denied (403). ' +
-          'Please disconnect and reconnect your Google account in Settings to grant the contacts.readonly scope.'
+          'This usually means you haven\'t granted the "See and download your contacts" permission. ' +
+          'Please go to Settings > Connections, disconnect and then reconnect your Google account, making sure to check ALL permission boxes.'
         );
       }
       if (res.status === 401) {
-        throw new Error('Google token expired. Please reconnect your Google account in Settings.');
+        throw new Error('Google authentication session expired. Please refresh the page or reconnect in Settings.');
       }
-      throw new Error(`Failed to fetch contacts: ${res.status}`);
+      throw new Error(`Google API Error (${res.status}): ${res.statusText}`);
     }
     return res.json();
   }
