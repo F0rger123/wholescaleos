@@ -646,18 +646,25 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     const bodyContent = payload.html || payload.text || '';
 
     const fromHeader = payload.from || store.currentUser?.email || 'me';
-    const strMessage = [
+    const headers = [
       `From: ${fromHeader}`,
-      `To: ${payload.to}`,
-      `Subject: ${payload.subject}`,
-      `Content-Type: ${contentType}; charset="UTF-8"`,
-      `MIME-Version: 1.0`,
-      `Content-Transfer-Encoding: 7bit`,
-      '',
-      bodyContent
-    ].join('\r\n');
+      `To: ${payload.to}`
+    ];
+    
+    // Only include Subject if it's not empty, as some SMS gateways reject empty subject headers
+    if (payload.subject && payload.subject.trim()) {
+      headers.push(`Subject: ${payload.subject}`);
+    }
+    
+    headers.push(`Content-Type: ${contentType}; charset="UTF-8"`);
+    headers.push(`MIME-Version: 1.0`);
+    headers.push(`Content-Transfer-Encoding: 7bit`);
+    
+    const strMessage = headers.join('\r\n') + '\r\n\r\n' + bodyContent;
 
-    const encodedMessage = btoa(unescape(encodeURIComponent(strMessage)))
+    console.log('📧 [EmailService] Full Message Payload:', strMessage);
+
+    const encodedMessage = btoa(new TextEncoder().encode(strMessage).reduce((data, byte) => data + String.fromCharCode(byte), ''))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
