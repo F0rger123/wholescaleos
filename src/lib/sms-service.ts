@@ -1,13 +1,8 @@
 import { sendEmail } from './email';
-
-// Carrier gateway mapping - verified working domains
-const CARRIER_GATEWAYS: Record<string, string[]> = {
-  'T-Mobile': ['tmomail.net'],
-  'Boost Mobile': ['tmomail.net'],
-  'MetroPCS': ['tmomail.net'],
-  'Verizon': ['vtext.com', 'vzwpix.com'],
-  'Unknown': ['tmomail.net', 'vtext.com'] // fallback - exclude dead AT&T
-};
+import { CARRIER_GATEWAYS } from './sms-gateways';
+import { supabase, isSupabaseConfigured } from './supabase';
+import { useStore } from '../store/useStore';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface SMSResult {
   success: boolean;
@@ -18,88 +13,112 @@ export interface SMSResult {
 }
 
 /**
- * Standardized SMS sending utility via Carrier Gateway (Email-to-SMS)
+ * Standardized SMS sending utility with WhatsApp Priority & Hardened Gateway
  */
 export async function sendSMS(
   phoneNumber: string,
   message: string,
   carrier: string = 'Unknown'
 ): Promise<SMSResult> {
-  // Step 1: Clean phone number to 10 digits (no +1, no dashes, no spaces)
+  // Step 1: Clean phone number
   const cleanPhone = phoneNumber.replace(/[^\d]/g, '').replace(/^1/, '').slice(-10);
   
   if (cleanPhone.length !== 10) {
-    console.error(`[SMS] Invalid phone number: ${phoneNumber} -> ${cleanPhone}`);
     return {
       success: false,
-      message: 'Invalid phone number format. Please provide a 10-digit US number.',
+      message: 'Invalid phone number format.',
       formattedPhone: phoneNumber,
       gatewaysUsed: []
     };
   }
 
-  // Step 2: Get gateways for this carrier
-  const isUnknown = carrier === 'Unknown' || !CARRIER_GATEWAYS[carrier];
-  const gateways = CARRIER_GATEWAYS[carrier] || CARRIER_GATEWAYS['Unknown'];
-  
-  console.log(`[SMS] Sending to ${cleanPhone} (${carrier}) using gateways: ${gateways.join(', ')}`);
+  // Step 2: Check for WhatsApp Priority
+  const currentUser = useStore.getState().currentUser;
+  if (currentUser?.id && isSupabaseConfigured && supabase) {
+    try {
+      const { data: prefs } = await supabase
+        .from('agent_preferences')
+        .select('whatsapp_enabled, whatsapp_status')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      
+      if (prefs?.whatsapp_enabled && prefs.whatsapp_status === 'connected') {
+        console.log(`[SMS-WhatsApp] Routing to WhatsApp Bridge for ${cleanPhone}`);
+        
+        const { error: insertError } = await supabase.from('sms_messages').insert({
+          id: uuidv4(),
+          user_id: currentUser.id,
+          phone_number: cleanPhone,
+          content: message,
+          direction: 'outbound',
+          status: 'pending_whatsapp', // Bridge will pick this up
+          is_read: true,
+          created_at: new Date().toISOString()
+        });
 
-  // Step 3: Try gateways. For unknown carriers, we blast all to ensure delivery.
-  // For known carriers, we try one by one.
+        if (!insertError) {
+          return {
+            success: true,
+            message: `✅ Message queued for WhatsApp delivery to ${cleanPhone}`,
+            formattedPhone: cleanPhone,
+            gatewaysUsed: ['whatsapp']
+          };
+        }
+        console.error('[SMS-WhatsApp] Failed to queue message:', insertError);
+      }
+    } catch (err) {}
+  }
+
+  // Step 3: Add Anti-Spam Randomization for Gateway
+  const randomId = Math.floor(1000 + Math.random() * 9000);
+  const hardenedMessage = `[id:${randomId}] ${message}`;
+
+  // Step 4: Get gateways
+  const gateways = CARRIER_GATEWAYS[carrier] || CARRIER_GATEWAYS['Unknown'] || ['tmomail.net', 'vtext.com'];
+  
+  console.log(`[SMS-Hardened] Sending to ${cleanPhone} (${carrier}) using gateways: ${gateways.join(', ')}`);
+
   let lastError = '';
   const successfulGateways: string[] = [];
 
-  if (isUnknown) {
-    console.log(`[SMS] Unknown carrier - blasting all gateways: ${gateways.join(', ')}`);
-    const results = await Promise.all(gateways.map(async (gateway) => {
-      const to = `${cleanPhone}@${gateway}`;
-      try {
-        const res = await sendEmail({ to, subject: '', text: message });
-        return { gateway, success: res.success, error: res.error };
-      } catch (e: any) {
-        return { gateway, success: false, error: e.message };
-      }
-    }));
+  // Step 4: Sequential Delivery with Throttling
+  for (const gateway of gateways) {
+    const to = `${cleanPhone}@${gateway}`;
+    console.log(`[SMS-Hardened] Attempting ${to}...`);
     
-    results.forEach(r => {
-      if (r.success) successfulGateways.push(r.gateway);
-      else lastError = r.error || lastError;
-    });
-
-    if (successfulGateways.length > 0) {
-      return {
-        success: true,
-        message: `✅ SMS sent to ${cleanPhone} via ${successfulGateways.join(', ')}`,
-        formattedPhone: cleanPhone,
-        gatewaysUsed: successfulGateways
-      };
-    }
-  } else {
-    for (const gateway of gateways) {
-      const to = `${cleanPhone}@${gateway}`;
-      console.log(`[SMS] Attempting to send to ${to}`);
-      
-      try {
-        const result = await sendEmail({ to, subject: '', text: message });
-        if (result.success) {
-          return {
-            success: true,
-            message: `✅ SMS sent to ${cleanPhone} via ${gateway}`,
-            formattedPhone: cleanPhone,
-            gatewaysUsed: [gateway]
-          };
-        }
-        lastError = result.error || 'Unknown email error';
-      } catch (error: any) {
-        lastError = error.message;
-        console.error(`[SMS] Failed via ${gateway}:`, error);
+    try {
+      // Use "." as default subject via email.ts logic
+      const res = await sendEmail({ to, subject: '.', text: hardenedMessage });
+      if (res.success) {
+        successfulGateways.push(gateway);
+        // If we found the right carrier, stop trying others
+        if (carrier !== 'Unknown') break;
+      } else {
+        lastError = res.error || 'Gateway error';
       }
+    } catch (e: any) {
+      lastError = e.message;
+      console.warn(`[SMS] Failed via ${gateway}:`, e.message);
     }
+    
+    // 1-second delay between attempts to avoid rate-limiting
+    if (gateway !== gateways[gateways.length - 1]) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  if (successfulGateways.length > 0) {
+    return {
+      success: true,
+      message: `✅ SMS delivered to ${cleanPhone} via ${successfulGateways.join(', ')}`,
+      formattedPhone: cleanPhone,
+      gatewaysUsed: successfulGateways
+    };
   }
   
   return {
     success: false,
-    message: `Failed to send SMS after trying all gateways: ${lastError}`,
+    message: `All gateways failed. Last error: ${lastError}`,
     formattedPhone: cleanPhone,
     gatewaysUsed: [],
     error: lastError

@@ -18,6 +18,7 @@
 //   → This file generates the HTML template and calls the Edge Function.
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import { v4 as uuidv4 } from 'uuid';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -645,19 +646,21 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     const contentType = payload.html ? 'text/html' : 'text/plain';
     const bodyContent = payload.html || payload.text || '';
 
-    const fromHeader = payload.from || store.currentUser?.email || 'me';
+    const fromEmail = payload.from || store.currentUser?.email || 'me';
+    const fromName = "WholeScale Assistant";
+    
     const headers = [
-      `From: ${fromHeader}`,
-      `To: ${payload.to}`
+      `From: "${fromName}" <${fromEmail}>`,
+      `To: ${payload.to}`,
+      `Date: ${new Date().toUTCString()}`,
+      `Message-ID: <${uuidv4()}@gmail.com>`,
+      `Subject: ${payload.subject || '.'}`,
+      `Content-Type: ${contentType}; charset="UTF-8"`,
+      `MIME-Version: 1.0`,
+      `Content-Transfer-Encoding: 7bit`
     ];
     
-    // Include Subject header (even if empty) for carrier gateway compatibility
-    headers.push(`Subject: ${payload.subject || ''}`);
-    
-    headers.push(`Content-Type: ${contentType}; charset="UTF-8"`);
-    headers.push(`MIME-Version: 1.0`);
-    headers.push(`Content-Transfer-Encoding: 7bit`);
-    
+    // Ensure properly terminated headers block with strict CRLF
     const strMessage = headers.join('\r\n') + '\r\n\r\n' + bodyContent;
 
     console.log('📧 [EmailService] Full Message Payload:', strMessage);
