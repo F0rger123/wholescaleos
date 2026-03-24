@@ -247,14 +247,12 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
     rawDigits = lead.phone.replace(/\D/g, '');
   }
 
-  let targetPhone = '';
-  if (rawDigits.length === 10) {
-    targetPhone = '+1' + rawDigits;
-  } else if (rawDigits.length === 11 && rawDigits.startsWith('1')) {
-    targetPhone = '+' + rawDigits;
-  } else if (rawDigits.length >= 7) {
-    targetPhone = rawDigits.startsWith('+') ? rawDigits : '+' + rawDigits;
-  } else {
+  // Use 10-digit format (no + or 1) as requested
+  const targetPhone = rawDigits.length === 11 && rawDigits.startsWith('1') 
+    ? rawDigits.slice(1) 
+    : rawDigits;
+
+  if (targetPhone.length < 10) {
     return { success: false, message: `Could not find a valid phone number for '${target}'. Please provide a 10-digit number.` };
   }
 
