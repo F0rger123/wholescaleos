@@ -6,10 +6,7 @@ const CARRIER_GATEWAYS: Record<string, string[]> = {
   'Boost Mobile': ['tmomail.net'],
   'MetroPCS': ['tmomail.net'],
   'Verizon': ['vtext.com', 'vzwpix.com'],
-  'AT&T': ['txt.att.net', 'mms.att.net'],
-  'Sprint': ['messaging.sprintpcs.com'],
-  'Cricket': ['mms.att.net', 'txt.att.net'],
-  'Unknown': ['tmomail.net', 'vtext.com', 'txt.att.net'] // fallback
+  'Unknown': ['tmomail.net', 'vtext.com'] // fallback - exclude dead AT&T
 };
 
 export interface SMSResult {
