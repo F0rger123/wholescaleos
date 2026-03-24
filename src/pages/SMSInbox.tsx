@@ -9,11 +9,11 @@ import {
   Plus, X, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { sendSMSViaAI } from '../lib/gemini';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { pollSMSMessages } from '../lib/sms-polling';
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { detectCarrier } from '../lib/carrier-service';
+import { sendSMS } from '../lib/sms-service';
 
 interface SMSMessage {
   id: string;
@@ -377,9 +377,9 @@ export function SMSInbox() {
 
     try {
       // Pass carrier (undefined = universal blast, string = specific CARRIER_GATEWAYS key)
-      const effectiveCarrier = carrier === 'Auto-Detect (Universal Blast)' ? undefined : carrier;
-      console.log(`[SMS Inbox] Calling sendSMSViaAI for ${formattedForSend} with carrier: ${effectiveCarrier || 'Auto-Detect'}`);
-      const result = await sendSMSViaAI(formattedForSend, textToSend, effectiveCarrier);
+      const effectiveCarrier = carrier === 'Auto-Detect (Universal Blast)' ? 'Unknown' : carrier;
+      console.log(`[SMS Inbox] Calling sendSMS for ${formattedForSend} with carrier: ${effectiveCarrier}`);
+      const result = await sendSMS(formattedForSend, textToSend, effectiveCarrier);
 
       if (result.success) {
         console.log(`[SMS Inbox] sendSMSViaAI success! result:`, result);

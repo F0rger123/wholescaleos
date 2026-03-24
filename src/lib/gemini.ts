@@ -1,8 +1,11 @@
 import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '../store/useStore';
 import type { Lead } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
-import { CARRIER_GATEWAYS, UNIVERSAL_SMS_GATEWAYS } from './sms-gateways';
-import { detectCarrier } from './carrier-service';
+import { 
+  CARRIER_GATEWAYS, 
+  UNIVERSAL_SMS_GATEWAYS 
+} from './sms-gateways';
+import { sendSMS } from './sms-service';
 
 export interface GeminiResponse {
   intent: string;
@@ -211,100 +214,35 @@ export function getTeamAvailability() {
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string; formattedPhone?: string }> {
   const store = useStore.getState();
-  const userId = store.currentUser?.id;
-  if (!userId) return { success: false, message: 'User not authenticated.' };
-
-  // 1. Get User SMS preferences (phone used for logging only)
-  let userPhone = '';
-
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data } = await supabase
-        .from('agent_preferences')
-        .select('phone_number')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (data) {
-        userPhone = data.phone_number || '';
-      }
-    } catch (_) {}
-  } else {
-    userPhone = localStorage.getItem('user_sms_phone') || '';
-  }
-
-  if (!userPhone) {
-    console.warn('[SMS] No sender phone configured.');
-  }
-
-  // 2. Resolve Target phone
+  
+  // Resolve Target Phone from Leads
+  let phoneToUse = target;
   const lead = store.leads.find(l =>
     (l.name && l.name.toLowerCase().includes(target.toLowerCase())) ||
     (l.phone && l.phone.replace(/\D/g, '').includes(target.replace(/\D/g, '')))
   );
-
-  let rawDigits = target.replace(/\D/g, '');
-  if (lead && lead.phone) {
-    rawDigits = lead.phone.replace(/\D/g, '');
-  }
-
-  // Use 10-digit format (no + or 1) as requested
-  const targetPhone = rawDigits.length === 11 && rawDigits.startsWith('1') 
-    ? rawDigits.slice(1) 
-    : rawDigits;
-
-  if (!target || !target.trim() || targetPhone.length < 10) {
-    return { success: false, message: `Could not find a valid phone number for '${target || 'this recipient'}'. Please provide a 10-digit number.` };
-  }
-
-  // 3. Determine gateway list
-  let gateways: string[] = UNIVERSAL_SMS_GATEWAYS;
-  let carrierToUse = targetCarrier || lead?.carrier;
-
-  if (carrierToUse && CARRIER_GATEWAYS[carrierToUse]) {
-    gateways = CARRIER_GATEWAYS[carrierToUse];
-    console.log(`[SMS AI] Using carrier '${carrierToUse}' gateway: ${gateways.join(', ')}`);
-  } else {
-    // Try auto-detection
-    console.log(`[SMS AI] Carrier unknown for ${targetPhone}, attempting auto-detect...`);
-    const detection = await detectCarrier(targetPhone);
-    gateways = detection.gateway;
-    console.log(`[SMS AI] Auto-detected carrier: ${detection.carrier} -> ${gateways.join(', ')}`);
-    
-    // Save detected carrier back to lead if possible
-    if (lead && detection.source !== 'default') {
-      store.updateLead(lead.id, { carrier: detection.carrier });
-    }
-  }
-
-  console.log(`[SMS AI Send] Target: ${targetPhone}, Gateways: ${gateways.join(', ')}`);
-
-  // 4. Send via Gmail API to all gateway addresses
-  const { sendEmail } = await import('./email');
-  const toAddresses = gateways.map(gw => `${targetPhone}@${gw}`);
-  const toRecipient = toAddresses.join(',');
   
-  console.log(`[SMS AI Send] Final recipient string: ${toRecipient}`);
-
-  const res = await sendEmail({
-    to: toRecipient,
-    subject: 'WholeScale OS Message',
-    text: message,
-    from: store.currentUser?.name
-      ? `${store.currentUser.name} <${store.currentUser.email}>`
-      : store.currentUser?.email || 'me'
-  });
-  if (res.success) {
-    return {
-      success: true,
-      message: `✅ SMS sent to ${targetPhone} via ${gateways.length > 1 ? 'multiple gateways' : gateways[0]}.${
-        carrierToUse ? ` Carrier: ${carrierToUse}.` : ' (Universal delivery mode)'
-      }`,
-      formattedPhone: targetPhone
-    };
-  } else {
-    console.error('[SMS] Gmail send failed:', res.error);
-    return { success: false, message: `Failed to send SMS: ${res.error || 'Gmail API error. Check Google connection in Settings.'}` };
+  if (lead && lead.phone) {
+    phoneToUse = lead.phone;
   }
+
+  const carrier = targetCarrier || lead?.carrier || 'Unknown';
+  
+  console.log(`[SMS AI] Delegating send to sms-service for: ${phoneToUse} (${carrier})`);
+  
+  const result = await sendSMS(phoneToUse, message, carrier);
+  
+  if (result.success && lead && !lead.carrier && result.gatewaysUsed.length > 0) {
+     // Indirectly update carrier if it was unknown and we succeeded? 
+     // The sms-service doesn't tell us WHICH one worked if it tried multiple, 
+     // but CARRIER_GATEWAYS mapping is static.
+  }
+
+  return {
+    success: result.success,
+    message: result.message,
+    formattedPhone: result.formattedPhone
+  };
 }
 
 /**
