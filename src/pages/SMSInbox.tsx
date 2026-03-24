@@ -361,10 +361,17 @@ export function SMSInbox() {
   };
 
   const executeSend = async (phone: string, textToSend: string, carrier?: string) => {
+    // Standardize phone with +1 right away for UX and DB consistency
+    let rawDigits = phone.replace(/\D/g, '');
+    let formattedForSend = rawDigits;
+    if (rawDigits.length === 10) formattedForSend = '+1' + rawDigits;
+    else if (rawDigits.length === 11 && rawDigits.startsWith('1')) formattedForSend = '+' + rawDigits;
+    else if (rawDigits.length >= 7) formattedForSend = rawDigits.startsWith('+') ? rawDigits : '+' + rawDigits;
+
     setSending(true);
     const optimisticMsg: SMSMessage = {
       id: `optimistic-${Date.now()}`,
-      phone_number: phone,
+      phone_number: formattedForSend,
       content: textToSend,
       direction: 'outbound',
       is_read: true,
@@ -375,23 +382,22 @@ export function SMSInbox() {
     try {
       // Pass carrier (undefined = universal blast, string = specific CARRIER_GATEWAYS key)
       const effectiveCarrier = carrier === 'Auto-Detect (Universal Blast)' ? undefined : carrier;
-      console.log(`[SMS Inbox] Calling sendSMSViaAI for ${phone} with carrier: ${effectiveCarrier || 'Auto-Detect'}`);
-      const result = await sendSMSViaAI(phone, textToSend, effectiveCarrier);
+      console.log(`[SMS Inbox] Calling sendSMSViaAI for ${formattedForSend} with carrier: ${effectiveCarrier || 'Auto-Detect'}`);
+      const result = await sendSMSViaAI(formattedForSend, textToSend, effectiveCarrier);
 
       if (result.success) {
         console.log(`[SMS Inbox] sendSMSViaAI success! result:`, result);
         if (isSupabaseConfigured && supabase && currentUser?.id) {
-          const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === normalizePhone(phone));
+          const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === normalizePhone(formattedForSend));
           const lead = matchingLeads[0];
           
           const carrierToRecord = effectiveCarrier || carrier || 'T-Mobile';
-          const targetToLog = result.formattedPhone || phone; // Use the + prefixed phone from Gemini
-          console.log(`[SMS Inbox] Recording outbound SMS to DB for ${targetToLog} with carrier: ${carrierToRecord}`);
+          console.log(`[SMS Inbox] Recording outbound SMS to DB for ${formattedForSend} with carrier: ${carrierToRecord}`);
           
           supabase.from('sms_messages').insert({
             user_id: currentUser.id,
             lead_id: lead?.id ?? null,
-            phone_number: targetToLog,
+            phone_number: formattedForSend,
             content: textToSend,
             direction: 'outbound',
             carrier: carrierToRecord,
