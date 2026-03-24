@@ -361,12 +361,8 @@ export function SMSInbox() {
   };
 
   const executeSend = async (phone: string, textToSend: string, carrier?: string) => {
-    // Standardize phone with +1 right away for UX and DB consistency
-    let rawDigits = phone.replace(/\D/g, '');
-    let formattedForSend = rawDigits;
-    if (rawDigits.length === 10) formattedForSend = '+1' + rawDigits;
-    else if (rawDigits.length === 11 && rawDigits.startsWith('1')) formattedForSend = '+' + rawDigits;
-    else if (rawDigits.length >= 7) formattedForSend = rawDigits.startsWith('+') ? rawDigits : '+' + rawDigits;
+    // Revert to 10-digit format (no +1) as requested
+    const formattedForSend = normalizePhone(phone);
 
     setSending(true);
     const optimisticMsg: SMSMessage = {
