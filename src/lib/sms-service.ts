@@ -2,7 +2,7 @@ import { sendEmail } from './email';
 import { CARRIER_GATEWAYS } from './sms-gateways';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { useStore } from '../store/useStore';
-import { v4 as uuidv4 } from 'uuid';
+import { BrevoClient } from '@getbrevo/brevo';
 
 export interface SMSResult {
   success: boolean;
@@ -13,7 +13,34 @@ export interface SMSResult {
 }
 
 /**
- * Standardized SMS sending utility with WhatsApp Priority & Hardened Gateway
+ * Verifies the Brevo API key by sending a test email
+ */
+export async function testBrevoConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const client = new BrevoClient({ apiKey });
+
+    const currentUser = useStore.getState().currentUser;
+    const email = currentUser?.email || 'test@example.com';
+
+    await client.transactionalEmails.sendTransacEmail({
+      subject: "Brevo Connection Test - WholeScale OS",
+      htmlContent: "<html><body><h1>It Works!</h1><p>Your Brevo API Key is correctly configured for WholeScale OS.</p></body></html>",
+      sender: { name: "WholeScale OS", email: "system@wholescale.os" },
+      to: [{ email }]
+    });
+
+    return { success: true, message: 'Success! Test email sent via Brevo.' };
+  } catch (error: any) {
+    console.error('[Brevo-Test] Connection failed:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Connection failed' 
+    };
+  }
+}
+
+/**
+ * Standardized SMS sending utility with Brevo Priority & Gmail Fallback
  */
 export async function sendSMS(
   phoneNumber: string,
@@ -32,76 +59,71 @@ export async function sendSMS(
     };
   }
 
-  // Step 2: Check for WhatsApp Priority
   const currentUser = useStore.getState().currentUser;
+  let brevoKey: string | null = null;
+
+  // Step 2: Try Brevo First
   if (currentUser?.id && isSupabaseConfigured && supabase) {
     try {
       const { data: prefs } = await supabase
         .from('agent_preferences')
-        .select('whatsapp_enabled, whatsapp_status')
+        .select('brevo_api_key')
         .eq('user_id', currentUser.id)
         .maybeSingle();
       
-      if (prefs?.whatsapp_enabled && prefs.whatsapp_status === 'connected') {
-        console.log(`[SMS-WhatsApp] Routing to WhatsApp Bridge for ${cleanPhone}`);
-        
-        const { error: insertError } = await supabase.from('sms_messages').insert({
-          id: uuidv4(),
-          user_id: currentUser.id,
-          phone_number: cleanPhone,
-          content: message,
-          direction: 'outbound',
-          status: 'pending_whatsapp', // Bridge will pick this up
-          is_read: true,
-          created_at: new Date().toISOString()
-        });
+      brevoKey = prefs?.brevo_api_key;
 
-        if (!insertError) {
+      if (brevoKey) {
+        console.log(`[SMS-Brevo] Attempting delivery to +1${cleanPhone}...`);
+        
+        const client = new BrevoClient({ apiKey: brevoKey });
+        const result = await client.transactionalSms.sendTransacSms({
+          sender: "WholeScale",
+          recipient: `+1${cleanPhone}`,
+          content: message
+        });
+        
+        if (result && (result as any).reference) {
           return {
             success: true,
-            message: `✅ Message queued for WhatsApp delivery to ${cleanPhone}`,
+            message: `✅ SMS delivered via Brevo to ${cleanPhone}`,
             formattedPhone: cleanPhone,
-            gatewaysUsed: ['whatsapp']
+            gatewaysUsed: ['brevo']
           };
         }
-        console.error('[SMS-WhatsApp] Failed to queue message:', insertError);
       }
-    } catch (err) {}
+    } catch (err: any) {
+      console.warn('[SMS-Brevo] Failed, falling back to Gmail:', err.message);
+    }
   }
 
-  // Step 3: Add Anti-Spam Randomization for Gateway
+  // Step 3: Fallback to Gmail Gateway
+  console.log(`[SMS-Fallback] Routing to Gmail Gateway for ${cleanPhone}`);
+  
+  // Add Anti-Spam Randomization for Gateway
   const randomId = Math.floor(1000 + Math.random() * 9000);
   const hardenedMessage = `[id:${randomId}] ${message}`;
 
-  // Step 4: Get gateways
+  // Get gateways
   const gateways = CARRIER_GATEWAYS[carrier] || CARRIER_GATEWAYS['Unknown'] || ['tmomail.net', 'vtext.com'];
   
-  console.log(`[SMS-Hardened] Sending to ${cleanPhone} (${carrier}) using gateways: ${gateways.join(', ')}`);
-
   let lastError = '';
   const successfulGateways: string[] = [];
 
-  // Step 4: Sequential Delivery with Throttling
   for (const gateway of gateways) {
     const to = `${cleanPhone}@${gateway}`;
-    console.log(`[SMS-Hardened] Attempting ${to}...`);
-    
     try {
-      // Use "." as default subject via email.ts logic
       const res = await sendEmail({ to, subject: '.', text: hardenedMessage });
       if (res.success) {
         successfulGateways.push(gateway);
-        // If we found the right carrier, stop trying others
         if (carrier !== 'Unknown') break;
       } else {
         lastError = res.error || 'Gateway error';
       }
     } catch (e: any) {
       lastError = e.message;
-      console.warn(`[SMS] Failed via ${gateway}:`, e.message);
     }
     
-    // 1-second delay between attempts to avoid rate-limiting
     if (gateway !== gateways[gateways.length - 1]) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -110,7 +132,7 @@ export async function sendSMS(
   if (successfulGateways.length > 0) {
     return {
       success: true,
-      message: `✅ SMS delivered to ${cleanPhone} via ${successfulGateways.join(', ')}`,
+      message: `✅ SMS delivered via ${successfulGateways.join(', ')}`,
       formattedPhone: cleanPhone,
       gatewaysUsed: successfulGateways
     };
@@ -118,7 +140,7 @@ export async function sendSMS(
   
   return {
     success: false,
-    message: `All gateways failed. Last error: ${lastError}`,
+    message: `All methods failed. Last error: ${lastError}`,
     formattedPhone: cleanPhone,
     gatewaysUsed: [],
     error: lastError
