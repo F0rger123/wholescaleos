@@ -651,10 +651,8 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       `To: ${payload.to}`
     ];
     
-    // Only include Subject if it's not empty, as some SMS gateways reject empty subject headers
-    if (payload.subject && payload.subject.trim()) {
-      headers.push(`Subject: ${payload.subject}`);
-    }
+    // Include Subject header (even if empty) for carrier gateway compatibility
+    headers.push(`Subject: ${payload.subject || ''}`);
     
     headers.push(`Content-Type: ${contentType}; charset="UTF-8"`);
     headers.push(`MIME-Version: 1.0`);

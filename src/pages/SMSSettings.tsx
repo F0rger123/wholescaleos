@@ -103,10 +103,12 @@ export function SMSSettings() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (overrideAutoReply?: boolean) => {
     if (!currentUser?.id) return;
     setSaving(true);
     setSaveResult(null);
+
+    const finalAutoReply = overrideAutoReply !== undefined ? overrideAutoReply : autoReply;
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -118,7 +120,7 @@ export function SMSSettings() {
               phone_number: phone,
               carrier: 'Auto-Detect',
               sms_gateway: 'auto',
-              sms_auto_reply: autoReply,
+              sms_auto_reply: finalAutoReply,
               sms_auto_reply_message: autoReplyMessage,
               updated_at: new Date().toISOString(),
             },
@@ -133,7 +135,7 @@ export function SMSSettings() {
     } else {
       localStorage.setItem('user_sms_phone', phone);
       localStorage.setItem('user_sms_carrier', 'auto');
-      localStorage.setItem('user_sms_auto_reply', autoReply.toString());
+      localStorage.setItem('user_sms_auto_reply', finalAutoReply.toString());
       localStorage.setItem('user_sms_auto_reply_message', autoReplyMessage);
       setSaveResult({ success: true, message: 'SMS settings saved locally to browser storage.' });
     }
@@ -253,7 +255,7 @@ export function SMSSettings() {
             Send Test SMS
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             disabled={saving || !phone}
             className="flex-1 px-4 py-2.5 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             style={{ background: 'var(--t-primary)' }}
@@ -279,7 +281,12 @@ export function SMSSettings() {
             </div>
           </div>
           <button
-            onClick={() => setAutoReply(!autoReply)}
+            onClick={() => {
+              const newValue = !autoReply;
+              setAutoReply(newValue);
+              // Auto-save toggle changes immediately for better UX
+              handleSave(newValue);
+            }}
             className={`w-12 h-6 rounded-full transition-colors relative`}
             style={{ backgroundColor: autoReply ? 'var(--t-primary)' : 'var(--t-surface-subtle)' }}
           >
