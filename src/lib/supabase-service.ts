@@ -98,22 +98,11 @@ export const leadsService = {
   },
 
   async update(id: string, updates: Record<string, unknown>) {
-    if (!supabase) {
-      console.warn('[LeadsService] Supabase not configured, skipping update.');
-      return;
-    }
-    console.log(`[LeadsService] Sending update to Supabase for ${id}:`, updates);
-    const { data, error } = await supabase
+    if (!supabase) return;
+    await supabase
       .from('leads')
       .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select();
-    
-    if (error) {
-      console.error(`[LeadsService] Supabase update error for ${id}:`, error);
-    } else {
-      console.log(`[LeadsService] Supabase update success for ${id}:`, data);
-    }
+      .eq('id', id);
   },
 
   async remove(id: string) {

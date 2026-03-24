@@ -385,12 +385,13 @@ export function SMSInbox() {
           const lead = matchingLeads[0];
           
           const carrierToRecord = effectiveCarrier || carrier || 'T-Mobile';
-          console.log(`[SMS Inbox] Recording outbound SMS to DB with carrier: ${carrierToRecord}`);
+          const targetToLog = result.formattedPhone || phone; // Use the + prefixed phone from Gemini
+          console.log(`[SMS Inbox] Recording outbound SMS to DB for ${targetToLog} with carrier: ${carrierToRecord}`);
           
           supabase.from('sms_messages').insert({
             user_id: currentUser.id,
             lead_id: lead?.id ?? null,
-            phone_number: phone,
+            phone_number: targetToLog,
             content: textToSend,
             direction: 'outbound',
             carrier: carrierToRecord,

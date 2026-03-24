@@ -1767,15 +1767,8 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.photos !== undefined) dbUpdates.photos = updates.photos;
       if (updates.carrier !== undefined) dbUpdates.carrier = updates.carrier;
       if (Object.keys(dbUpdates).length > 0) {
-        console.log(`[Store] updateLead ${id} triggering DB update:`, dbUpdates);
-        leadsService.update(id, dbUpdates).catch((err) => {
-          console.error(`[Store] DB update failed for lead ${id}:`, err);
-        });
-      } else {
-        console.log(`[Store] updateLead ${id} - no DB fields to update.`);
+        leadsService.update(id, dbUpdates).catch(() => {});
       }
-    } else {
-      console.warn(`[Store] updateLead ${id} - Supabase NOT configured, local update only.`);
     }
   },
 
