@@ -40,7 +40,7 @@ export async function testBrevoConnection(apiKey: string): Promise<{ success: bo
 }
 
 /**
- * Standardized SMS sending utility with Brevo Priority & Gmail Fallback
+ * Standardized SMS sending utility with Brevo Email-to-SMS & Gmail Fallback
  */
 export async function sendSMS(
   phoneNumber: string,
@@ -61,8 +61,11 @@ export async function sendSMS(
 
   const currentUser = useStore.getState().currentUser;
   let brevoKey: string | null = null;
+  const gateways = CARRIER_GATEWAYS[carrier] || CARRIER_GATEWAYS['Unknown'] || ['tmomail.net', 'vtext.com'];
+  const randomId = Math.floor(1000 + Math.random() * 9000);
+  const hardenedMessage = `[id:${randomId}] ${message}`;
 
-  // Step 2: Try Brevo First
+  // Step 2: Try Brevo Email Gateway (Primary if configured)
   if (currentUser?.id && isSupabaseConfigured && supabase) {
     try {
       const { data: prefs } = await supabase
@@ -74,38 +77,42 @@ export async function sendSMS(
       brevoKey = prefs?.brevo_api_key;
 
       if (brevoKey) {
-        console.log(`[SMS-Brevo] Attempting delivery to +1${cleanPhone}...`);
-        
+        console.log(`[SMS-Brevo-Gateway] Attempting delivery to ${cleanPhone} via ${gateways.join(', ')}...`);
         const client = new BrevoClient({ apiKey: brevoKey });
-        const result = await client.transactionalSms.sendTransacSms({
-          sender: "WholeScale",
-          recipient: `+1${cleanPhone}`,
-          content: message
-        });
-        
-        if (result && (result as any).reference) {
+        const successfulGateways: string[] = [];
+
+        for (const gateway of gateways) {
+          const toAddress = `${cleanPhone}@${gateway}`;
+          try {
+            await client.transactionalEmails.sendTransacEmail({
+              subject: ".", // Same as Gmail gateway
+              sender: { name: "WholeScale OS", email: "system@wholescale.os" }, // Must be authenticated in Brevo
+              to: [{ email: toAddress }],
+              textContent: hardenedMessage
+            });
+            successfulGateways.push(gateway);
+            if (carrier !== 'Unknown') break; // Found the right one
+          } catch (e: any) {
+            console.warn(`[SMS-Brevo] Failed via ${gateway}:`, e.message);
+          }
+        }
+
+        if (successfulGateways.length > 0) {
           return {
             success: true,
-            message: `✅ SMS delivered via Brevo to ${cleanPhone}`,
+            message: `✅ SMS delivered via Brevo Email to ${cleanPhone}`,
             formattedPhone: cleanPhone,
-            gatewaysUsed: ['brevo']
+            gatewaysUsed: successfulGateways
           };
         }
       }
     } catch (err: any) {
-      console.warn('[SMS-Brevo] Failed, falling back to Gmail:', err.message);
+      console.warn('[SMS-Brevo] Configuration error, falling back to Gmail:', err.message);
     }
   }
 
-  // Step 3: Fallback to Gmail Gateway
-  console.log(`[SMS-Fallback] Routing to Gmail Gateway for ${cleanPhone}`);
-  
-  // Add Anti-Spam Randomization for Gateway
-  const randomId = Math.floor(1000 + Math.random() * 9000);
-  const hardenedMessage = `[id:${randomId}] ${message}`;
-
-  // Get gateways
-  const gateways = CARRIER_GATEWAYS[carrier] || CARRIER_GATEWAYS['Unknown'] || ['tmomail.net', 'vtext.com'];
+  // Step 3: Fallback to Gmail Gateway (Absolute fallback)
+  console.log(`[SMS-Gmail-Fallback] Routing to Gmail for ${cleanPhone}`);
   
   let lastError = '';
   const successfulGateways: string[] = [];
