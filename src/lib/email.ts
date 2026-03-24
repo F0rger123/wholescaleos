@@ -647,14 +647,17 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     const bodyContent = payload.html || payload.text || '';
 
     const fromEmail = payload.from || store.currentUser?.email || 'me';
-    const fromName = "WholeScale Assistant";
     
+    // Use a unique, short subject tag to avoid carrier spam filters (AUP#MXRT)
+    const timestampTag = `[id:${Math.floor(Date.now() / 1000).toString().slice(-6)}]`;
+    const finalSubject = (payload.subject && payload.subject !== '.') ? payload.subject : timestampTag;
+
     const headers = [
-      `From: "${fromName}" <${fromEmail}>`,
+      `From: <${fromEmail}>`,
       `To: ${payload.to}`,
       `Date: ${new Date().toUTCString()}`,
       `Message-ID: <${uuidv4()}@gmail.com>`,
-      `Subject: ${payload.subject || '.'}`,
+      `Subject: ${finalSubject}`,
       `Content-Type: ${contentType}; charset="UTF-8"`,
       `MIME-Version: 1.0`,
       `Content-Transfer-Encoding: 7bit`
