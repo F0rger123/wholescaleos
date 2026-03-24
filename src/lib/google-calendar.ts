@@ -71,7 +71,14 @@ export class GoogleCalendarService {
         .eq('provider', 'google')
         .maybeSingle();
 
-      if (error || !data?.refresh_token) return null;
+      if (error) {
+        console.error('[GoogleService] Supabase error fetching refresh token:', error);
+        return null;
+      }
+      if (!data?.refresh_token) {
+        console.warn('[GoogleService] No refresh token found for user:', userId);
+        return null;
+      }
 
       const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -84,11 +91,21 @@ export class GoogleCalendarService {
         }),
       });
 
+      if (!refreshResponse.ok) {
+        const errText = await refreshResponse.text();
+        console.error('[GoogleService] Token refresh failed:', refreshResponse.status, errText);
+        return null;
+      }
+
       const tokens = await refreshResponse.json();
-      return tokens.access_token || null;
-      
+      if (!tokens.access_token) {
+        console.error('[GoogleService] Refresh response missing access_token:', tokens);
+        return null;
+      }
+
+      return tokens.access_token;
     } catch (err) {
-      console.error('Error getting access token:', err);
+      console.error('[GoogleService] Error getting access token:', err);
       return null;
     }
   }
