@@ -209,7 +209,7 @@ export function getTeamAvailability() {
 }
 
 
-export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string }> {
+export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string; formattedPhone?: string }> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   if (!userId) return { success: false, message: 'User not authenticated.' };
@@ -237,16 +237,23 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   }
 
   // 2. Resolve Target phone
-  let targetPhone = '';
   const lead = store.leads.find(l =>
     (l.name && l.name.toLowerCase().includes(target.toLowerCase())) ||
     (l.phone && l.phone.replace(/\D/g, '').includes(target.replace(/\D/g, '')))
   );
 
+  let rawDigits = target.replace(/\D/g, '');
   if (lead && lead.phone) {
-    targetPhone = lead.phone.replace(/\D/g, '');
-  } else if (target.replace(/\D/g, '').length >= 10) {
-    targetPhone = target.replace(/\D/g, '');
+    rawDigits = lead.phone.replace(/\D/g, '');
+  }
+
+  let targetPhone = '';
+  if (rawDigits.length === 10) {
+    targetPhone = '+1' + rawDigits;
+  } else if (rawDigits.length === 11 && rawDigits.startsWith('1')) {
+    targetPhone = '+' + rawDigits;
+  } else if (rawDigits.length >= 7) {
+    targetPhone = rawDigits.startsWith('+') ? rawDigits : '+' + rawDigits;
   } else {
     return { success: false, message: `Could not find a valid phone number for '${target}'. Please provide a 10-digit number.` };
   }
@@ -288,29 +295,13 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
       ? `${store.currentUser.name} <${store.currentUser.email}>`
       : store.currentUser?.email || 'me'
   });
-
   if (res.success) {
-    // Log to DB (non-blocking — message was already sent)
-    if (store.currentUser?.id && isSupabaseConfigured && supabase) {
-      supabase.from('sms_messages').insert({
-        user_id: store.currentUser.id,
-        lead_id: lead?.id ?? null,
-        phone_number: targetPhone,
-        content: message,
-        direction: 'outbound',
-        carrier: carrierToUse ?? 'T-Mobile',
-        is_read: true,
-        created_at: new Date().toISOString()
-      }).then(({ error }) => {
-        if (error) console.warn('[SMS] DB log failed (message was still sent):', error.message);
-      });
-    }
-
     return {
       success: true,
       message: `✅ SMS sent to ${targetPhone} via ${gateways.length > 1 ? 'multiple gateways' : gateways[0]}.${
         carrierToUse ? ` Carrier: ${carrierToUse}.` : ' (Universal delivery mode)'
-      }`
+      }`,
+      formattedPhone: targetPhone
     };
   } else {
     console.error('[SMS] Gmail send failed:', res.error);
