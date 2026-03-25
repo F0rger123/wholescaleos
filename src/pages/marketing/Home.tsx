@@ -1,25 +1,33 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, Shield, Zap, Users, MessageSquare,
+  ArrowRight, Shield, Users, MessageSquare,
   LayoutDashboard, Map, Sparkles, TrendingUp, Clock, 
-  PlayCircle, BarChart3
+  PlayCircle, BarChart3, MousePointer2, Award, Trophy
 } from 'lucide-react';
 
 export default function Home() {
-  const [dealsPerMonth, setDealsPerMonth] = useState(2);
-  const [avgProfitPerDeal, setAvgProfitPerDeal] = useState(15000);
+  const [adminHours, setAdminHours] = useState(20);
+  const [leadsPerMonth, setLeadsPerMonth] = useState(100);
+  const [dealValue, setDealValue] = useState(15000);
 
-  const calculateROI = () => {
-    const monthlyGains = dealsPerMonth * avgProfitPerDeal * 0.2; // Assuming 20% efficiency increase
-    const annualGains = monthlyGains * 12;
-    return {
-      monthly: monthlyGains.toLocaleString(),
-      annual: annualGains.toLocaleString()
-    };
+  const calculateTimeSaved = () => {
+    const savedPerWeek = adminHours * 0.2;
+    const savedPerYear = savedPerWeek * 52;
+    const dollarValue = savedPerYear * 50;
+    return { week: savedPerWeek.toFixed(1), year: Math.round(savedPerYear), dollars: dollarValue.toLocaleString() };
   };
 
-  const roi = calculateROI();
+  const calculateRetention = () => {
+    const currentRetained = leadsPerMonth * 0.7; // 30% loss
+    const osRetained = leadsPerMonth * 0.9; // 90% retention
+    const extraLeads = osRetained - currentRetained;
+    const extraRevenue = extraLeads * (dealValue * 0.05); // Assuming 5% conversion of those leads
+    return { extra: Math.round(extraLeads), revenue: Math.round(extraRevenue).toLocaleString() };
+  };
+
+  const timeSaved = calculateTimeSaved();
+  const retention = calculateRetention();
 
   return (
     <div className="flex flex-col bg-[#0f172a] text-white selection:bg-blue-500/30">
@@ -98,7 +106,7 @@ export default function Home() {
               {/* Overlay text for mockup */}
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                 <div className="text-center p-8 rounded-3xl bg-[#0f172a]/90 border border-white/10 shadow-2xl">
-                  <h3 className="text-xl font-bold mb-2">Live Screenshot Coming Soon</h3>
+                  <h3 className="text-xl font-bold mb-2">[Dashboard Preview - Coming Soon]</h3>
                   <p className="text-gray-500 text-sm">We're updating our platform with new features.</p>
                 </div>
               </div>
@@ -154,51 +162,152 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ROI Calculator Section */}
+      {/* Leverage Calculators */}
       <section className="py-32 bg-[#0b1120]/50">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-black mb-4">Calculate Your Leverage</h2>
             <p className="text-gray-400">See how much time and revenue you're leaving on the table.</p>
           </div>
-          <div className="p-12 rounded-[3.5rem] bg-[#121a2d] border border-blue-500/20 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-12 opacity-5"><Zap size={200} /></div>
-            <div className="grid md:grid-cols-2 gap-16 relative z-10">
-              <div className="space-y-12">
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* Time Saved Calculator */}
+            <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-blue-500/20 shadow-2xl space-y-10 reveal">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500"><Clock size={24} /></div>
+                <h3 className="text-2xl font-black italic">Time Refined</h3>
+              </div>
+              
+              <div className="space-y-8">
                 <div>
-                  <label className="block text-sm font-black uppercase tracking-widest text-[#4b5563] mb-6">Deals Closed Per Month</label>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[#4b5563] mb-4">Admin Hours / Week</label>
                   <input 
-                    type="range" 
-                    min="1" max="50" 
-                    value={dealsPerMonth} 
-                    onChange={(e) => setDealsPerMonth(parseInt(e.target.value))}
+                    type="range" min="1" max="40" value={adminHours}
+                    onChange={(e) => setAdminHours(parseInt(e.target.value))}
                     className="w-full accent-blue-500 h-1 bg-white/5 rounded-full appearance-none cursor-pointer"
                   />
-                  <div className="mt-4 text-3xl font-black text-blue-500">{dealsPerMonth} <span className="text-sm text-gray-500">Deals</span></div>
+                  <div className="mt-4 text-3xl font-black text-blue-500">{adminHours} <span className="text-sm text-gray-400">Hours</span></div>
                 </div>
-                <div>
-                  <label className="block text-sm font-black uppercase tracking-widest text-[#4b5563] mb-6">Average Profit Per Deal</label>
-                  <input 
-                    type="range" 
-                    min="5000" max="100000" step="5000"
-                    value={avgProfitPerDeal} 
-                    onChange={(e) => setAvgProfitPerDeal(parseInt(e.target.value))}
-                    className="w-full accent-blue-500 h-1 bg-white/5 rounded-full appearance-none cursor-pointer"
-                  />
-                  <div className="mt-4 text-3xl font-black text-blue-500">${avgProfitPerDeal.toLocaleString()} <span className="text-sm text-gray-500">Profit</span></div>
+
+                <div className="p-6 rounded-2xl bg-blue-500/5 border border-blue-500/10 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Weekly Savings</span>
+                    <span className="text-xl font-black text-white">{timeSaved.week}h</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Annual Savings</span>
+                    <span className="text-xl font-black text-white">{timeSaved.year}h</span>
+                  </div>
+                  <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                    <span className="text-xs font-black text-blue-400 uppercase tracking-widest">Yearly Leverage</span>
+                    <span className="text-2xl font-black text-blue-500">${timeSaved.dollars}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col justify-center bg-blue-500/5 rounded-3xl p-8 border border-blue-500/10">
-                <div className="space-y-8">
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Estimated Monthly Gain</div>
-                    <div className="text-5xl font-black text-white">${roi.monthly}</div>
-                    <div className="text-[10px] text-green-400 font-bold mt-2 uppercase">Based on 20% efficiency increase</div>
+            </div>
+
+            {/* Lead Retention Calculator */}
+            <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-indigo-500/20 shadow-2xl space-y-10 reveal delayed-1">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center text-indigo-500"><MousePointer2 size={24} /></div>
+                <h3 className="text-2xl font-black italic">Lead Retention</h3>
+              </div>
+
+              <div className="space-y-8">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-[#4b5563] mb-4">Leads Per Month</label>
+                  <input 
+                    type="range" min="1" max="500" value={leadsPerMonth}
+                    onChange={(e) => setLeadsPerMonth(parseInt(e.target.value))}
+                    className="w-full accent-indigo-500 h-1 bg-white/5 rounded-full appearance-none cursor-pointer"
+                  />
+                  <div className="mt-4 text-3xl font-black text-indigo-500">{leadsPerMonth} <span className="text-sm text-gray-400">Leads</span></div>
+                </div>
+
+                <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-6">
+                  <div className="space-y-4">
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-[#4b5563]">Avg. Profit / Deal</label>
+                    <input 
+                      type="range" min="5000" max="50000" step="5000" value={dealValue}
+                      onChange={(e) => setDealValue(parseInt(e.target.value))}
+                      className="w-full accent-indigo-500 h-1 bg-white/5 rounded-full appearance-none cursor-pointer"
+                    />
+                    <div className="text-sm font-bold text-indigo-400">${dealValue.toLocaleString()}</div>
                   </div>
-                  <div className="pt-8 border-t border-white/5">
-                    <div className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Estimated Annual Gain</div>
-                    <div className="text-5xl font-black text-blue-500">${roi.annual}</div>
+                  <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Leads Saved / Mo</span>
+                    <span className="text-xl font-black text-white">{retention.extra}</span>
                   </div>
+                  <p className="text-[10px] text-gray-500 italic">"Without AI, you lose 30% of leads. With WholeScale, retain 90%."</p>
+                  <div className="pt-4 border-t border-white/5 flex justify-between items-center">
+                    <span className="text-xs font-black text-indigo-400 uppercase tracking-widest">Est. Added Revenue</span>
+                    <span className="text-2xl font-black text-indigo-500">${retention.revenue}+</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Referral Leaderboard */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 blur-[150px] rounded-full" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]">Affiliate Program</div>
+              <h2 className="text-5xl md:text-7xl font-black italic leading-[0.9]">Earn 10% <br /><span className="text-blue-500">Recurring.</span></h2>
+              <p className="text-xl text-gray-400 leading-relaxed font-medium max-w-lg">
+                Refer other agents and builders to the OS. Earn a 10% lifetime commission on every subscription, plus exclusive perks.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                 <Link to="/login?signup=true" className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black transition-all shadow-xl shadow-blue-600/20 text-center">
+                    Get Your Referral Link
+                 </Link>
+              </div>
+            </div>
+
+            <div className="p-2 rounded-[3.5rem] bg-gradient-to-br from-blue-500/20 to-transparent border border-white/10 backdrop-blur-3xl">
+              <div className="bg-[#0f172a]/80 rounded-[3rem] p-8 space-y-8">
+                <div className="flex items-center justify-between">
+                   <h3 className="text-xl font-bold italic flex items-center gap-2">
+                     <Trophy size={20} className="text-yellow-500" /> Top Referrers
+                   </h3>
+                   <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">This Month</span>
+                </div>
+                
+                <div className="space-y-4">
+                   {[
+                     { name: 'Marcus Sterling', referrals: 42, reward: 'Elite Builder' },
+                     { name: 'Elena Rodriguez', referrals: 38, reward: 'Master Closer' },
+                     { name: 'David Vance', referrals: 31, reward: 'Power Affiliate' },
+                     { name: 'Sarah Chen', referrals: 24, reward: 'Rising Star' },
+                     { name: 'Luke Holloway', referrals: 19, reward: 'Growth Agent' }
+                   ].map((user, i) => (
+                     <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all group">
+                        <div className="flex items-center gap-4">
+                           <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-xs font-black text-blue-500">{i + 1}</div>
+                           <div>
+                              <div className="text-sm font-bold group-hover:text-blue-400 transition-colors">{user.name}</div>
+                              <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{user.reward}</div>
+                           </div>
+                        </div>
+                        <div className="text-right">
+                           <div className="text-sm font-black text-white">{user.referrals}</div>
+                           <div className="text-[9px] font-bold text-gray-500 uppercase">Referrals</div>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+                
+                <div className="pt-8 border-t border-white/5">
+                   <div className="flex items-center gap-4 p-4 rounded-2xl bg-blue-600 shadow-xl shadow-blue-600/20">
+                      <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white"><Award size={24} /></div>
+                      <div>
+                         <div className="text-sm font-black text-white">Join the Leaderboard</div>
+                         <p className="text-[10px] font-bold text-white/70 uppercase">Top 10 referrers get a 2024 Swag Box</p>
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>

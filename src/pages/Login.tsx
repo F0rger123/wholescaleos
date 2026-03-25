@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff, Database, ExternalLink, Copy, Check } from 'lucide-react';
+import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff, Database, ExternalLink, Copy, Check, Users } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { sendWelcomeEmail } from '../lib/email';
+import { referralService } from '../lib/referral-service';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -42,6 +43,7 @@ export function Login() {
     password: '',
     confirmPassword: '',
     inviteCode: '',
+    referralCode: '',
   });
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -446,9 +448,20 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             email: form.email,
             password: form.password,
             options: {
-              data: { full_name: form.name.trim() },
+              data: { 
+                full_name: form.name.trim(),
+                referral_code: referralService.generateCode(form.name.trim())
+              },
             },
           });
+
+          // Check for referral code validation
+          if (form.referralCode.trim() && data.user) {
+            const referrerId = await referralService.validateCode(form.referralCode);
+            if (referrerId) {
+              await referralService.recordReferral(referrerId, data.user.id, form.referralCode);
+            }
+          }
 
           // ─── Handle signup errors ───
           if (authError) {
@@ -894,6 +907,25 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                     style={inputStyle}
                     disabled={loading}
                   />
+                </div>
+
+                <div className="space-y-2 mt-4">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Referral Code (Optional)</label>
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
+                      <Users size={16} />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="WHOLESCALE-AGENT-1234"
+                      value={form.referralCode}
+                      onChange={(e) => setForm({ ...form, referralCode: e.target.value })}
+                      className={inputClass}
+                      style={inputStyle}
+                      disabled={loading}
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 ml-1">Enter a code to get 1 month free and 20% off certifications!</p>
                 </div>
                 {fieldErrors.name && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.name}</p>}
               </div>

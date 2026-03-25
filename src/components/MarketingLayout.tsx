@@ -271,20 +271,20 @@ export const MarketingLayout: React.FC = () => {
           </div>
 
           <div>
-            <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-gray-500">Company</h4>
-            <ul className="space-y-4 text-sm text-gray-400">
-              <li><Link to="/about" className="hover:text-blue-400 transition-colors">About Us</Link></li>
-              <li><Link to="/blog" className="hover:text-blue-400 transition-colors">Blog</Link></li>
-              <li><Link to="/careers" className="hover:text-blue-400 transition-colors">Careers</Link></li>
-              <li><Link to="/contact" className="hover:text-blue-400 transition-colors">Contact</Link></li>
-            </ul>
+            <div className="space-y-4">
+              <h4 className="text-white font-bold">Resources</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              </ul>
+            </div>
           </div>
 
           <div>
             <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-gray-500">Legal</h4>
             <ul className="space-y-4 text-sm text-gray-400">
-              <li><Link to="/privacy" className="hover:text-blue-400 transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-blue-400 transition-colors">Terms of Service</Link></li>
               <li><Link to="/cookies" className="hover:text-blue-400 transition-colors">Cookie Policy</Link></li>
             </ul>
           </div>
