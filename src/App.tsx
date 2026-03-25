@@ -26,6 +26,12 @@ import { SMSSettings } from './pages/SMSSettings';
 import { SMSInbox } from './pages/SMSInbox';
 import { NotificationInbox } from './pages/NotificationInbox';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
+import { CursorEffects } from './components/CursorEffects';
+import { MarketingLayout } from './components/MarketingLayout';
+import Home from './pages/marketing/Home';
+import Features from './pages/marketing/Features';
+import Pricing from './pages/marketing/Pricing';
+import About from './pages/marketing/About';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -147,7 +153,16 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <CursorEffects />
       <Routes>
+        {/* Marketing Site */}
+        <Route element={<MarketingLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/features" element={<Features />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/about" element={<About />} />
+        </Route>
+
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
@@ -162,7 +177,7 @@ export function App() {
 
         {/* Protected routes */}
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<Leads />} />
           <Route path="/map" element={<MapView />} />

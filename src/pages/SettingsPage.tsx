@@ -6,7 +6,7 @@ import {
   Bell, Shield, Palette, Database, Save, Eye, EyeOff,
   Check, Globe, Building, Mail, Phone, MapPin,
   Upload, Download, Trash2, RefreshCw, Smartphone, Lock,
-  Monitor, AlertTriangle, Copy, Loader2,
+  Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
   Users, UserMinus,
   HardDrive, Send, Sparkles
 } from 'lucide-react';
@@ -324,7 +324,8 @@ function GeneralTab() {
 function AppearanceTab() {
   const { 
     currentTheme, setTheme, 
-    showQuickNotes, setShowQuickNotes 
+    showQuickNotes, setShowQuickNotes,
+    cursorSettings, setCursorSettings
   } = useStore();
   const [themeSaved, setThemeSaved] = useState(false);
 
@@ -441,6 +442,88 @@ const user = data?.user;
             >
               <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200" style={{ transform: showQuickNotes ? 'translateX(22px)' : 'translateX(2px)' }} />
             </button>
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>Visual Effects</h2>
+            <p className="text-sm mb-4" style={{ color: 'var(--t-text-secondary)' }}>Customize interactive cursor effects</p>
+            
+            <div className="p-6 rounded-xl space-y-6" style={{ backgroundColor: 'var(--t-surface-dim)', border: '1px solid var(--t-border)' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--t-primary-dim)' }}>
+                    <MousePointer2 className="w-5 h-5" style={{ color: 'var(--t-primary)' }} />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm" style={{ color: 'var(--t-text)' }}>Cursor Effect</p>
+                    <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Enable premium interactive cursor animations</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setCursorSettings({ enabled: !cursorSettings.enabled })}
+                  className="relative w-10 h-5 rounded-full transition-all duration-200" 
+                  style={{ backgroundColor: cursorSettings.enabled ? 'var(--t-primary)' : 'var(--t-border)' }}
+                >
+                  <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-200" style={{ transform: cursorSettings.enabled ? 'translateX(22px)' : 'translateX(2px)' }} />
+                </button>
+              </div>
+
+              {cursorSettings.enabled && (
+                <div className="grid grid-cols-2 gap-6 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium" style={{ color: 'var(--t-text)' }}>Effect Type</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['glow', 'sparkles', 'spotlight', 'trail', 'none'] as const).map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setCursorSettings({ type })}
+                          className="px-3 py-2 rounded-lg text-xs font-medium border transition-all capitalize"
+                          style={{
+                            backgroundColor: cursorSettings.type === type ? 'var(--t-primary-dim)' : 'transparent',
+                            borderColor: cursorSettings.type === type ? 'var(--t-primary)' : 'var(--t-border)',
+                            color: cursorSettings.type === type ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                          }}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <label className="text-xs font-medium" style={{ color: 'var(--t-text-secondary)' }}>Intensity</label>
+                        <span className="text-xs" style={{ color: 'var(--t-primary)' }}>{cursorSettings.intensity}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="1" 
+                        max="100" 
+                        value={cursorSettings.intensity} 
+                        onChange={(e) => setCursorSettings({ intensity: parseInt(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <label className="text-xs font-medium" style={{ color: 'var(--t-text-secondary)' }}>Size</label>
+                        <span className="text-xs" style={{ color: 'var(--t-primary)' }}>{cursorSettings.size}px</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="10" 
+                        max="200" 
+                        value={cursorSettings.size} 
+                        onChange={(e) => setCursorSettings({ size: parseInt(e.target.value) })}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

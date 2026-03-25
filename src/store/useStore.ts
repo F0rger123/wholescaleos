@@ -264,6 +264,14 @@ export interface MapSettings {
   clusterRadius: number;
 }
 
+export interface CursorSettings {
+  type: 'glow' | 'trail' | 'spotlight' | 'sparkles' | 'none';
+  color: string;
+  size: number;
+  enabled: boolean;
+  intensity: number;
+}
+
 // ─── Import Types ────────────────────────────────────────────────────────────
 
 export type ImportSource = 'google-sheets' | 'homes-com' | 'url' | 'pdf' | 'csv' | 'smart-paste';
@@ -1510,6 +1518,10 @@ interface AppState {
   // Global Lead Modal State
   activeLeadModalId: string | null;
   setActiveLeadModalId: (id: string | null) => void;
+
+  // Cursor Effects
+  cursorSettings: CursorSettings;
+  setCursorSettings: (settings: Partial<CursorSettings>) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1577,6 +1589,26 @@ export const useStore = create<AppState>((set, get) => ({
 
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks_quick_notes') || '' : '',
   showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('show_quick_notes') === 'true' : false,
+
+  cursorSettings: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('wholescale-cursor-settings');
+        if (saved) return { ...{ type: 'glow', color: 'var(--t-primary)', size: 40, enabled: true, intensity: 50 }, ...JSON.parse(saved) };
+      }
+    } catch (e) {}
+    return { type: 'glow', color: 'var(--t-primary)', size: 40, enabled: true, intensity: 50 };
+  })(),
+
+  setCursorSettings: (settings) => {
+    set((state) => {
+      const next = { ...state.cursorSettings, ...settings };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wholescale-cursor-settings', JSON.stringify(next));
+      }
+      return { cursorSettings: next };
+    });
+  },
 
   setShowQuickNotes: (v: boolean) => {
     if (typeof window !== 'undefined') {

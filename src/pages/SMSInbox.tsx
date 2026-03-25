@@ -6,7 +6,7 @@ import {
   Search, MessageSquare, User, 
   Send, Loader2, ArrowLeft, MoreVertical, 
   CheckCircle2, UserPlus, Smartphone,
-  Plus, X, RefreshCw
+  Plus, X, RefreshCw, Calendar as CalendarIcon
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -14,6 +14,7 @@ import { pollSMSMessages } from '../lib/sms-polling';
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { detectCarrier } from '../lib/carrier-service';
 import { sendSMS } from '../lib/sms-service';
+import { GoogleCalendarService } from '../lib/google-calendar';
 
 interface SMSMessage {
   id: string;
@@ -24,6 +25,8 @@ interface SMSMessage {
   created_at: string;
   lead_id?: string;
 }
+
+import { analyzeSMSConversation, SMSAnalysis } from '../lib/sms-analysis-service';
 
 import { CARRIER_GATEWAYS } from '../lib/sms-gateways';
 
@@ -60,6 +63,7 @@ export function SMSInbox() {
   const currentUser = useStore(state => state.currentUser);
   const addLead = useStore(state => state.addLead);
   const updateLead = useStore(state => state.updateLead);
+  const addTask = useStore(state => state.addTask);
   const contacts = useStore(state => state.contacts);
   const addContact = useStore(state => state.addContact);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -78,6 +82,9 @@ export function SMSInbox() {
     message: '',
     onConfirm: () => {},
   });
+
+  const [analysis, setAnalysis] = useState<SMSAnalysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // 3-dot dropdown menu state
   const [menuOpen, setMenuOpen] = useState(false);
@@ -460,8 +467,35 @@ export function SMSInbox() {
     scrollToBottom();
     if (selectedPhone) {
       markAsRead(selectedPhone);
+      handleAnalyze();
     }
   }, [selectedPhone, messages]);
+
+  const handleAnalyze = async () => {
+    if (!selectedPhone || isAnalyzing) return;
+    
+    // Get messages for current phone
+    const conversationMessages = messages
+      .filter(m => m.phone_number.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''))
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+      .slice(-10) // analyze last 10 messages for context
+      .map(m => ({
+        role: (m.direction === 'inbound' ? 'user' : 'assistant') as 'user' | 'assistant',
+        content: m.content
+      }));
+
+    if (conversationMessages.length === 0) return;
+
+    setIsAnalyzing(true);
+    try {
+      const result = await analyzeSMSConversation(conversationMessages);
+      if (result) setAnalysis(result);
+    } catch (err) {
+      console.error('Analysis failed:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const filteredConversations = conversations
     .filter(c => {
@@ -644,7 +678,7 @@ export function SMSInbox() {
                   <ArrowLeft size={20} />
                 </button>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>
-                  {activeConversation?.leadName?.charAt(0) || <User size={18} />}
+                  {activeConversation?.leadName ? activeConversation.leadName.charAt(0) : <User size={18} />}
                 </div>
                 <div>
                   <h3 className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{activeConversation?.leadName || formatPhoneNumber(activeConversation?.phone || '')}</h3>
@@ -868,6 +902,173 @@ export function SMSInbox() {
               </div>
             </div>
 
+            {/* AI Analysis Card */}
+            {isAnalyzing && (
+              <div className="mx-4 mt-4 p-4 rounded-2xl border animate-pulse"
+                style={{ backgroundColor: 'rgba(var(--t-primary-rgb), 0.03)', borderColor: 'rgba(var(--t-primary-rgb), 0.1)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-6 h-6 rounded bg-[var(--t-primary-dim)]" />
+                  <div className="w-24 h-4 rounded bg-[var(--t-primary-dim)]" />
+                </div>
+                <div className="space-y-2">
+                  <div className="w-full h-3 rounded bg-[var(--t-surface)]" />
+                  <div className="w-2/3 h-3 rounded bg-[var(--t-surface)]" />
+                </div>
+              </div>
+            )}
+
+            {analysis && !isAnalyzing && (
+              <div className="mx-4 mt-4 p-4 rounded-2xl border animate-in fade-in slide-in-from-top-4 duration-500"
+                style={{ backgroundColor: 'rgba(var(--t-primary-rgb), 0.05)', borderColor: 'rgba(var(--t-primary-rgb), 0.2)' }}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-[var(--t-primary-dim)]">
+                      <MessageSquare size={14} className="text-[var(--t-primary)]" />
+                    </div>
+                    <h4 className="text-sm font-bold text-[var(--t-primary)] uppercase tracking-wider">AI Insights</h4>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                    analysis.intent === 'interest' ? 'bg-green-500/10 text-green-500' :
+                    analysis.intent === 'scheduling' ? 'bg-blue-500/10 text-blue-500' :
+                    analysis.intent === 'stop' ? 'bg-red-500/10 text-red-500' :
+                    'bg-gray-500/10 text-gray-400'
+                  }`}>
+                    {analysis.intent}
+                  </span>
+                </div>
+                
+                <p className="text-sm leading-relaxed mb-4 text-[var(--t-text)]">{analysis.summary}</p>
+                
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => {
+                      if (analysis.suggestedReplies && analysis.suggestedReplies.length > 0) {
+                        setReplyText(analysis.suggestedReplies[0]);
+                      } else {
+                        alert('No suggested replies available.');
+                      }
+                    }}
+                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
+                    style={{ color: 'var(--t-text)' }}
+                  >
+                    <Send size={12} /> Send Reply
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (analysis.extractedInfo.name && selectedPhone) {
+                        addLead({
+                          name: analysis.extractedInfo.name,
+                          email: '',
+                          phone: selectedPhone,
+                          status: 'new',
+                          source: 'other',
+                          propertyAddress: analysis.extractedInfo.propertyAddress || 'Unknown',
+                          propertyType: 'single-family',
+                          estimatedValue: 0,
+                          offerAmount: 0,
+                          lat: 34.0522,
+                          lng: -118.2437,
+                          notes: 'Analyzed from SMS: ' + analysis.summary,
+                          assignedTo: currentUser?.id || '',
+                          probability: 50,
+                          engagementLevel: 3,
+                          timelineUrgency: 3,
+                          competitionLevel: 1
+                        });
+                        alert('Lead created successfully!');
+                      } else {
+                        const name = prompt("Enter name for this lead:", analysis.extractedInfo.name || "");
+                        if (name && selectedPhone) {
+                          addLead({
+                            name,
+                            email: '',
+                            phone: selectedPhone,
+                            status: 'new',
+                            source: 'other',
+                            propertyAddress: analysis.extractedInfo.propertyAddress || 'Unknown',
+                            propertyType: 'single-family',
+                            estimatedValue: 0,
+                            offerAmount: 0,
+                            lat: 34.0522,
+                            lng: -118.2437,
+                            notes: 'Analyzed from SMS: ' + analysis.summary,
+                            assignedTo: currentUser?.id || '',
+                            probability: 50,
+                            engagementLevel: 3,
+                            timelineUrgency: 3,
+                            competitionLevel: 1
+                          });
+                          alert('Lead created successfully!');
+                        }
+                      }
+                    }}
+                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
+                    style={{ color: 'var(--t-text)' }}
+                  >
+                    <UserPlus size={12} /> Create Lead
+                  </button>
+                  <button 
+                    onClick={() => {
+                      addTask({
+                        title: `Follow up with ${analysis.extractedInfo.name || formatPhoneNumber(selectedPhone || "")}`,
+                        description: `Conversation Summary: ${analysis.summary}`,
+                        assignedTo: currentUser?.id || "",
+                        dueDate: new Date().toISOString().split('T')[0],
+                        priority: analysis.intent === 'interest' ? 'high' : 'medium',
+                        status: 'todo',
+                        createdBy: currentUser?.id || "",
+                        leadId: activeConversation?.leadId
+                      });
+                      alert('Task created successfully!');
+                    }}
+                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
+                    style={{ color: 'var(--t-text)' }}
+                  >
+                    <CheckCircle2 size={12} /> Create Task
+                  </button>
+                  <button 
+                    onClick={async () => {
+                      if (!currentUser?.id) return;
+                      const dateStr = prompt("Enter event date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+                      if (!dateStr) return;
+                      const timeStr = prompt("Enter event time (HH:MM):", "10:00");
+                      if (!timeStr) return;
+                      
+                      const startDateTime = `${dateStr}T${timeStr}:00Z`;
+                      const endDateTime = `${dateStr}T${String(parseInt(timeStr.split(':')[0]) + 1).padStart(2, '0')}:${timeStr.split(':')[1]}:00Z`;
+                      
+                      try {
+                        const googleService = GoogleCalendarService.getInstance();
+                        await googleService.createEvent(currentUser.id, 'primary', {
+                          summary: `Meeting with ${analysis.extractedInfo.name || formatPhoneNumber(selectedPhone || "")}`,
+                          description: `Follow up from SMS conversation.\nSummary: ${analysis.summary}`,
+                          start: { dateTime: startDateTime },
+                          end: { dateTime: endDateTime }
+                        });
+                        alert('Event added to Google Calendar!');
+                      } catch (err) {
+                        console.error('Failed to create calendar event:', err);
+                        alert('Failed to connect to Google Calendar. Check settings.');
+                      }
+                    }}
+                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
+                    style={{ color: 'var(--t-text)' }}
+                  >
+                    <CalendarIcon size={12} /> Add to Calendar
+                  </button>
+                  <button 
+                    onClick={() => {
+                      window.location.href = `tel:${selectedPhone}`;
+                    }}
+                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
+                    style={{ color: 'var(--t-text)' }}
+                  >
+                    <Smartphone size={12} /> Call Lead
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Messages Panel */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {selectedMessages.map((msg, idx) => {
@@ -910,7 +1111,27 @@ export function SMSInbox() {
             </div>
 
             {/* Reply Area */}
-            <div className="p-4 border-t" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.8)', borderColor: 'var(--t-border)' }}>
+            <div className="p-4 border-t relative" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.8)', borderColor: 'var(--t-border)' }}>
+              {/* Suggested Replies */}
+              {analysis?.suggestedReplies && analysis.suggestedReplies.length > 0 && (
+                <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-none">
+                  {analysis.suggestedReplies.map((reply, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setReplyText(reply)}
+                      className="whitespace-nowrap px-3 py-1.5 rounded-full text-[10px] font-medium border transition-all hover:scale-105"
+                      style={{ 
+                        backgroundColor: 'var(--t-primary-dim)', 
+                        borderColor: 'var(--t-primary)', 
+                        color: 'var(--t-primary)' 
+                      }}
+                    >
+                      {reply}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
               <form onSubmit={handleSend} className="flex gap-2">
                 <input 
                   type="text"

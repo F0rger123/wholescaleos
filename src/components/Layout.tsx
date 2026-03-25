@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
 import { NotificationPanel } from './NotificationPanel';
@@ -41,7 +41,7 @@ export function Layout() {
 
   const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
     Core: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { to: '/map', label: 'Map', icon: Map },
       { to: '/leads', label: 'Leads', icon: Users },
       { to: '/tasks', label: 'Tasks', icon: ListTodo },
@@ -89,6 +89,7 @@ export function Layout() {
   const [aiDocked, setAiDocked] = useState(() => localStorage.getItem('ai_widget_docked') === 'true');
   const [notesDocked, setNotesDocked] = useState(() => localStorage.getItem('quick_notes_docked') === 'true');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -759,8 +760,10 @@ export function Layout() {
         </header>
 
         {/* Page */}
-        <main className="flex-1 overflow-auto p-6">
-          <Outlet />
+        <main className="flex-1 overflow-auto p-6 relative">
+          <div key={location.pathname} className="animate-page-fade-in h-full">
+            <Outlet />
+          </div>
         </main>
       </div>
 
