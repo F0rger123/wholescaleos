@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bell, Check, CheckCheck, Trash2, X,
   UserPlus, MessageSquare, Target, AlertTriangle,
-  Calendar, TrendingUp, Phone, Mail,
+  Calendar, TrendingUp, Phone, Mail, BellOff
 } from 'lucide-react';
 import { useStore, type AppNotification } from '../store/useStore';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,8 +23,13 @@ const NOTIF_ICONS: Record<AppNotification['type'], { icon: React.ElementType }> 
 
 export function NotificationPanel() {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const ref = useRef<HTMLDivElement>(null);
-  const { notifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications } = useStore();
+  const { 
+    notifications, markNotificationRead, markAllNotificationsRead, 
+    clearAllNotifications, notificationSettings, updateNotificationSettings 
+  } = useStore();
+  const dndEnabled = notificationSettings.dndEnabled;
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -99,6 +105,19 @@ export function NotificationPanel() {
               )}
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => updateNotificationSettings({ dndEnabled: !dndEnabled })}
+                className={`p-1.5 rounded-lg transition-colors ${dndEnabled ? 'bg-red-500/10 text-red-500' : 'text-gray-500'}`}
+                onMouseEnter={(e) => {
+                  if (!dndEnabled) e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  if (!dndEnabled) e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title={dndEnabled ? "Disable DND" : "Enable DND"}
+              >
+                {dndEnabled ? <BellOff size={16} /> : <Bell size={16} />}
+              </button>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllNotificationsRead}
@@ -227,7 +246,10 @@ export function NotificationPanel() {
               <button
                 className="text-xs font-medium hover:underline"
                 style={{ color: 'var(--t-primary-text)' }}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                  navigate('/notifications');
+                }}
               >
                 View all notifications
               </button>

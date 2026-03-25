@@ -137,7 +137,7 @@ export function AIBotWidget() {
       setHasKey(keyExists);
 
       if (isSupabaseConfigured && supabase) {
-        const { data } = await supabase
+        await supabase
           .from('profiles')
           .select('settings')
           .eq('id', currentUser.id)
@@ -156,7 +156,7 @@ export function AIBotWidget() {
           setMessages([{
             id: 'welcome',
             role: 'ai',
-            content: `Hi there! I'm ${data?.settings?.ai_name || 'AI Assistant'}. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
+            content: `Hi there! I'm ${aiName}. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
             timestamp: new Date().toISOString()
           }]);
         }
@@ -245,7 +245,7 @@ export function AIBotWidget() {
 
   // Proactive Insights based on page
   useEffect(() => {
-    if (isOpen && !isMinimized && hasKey) {
+    if (isOpen && !isMinimized && hasKey && !loading) {
       const loadInsights = async () => {
         setInsightsLoading(true);
         try {
@@ -259,7 +259,7 @@ export function AIBotWidget() {
       };
       loadInsights();
     }
-  }, [location.pathname, isOpen, hasKey]);
+  }, [location.pathname, isOpen, isMinimized, hasKey, loading]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();

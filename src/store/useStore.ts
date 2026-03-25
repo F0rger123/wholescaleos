@@ -4,7 +4,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { leadsService, tasksService, teamService, chatService, notificationsService, mapService } from '../lib/supabase-service';
 import { themes } from '../styles/themes';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost';
 export type LeadSource = 'website' | 'referral' | 'cold-call' | 'social-media' | 'mailer' | 'other';
@@ -15,7 +15,7 @@ export type TeamRole = 'admin' | 'member' | 'viewer';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type TaskStatus = 'todo' | 'in-progress' | 'done' | 'cancelled';
 
-// ─── Chat Types ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Chat Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type ChannelType = 'direct' | 'group';
 export type MessageType = 'text' | 'image' | 'file' | 'voice' | 'video' | 'system';
@@ -52,7 +52,7 @@ export interface ChatMessage {
   deleted: boolean;
 }
 
-// ─── AI Bot Types ──────────────────────────────────────────────────────────
+// â”€â”€â”€ AI Bot Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface AIUsage {
   used: number;
@@ -90,7 +90,7 @@ export interface ChatChannel {
   pinnedMessageIds: string[];
 }
 
-// ─── Existing Types ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Existing Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface TimelineEntry {
   id: string;
@@ -301,7 +301,7 @@ export interface CursorSettings {
   intensity: number;
 }
 
-// ─── Import Types ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Import Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type ImportSource = 'google-sheets' | 'homes-com' | 'url' | 'pdf' | 'csv' | 'smart-paste';
 export type ImportStatus = 'pending' | 'mapping' | 'reviewing' | 'importing' | 'completed' | 'failed';
@@ -415,7 +415,7 @@ const MOCK_PDF_EXTRACTIONS: ScrapedPropertyData[] = [
   },
 ];
 
-// ─── Notification Types ──────────────────────────────────────────────────────
+// â”€â”€â”€ Notification Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type NotificationType =
   | 'lead-assigned' | 'status-change' | 'deal-closed'
@@ -440,6 +440,7 @@ export interface NotificationSettings {
   systemUpdates: boolean;
   emailNotifications: boolean;
   smsNotifications: boolean;
+  dndEnabled: boolean;
 }
 
 export const defaultNotificationSettings: NotificationSettings = {
@@ -450,9 +451,10 @@ export const defaultNotificationSettings: NotificationSettings = {
   systemUpdates: true,
   emailNotifications: true,
   smsNotifications: true,
+  dndEnabled: false,
 };
 
-// ─── Calculator Types ────────────────────────────────────────────────────────
+// â”€â”€â”€ Calculator Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type CalculatorType = 'wholesale' | 'fixnflip' | 'rental' | 'brrrr';
 
@@ -468,7 +470,7 @@ export interface CalculatorScenario {
   notes?: string;
 }
 
-// ─── AI Types ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ AI Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface AIUsage {
   used: number;
@@ -516,7 +518,7 @@ export const AI_PRIORITY_COLORS: Record<AIPriorityLevel, { bg: string; text: str
   low: { bg: 'color-mix(in srgb, var(--t-success) 15%, transparent)', text: 'var(--t-success)', border: 'color-mix(in srgb, var(--t-success) 30%, transparent)', dot: 'var(--t-success)', label: 'Low Priority' },
 };
 
-// ─── Utilities ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function calculateDealScore(lead: Lead): number {
   // Value component: Logarithmic scaling for property value (more sensitive to lower values, capped at $1.5M)
@@ -601,7 +603,7 @@ export function getLeadsInArea(leads: Lead[], area: CoverageArea): Lead[] {
   return leads.filter(l => isPointInPolygon([l.lat, l.lng], area.coordinates));
 }
 
-// ─── AI Utility Functions ────────────────────────────────────────────────────
+// â”€â”€â”€ AI Utility Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function calculatePriorityScore(lead: Lead): { score: number; level: AIPriorityLevel } {
   if (lead.status === 'closed-won' || lead.status === 'closed-lost') {
@@ -654,19 +656,19 @@ export function generateNextAction(lead: Lead): AISuggestion {
     return { ...base, type: 'follow-up', title: 'Send thank-you & request referral', description: 'Deal is closed! Send a thank-you note and ask for referrals to build your pipeline.', priority: 'low', confidence: 85, actionLabel: 'Send Email' };
   }
   if (lead.status === 'closed-lost') {
-    return { ...base, type: 'email', title: 'Re-engage in 30 days', description: 'Set a reminder to reach out with new market data. Situations change — this lead could reactivate.', priority: 'low', confidence: 60, actionLabel: 'Schedule Reminder' };
+    return { ...base, type: 'email', title: 'Re-engage in 30 days', description: 'Set a reminder to reach out with new market data. Situations change â€” this lead could reactivate.', priority: 'low', confidence: 60, actionLabel: 'Schedule Reminder' };
   }
   if (daysSinceContact >= 7) {
-    return { ...base, type: 'call', title: `Urgent: Call now — ${daysSinceContact} days since last contact`, description: `This lead hasn't been contacted in ${daysSinceContact} days. Risk of going cold. Make a personal call today to re-engage.`, priority: 'high', confidence: 92, actionLabel: 'Log Call' };
+    return { ...base, type: 'call', title: `Urgent: Call now â€” ${daysSinceContact} days since last contact`, description: `This lead hasn't been contacted in ${daysSinceContact} days. Risk of going cold. Make a personal call today to re-engage.`, priority: 'high', confidence: 92, actionLabel: 'Log Call' };
   }
   if (daysSinceContact >= 4) {
-    return { ...base, type: 'call', title: `Follow up — ${daysSinceContact} days since last contact`, description: 'It\'s been a few days. A quick check-in call will keep momentum going and show you\'re attentive.', priority: 'medium', confidence: 80, actionLabel: 'Log Call' };
+    return { ...base, type: 'call', title: `Follow up â€” ${daysSinceContact} days since last contact`, description: 'It\'s been a few days. A quick check-in call will keep momentum going and show you\'re attentive.', priority: 'medium', confidence: 80, actionLabel: 'Log Call' };
   }
   if (lead.status === 'new') {
     return { ...base, type: 'call', title: 'Make initial contact call', description: 'New lead needs first contact ASAP. Introduce yourself, understand their motivation, and set expectations.', priority: 'high', confidence: 95, actionLabel: 'Log Call' };
   }
   if (lead.status === 'negotiating' && dealScore >= 70) {
-    return { ...base, type: 'offer', title: 'Send final offer — high close probability', description: `Deal score is ${dealScore}/100. This lead is hot. Present your best offer to close before competition moves in.`, priority: 'high', confidence: 88, actionLabel: 'Send Offer' };
+    return { ...base, type: 'offer', title: 'Send final offer â€” high close probability', description: `Deal score is ${dealScore}/100. This lead is hot. Present your best offer to close before competition moves in.`, priority: 'high', confidence: 88, actionLabel: 'Send Offer' };
   }
   if (lead.status === 'negotiating') {
     return { ...base, type: 'email', title: 'Send comparable market data', description: 'Strengthen your negotiating position by sharing recent comparable sales that justify your offer price.', priority: 'medium', confidence: 75, actionLabel: 'Send Email' };
@@ -675,14 +677,14 @@ export function generateNextAction(lead: Lead): AISuggestion {
     return { ...base, type: 'meeting', title: 'Schedule property walkthrough', description: 'This lead is qualified. Next step is an on-site visit to assess condition and build rapport with the seller.', priority: 'medium', confidence: 82, actionLabel: 'Schedule Meeting' };
   }
   if (lead.status === 'contacted' && lead.engagementLevel >= 4) {
-    return { ...base, type: 'meeting', title: 'High engagement — schedule in-person meeting', description: 'This lead is highly engaged. Move to an in-person meeting to build trust and advance the deal.', priority: 'high', confidence: 85, actionLabel: 'Schedule Meeting' };
+    return { ...base, type: 'meeting', title: 'High engagement â€” schedule in-person meeting', description: 'This lead is highly engaged. Move to an in-person meeting to build trust and advance the deal.', priority: 'high', confidence: 85, actionLabel: 'Schedule Meeting' };
   }
   return { ...base, type: 'follow-up', title: 'Send status update email', description: 'Keep the lead warm with a friendly check-in email. Share any new market insights relevant to their property.', priority: 'medium', confidence: 70, actionLabel: 'Send Email' };
 }
 
 const MOCK_TRANSCRIPTIONS: CallTranscription[] = [
   {
-    text: "Called the property owner to discuss our offer. They expressed interest in selling quickly due to a job relocation. Main concern was whether our cash offer would be competitive with traditional buyers. I walked them through the benefits — no appraisal contingency, flexible closing date, and as-is purchase. They mentioned the roof needs replacement ($12k estimate) which they don't want to deal with. I said we'd factor that in. They want to talk to their accountant about tax implications before committing. Overall very positive conversation — they're motivated and realistic about pricing.",
+    text: "Called the property owner to discuss our offer. They expressed interest in selling quickly due to a job relocation. Main concern was whether our cash offer would be competitive with traditional buyers. I walked them through the benefits â€” no appraisal contingency, flexible closing date, and as-is purchase. They mentioned the roof needs replacement ($12k estimate) which they don't want to deal with. I said we'd factor that in. They want to talk to their accountant about tax implications before committing. Overall very positive conversation â€” they're motivated and realistic about pricing.",
     sentiment: 'positive',
     objections: ['Concerned about offer competitiveness vs. traditional buyers', 'Wants to consult accountant on tax implications', 'Roof replacement cost factored into expectations'],
     nextSteps: ['Send comparable sales data via email', 'Follow up after accountant meeting (3-5 days)', 'Prepare revised offer factoring roof repair'],
@@ -695,23 +697,23 @@ const MOCK_TRANSCRIPTIONS: CallTranscription[] = [
     objections: ['Multiple competing offers', 'Initial offer too low (15% below competition)', 'Skeptical of investor intentions'],
     nextSteps: ['Send proof of funds within 2 hours', 'Prepare revised offer within 5% of competition', 'Submit revised offer within 48 hours', 'Schedule property inspection ASAP'],
     keyPoints: ['Multiple competing offers on property', 'Competition slow to follow up', '48-hour window to submit revised offer', '14-day close capability is a differentiator', 'Proof of funds needed immediately'],
-    summary: 'Competitive situation with multiple offers. Seller gave us 48-hour window after we differentiated on closing speed. Need to send proof of funds and revised offer ASAP. Competition is dropping the ball on follow-up — our advantage.',
+    summary: 'Competitive situation with multiple offers. Seller gave us 48-hour window after we differentiated on closing speed. Need to send proof of funds and revised offer ASAP. Competition is dropping the ball on follow-up â€” our advantage.',
   },
   {
-    text: "Difficult conversation with the property owner. They were upset about a previous investor experience where the deal fell through at closing. Spent most of the call rebuilding trust and explaining how our process is different. They have unrealistic price expectations — asking full retail for a property that needs $40k in repairs. I gently presented the repair estimates and explained the ARV calculation. They got defensive and said they'd think about it. Not optimistic but left the door open for future contact. May need to let this one cool off and revisit in 30 days.",
+    text: "Difficult conversation with the property owner. They were upset about a previous investor experience where the deal fell through at closing. Spent most of the call rebuilding trust and explaining how our process is different. They have unrealistic price expectations â€” asking full retail for a property that needs $40k in repairs. I gently presented the repair estimates and explained the ARV calculation. They got defensive and said they'd think about it. Not optimistic but left the door open for future contact. May need to let this one cool off and revisit in 30 days.",
     sentiment: 'negative',
     objections: ['Bad previous experience with investors', 'Unrealistic price expectations', 'Property needs $40k in repairs but owner in denial', 'Defensive about repair estimates'],
-    nextSteps: ['Send detailed repair estimate breakdown via email', 'Set 30-day follow-up reminder', 'Do not push — let them process the information', 'Consider having a different team member reach out'],
-    keyPoints: ['Previous deal fell through — trust issues', 'Asking full retail despite needed repairs', '$40k repair estimate', 'Defensive reaction to market analysis', 'Door left open for future contact'],
-    summary: 'Challenging call — seller has trust issues from a prior failed deal and unrealistic pricing expectations. Presented repair estimates but met with resistance. Recommend cooling off period of 30 days before re-engaging with a softer approach.',
+    nextSteps: ['Send detailed repair estimate breakdown via email', 'Set 30-day follow-up reminder', 'Do not push â€” let them process the information', 'Consider having a different team member reach out'],
+    keyPoints: ['Previous deal fell through â€” trust issues', 'Asking full retail despite needed repairs', '$40k repair estimate', 'Defensive reaction to market analysis', 'Door left open for future contact'],
+    summary: 'Challenging call â€” seller has trust issues from a prior failed deal and unrealistic pricing expectations. Presented repair estimates but met with resistance. Recommend cooling off period of 30 days before re-engaging with a softer approach.',
   },
   {
-    text: "Great call with a referral lead. Very warm introduction — the referring attorney had already explained our process. The owner has an inherited property they don't want to manage. No emotional attachment to the property. They want a clean, simple transaction. Discussed our all-cash offer and 21-day closing timeline. They were pleased with both. Main question was about title clearing since there's a potential lien from a contractor. I assured them our title company handles that. Scheduling a walkthrough for this Thursday at 2pm. This one should move fast.",
+    text: "Great call with a referral lead. Very warm introduction â€” the referring attorney had already explained our process. The owner has an inherited property they don't want to manage. No emotional attachment to the property. They want a clean, simple transaction. Discussed our all-cash offer and 21-day closing timeline. They were pleased with both. Main question was about title clearing since there's a potential lien from a contractor. I assured them our title company handles that. Scheduling a walkthrough for this Thursday at 2pm. This one should move fast.",
     sentiment: 'positive',
     objections: ['Potential contractor lien on title', 'Questions about title clearing process'],
     nextSteps: ['Schedule walkthrough for Thursday 2pm', 'Order preliminary title search immediately', 'Prepare offer based on comparable sales', 'Send process overview document'],
-    keyPoints: ['Referral from attorney — warm lead', 'Inherited property, no emotional attachment', 'Wants clean, simple transaction', 'All-cash offer well-received', '21-day close acceptable', 'Possible contractor lien to resolve'],
-    summary: 'Excellent referral lead — inherited property with no emotional attachment. Owner wants simplicity. Cash offer and 21-day close were well received. Only concern is a possible contractor lien, which our title company will handle. Walkthrough scheduled for Thursday.',
+    keyPoints: ['Referral from attorney â€” warm lead', 'Inherited property, no emotional attachment', 'Wants clean, simple transaction', 'All-cash offer well-received', '21-day close acceptable', 'Possible contractor lien to resolve'],
+    summary: 'Excellent referral lead â€” inherited property with no emotional attachment. Owner wants simplicity. Cash offer and 21-day close were well received. Only concern is a possible contractor lien, which our title company will handle. Walkthrough scheduled for Thursday.',
   },
 ];
 
@@ -724,7 +726,7 @@ export function mockAnalyzeCall(duration: number): CallTranscription {
   };
 }
 
-// ─── Smart Paste Parsing Utilities ───────────────────────────────────────────
+// â”€â”€â”€ Smart Paste Parsing Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ParsedColumn {
   name: string;
@@ -1294,9 +1296,9 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
   'closed-lost': 'Closed Lost',
 };
 
-export const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥', '🎉', '💯'];
+export const QUICK_REACTIONS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ”¥', 'ðŸŽ‰', 'ðŸ’¯'];
 
-// ─── Default Auth (used by demo login only) ──────────────────────────────────
+// â”€â”€â”€ Default Auth (used by demo login only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const defaultUser: UserProfile = {
   id: uuidv4(),
@@ -1317,7 +1319,7 @@ const defaultTeamConfig: TeamConfig = {
   createdBy: defaultUser.id,
 };
 
-// ─── Store ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Store â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface AppState {
   // Auth
@@ -1538,11 +1540,13 @@ interface AppState {
   };
   performSearch: (query: string) => void;
 
-  // AI Bot Name & Model
+  // AI Bot Name, Model & Personality
   aiName: string;
   setAiName: (name: string) => void;
   aiModel: string;
   setAiModel: (model: string) => void;
+  aiPersonality: string;
+  setAiPersonality: (personality: string) => void;
 
   // Global Lead Modal State
   activeLeadModalId: string | null;
@@ -1554,7 +1558,7 @@ interface AppState {
 }
 
 export const useStore = create<AppState>((set, get) => ({
-  // ── Auth ──────────────────────────────────────────────────
+  // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   isAuthenticated: false,
   currentUser: null,
   smsMessages: [],
@@ -1563,6 +1567,21 @@ export const useStore = create<AppState>((set, get) => ({
   showFloatingAIWidget: false,
   activeLeadModalId: null,
   setActiveLeadModalId: (id) => set({ activeLeadModalId: id }),
+  aiName: typeof window !== 'undefined' ? localStorage.getItem('user_ai_name') || 'OS Bot' : 'OS Bot',
+  setAiName: (name) => {
+    set({ aiName: name });
+    if (typeof window !== 'undefined') localStorage.setItem('user_ai_name', name);
+  },
+  aiModel: typeof window !== 'undefined' ? localStorage.getItem('user_ai_model') || 'gemini-2.5-flash-lite' : 'gemini-2.5-flash-lite',
+  setAiModel: (model) => {
+    set({ aiModel: model });
+    if (typeof window !== 'undefined') localStorage.setItem('user_ai_model', model);
+  },
+  aiPersonality: typeof window !== 'undefined' ? localStorage.getItem('user_ai_personality') || '' : '',
+  setAiPersonality: (personality) => {
+    set({ aiPersonality: personality });
+    if (typeof window !== 'undefined') localStorage.setItem('user_ai_personality', personality);
+  },
   shortcutsEnabled: (typeof window !== 'undefined' && localStorage.getItem('wholescale-shortcuts-enabled') !== 'false'),
   aiUsage: (() => {
     try {
@@ -1597,11 +1616,27 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('wholescale-notification-settings');
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            emailNotifications: true, smsNotifications: true, newLead: true, 
+            taskDue: true, smsReceived: true, appointmentReminder: true, 
+            systemUpdates: true, dndEnabled: false,
+            ...parsed
+          };
+        }
       }
     } catch (e) {}
     return defaultNotificationSettings;
   })(),
+
+  updateNotificationSettings: (updates) => {
+    set((s) => {
+      const next = { ...s.notificationSettings, ...updates };
+      if (typeof window !== 'undefined') localStorage.setItem('wholescale-notification-settings', JSON.stringify(next));
+      return { notificationSettings: next };
+    });
+  },
 
   smsAutoReplyEnabled: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-enabled') === 'true' : false,
   smsAutoReplyMessage: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-message') || "I'm with a client right now but will get back to you soon!" : "I'm with a client right now but will get back to you soon!",
@@ -1739,14 +1774,6 @@ export const useStore = create<AppState>((set, get) => ({
   },
   clearAuthError: () => set({ authError: null }),
 
-  updateNotificationSettings: (updates) => set((s) => {
-    const newSettings = { ...s.notificationSettings, ...updates };
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wholescale-notification-settings', JSON.stringify(newSettings));
-    }
-    return { notificationSettings: newSettings };
-  }),
-
   setSMSAutoReplyEnabled: (v: boolean) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('sms-auto-reply-enabled', v.toString());
@@ -1761,7 +1788,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ smsAutoReplyMessage: msg });
   },
 
-  // ── Sync ──────────────────────────────────────────────────
+  // â”€â”€ Sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   teamId: null,
   dataLoaded: false,
   setTeamId: (id) => set({ teamId: id }),
@@ -1799,7 +1826,7 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // ── Leads (empty — loaded from Supabase) ──────────────────
+  // â”€â”€ Leads (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   leads: [],
 
   addLead: (lead) => {
@@ -1914,14 +1941,14 @@ export const useStore = create<AppState>((set, get) => ({
           status: newStatus,
           updated_at: now
         }).catch((error) => {
-          console.error('❌ Failed to save status change to Supabase:', error);
+          console.error('âŒ Failed to save status change to Supabase:', error);
         });
       }
 
       return { leads: updatedLeads };
     }),
 
-  // ── Team (empty — loaded from Supabase) ───────────────────
+  // â”€â”€ Team (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   team: [],
   teamConfig: defaultTeamConfig,
 
@@ -1994,7 +2021,7 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  // ── Tasks (empty — loaded from Supabase) ──────────────────
+  // â”€â”€ Tasks (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   tasks: [],
 
   addTask: (task) => {
@@ -2047,7 +2074,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (isSupabaseConfigured && supabase) tasksService.complete(id).catch(() => {});
   },
 
-  // ── Calculator Scenarios ─────────────────────────────────
+  // â”€â”€ Calculator Scenarios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   calculatorScenarios: (() => {
     try {
       if (typeof window !== 'undefined') {
@@ -2081,7 +2108,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (lead) {
         get().addTimelineEntry(scenario.leadId, {
           type: 'note',
-          content: `📊 Added calculator scenario: ${scenario.name || scenario.type}`,
+          content: `ðŸ“Š Added calculator scenario: ${scenario.name || scenario.type}`,
           timestamp: now,
           user: 'System',
           metadata: { scenarioId: newScenario.id, scenarioType: scenario.type }
@@ -2118,11 +2145,11 @@ export const useStore = create<AppState>((set, get) => ({
     return get().calculatorScenarios.filter(s => s.leadId === leadId);
   },
 
-  // ── UI ────────────────────────────────────────────────────
+  // â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   sidebarOpen: true,
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
 
-  // ── Map (empty — loaded from Supabase) ────────────────────
+  // â”€â”€ Map (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   buyers: [],
   coverageAreas: [],
   buyerTemplates: [],
@@ -2193,7 +2220,7 @@ export const useStore = create<AppState>((set, get) => ({
   updateMapSettings: (settings) => set((s) => ({ mapSettings: { ...s.mapSettings, ...settings } })),
   setPendingDrawMode: (v) => set({ pendingDrawMode: v }),
 
-  // ── Chat (empty — loaded from Supabase) ───────────────────
+  // â”€â”€ Chat (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   channels: [],
   messages: {},
   currentChannelId: null,
@@ -2206,7 +2233,7 @@ export const useStore = create<AppState>((set, get) => ({
   sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
     const user = get().currentUser;
     if (!user) {
-      console.log('❌ No user, cannot send message');
+      console.log('âŒ No user, cannot send message');
       return;
     }
     const now = new Date().toISOString();
@@ -2219,7 +2246,7 @@ export const useStore = create<AppState>((set, get) => ({
       attachments, edited: false, readBy: [user.id], deleted: false,
     };
     
-    console.log('✅ Sending message locally:', { id: newId, channelId, content, user: user.name });
+    console.log('âœ… Sending message locally:', { id: newId, channelId, content, user: user.name });
     
     // Update UI immediately
     set((s) => {
@@ -2231,7 +2258,7 @@ export const useStore = create<AppState>((set, get) => ({
     });
     
     if (isSupabaseConfigured && supabase) {
-      console.log('📤 Saving message to Supabase...');
+      console.log('ðŸ“¤ Saving message to Supabase...');
       chatService.sendMessage({
         id: newId, 
         channel_id: channelId, 
@@ -2245,13 +2272,13 @@ export const useStore = create<AppState>((set, get) => ({
         attachments: attachments.length ? attachments : [],
       })
       .then((result) => {
-        console.log('✅ Message saved to Supabase successfully:', result);
+        console.log('âœ… Message saved to Supabase successfully:', result);
       })
       .catch((error) => {
-        console.error('❌ Failed to save message to Supabase:', error);
+        console.error('âŒ Failed to save message to Supabase:', error);
       });
     } else {
-      console.log('⚠️ Supabase not configured, message only saved locally');
+      console.log('âš ï¸ Supabase not configured, message only saved locally');
     }
   },
 
@@ -2332,7 +2359,7 @@ export const useStore = create<AppState>((set, get) => ({
     const user = get().currentUser;
     const now = new Date().toISOString();
     
-    console.log('🎯 Creating channel:', { id, name, type, members, description, userId: user?.id });
+    console.log('ðŸŽ¯ Creating channel:', { id, name, type, members, description, userId: user?.id });
     
     const newChannel = {
       id,
@@ -2340,7 +2367,7 @@ export const useStore = create<AppState>((set, get) => ({
       type,
       members,
       description,
-      avatar: type === 'group' ? '💬' : name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+      avatar: type === 'group' ? 'ðŸ’¬' : name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
       createdAt: now,
       createdBy: user?.id || '',
       lastMessageAt: now,
@@ -2349,7 +2376,7 @@ export const useStore = create<AppState>((set, get) => ({
     
     // Update UI immediately
     set((s) => {
-      console.log('📝 Updating local state with new channel');
+      console.log('ðŸ“ Updating local state with new channel');
       return {
         channels: [...s.channels, newChannel],
         messages: { ...s.messages, [id]: [] },
@@ -2359,7 +2386,7 @@ export const useStore = create<AppState>((set, get) => ({
 
     // Save to Supabase
     if (isSupabaseConfigured && supabase && user) {
-      console.log('💾 Attempting to save channel to Supabase...');
+      console.log('ðŸ’¾ Attempting to save channel to Supabase...');
       
       supabase
         .from('channels')
@@ -2376,13 +2403,13 @@ export const useStore = create<AppState>((set, get) => ({
         }])
         .then(({ data, error }) => {
           if (error) {
-            console.error('❌ Failed to save channel to Supabase:', error);
+            console.error('âŒ Failed to save channel to Supabase:', error);
           } else {
-            console.log('✅ Channel saved to Supabase successfully:', data);
+            console.log('âœ… Channel saved to Supabase successfully:', data);
             
             // Also add channel members
             if (members && members.length > 0 && supabase) {
-              console.log('👥 Adding channel members:', members);
+              console.log('ðŸ‘¥ Adding channel members:', members);
               supabase
                 .from('channel_members')
                 .insert(members.map(userId => ({
@@ -2392,16 +2419,16 @@ export const useStore = create<AppState>((set, get) => ({
                 )
                 .then(({ data: memberData, error: memberError }) => {
                   if (memberError) {
-                    console.error('❌ Failed to save channel members:', memberError);
+                    console.error('âŒ Failed to save channel members:', memberError);
                   } else {
-                    console.log('✅ Channel members saved successfully:', memberData);
+                    console.log('âœ… Channel members saved successfully:', memberData);
                   }
                 });
             }
           }
         });
     } else {
-      console.log('⚠️ Supabase not configured or user not logged in');
+      console.log('âš ï¸ Supabase not configured or user not logged in');
     }
 
     return id;
@@ -2411,11 +2438,11 @@ deleteChannel: (channelId) => {
   const user = get().currentUser;
   const channel = get().channels.find(ch => ch.id === channelId);
   
-  console.log('🗑️ Attempting to delete channel:', { channelId, user: user?.id, isCreator: user?.id === channel?.createdBy });
+  console.log('ðŸ—‘ï¸ Attempting to delete channel:', { channelId, user: user?.id, isCreator: user?.id === channel?.createdBy });
 
   // Check if user is creator (only creators should delete)
   if (channel && channel.createdBy !== user?.id) {
-    console.error('❌ Only the creator can delete this channel');
+    console.error('âŒ Only the creator can delete this channel');
     return;
   }
 
@@ -2429,7 +2456,7 @@ deleteChannel: (channelId) => {
     const newChannels = s.channels.filter(ch => ch.id !== channelId);
     const newCurrentId = s.currentChannelId === channelId ? (newChannels[0]?.id || null) : s.currentChannelId;
     
-    console.log('📝 Updated local state - channel removed');
+    console.log('ðŸ“ Updated local state - channel removed');
     
     return {
       channels: newChannels,
@@ -2441,7 +2468,7 @@ deleteChannel: (channelId) => {
 
   // Delete from Supabase
   if (isSupabaseConfigured && supabase) {
-    console.log('💾 Sending delete to Supabase...');
+    console.log('ðŸ’¾ Sending delete to Supabase...');
     
     supabase
       .from('channels')
@@ -2449,14 +2476,14 @@ deleteChannel: (channelId) => {
       .eq('id', channelId)
       .then(({ data, error }) => {
         if (error) {
-          console.error('❌ Failed to delete channel from Supabase:', error);
+          console.error('âŒ Failed to delete channel from Supabase:', error);
           
           // Revert the local deletion if Supabase fails
           set((s) => {
             const originalChannel = get().channels.find(ch => ch.id === channelId);
             if (!originalChannel) return {};
             
-            console.log('🔄 Reverting local deletion');
+            console.log('ðŸ”„ Reverting local deletion');
             
             return {
               channels: [...s.channels, originalChannel],
@@ -2466,7 +2493,7 @@ deleteChannel: (channelId) => {
           
           alert('Failed to delete channel. Please try again.');
         } else {
-          console.log('✅ Channel deleted successfully from Supabase:', data);
+          console.log('âœ… Channel deleted successfully from Supabase:', data);
         }
       });
   }
@@ -2492,9 +2519,9 @@ deleteChannel: (channelId) => {
         .eq('id', channelId)
         .then(({ error }) => {
           if (error) {
-            console.error('❌ Failed to update channel:', error);
+            console.error('âŒ Failed to update channel:', error);
           } else {
-            console.log('✅ Channel updated successfully');
+            console.log('âœ… Channel updated successfully');
           }
         });
     }
@@ -2527,9 +2554,9 @@ deleteChannel: (channelId) => {
         }])
         .then(({ error }) => {
           if (error) {
-            console.error('❌ Failed to add channel member:', error);
+            console.error('âŒ Failed to add channel member:', error);
           } else {
-            console.log('✅ Channel member added successfully');
+            console.log('âœ… Channel member added successfully');
           }
         });
     }
@@ -2564,9 +2591,9 @@ deleteChannel: (channelId) => {
         .eq('user_id', userId)
         .then(({ error }) => {
           if (error) {
-            console.error('❌ Failed to remove channel member:', error);
+            console.error('âŒ Failed to remove channel member:', error);
           } else {
-            console.log('✅ Channel member removed successfully');
+            console.log('âœ… Channel member removed successfully');
           }
         });
     }
@@ -2599,9 +2626,9 @@ deleteChannel: (channelId) => {
         .eq('user_id', user.id)
         .then(({ error }) => {
           if (error) {
-            console.error('❌ Failed to leave channel:', error);
+            console.error('âŒ Failed to leave channel:', error);
           } else {
-            console.log('✅ Left channel successfully');
+            console.log('âœ… Left channel successfully');
           }
         });
     }
@@ -2656,7 +2683,7 @@ deleteChannel: (channelId) => {
     return Object.values(unreadCounts).reduce((sum, c) => sum + c, 0);
   },
 
-  // ── AI (empty — no mock recordings) ─────────────────────
+  // â”€â”€ AI (empty â€” no mock recordings) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   callRecordings: [],
 
   addCallRecording: (leadId, duration) =>
@@ -2711,7 +2738,7 @@ deleteChannel: (channelId) => {
                   t.metadata?.recordingId === recordingId
                     ? {
                         ...t,
-                        content: `📞 Call recorded & analyzed — ${transcription.summary.slice(0, 100)}...`,
+                        content: `ðŸ“ž Call recorded & analyzed â€” ${transcription.summary.slice(0, 100)}...`,
                         metadata: { ...t.metadata, recordingId, hasTranscript: 'true' },
                       }
                     : t
@@ -2722,7 +2749,7 @@ deleteChannel: (channelId) => {
       };
     }),
 
-  // ── Theme ────────────────────────────────────────────────
+  // â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   currentTheme: (typeof window !== 'undefined' && localStorage.getItem('wholescale-theme')) || 'dark',
   setTheme: (theme) => {
     set({ currentTheme: theme });
@@ -2764,7 +2791,7 @@ deleteChannel: (channelId) => {
                   .eq('id', data.user.id)
                   .then(({ error }) => {
                     if (error) console.error('Failed to save theme:', error);
-                    console.log('✅ Theme saved to Supabase:', theme);
+                    console.log('âœ… Theme saved to Supabase:', theme);
                   });
               }
             });
@@ -2881,10 +2908,25 @@ deleteChannel: (channelId) => {
     return { ...themeColors, ...state.customColors };
   },
 
-  // ── Notifications (empty — loaded from Supabase) ─────────
+  // â”€â”€ Notifications (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€
   notifications: [],
 
   addNotification: (notif) => {
+    const { notificationSettings, notifications } = get();
+    
+    // Check DND
+    if (notificationSettings.dndEnabled) return;
+
+    // Deduplication logic: Don't add if identical title/message is in the last 10 seconds
+    const tenSecondsAgo = Date.now() - 10000;
+    const isDuplicate = notifications.some(n => 
+      n.title === notif.title && 
+      n.message === notif.message && 
+      new Date(n.timestamp).getTime() > tenSecondsAgo
+    );
+
+    if (isDuplicate) return;
+
     const newId = uuidv4();
     set((s) => ({
       notifications: [
@@ -2920,7 +2962,7 @@ deleteChannel: (channelId) => {
     if (isSupabaseConfigured && supabase) notificationsService.remove(id).catch(() => {});
   },
 
-  // ── Import ──────────────────────────────────────────────
+  // â”€â”€ Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   importTemplates: [],
   importHistory: [],
 
@@ -3048,9 +3090,9 @@ deleteChannel: (channelId) => {
 
       supabase.from('leads').insert(rows).then(({ error }) => {
         if (error) {
-          console.error('❌ Failed to save imported leads to Supabase:', error);
+          console.error('âŒ Failed to save imported leads to Supabase:', error);
         } else {
-          console.log(`✅ ${rows.length} imported leads saved to Supabase`);
+          console.log(`âœ… ${rows.length} imported leads saved to Supabase`);
         }
       });
     }
@@ -3058,7 +3100,7 @@ deleteChannel: (channelId) => {
     return imported;
   },
 
-  // ── Streaks (start at 0) ────────────────────────────────
+  // â”€â”€ Streaks (start at 0) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   loginStreak: 0,
   taskStreak: 0,
   lastLoginDate: new Date().toISOString(),
@@ -3085,7 +3127,7 @@ deleteChannel: (channelId) => {
       };
     }),
 
-  // ── Lead Photos ─────────────────────────────────────────
+  // â”€â”€ Lead Photos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   addLeadPhoto: (leadId, photoId) =>
     set((s) => ({
       leads: s.leads.map(l =>
@@ -3111,7 +3153,7 @@ deleteChannel: (channelId) => {
       ),
     })),
 
-  // ── SMS ──────────────────────────────────────────────────
+  // â”€â”€ SMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   setSMSMessages: (messages) => {
     const unreadCount = messages.filter(m => !m.is_read && m.direction === 'inbound').length;
     set((state: any) => ({ 
@@ -3177,7 +3219,7 @@ deleteChannel: (channelId) => {
 
   setAiUsage: (model, used, limit) => {
     set((s) => {
-      const today = new Date().toLocaleDateString();
+      const today = new Date().toISOString().split('T')[0];
       const current = s.aiUsage[model] || { used: 0, limit: model.includes('pro') ? 10 : 20, lastReset: today };
       
       const updated = {
@@ -3367,23 +3409,6 @@ deleteChannel: (channelId) => {
               .then();
           }
         });
-    }
-  },
-
-  // AI Bot Name
-  aiName: typeof window !== 'undefined' ? localStorage.getItem('user_ai_name') || 'OS Bot' : 'OS Bot',
-  setAiName: (name) => {
-    set({ aiName: name });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user_ai_name', name);
-    }
-  },
-
-  aiModel: typeof window !== 'undefined' ? localStorage.getItem('user_ai_model') || 'gemini-2.0-flash-lite' : 'gemini-2.0-flash-lite',
-  setAiModel: (model) => {
-    set({ aiModel: model });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('user_ai_model', model);
     }
   },
 }));
