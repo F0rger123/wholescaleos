@@ -60,13 +60,12 @@ export default function Pricing() {
 
       <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-8">
         {plans.map((plan, idx) => (
-          <div 
-            key={idx} 
-            className={`relative p-8 rounded-3xl border transition-all hover:scale-105 duration-300 ${
-              plan.popular 
-                ? 'bg-[#1e293b] border-blue-500 shadow-2xl shadow-blue-500/10 z-10' 
+          <div
+            key={idx}
+            className={`relative p-8 rounded-3xl border transition-all hover:scale-105 duration-300 ${plan.popular
+                ? 'bg-[#1e293b] border-blue-500 shadow-2xl shadow-blue-500/10 z-10'
                 : 'bg-[#0b1120] border-white/5'
-            }`}
+              }`}
           >
             {plan.popular && (
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-blue-500 text-white text-xs font-bold uppercase tracking-wider">
@@ -81,7 +80,7 @@ export default function Pricing() {
               </div>
               <p className="text-gray-400 text-sm mt-4">{plan.desc}</p>
             </div>
-            
+
             <ul className="space-y-4 mb-10">
               {plan.features.map((feature, fIdx) => (
                 <li key={fIdx} className="flex items-start gap-3 text-sm text-gray-300">
@@ -91,13 +90,12 @@ export default function Pricing() {
               ))}
             </ul>
 
-            <Link 
+            <Link
               to={plan.price === 'Custom' ? '/contact' : '/login?signup=true'}
-              className={`block w-full py-4 rounded-xl text-center font-bold transition-all ${
-                plan.popular 
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg' 
+              className={`block w-full py-4 rounded-xl text-center font-bold transition-all ${plan.popular
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg'
                   : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
-              }`}
+                }`}
             >
               {plan.cta}
             </Link>

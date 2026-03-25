@@ -8,7 +8,8 @@ import {
   Upload, Download, Trash2, RefreshCw, Smartphone, Lock,
   Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
   Users, UserMinus,
-  HardDrive, Send, Sparkles
+  HardDrive, Send, Sparkles, ExternalLink, QrCode, Award, 
+  Linkedin, Facebook, Instagram, Twitter, Share2
 } from 'lucide-react';
 import { AISettings } from './AISettings';
 import { SMSSettings } from './SMSSettings';
@@ -17,6 +18,7 @@ import { Keyboard } from 'lucide-react';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Building },
+  { id: 'profile', label: 'Public Profile', icon: Award },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -73,6 +75,7 @@ export default function SettingsPage() {
         {/* Content */}
         <div className="flex-1 min-w-0">
           {activeTab === 'general' && <GeneralTab />}
+          {activeTab === 'profile' && <ProfileTab />}
           {activeTab === 'notifications' && <NotificationsTab />}
           {activeTab === 'security' && <SecurityTab />}
           {activeTab === 'appearance' && <AppearanceTab />}
@@ -313,6 +316,302 @@ function GeneralTab() {
             )}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   PROFILE TAB - AGENT PUBLIC PROFILE MANAGEMENT
+   ============================================================ */
+function ProfileTab() {
+  const { currentUser, updateProfile } = useStore();
+  const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
+  const [formData, setFormData] = useState({
+    bio: currentUser?.bio || '',
+    licenseNumber: currentUser?.licenseNumber || '',
+    yearsExperience: currentUser?.yearsExperience || 0,
+    isPublic: currentUser?.isPublic !== false,
+    publicContactEmail: currentUser?.publicContactEmail !== false,
+    publicContactPhone: currentUser?.publicContactPhone !== false,
+    acceptLeads: currentUser?.acceptLeads !== false,
+    specialties: currentUser?.specialties?.join(', ') || '',
+    languages: currentUser?.languages?.join(', ') || '',
+    serviceAreas: currentUser?.serviceAreas?.join(', ') || '',
+    website: currentUser?.website || '',
+    socialLinks: {
+      facebook: currentUser?.socialLinks?.facebook || '',
+      instagram: currentUser?.socialLinks?.instagram || '',
+      linkedin: currentUser?.socialLinks?.linkedin || '',
+      x: currentUser?.socialLinks?.x || '',
+    }
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({
+        bio: formData.bio,
+        licenseNumber: formData.licenseNumber,
+        yearsExperience: Number(formData.yearsExperience),
+        isPublic: formData.isPublic,
+        publicContactEmail: formData.publicContactEmail,
+        publicContactPhone: formData.publicContactPhone,
+        acceptLeads: formData.acceptLeads,
+        specialties: formData.specialties.split(',').map(s => s.trim()).filter(Boolean),
+        languages: formData.languages.split(',').map(s => s.trim()).filter(Boolean),
+        serviceAreas: formData.serviceAreas.split(',').map(s => s.trim()).filter(Boolean),
+        website: formData.website,
+        socialLinks: formData.socialLinks
+      });
+      setSaveResult('success');
+      setTimeout(() => setSaveResult(null), 3000);
+    } catch (err) {
+      setSaveResult('error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateSocial = (key: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      socialLinks: { ...prev.socialLinks, [key]: value }
+    }));
+  };
+
+  const nameSlug = currentUser?.name.toLowerCase().replace(/\s+/g, '-') || 'agent';
+  const publicUrl = `${window.location.origin}/agent/${nameSlug}`;
+
+  return (
+    <div className="space-y-6">
+      {/* Public Status Card */}
+      <div className="rounded-2xl p-6 border transition-all" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+             <div className="w-16 h-16 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
+               <QrCode size={32} />
+             </div>
+             <div>
+                <h2 className="text-lg font-bold">Public Presence</h2>
+                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                  <Globe size={12} />
+                  <span>Your profile is {formData.isPublic ? 'live and public' : 'currently private'}</span>
+                </div>
+             </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+             <div 
+              onClick={() => setFormData(p => ({ ...p, isPublic: !p.isPublic }))}
+              className="relative w-12 h-6 rounded-full cursor-pointer transition-all"
+              style={{ backgroundColor: formData.isPublic ? 'var(--t-primary)' : 'var(--t-border)' }}
+             >
+                <div className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-md" style={{ left: formData.isPublic ? '26px' : '4px' }} />
+             </div>
+             <a 
+              href={publicUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-2 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] hover:border-blue-500/50 text-gray-400 hover:text-blue-500 transition-all"
+              title="View Public Profile"
+             >
+                <ExternalLink size={18} />
+             </a>
+          </div>
+        </div>
+        
+        {formData.isPublic && (
+          <div className="mt-6 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 flex items-center justify-between gap-4">
+             <code className="text-[10px] text-blue-400 font-mono truncate">{publicUrl}</code>
+             <button 
+              onClick={() => { navigator.clipboard.writeText(publicUrl); }}
+              className="text-[10px] uppercase font-black tracking-widest text-blue-500 hover:text-blue-400 transition-colors shrink-0"
+             >
+               Copy Link
+             </button>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Bio & Credentials */}
+        <div className="rounded-2xl p-6 border space-y-6" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+          <h3 className="text-sm font-bold flex items-center gap-2">
+            <Award size={16} className="text-blue-500" /> Professional Info
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Short Bio</label>
+              <textarea
+                value={formData.bio}
+                onChange={(e) => setFormData(p => ({ ...p, bio: e.target.value }))}
+                placeholder="Tell your story..."
+                className="w-full h-32 px-4 py-3 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none transition-all resize-none"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">License #</label>
+                <input
+                  type="text"
+                  value={formData.licenseNumber}
+                  onChange={(e) => setFormData(p => ({ ...p, licenseNumber: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Years Exp.</label>
+                <input
+                  type="number"
+                  value={formData.yearsExperience}
+                  onChange={(e) => setFormData(p => ({ ...p, yearsExperience: parseInt(e.target.value) || 0 }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Visibility & Tags */}
+        <div className="rounded-2xl p-6 border space-y-6" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+          <h3 className="text-sm font-bold flex items-center gap-2">
+            <Globe size={16} className="text-blue-500" /> Tags & Visibility
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Specialties</label>
+              <p className="text-[10px] text-gray-600 mb-2">Separate with commas</p>
+              <input
+                type="text"
+                value={formData.specialties}
+                onChange={(e) => setFormData(p => ({ ...p, specialties: e.target.value }))}
+                placeholder="Residential, Commercial, Luxury..."
+                className="w-full px-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Service Areas</label>
+              <p className="text-[10px] text-gray-600 mb-2">Cities or Zip codes</p>
+              <input
+                type="text"
+                value={formData.serviceAreas}
+                onChange={(e) => setFormData(p => ({ ...p, serviceAreas: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Personal Website</label>
+              <input
+                type="text"
+                value={formData.website}
+                onChange={(e) => setFormData(p => ({ ...p, website: e.target.value }))}
+                placeholder="https://yourwebsite.com"
+                className="w-full px-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none"
+              />
+            </div>
+            
+            <div className="pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">Show Email publicly</span>
+                <input 
+                  type="checkbox" 
+                  checked={formData.publicContactEmail}
+                  onChange={e => setFormData(p => ({ ...p, publicContactEmail: e.target.checked }))}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium">Show Phone publicly</span>
+                <input 
+                  type="checkbox" 
+                  checked={formData.publicContactPhone}
+                  onChange={e => setFormData(p => ({ ...p, publicContactPhone: e.target.checked }))}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-blue-500 font-bold">Enable Lead Capture</span>
+                <input 
+                  type="checkbox" 
+                  checked={formData.acceptLeads}
+                  onChange={e => setFormData(p => ({ ...p, acceptLeads: e.target.checked }))}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Social Links */}
+      <div className="rounded-2xl p-6 border space-y-6" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+        <h3 className="text-sm font-bold flex items-center gap-2">
+           <Share2 size={16} className="text-blue-500" /> Social Links
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="relative">
+            <Facebook size={14} className="absolute left-3 top-3.5 text-blue-500" />
+            <input
+              type="text"
+              value={formData.socialLinks.facebook}
+              onChange={(e) => updateSocial('facebook', e.target.value)}
+              placeholder="Facebook URL"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-xs"
+            />
+          </div>
+          <div className="relative">
+            <Instagram size={14} className="absolute left-3 top-3.5 text-pink-500" />
+            <input
+              type="text"
+              value={formData.socialLinks.instagram}
+              onChange={(e) => updateSocial('instagram', e.target.value)}
+              placeholder="Instagram URL"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-xs"
+            />
+          </div>
+          <div className="relative">
+            <Linkedin size={14} className="absolute left-3 top-3.5 text-blue-700" />
+            <input
+              type="text"
+              value={formData.socialLinks.linkedin}
+              onChange={(e) => updateSocial('linkedin', e.target.value)}
+              placeholder="LinkedIn URL"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-xs"
+            />
+          </div>
+          <div className="relative">
+            <Twitter size={14} className="absolute left-3 top-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={formData.socialLinks.x}
+              onChange={(e) => updateSocial('x', e.target.value)}
+              placeholder="X URL"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-xs"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-8 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Profile Changes'}
+          </button>
+          {saveResult === 'success' && (
+            <div className="flex items-center gap-2 text-green-500 font-bold text-sm animate-in fade-in slide-in-from-left-2">
+              <Check size={18} /> Profile updated
+            </div>
+          )}
+        </div>
+        
+        <p className="text-xs text-gray-500 italic">Last synced: Just now</p>
       </div>
     </div>
   );

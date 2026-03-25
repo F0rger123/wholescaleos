@@ -151,6 +151,15 @@ export interface TeamMember {
   teamRole: TeamRole;
 }
 
+export interface AgentTestimonial {
+  id: string;
+  author: string;
+  role?: string;
+  content: string;
+  rating: number;
+  date: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -160,6 +169,24 @@ export interface UserProfile {
   teamRole: TeamRole;
   emailVerified: boolean;
   createdAt: string;
+  bio?: string;
+  specialties?: string[];
+  licenseNumber?: string;
+  yearsExperience?: number;
+  languages?: string[];
+  socialLinks?: {
+    facebook?: string;
+    instagram?: string;
+    linkedin?: string;
+    x?: string;
+  };
+  serviceAreas?: string[];
+  testimonials?: AgentTestimonial[];
+  isPublic?: boolean;
+  publicContactEmail?: boolean;
+  publicContactPhone?: boolean;
+  acceptLeads?: boolean;
+  website?: string;
 }
 
 export interface Task {
@@ -1664,15 +1691,50 @@ export const useStore = create<AppState>((set, get) => ({
     teamId: null,
   }),
   forgotPassword: () => set({ authError: null }),
-  updateProfile: (updates) =>
-    set((s) => {
-      if (!s.currentUser) return {};
-      const newUser = { ...s.currentUser, ...updates };
-      if (updates.name) {
-        newUser.avatar = updates.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  updateProfile: async (updates) => {
+    const { currentUser } = get();
+    if (!currentUser) return;
+
+    const newUser = { ...currentUser, ...updates };
+    if (updates.name) {
+      newUser.avatar = updates.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    set({ currentUser: newUser });
+
+    // Persist to Supabase if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: newUser.name,
+            phone: newUser.phone,
+            avatar: newUser.avatar,
+            settings: {
+              ...(newUser.bio && { bio: newUser.bio }),
+              ...(newUser.specialties && { specialties: newUser.specialties }),
+              ...(newUser.licenseNumber && { license_number: newUser.licenseNumber }),
+              ...(newUser.yearsExperience && { years_experience: newUser.yearsExperience }),
+              ...(newUser.languages && { languages: newUser.languages }),
+              ...(newUser.socialLinks && { social_links: newUser.socialLinks }),
+              ...(newUser.serviceAreas && { service_areas: newUser.serviceAreas }),
+              ...(newUser.testimonials && { testimonials: newUser.testimonials }),
+              ...(newUser.isPublic !== undefined && { is_public: newUser.isPublic }),
+              ...(newUser.publicContactEmail !== undefined && { public_contact_email: newUser.publicContactEmail }),
+              ...(newUser.publicContactPhone !== undefined && { public_contact_phone: newUser.publicContactPhone }),
+              ...(newUser.acceptLeads !== undefined && { accept_leads: newUser.acceptLeads }),
+              ...(newUser.website && { website: newUser.website }),
+            }
+          })
+          .eq('id', currentUser.id);
+        
+        if (error) throw error;
+      } catch (err) {
+        console.error('Failed to sync profile change to Supabase:', err);
       }
-      return { currentUser: newUser };
-    }),
+    }
+  },
   clearAuthError: () => set({ authError: null }),
 
   updateNotificationSettings: (updates) => set((s) => {

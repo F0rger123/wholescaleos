@@ -1,8 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useStore } from '../../store/useStore';
-import { 
-  ArrowRight, Shield, Zap, Users, MessageSquare, 
+import {
+  ArrowRight, Shield, Zap, Users, MessageSquare,
   LayoutDashboard, Map, Calculator, Calendar
 } from 'lucide-react';
 
@@ -31,20 +31,20 @@ export default function Home() {
               <Zap size={14} className="fill-current" /> Part of the WholeScale Ecosystem
             </div>
             <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]">
-              The Operating System for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Scale.</span>
+              The <span className="text-blue-500">Sovereign</span> Operating System for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Real Estate Professionals.</span>
             </h1>
-            <p className="text-xl text-gray-400 mb-10 leading-relaxed max-w-2xl mx-auto">
-              WholeScale OS is a comprehensive platform designed to automate your real estate operations, 
-              from AI-powered SMS lead management to team collaboration and deal closing.
+            <p className="text-xl text-gray-400 mb-10 leading-relaxed max-w-3xl mx-auto">
+              Scale your wholesale, creative finance, or traditional brokerage with AI-powered automation
+              and a secure, private infrastructure designed for elite performance.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link 
+              <Link
                 to="/login?signup=true"
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-lg font-bold transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-blue-500/30"
               >
                 Start for Free <ArrowRight size={20} />
               </Link>
-              <Link 
+              <Link
                 to="/pricing"
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-bold transition-all"
               >
@@ -63,9 +63,9 @@ export default function Home() {
                 <div className="w-3 h-3 rounded-full bg-green-500/50" />
                 <div className="ml-4 h-6 w-32 rounded bg-white/5" />
               </div>
-              <img 
-                src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2426" 
-                alt="Dashboard Preview" 
+              <img
+                src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2426"
+                alt="Dashboard Preview"
                 className="rounded-xl border border-white/5 shadow-inner"
               />
             </div>
@@ -79,51 +79,51 @@ export default function Home() {
           <div className="text-center mb-20">
             <h2 className="text-3xl md:text-5xl font-bold mb-6">Everything you need to <span className="text-blue-500">DOMINATE</span></h2>
             <p className="text-gray-400 max-w-2xl mx-auto">
-              Stop juggling multiple tools. WholeScale OS brings everything into one unified, 
+              Stop juggling multiple tools. WholeScale OS brings everything into one unified,
               AI-enhanced workspace.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
             {[
               {
                 title: 'AI SMS Automation',
-                desc: 'Gemini-powered conversation analysis, intent detection, and suggested replies.',
+                desc: 'Gemini-powered conversation analysis, intent detection, and suggested replies built for speed.',
                 icon: MessageSquare,
                 color: 'blue'
               },
               {
-                title: 'Global Map View',
-                desc: 'Visualize your entire portfolio and lead pipeline on a dynamic interactive map.',
-                icon: Map,
+                title: 'Agent Public Profiles',
+                desc: 'Generate premium, high-converting public landing pages with QR codes and integrated lead capture.',
+                icon: Users,
                 color: 'indigo'
               },
               {
-                title: 'Advanced Analytics',
-                desc: 'Monitor KPIs, team performance, and conversion rates with real-time dashboards.',
+                title: 'Integrated CRM Hub',
+                desc: 'A unified inbox for SMS and Email with AI-driven triage and threaded conversation history.',
                 icon: LayoutDashboard,
                 color: 'purple'
               },
               {
-                title: 'Smart Calculators',
-                desc: 'Instant ROI, rental, and flip calculations to analyze deals on the fly.',
-                icon: Calculator,
+                title: 'Global Map View',
+                desc: 'Visualize your entire portfolio and lead pipeline on a dynamic interactive map for geographic insights.',
+                icon: Map,
                 color: 'green'
               },
               {
-                title: 'Team Collaboration',
-                desc: 'Real-time chat, task assignments, and presence tracking for high-velocity teams.',
-                icon: Users,
+                title: 'Visual Workflow Builder',
+                desc: 'Automate complex real estate processes with an intuitive visual canvas for rapid scale.',
+                icon: Zap,
                 color: 'orange'
               },
               {
-                title: 'Calendar Integration',
-                desc: 'Sync effortlessly with Google Calendar for seamless scheduling and follow-ups.',
-                icon: Calendar,
+                title: 'Secure Infrastructure',
+                desc: 'Your data is private, encrypted, and owned entirely by you. No platform lock-in or data sharing.',
+                icon: Shield,
                 color: 'red'
               }
             ].map((feature, i) => (
-              <div 
+              <div
                 key={i}
                 className="group p-8 rounded-3xl bg-[#1e293b]/30 border border-white/5 hover:border-blue-500/30 transition-all hover:-translate-y-2"
               >
@@ -137,6 +137,81 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          {/* New Profile Showcase Callout */}
+          <div className="rounded-[2.5rem] p-12 bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border border-blue-500/20 flex flex-col md:flex-row items-center gap-12">
+            <div className="flex-1 space-y-6 text-center md:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest">
+                NEW Feature
+              </div>
+              <h3 className="text-3xl font-bold">Showcase Your Expertise with Agent Profiles</h3>
+              <p className="text-gray-400 leading-relaxed">
+                Generate professional public landing pages in seconds. Manage your bio, specialties,
+                and social links from your dashboard. Includes built-in lead capture and QR codes
+                for your physical marketing materials.
+              </p>
+              <Link to="/pricing" className="inline-flex items-center gap-2 text-blue-500 font-bold hover:text-blue-400 transition-colors">
+                Learn more about Profiles <ArrowRight size={18} />
+              </Link>
+            </div>
+            <div className="w-full md:w-96 aspect-[4/5] rounded-3xl bg-[#0f172a] shadow-2xl border border-white/10 overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-transparent to-transparent z-10" />
+              <img
+                src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80"
+                alt="Agent Profile Preview"
+                className="w-full h-full object-cover opacity-60 grayscale hover:grayscale-0 transition-all duration-1000"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonial Section */}
+      <section className="py-32 relative overflow-hidden bg-[#0b1120]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20 space-y-4">
+            <h2 className="text-3xl md:text-5xl font-bold italic tracking-tight">Trusted by Leaders.</h2>
+            <p className="text-gray-500">See why top performers choose WholeScaleOS to power their empire.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+              <p className="text-gray-300 italic">"The AI SMS automation saved me 15 hours a week. I can focus on closing deals while the system handles the initial triage."</p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden border border-blue-500/30">
+                  <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80" alt="Avatar" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold">Jason Rivera</div>
+                  <div className="text-[10px] text-gray-500 uppercase font-black">Elite Acquisitions</div>
+                </div>
+              </div>
+            </div>
+            <div className="p-8 rounded-3xl bg-white/5 border border-blue-500/30 space-y-6 shadow-2xl shadow-blue-500/10 scale-105 z-10">
+              <p className="text-gray-300 italic">"The sovereign OS approach is what I've been waiting for. My data, my rules, and the most powerful AI I've ever used in real estate."</p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden border border-blue-500/30">
+                  <img src="/assets/testimonials/agent-2.png" alt="Avatar" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold">Sarah Jenkins</div>
+                  <div className="text-[10px] text-blue-500 uppercase font-black">Jenkins Realty Group</div>
+                </div>
+              </div>
+            </div>
+            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-6">
+              <p className="text-gray-300 italic">"The new Agent Profiles are a game changer. My conversion rate on flyers went up 40% after adding the profile QR code."</p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden border border-blue-500/30">
+                  <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80" alt="Avatar" className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="text-sm font-bold">Marcus Thorne</div>
+                  <div className="text-[10px] text-gray-500 uppercase font-black">Thorne Investors</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -148,10 +223,10 @@ export default function Home() {
             <p className="text-gray-400">Join 500+ real estate teams scaling their business with WholeScale OS.</p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-12 opacity-50 grayscale hover:grayscale-0 transition-all">
-             {/* Mock Partner Logos */}
-             <div className="flex items-center gap-2 font-bold text-xl"><Shield size={24} /> SECURE</div>
-             <div className="flex items-center gap-2 font-bold text-xl"><Zap size={24} /> VELOCITY</div>
-             <div className="flex items-center gap-2 font-bold text-xl"><Users size={24} /> NETWORK</div>
+            {/* Mock Partner Logos */}
+            <div className="flex items-center gap-2 font-bold text-xl"><Shield size={24} /> SECURE</div>
+            <div className="flex items-center gap-2 font-bold text-xl"><Zap size={24} /> VELOCITY</div>
+            <div className="flex items-center gap-2 font-bold text-xl"><Users size={24} /> NETWORK</div>
           </div>
         </div>
       </section>
@@ -162,10 +237,10 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-6 relative text-center">
           <h2 className="text-4xl md:text-6xl font-extrabold mb-8">Ready to transform your business?</h2>
           <p className="text-xl text-gray-400 mb-12">
-            Experience the future of real estate operations today. 
+            Experience the future of real estate operations today.
             No credit card required to start.
           </p>
-          <Link 
+          <Link
             to="/login?signup=true"
             className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl bg-white text-[#0f172a] text-xl font-bold hover:bg-gray-200 transition-all hover:scale-105"
           >
