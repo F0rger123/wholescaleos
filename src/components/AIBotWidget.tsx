@@ -537,7 +537,7 @@ export function AIBotWidget() {
 
   return (
     <div 
-      className="fixed z-[10000] flex flex-col items-end pointer-events-none"
+      className="fixed z-[99999] flex flex-col items-end pointer-events-none"
       style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
     >
       

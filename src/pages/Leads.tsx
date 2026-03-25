@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, Lead, LeadStatus, calculateDealScore, calculatePriorityScore, generateNextAction, STATUS_LABELS, STATUS_FLOW } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import { geocodeAddress } from '../lib/geocoding';
@@ -13,7 +13,7 @@ import {
   Target, Zap, BarChart3, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
   Trash, AlertTriangle, FileText as ScriptIcon, Folder,
-  Share2, UserMinus
+  Share2, UserMinus, ExternalLink
 } from 'lucide-react';
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
@@ -57,6 +57,7 @@ interface CustomField {
 
 export default function Leads() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const store = useStore();
   const { leads, addLead, updateLead, deleteLead, teamId, team, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto } = store;
   const saveStatus = (store as any).saveStatus || 'idle';
@@ -1172,21 +1173,31 @@ export default function Leads() {
                         <div className="px-4 pb-4 flex gap-2">
                            <button 
                              onClick={() => {
-                               const url = `${window.location.origin}/share/${lead.id}`;
+                               const url = `${window.location.origin}/#/share/${lead.id}`;
                                navigator.clipboard.writeText(url);
                                alert('Public lead link copied to clipboard!');
                              }}
-                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95"
+                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
                              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
                            >
-                             <Share2 size={16} /> <span className="text-sm font-bold">Share Lead</span>
+                             <Share2 size={16} className="group-hover:text-blue-500 transition-colors" /> 
+                             <span className="text-sm font-bold">Copy Link</span>
+                           </button>
+                           <button 
+                             onClick={() => navigate(`/leads/${lead.id}/share-edit`)}
+                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group text-blue-500"
+                             style={{ borderColor: 'var(--t-border)' }}
+                           >
+                             <ExternalLink size={16} className="group-hover:scale-110 transition-transform" /> 
+                             <span className="text-sm font-bold">Edit Share Page</span>
                            </button>
                            <button 
                              onClick={() => openEdit(lead)}
-                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95"
+                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
                              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
                            >
-                             <Edit2 size={16} /> <span className="text-sm font-bold">Full Edit</span>
+                             <Edit2 size={16} className="group-hover:text-blue-500 transition-colors" /> 
+                             <span className="text-sm font-bold">Full Edit</span>
                            </button>
                         </div>
 

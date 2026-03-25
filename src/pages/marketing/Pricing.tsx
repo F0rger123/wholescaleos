@@ -288,19 +288,19 @@ function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onClose}>
       <div className="w-full max-w-2xl bg-[#121a2d] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-8 border-b border-white/5 bg-[#0f172a]/50">
+        <div className="flex items-center justify-between p-6 md:p-8 border-b border-white/5 bg-[#0f172a]/50">
           <div>
-            <h3 className="text-3xl font-black italic text-white flex items-center gap-3">
-              {plan.name} <span className="text-sm font-bold text-blue-500 not-italic uppercase tracking-widest">Protocol</span>
+            <h3 className="text-2xl md:text-3xl font-black italic text-white flex items-center gap-3 text-wrap">
+              {plan.name} <span className="text-sm font-bold text-blue-500 not-italic uppercase tracking-widest block md:inline">Protocol</span>
             </h3>
-            <p className="text-gray-500 text-sm mt-1">{plan.desc}</p>
+            <p className="text-gray-500 text-xs md:text-sm mt-1">{plan.desc}</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all">
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all shrink-0">
             <X size={24} />
           </button>
         </div>
         
-        <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-10">
+        <div className="p-6 md:p-8 max-h-[60vh] md:max-h-[70vh] overflow-y-auto custom-scrollbar space-y-10">
           <div className="flex items-center justify-between p-6 rounded-3xl bg-blue-600/10 border border-blue-500/20">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-blue-400 mb-1">Price ({billingCycle})</p>

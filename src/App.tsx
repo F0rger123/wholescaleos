@@ -39,8 +39,10 @@ import Privacy from './pages/marketing/Privacy';
 import Terms from './pages/marketing/Terms';
 import Contact from './pages/marketing/Contact';
 import LeadShare from './pages/marketing/LeadShare';
+import LeadShareEditor from './pages/LeadShareEditor';
 import CRMCompare from './pages/marketing/CRMCompare';
 import Roadmap from './pages/marketing/Roadmap';
+import Integrations from './pages/marketing/Integrations';
 import ScrollToTop from './components/ScrollToTop';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -175,8 +177,8 @@ export function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/compare" element={<CRMCompare />} />
           <Route path="/roadmap" element={<Roadmap />} />
+          <Route path="/integrations" element={<Integrations />} />
         </Route>
 
         <Route path="/share/:id" element={<LeadShare />} />
@@ -206,6 +208,7 @@ export function App() {
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/imports" element={<Imports />} />
+          <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
           <Route path="/calculators" element={<Calculators />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/ai" element={<AISettings />} />

@@ -424,7 +424,13 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           </div>
           <div className="space-y-4 pt-4 border-t border-[var(--t-border)]">
             <div>
-              <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Custom AI Personality</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-[var(--t-text-muted)]">Custom AI Personality</label>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--t-warning-dim)] border border-[var(--t-warning)]/20">
+                  <AlertCircle size={10} className="text-[var(--t-warning)]" />
+                  <span className="text-[10px] font-bold text-[var(--t-warning)] uppercase tracking-wider">You are responsible for AI responses</span>
+                </div>
+              </div>
               <textarea
                 value={aiPersonality}
                 onChange={(e) => setAiPersonalityState(e.target.value)}

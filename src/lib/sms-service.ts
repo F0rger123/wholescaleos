@@ -1,7 +1,5 @@
 import { sendEmail } from './email';
 import { CARRIER_GATEWAYS } from './sms-gateways';
-import { supabase, isSupabaseConfigured } from './supabase';
-import { useStore } from '../store/useStore';
 
 export interface SMSResult {
   success: boolean;

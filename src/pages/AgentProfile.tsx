@@ -15,6 +15,7 @@ export default function AgentProfile() {
   const [agent, setAgent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     async function fetchAgent() {
@@ -163,6 +164,42 @@ END:VCARD`;
 
   return (
     <div className="min-h-screen bg-[var(--t-bg)] text-[var(--t-text)] overflow-x-hidden">
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2.5rem] p-8 max-w-sm w-full space-y-6 shadow-2xl relative">
+            <button 
+              onClick={() => setShowQRModal(false)}
+              className="absolute top-6 right-6 p-2 rounded-full bg-[var(--t-bg)] border border-[var(--t-border)] text-gray-400 hover:text-white transition-all"
+            >
+              <Sparkles size={16} />
+            </button>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-bold">Share Profile</h3>
+              <p className="text-xs text-gray-500">Scan this code to view Alex's digital business card</p>
+            </div>
+            <div className="aspect-square rounded-3xl bg-white p-6 shadow-inner flex items-center justify-center">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(window.location.href)}`} 
+                alt="Profile QR Code"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="pt-2">
+               <button 
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  setShowQRModal(false);
+                }}
+                className="w-full py-4 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20"
+               >
+                 Copy Link
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <div className="relative h-[40vh] md:h-[50vh] transition-all">
          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 opacity-80" />
@@ -341,11 +378,7 @@ END:VCARD`;
                       vCard
                     </button>
                     <button 
-                      onClick={() => {
-                        const url = window.location.href;
-                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
-                        window.open(qrUrl, '_blank');
-                      }}
+                      onClick={() => setShowQRModal(true)}
                       className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition-all"
                     >
                       <QrCode size={14} />
