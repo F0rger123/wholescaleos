@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight, Shield, Users, MessageSquare,
   LayoutDashboard, Map, Sparkles, TrendingUp, Clock, 
-  PlayCircle, BarChart3, MousePointer2, Award, Trophy
+  PlayCircle, BarChart3, Award, Trophy
 } from 'lucide-react';
 
 export default function Home() {
@@ -208,8 +208,8 @@ export default function Home() {
             {/* Lead Retention Calculator */}
             <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-indigo-500/20 shadow-2xl space-y-10 reveal delayed-1">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center text-indigo-500"><MousePointer2 size={24} /></div>
-                <h3 className="text-2xl font-black italic">Lead Retention</h3>
+                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center text-indigo-500"><TrendingUp size={24} /></div>
+                <h3 className="text-2xl font-black italic">Revenue Growth Calculator</h3>
               </div>
 
               <div className="space-y-8">

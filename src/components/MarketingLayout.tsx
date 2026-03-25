@@ -13,6 +13,7 @@ export const MarketingLayout: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showCookieConsent, setShowCookieConsent] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -22,6 +23,14 @@ export const MarketingLayout: React.FC = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const consent = localStorage.getItem('wholescale-cookie-consent');
+    if (!consent) {
+      const timer = setTimeout(() => setShowCookieConsent(true), 2000);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const getInitials = () => {
@@ -265,8 +274,8 @@ export const MarketingLayout: React.FC = () => {
             <ul className="space-y-4 text-sm text-gray-400">
               <li><Link to="/features" className="hover:text-blue-400 transition-colors">Features</Link></li>
               <li><Link to="/pricing" className="hover:text-blue-400 transition-colors">Pricing</Link></li>
-              <li><Link to="/integrations" className="hover:text-blue-400 transition-colors">Integrations</Link></li>
-              <li><Link to="/roadmap" className="hover:text-blue-400 transition-colors">Roadmap</Link></li>
+              <li><Link to="#" className="text-gray-600 cursor-not-allowed">Integrations</Link></li>
+              <li><Link to="#" className="text-gray-600 cursor-not-allowed">Roadmap</Link></li>
             </ul>
           </div>
 
@@ -285,7 +294,7 @@ export const MarketingLayout: React.FC = () => {
           <div>
             <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-gray-500">Legal</h4>
             <ul className="space-y-4 text-sm text-gray-400">
-              <li><Link to="/cookies" className="hover:text-blue-400 transition-colors">Cookie Policy</Link></li>
+              <li><Link to="/privacy" className="hover:text-blue-400 transition-colors">Cookie Policy</Link></li>
             </ul>
           </div>
         </div>
@@ -293,6 +302,47 @@ export const MarketingLayout: React.FC = () => {
           © {new Date().getFullYear()} WholeScale OS. All rights reserved.
         </div>
       </footer>
+
+      {/* Cookie Consent Banner */}
+      {showCookieConsent && (
+        <div className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-[400px] z-[200] p-6 rounded-[2rem] bg-[#1e293b] border border-blue-500/30 shadow-2xl animate-in slide-in-from-bottom-10 lg:slide-in-from-right-10 duration-500">
+           <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 shrink-0">
+                 <Settings size={24} className="animate-spin-slow" />
+              </div>
+              <div className="space-y-4">
+                 <div>
+                    <h4 className="font-bold text-white">Sovereign Data Controls</h4>
+                    <p className="text-xs text-gray-400 leading-relaxed mt-1">
+                       We use high-performance cookies to ensure the integrity of your session and provide the best OS experience.
+                    </p>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => {
+                        localStorage.setItem('wholescale-cookie-consent', 'true');
+                        setShowCookieConsent(false);
+                      }}
+                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                      Accept Protocol
+                    </button>
+                    <Link to="/privacy" className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors">Learn More</Link>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 12s linear infinite;
+        }
+      `}</style>
     </div>
   );
 };

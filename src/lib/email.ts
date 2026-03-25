@@ -54,6 +54,7 @@ export interface EmailThread {
   participants: string[];
   subject: string;
   unread: boolean;
+  isStarred: boolean;
 }
 
 export interface EmailMessage {
@@ -854,7 +855,8 @@ export async function getThread(threadId: string): Promise<EmailThread | null> {
       lastMessageAt: messages[messages.length - 1].date,
       participants,
       subject: firstMsg?.subject || 'No Subject',
-      unread: data.messages.some((m: any) => m.labelIds?.includes('UNREAD'))
+      unread: data.messages.some((m: any) => m.labelIds?.includes('UNREAD')),
+      isStarred: data.messages.some((m: any) => m.labelIds?.includes('STARRED'))
     };
 
   } catch (err) {
@@ -925,4 +927,66 @@ export async function sendMentionNotification(
   const chatUrl = window.location.origin + window.location.pathname + '#/chat';
   const template = mentionTemplate(userName, mentionedBy, channelName, messagePreview, chatUrl);
   return sendEmail({ ...template, to: email });
+}
+
+/**
+ * Modify thread labels (Gmail API)
+ */
+async function modifyThreadLabels(threadId: string, addLabelIds: string[] = [], removeLabelIds: string[] = []): Promise<boolean> {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  if (!isSupabaseConfigured || !supabase || !userId) return false;
+
+  try {
+    const { data: conn } = await supabase
+      .from('user_connections')
+      .select('refresh_token')
+      .eq('user_id', userId)
+      .eq('provider', 'google')
+      .maybeSingle();
+
+    if (!conn?.refresh_token) return false;
+
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: conn.refresh_token,
+        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
+        client_secret: "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",
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    const { access_token } = await refreshResponse.json();
+
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}/modify`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        addLabelIds,
+        removeLabelIds,
+      }),
+    });
+
+    return response.ok;
+  } catch (err) {
+    console.error('modifyThreadLabels error:', err);
+    return false;
+  }
+}
+
+export async function starThread(threadId: string) {
+  return modifyThreadLabels(threadId, ['STARRED']);
+}
+
+export async function unstarThread(threadId: string) {
+  return modifyThreadLabels(threadId, [], ['STARRED']);
+}
+
+export async function trashThread(threadId: string) {
+  return modifyThreadLabels(threadId, ['TRASH'], ['INBOX']);
 }

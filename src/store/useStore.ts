@@ -143,6 +143,7 @@ export interface TeamMember {
   email: string;
   phone: string;
   avatar: string;
+  avatarUrl?: string;
   dealsCount: number;
   revenue: number;
   presenceStatus: PresenceStatus;
@@ -166,6 +167,7 @@ export interface UserProfile {
   email: string;
   phone: string;
   avatar: string;
+  avatarUrl?: string;
   teamRole: TeamRole;
   emailVerified: boolean;
   createdAt: string;

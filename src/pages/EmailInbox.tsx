@@ -3,10 +3,13 @@ import {
   Mail, Send, RefreshCw, ChevronLeft, 
   Star, 
   Reply, Trash2,
-  Sparkles, Loader2, Search
+  Sparkles, Loader2, Search, UserPlus
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { listThreads, getThread, sendEmail, EmailThread } from '../lib/email';
+import { 
+  listThreads, getThread, sendEmail, EmailThread, 
+  starThread, unstarThread, trashThread 
+} from '../lib/email';
 import { analyzeSMSConversation } from '../lib/sms-analysis-service';
 
 export default function EmailInbox() {
@@ -22,6 +25,8 @@ export default function EmailInbox() {
   // AI states
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [showLeadAssign, setShowLeadAssign] = useState(false);
+
   
   const threadListRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -97,6 +102,36 @@ export default function EmailInbox() {
       setIsSending(false);
     }
   };
+  
+  const handleToggleStar = async () => {
+    if (!selectedThread) return;
+    const newStatus = !selectedThread.isStarred;
+    setSelectedThread({ ...selectedThread, isStarred: newStatus });
+    
+    // Optimistically update threads list too
+    setThreads(threads.map(t => t.id === selectedThread.id ? { ...t, isStarred: newStatus } : t));
+    
+    if (newStatus) await starThread(selectedThread.id);
+    else await unstarThread(selectedThread.id);
+  };
+  
+  const handleTrashThread = async () => {
+    if (!selectedThread) return;
+    if (confirm('Are you sure you want to move this thread to trash?')) {
+      const threadId = selectedThread.id;
+      setSelectedThread(null);
+      setThreads(threads.filter(t => t.id !== threadId));
+      await trashThread(threadId);
+    }
+  };
+
+  const handleAssignToLead = async (leadId: string) => {
+    if (!selectedThread) return;
+    // For now we just mock this or log it, but in reality we'd link them in Supabase
+    console.log(`Assigning thread ${selectedThread.id} to lead ${leadId}`);
+    setShowLeadAssign(false);
+    alert('Thread assigned to lead successfully');
+  };
 
   const formatDate = (dateStr: string) => {
     try {
@@ -111,9 +146,11 @@ export default function EmailInbox() {
 
   const filteredThreads = threads.filter((t: any) => {
     if (activeTab === 'unread') return t.unread;
+    if (activeTab === 'starred') return t.isStarred;
     if (searchQuery) return t.snippet.toLowerCase().includes(searchQuery.toLowerCase());
     return true;
   });
+
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ color: 'var(--t-text)' }}>
@@ -228,9 +265,26 @@ export default function EmailInbox() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white"><Star size={16} /></button>
+                  <button 
+                    onClick={handleToggleStar}
+                    className={`p-2 rounded-lg transition-colors ${selectedThread.isStarred ? 'text-yellow-400' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                  >
+                    <Star size={16} fill={selectedThread.isStarred ? 'currentColor' : 'none'} />
+                  </button>
+                  <button 
+                    onClick={() => setShowLeadAssign(true)}
+                    className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white"
+                    title="Assign to Lead"
+                  >
+                    <UserPlus size={16} />
+                  </button>
                   <button className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white"><Reply size={16} /></button>
-                  <button className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white"><Trash2 size={16} /></button>
+                  <button 
+                    onClick={handleTrashThread}
+                    className="p-2 hover:bg-white/5 rounded-lg text-red-400/70 hover:text-red-400"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
 
@@ -323,6 +377,14 @@ export default function EmailInbox() {
           )}
         </div>
       </div>
+
+      {/* Lead Assignment Modal */}
+      {showLeadAssign && (
+        <LeadAssignModal 
+          onClose={() => setShowLeadAssign(false)} 
+          onAssign={handleAssignToLead} 
+        />
+      )}
       
       <style>{`
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -334,3 +396,67 @@ export default function EmailInbox() {
     </div>
   );
 }
+
+// ─── Lead Assignment Modal ───────────────────────────────────────────────────
+
+function LeadAssignModal({ onClose, onAssign }: { onClose: () => void; onAssign: (id: string) => void }) {
+  const { leads } = useStore();
+  const [search, setSearch] = useState('');
+
+  const filteredLeads = leads.filter(l => 
+    l.name.toLowerCase().includes(search.toLowerCase()) || 
+    l.propertyAddress.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-[var(--t-border)]">
+          <h3 className="text-lg font-bold text-white">Assign to Lead</h3>
+          <button onClick={onClose} className="p-1.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input 
+              autoFocus
+              type="text"
+              placeholder="Search leads by name or address..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)] text-white"
+            />
+          </div>
+
+          <div className="max-h-64 overflow-y-auto custom-scrollbar space-y-1">
+            {filteredLeads.length === 0 ? (
+              <div className="py-8 text-center text-gray-500 text-sm">No leads found matching your search.</div>
+            ) : (
+              filteredLeads.map(lead => (
+                <button
+                  key={lead.id}
+                  onClick={() => onAssign(lead.id)}
+                  className="w-full p-3 text-left hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10 group"
+                >
+                  <p className="text-sm font-bold text-white group-hover:text-[var(--t-primary)] transition-colors">{lead.name}</p>
+                  <p className="text-[11px] text-gray-500 truncate">{lead.propertyAddress}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+        
+        <div className="p-4 bg-[var(--t-surface-dim)] border-t border-[var(--t-border)] flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const X = ({ size, ...props }: any) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;

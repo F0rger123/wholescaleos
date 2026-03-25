@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ArrowRight, Zap, Shield, Users, CreditCard, Sparkles } from 'lucide-react';
+import { Check, ArrowRight, Zap, Shield, Users, CreditCard, Sparkles, X, Info } from 'lucide-react';
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
+  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+
 
   const plans = [
     {
@@ -84,9 +86,18 @@ export default function Pricing() {
       ],
       cta: 'Go Enterprise',
       popular: false,
-      color: 'green'
+      color: 'green',
+      detailedFeatures: [
+        { category: 'Team & Infrastructure', items: ['Everything in Team', 'Unlimited members', 'Full White Label (Branded)', 'Custom Domain Integration'] },
+        { category: 'Performance', items: ['API Priority & SLA', 'Custom Training & Onboarding', 'Dedicated Success Team', 'Custom 24/7 Phone Support'] },
+      ]
     }
-  ];
+  ].map(p => ({
+    ...p,
+    detailedFeatures: p.detailedFeatures || [
+      { category: 'Features', items: p.features }
+    ]
+  }));
 
   const calculatePrice = (monthlyPrice: number) => {
     if (billingCycle === 'annual') {
@@ -141,6 +152,14 @@ export default function Pricing() {
                 Most Popular
               </div>
             )}
+            
+            <button 
+              onClick={() => setSelectedPlan(plan)}
+              className="absolute top-6 right-6 p-1.5 rounded-lg text-gray-600 hover:text-blue-400 transition-colors"
+              title="View Detailed Features"
+            >
+              <Info size={16} />
+            </button>
             
             <div className="mb-8">
               <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
@@ -251,6 +270,75 @@ export default function Pricing() {
           </div>
         </div>
       </section>
+
+      {/* Detailed Plan Modal */}
+      {selectedPlan && (
+        <PlanDetailModal 
+          plan={selectedPlan} 
+          billingCycle={billingCycle}
+          onClose={() => setSelectedPlan(null)} 
+          calculatePrice={calculatePrice}
+        />
+      )}
+    </div>
+  );
+}
+
+function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onClose}>
+      <div className="w-full max-w-2xl bg-[#121a2d] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-8 border-b border-white/5 bg-[#0f172a]/50">
+          <div>
+            <h3 className="text-3xl font-black italic text-white flex items-center gap-3">
+              {plan.name} <span className="text-sm font-bold text-blue-500 not-italic uppercase tracking-widest">Protocol</span>
+            </h3>
+            <p className="text-gray-500 text-sm mt-1">{plan.desc}</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl text-gray-400 hover:text-white transition-all">
+            <X size={24} />
+          </button>
+        </div>
+        
+        <div className="p-8 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-10">
+          <div className="flex items-center justify-between p-6 rounded-3xl bg-blue-600/10 border border-blue-500/20">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-blue-400 mb-1">Price ({billingCycle})</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-white">${calculatePrice(plan.price)}</span>
+                <span className="text-gray-500 font-bold">/ month</span>
+              </div>
+            </div>
+            <Link 
+              to={plan.name === 'Agency' ? '/contact' : '/login?signup=true'}
+              className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-blue-600/20"
+            >
+              Initialize Plan
+            </Link>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-10">
+            {plan.detailedFeatures.map((section: any, idx: number) => (
+              <div key={idx} className="space-y-4">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 border-b border-white/5 pb-2">{section.category}</h4>
+                <ul className="space-y-3">
+                  {section.items.map((item: string, i: number) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-gray-400">
+                      <Check size={16} className="text-blue-500 mt-0.5 shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-8 bg-[#0f172a]/50 border-t border-white/5 flex items-center justify-between">
+           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Built for Sovereignty.</p>
+           <button onClick={onClose} className="text-sm font-bold text-gray-400 hover:text-white transition-colors">Close Overview</button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -15,6 +15,8 @@ import AISettings from './AISettings';
 import SMSSettings from './SMSSettings';
 import ShortcutSettings from './ShortcutSettings';
 import { Keyboard } from 'lucide-react';
+import { FileUploader } from '../components/FileUploader';
+
 
 const TABS = [
   { id: 'general', label: 'General', icon: Building },
@@ -280,18 +282,23 @@ function GeneralTab() {
               <option value="America/Los_Angeles">Pacific</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm mb-1" style={{ color: 'var(--t-text-secondary)' }}>
-              <Upload size={14} className="inline mr-1" /> Logo URL
+          <div className="col-span-2">
+            <label className="block text-sm mb-2" style={{ color: 'var(--t-text-secondary)' }}>
+              <Upload size={14} className="inline mr-1" /> Company Logo
             </label>
-            <input
-              type="text"
-              value={formData.logoUrl}
-              onChange={(e) => updateField('logoUrl', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm"
-              placeholder="https://..."
-              style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
-            />
+            <div className="flex items-start gap-4">
+              {formData.logoUrl && (
+                <div className="w-20 h-20 rounded-xl overflow-hidden border border-[var(--t-border)] shrink-0">
+                  <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <FileUploader
+                bucket="team-logos"
+                onUploadComplete={(url) => updateField('logoUrl', url)}
+                label=""
+                className="flex-1"
+              />
+            </div>
           </div>
         </div>
 
@@ -434,6 +441,34 @@ function ProfileTab() {
           </div>
         )}
       </div>
+
+      {/* Profile Photo Upload */}
+      <div className="rounded-2xl p-6 border" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+        <h3 className="text-sm font-bold flex items-center gap-2 mb-4">
+          <Upload size={16} className="text-blue-500" /> Profile Photo
+        </h3>
+        <div className="flex items-start gap-6">
+          <div className="w-24 h-24 rounded-2xl bg-[var(--t-bg)] border border-[var(--t-border)] flex items-center justify-center overflow-hidden shrink-0">
+            {currentUser?.avatarUrl ? (
+              <img src={currentUser.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-2xl font-bold text-[var(--t-text-muted)]">{currentUser?.avatar}</span>
+            )}
+          </div>
+          <div className="flex-1">
+            <FileUploader
+              bucket="avatars"
+              onUploadComplete={(url) => updateProfile({ avatarUrl: url })}
+              label="Update your professional headshot"
+              className="max-w-sm"
+            />
+            <p className="text-[10px] text-[var(--t-text-muted)] mt-2 italic">
+              Images will be resized and optimized for performance.
+            </p>
+          </div>
+        </div>
+      </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bio & Credentials */}

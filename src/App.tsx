@@ -173,9 +173,11 @@ export function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/share/:id" element={<LeadShare />} />
-          <Route path="/agent/:name" element={<AgentProfile />} />
         </Route>
+
+        <Route path="/share/:id" element={<LeadShare />} />
+        <Route path="/agent/:name" element={<AgentProfile />} />
+
 
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -193,7 +195,7 @@ export function App() {
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/billing" element={<BillingProfile />} />
-          <Route path="/dashboard/leads" element={<Leads />} />
+          <Route path="/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<Leads />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/team" element={<Team />} />
