@@ -7,7 +7,7 @@ import {
 import { useStore } from '../store/useStore';
 import type { CalculatorType, CalculatorScenario } from '../store/useStore';
 
-export function Calculators() {
+export default function Calculators() {
   const { 
     calculatorScenarios, 
     addCalculatorScenario, 

@@ -10,7 +10,7 @@ import { sendSMS } from '../lib/sms-service';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
 
-export function SMSSettings() {
+export default function SMSSettings() {
   const [phone, setPhone] = useState('');
   const [carrier, setCarrier] = useState('Auto-Detect');
   const [autoReply, setAutoReply] = useState(false);

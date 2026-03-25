@@ -24,7 +24,7 @@ function isDatabaseSetupError(msg: string): boolean {
   return patterns.some(p => lower.includes(p));
 }
 
-export function Login() {
+export default function Login() {
   const navigate = useNavigate();
   const { login, signup, clearAuthError } = useStore();
   const [mode, setMode] = useState<AuthMode>('login');

@@ -22,7 +22,7 @@ const NOTIF_ICONS: Record<AppNotification['type'], { icon: React.ElementType, co
   'system': { icon: Bell, color: 'text-slate-500', bg: 'bg-slate-500/10' },
 };
 
-export function NotificationInbox() {
+export default function NotificationInbox() {
   const navigate = useNavigate();
   const { notifications, markNotificationRead, markAllNotificationsRead, clearAllNotifications, deleteNotification } = useStore();
   

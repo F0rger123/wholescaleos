@@ -115,7 +115,7 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; lab
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
-export function Dashboard() {
+export default function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
