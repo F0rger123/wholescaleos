@@ -1,121 +1,212 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, ArrowRight, Zap, Shield, Users, CreditCard, Sparkles } from 'lucide-react';
 
 export default function Pricing() {
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
+
   const plans = [
     {
-      name: 'Starter',
-      price: '$0',
+      name: 'Free',
+      price: 0,
       desc: 'Perfect for individual agents getting started.',
       features: [
-        'Up to 100 Leads',
-        'Basic Map View',
-        'Deal Calculators',
-        'Standard Email Notifications',
-        'Mobile App Access'
+        'Dashboard, Leads & Map',
+        'Basic AI (50 credits/mo)',
+        'Email sending (Gmail)',
+        'SMS (Gmail gateway)',
+        '1 team member',
+        'Standard Support'
       ],
-      cta: 'Start for Free',
-      popular: false
+      cta: 'Get Started',
+      popular: false,
+      color: 'gray'
     },
     {
-      name: 'Professional',
-      price: '$99',
-      desc: 'Advanced tools for growing real estate teams.',
+      name: 'Solo',
+      price: 27,
+      desc: 'Advanced tools for the solo power user.',
       features: [
-        'Unlimited Leads',
-        'Full AI SMS Automation',
-        'Suggested Replies Hub',
-        'Team Presence & Chat',
-        'Google Calendar Sync',
+        'Everything in Free',
+        'Unlimited AI credits',
+        'SMS (Brevo/Twilio ready)',
+        'Voice AI & Call Scripts',
+        'Email Templates',
+        'Lead Scoring Engine'
+      ],
+      cta: 'Start Solo Trial',
+      popular: false,
+      color: 'blue'
+    },
+    {
+      name: 'Pro',
+      price: 97,
+      desc: 'The sweet spot for growing teams.',
+      features: [
+        'Everything in Solo',
+        'Up to 5 team members',
+        'Analytics Dashboard',
+        'Advanced AI Automations',
+        'API Access',
         'Priority Support'
       ],
-      cta: 'Start Free Trial',
-      popular: true
+      cta: 'Go Pro Now',
+      popular: true,
+      color: 'indigo'
     },
     {
-      name: 'Enterprise',
-      price: 'Custom',
-      desc: 'Seamless scale for large organizations.',
+      name: 'Team',
+      price: 197,
+      desc: 'High-velocity collaboration for agencies.',
       features: [
-        'Dedicated Success Manager',
-        'Custom AI Model Tuning',
-        'Advanced Security & SSO',
-        'API Access',
-        'White-label Options',
-        'Unlimited Team Members'
+        'Everything in Pro',
+        'Up to 20 members',
+        'Team Leaderboard',
+        'Role-based Permissions',
+        'White Labeling (Partial)',
+        'Dedicated Account Manager'
       ],
-      cta: 'Contact Sales',
-      popular: false
+      cta: 'Scale Your Team',
+      popular: false,
+      color: 'purple'
+    },
+    {
+      name: 'Agency',
+      price: 497,
+      desc: 'Full-scale enterprise infrastructure.',
+      features: [
+        'Everything in Team',
+        'Unlimited members',
+        'Full White Label (Branded)',
+        'Custom Domain Integration',
+        'API Priority & SLA',
+        'Custom Training & Onboarding'
+      ],
+      cta: 'Go Enterprise',
+      popular: false,
+      color: 'green'
     }
   ];
 
+  const calculatePrice = (monthlyPrice: number) => {
+    if (billingCycle === 'annual') {
+      // 2 months free = (10/12) of annual cost if paid monthly, but usually it's just price * 10
+      return monthlyPrice === 0 ? 0 : Math.round(monthlyPrice * 10 / 12);
+    }
+    return monthlyPrice;
+  };
+
   return (
-    <div className="pb-32">
-      <section className="pt-20 pb-20 text-center px-6">
-        <h1 className="text-4xl md:text-6xl font-bold mb-6">Simple, <span className="text-blue-500">Transparent</span> Pricing</h1>
-        <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-          Choose the plan that fits your growth. No hidden fees, no long-term contracts.
+    <div className="pb-32 bg-[#0f172a]">
+      {/* Hero Section */}
+      <section className="pt-20 pb-16 text-center px-6 relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
+        <h1 className="text-5xl md:text-7xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-indigo-100">
+          Built for <span className="text-blue-500">Every Stage</span> of Growth.
+        </h1>
+        <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
+          Choose the infrastructure that scales with your empire. Transparent pricing, no hidden fees.
         </p>
+
+        {/* Billing Toggle */}
+        <div className="flex items-center justify-center gap-4 mb-16">
+          <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-gray-500'}`}>Monthly</span>
+          <button
+            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
+            className="w-14 h-7 rounded-full bg-blue-600/20 border border-blue-500/30 p-1 relative transition-colors hover:border-blue-500"
+          >
+            <div className={`w-5 h-5 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50 transition-all duration-300 ${billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-0'}`} />
+          </button>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium ${billingCycle === 'annual' ? 'text-white' : 'text-gray-500'}`}>Annual</span>
+            <span className="px-2 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] font-bold uppercase tracking-wider">
+              2 Months Free
+            </span>
+          </div>
+        </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-8">
+      {/* Pricing Grid */}
+      <div className="max-w-[1400px] mx-auto px-6 grid md:grid-cols-3 lg:grid-cols-5 gap-6">
         {plans.map((plan, idx) => (
           <div
             key={idx}
-            className={`relative p-8 rounded-3xl border transition-all hover:scale-105 duration-300 ${plan.popular
-                ? 'bg-[#1e293b] border-blue-500 shadow-2xl shadow-blue-500/10 z-10'
-                : 'bg-[#0b1120] border-white/5'
+            className={`relative flex flex-col p-8 rounded-[2.5rem] border transition-all duration-500 hover:-translate-y-2 ${plan.popular
+              ? 'bg-[#1e293b] border-blue-500 shadow-2xl shadow-blue-500/20 z-10 scale-105'
+              : 'bg-[#121a2d] border-white/5 hover:border-white/10'
               }`}
           >
             {plan.popular && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-blue-500 text-white text-xs font-bold uppercase tracking-wider">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">
                 Most Popular
               </div>
             )}
+            
             <div className="mb-8">
-              <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+              <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+                {plan.name}
+                {plan.name === 'Agency' && <Sparkles size={16} className="text-yellow-400" />}
+              </h3>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold">{plan.price}</span>
-                {plan.price !== 'Custom' && <span className="text-gray-400 text-sm">/mo</span>}
+                <span className="text-3xl font-black">${calculatePrice(plan.price)}</span>
+                <span className="text-gray-500 text-sm font-medium">/mo</span>
               </div>
-              <p className="text-gray-400 text-sm mt-4">{plan.desc}</p>
+              <p className="text-gray-500 text-xs mt-4 leading-relaxed font-medium">{plan.desc}</p>
             </div>
 
-            <ul className="space-y-4 mb-10">
+            <div className="h-px bg-white/5 mb-8" />
+
+            <ul className="space-y-4 mb-10 flex-1">
               {plan.features.map((feature, fIdx) => (
-                <li key={fIdx} className="flex items-start gap-3 text-sm text-gray-300">
-                  <Check size={18} className="text-blue-500 mt-0.5 shrink-0" />
+                <li key={fIdx} className="flex items-start gap-3 text-xs text-gray-400 leading-tight">
+                  <Check size={14} className="text-blue-500 mt-0.5 shrink-0" />
                   {feature}
                 </li>
               ))}
             </ul>
 
             <Link
-              to={plan.price === 'Custom' ? '/contact' : '/login?signup=true'}
-              className={`block w-full py-4 rounded-xl text-center font-bold transition-all ${plan.popular
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg'
-                  : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+              to={plan.name === 'Agency' ? '/contact' : '/login?signup=true'}
+              className={`group flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${plan.popular
+                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30'
+                : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
                 }`}
             >
               {plan.cta}
+              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
         ))}
       </div>
 
-      <section className="mt-32 max-w-3xl mx-auto px-6">
-        <h2 className="text-2xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
-        <div className="space-y-6">
-          {[
-            { q: 'Can I change plans later?', a: 'Yes, you can upgrade or downgrade your plan at any time from your account settings.' },
-            { q: 'Is there a free trial?', a: 'Yes! All plans come with a 14-day free trial, no credit card required.' },
-            { q: 'Do you offer annual discounts?', a: 'We do! Save 20% when you pay annually for any Professional or Enterprise plan.' }
-          ].map((faq, i) => (
-            <div key={i} className="p-6 rounded-2xl bg-[#1e293b]/30 border border-white/5">
-              <h4 className="font-bold mb-2 text-white">{faq.q}</h4>
-              <p className="text-gray-400 text-sm">{faq.a}</p>
-            </div>
-          ))}
+      {/* Trust Badges */}
+      <section className="mt-32 max-w-6xl mx-auto px-6 text-center">
+        <div className="inline-flex items-center gap-8 py-8 px-12 rounded-[2rem] bg-white/5 border border-white/5 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
+          <div className="flex items-center gap-2 font-bold text-sm"><Shield size={18} /> Enterprise Secure</div>
+          <div className="flex items-center gap-2 font-bold text-sm"><CreditCard size={18} /> Secure Checkout</div>
+          <div className="flex items-center gap-2 font-bold text-sm"><Zap size={18} /> Instant Onboarding</div>
+          <div className="flex items-center gap-2 font-bold text-sm hidden md:flex"><Users size={18} /> 5k+ Active Users</div>
+        </div>
+      </section>
+
+      {/* ROI Callout */}
+      <section className="mt-32 max-w-5xl mx-auto px-6">
+        <div className="rounded-[3rem] p-12 bg-gradient-to-br from-blue-600/20 to-indigo-600/10 border border-blue-500/20 text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <Sparkles size={120} />
+          </div>
+          <h2 className="text-3xl font-extrabold mb-6">Unsure which plan is right for you?</h2>
+          <p className="text-gray-400 mb-10 max-w-2xl mx-auto">
+            Our enterprise consultants can help you architect the perfect system for your team's specific workflow and scale.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Link to="/contact" className="px-8 py-4 rounded-xl bg-white text-[#0f172a] font-bold transition-all hover:scale-105">
+              Talk to an Expert
+            </Link>
+            <Link to="/features" className="px-8 py-4 rounded-xl bg-white/5 hover:bg-white/10 font-bold border border-white/10 transition-all">
+              Compare Features
+            </Link>
+          </div>
         </div>
       </section>
     </div>
