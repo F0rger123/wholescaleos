@@ -3,6 +3,7 @@ import {
   Map as MapIcon, Mail, MessageSquare, 
   Smartphone, Globe, LayoutDashboard, Sparkles
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Features() {
   const sections = [
@@ -124,9 +125,12 @@ export default function Features() {
            <div className="relative z-10 space-y-10">
              <h2 className="text-4xl md:text-7xl font-black italic text-white tracking-tighter">Stop Juggling. <br /> Start Compounding.</h2>
              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-               <button className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white text-blue-600 text-xl font-black hover:scale-105 active:scale-95 transition-all shadow-xl">
+               <Link 
+                 to="/pricing"
+                 className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white text-blue-600 text-xl font-black hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center justify-center"
+               >
                  Initialize Your OS
-               </button>
+               </Link>
                <button className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-bold backdrop-blur-md">
                  Book Enterprise Demo
                </button>

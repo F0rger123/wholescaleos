@@ -101,11 +101,33 @@ export const CursorEffects: React.FC = () => {
         <div 
           className="absolute inset-0 bg-black"
           style={{
-            opacity: 0.8,
-            maskImage: `radial-gradient(circle ${cursorSettings.size}px at ${mousePos.x}px ${mousePos.y}px, transparent 100%, black 100%)`,
-            WebkitMaskImage: `radial-gradient(circle ${cursorSettings.size}px at ${mousePos.x}px ${mousePos.y}px, transparent 100%, black 100%)`,
+            opacity: 0.9,
+            maskImage: `radial-gradient(circle ${cursorSettings.size}px at ${mousePos.x}px ${mousePos.y}px, transparent, black 100%)`,
+            WebkitMaskImage: `radial-gradient(circle ${cursorSettings.size}px at ${mousePos.x}px ${mousePos.y}px, transparent, black 100%)`,
           }}
         />
+      )}
+
+      {/* Trail Effect */}
+      {cursorSettings.type === 'trail' && (
+        <div className="absolute inset-0">
+          {[...Array(8)].map((_, i) => (
+            <div 
+              key={i}
+              className="absolute rounded-full pointer-events-none transition-all duration-300 ease-out"
+              style={{
+                width: cursorSettings.size / (i + 1),
+                height: cursorSettings.size / (i + 1),
+                left: mousePos.x,
+                top: mousePos.y,
+                backgroundColor: cursorSettings.color,
+                opacity: (cursorSettings.intensity / 100) * (1 - i / 8),
+                transform: `translate(-50%, -50%)`,
+                transitionDelay: `${i * 20}ms`
+              }}
+            />
+          ))}
+        </div>
       )}
 
       {/* Sparkles Effect (Canvas) */}

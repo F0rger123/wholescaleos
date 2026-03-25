@@ -12,7 +12,8 @@ import {
   Users, Mic, Play, Pause, Square, Bot as Brain,
   Target, Zap, BarChart3, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
-  Trash, AlertTriangle, FileText as ScriptIcon, Folder
+  Trash, AlertTriangle, FileText as ScriptIcon, Folder,
+  Share2, UserMinus
 } from 'lucide-react';
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
@@ -1146,14 +1147,47 @@ export default function Leads() {
                             { i: DollarSign, l: 'Offer', v: fmt$(lead.offerAmount || 0) },
                             { i: Calendar, l: 'Created', v: fmtDate(lead.createdAt) }
                           ].map((x, i) => (
-                            <div key={i} className="p-3 rounded-lg" style={{ backgroundColor: 'var(--t-surface-dim)' }}>
-                              <div className="flex items-center gap-1 text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>
-                                <x.i className="w-3 h-3" />
-                                {x.l}
+                            <div key={i} className="p-3 rounded-lg group relative" style={{ backgroundColor: 'var(--t-surface-dim)' }}>
+                              <div className="flex items-center justify-between gap-1 text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>
+                                <div className="flex items-center gap-1">
+                                  <x.i className="w-3 h-3" />
+                                  {x.l}
+                                </div>
+                                {x.l === 'Email' && lead.email && (
+                                  <button 
+                                    onClick={() => updateLead(lead.id, { email: '' })}
+                                    className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-[var(--t-error-dim)] hover:text-[var(--t-error)] rounded transition-all"
+                                    title="Unassign Email"
+                                  >
+                                    <UserMinus size={10} />
+                                  </button>
+                                )}
                               </div>
                               <p className="text-sm truncate" style={{ color: 'var(--t-text)' }}>{x.v}</p>
                             </div>
                           ))}
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="px-4 pb-4 flex gap-2">
+                           <button 
+                             onClick={() => {
+                               const url = `${window.location.origin}/share/${lead.id}`;
+                               navigator.clipboard.writeText(url);
+                               alert('Public lead link copied to clipboard!');
+                             }}
+                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95"
+                             style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                           >
+                             <Share2 size={16} /> <span className="text-sm font-bold">Share Lead</span>
+                           </button>
+                           <button 
+                             onClick={() => openEdit(lead)}
+                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95"
+                             style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                           >
+                             <Edit2 size={16} /> <span className="text-sm font-bold">Full Edit</span>
+                           </button>
                         </div>
 
                         {/* Dual Maps: Satellite & Street View */}

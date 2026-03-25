@@ -1,5 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { 
+  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
+  CartesianGrid, LineChart, Line, BarChart, Bar 
+} from 'recharts';
 import {
   ArrowRight, Shield, Users, MessageSquare,
   LayoutDashboard, Map, Sparkles, TrendingUp, Clock, 
@@ -10,6 +14,8 @@ export default function Home() {
   const [adminHours, setAdminHours] = useState(20);
   const [leadsPerMonth, setLeadsPerMonth] = useState(100);
   const [dealValue, setDealValue] = useState(15000);
+  const [timeframe, setTimeframe] = useState(90);
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('area');
 
   const calculateTimeSaved = () => {
     const savedPerWeek = adminHours * 0.2;
@@ -28,6 +34,22 @@ export default function Home() {
 
   const timeSaved = calculateTimeSaved();
   const retention = calculateRetention();
+
+  const chartData = useMemo(() => {
+    const data = [];
+    const monthlyExtra = (leadsPerMonth * 0.2) * (dealValue * 0.05); // 20% more leads * 5% conv
+    const steps = timeframe === 30 ? 4 : timeframe === 60 ? 8 : 12; // weeks
+    
+    for (let i = 0; i <= steps; i++) {
+       const weekRevenue = (monthlyExtra / 4) * i;
+       data.push({
+         name: `Week ${i}`,
+         revenue: Math.round(weekRevenue),
+         traditional: Math.round(weekRevenue * 0.4)
+       });
+    }
+    return data;
+  }, [leadsPerMonth, dealValue, timeframe]);
 
   return (
     <div className="flex flex-col bg-[#0f172a] text-white selection:bg-blue-500/30">
@@ -206,42 +228,124 @@ export default function Home() {
             </div>
 
             {/* Lead Retention Calculator */}
-            <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-indigo-500/20 shadow-2xl space-y-10 reveal delayed-1">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center text-indigo-500"><TrendingUp size={24} /></div>
-                <h3 className="text-2xl font-black italic">Revenue Growth Calculator</h3>
+            <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-indigo-500/20 shadow-2xl space-y-10 reveal delayed-1 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                 <TrendingUp size={120} className="text-indigo-500" />
+              </div>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 flex items-center justify-center text-indigo-500"><TrendingUp size={24} /></div>
+                  <h3 className="text-2xl font-black italic">Revenue Growth</h3>
+                </div>
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                   {[30, 60, 90].map(d => (
+                     <button 
+                       key={d}
+                       onClick={() => setTimeframe(d)}
+                       className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${timeframe === d ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                     >
+                       {d}D
+                     </button>
+                   ))}
+                </div>
               </div>
 
-              <div className="space-y-8">
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-[#4b5563] mb-4">Leads Per Month</label>
-                  <input 
-                    type="range" min="1" max="500" value={leadsPerMonth}
-                    onChange={(e) => setLeadsPerMonth(parseInt(e.target.value))}
-                    className="w-full accent-indigo-500 h-1 bg-white/5 rounded-full appearance-none cursor-pointer"
-                  />
-                  <div className="mt-4 text-3xl font-black text-indigo-500">{leadsPerMonth} <span className="text-sm text-gray-400">Leads</span></div>
-                </div>
+              <div className="grid lg:grid-cols-2 gap-10 relative z-10">
+                <div className="space-y-8">
+                  <div>
+                    <div className="flex justify-between mb-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#4b5563]">Leads / Month</label>
+                      <span className="text-xs font-bold text-indigo-400">{leadsPerMonth}</span>
+                    </div>
+                    <input 
+                      type="range" min="1" max="500" value={leadsPerMonth}
+                      onChange={(e) => setLeadsPerMonth(parseInt(e.target.value))}
+                      className="w-full accent-indigo-500 h-1 bg-white/5 rounded-full appearance-none cursor-pointer"
+                    />
+                  </div>
 
-                <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-6">
-                  <div className="space-y-4">
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-[#4b5563]">Avg. Profit / Deal</label>
+                  <div>
+                    <div className="flex justify-between mb-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#4b5563]">Avg. Profit / Deal</label>
+                      <span className="text-xs font-bold text-indigo-400">${dealValue.toLocaleString()}</span>
+                    </div>
                     <input 
                       type="range" min="5000" max="50000" step="5000" value={dealValue}
                       onChange={(e) => setDealValue(parseInt(e.target.value))}
                       className="w-full accent-indigo-500 h-1 bg-white/5 rounded-full appearance-none cursor-pointer"
                     />
-                    <div className="text-sm font-bold text-indigo-400">${dealValue.toLocaleString()}</div>
                   </div>
-                  <div className="flex justify-between items-center pt-4 border-t border-white/5">
-                    <span className="text-xs font-bold text-gray-500 uppercase">Leads Saved / Mo</span>
-                    <span className="text-xl font-black text-white">{retention.extra}</span>
+
+                  <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-4">
+                     <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500 font-bold uppercase tracking-widest">Added Revenue ({timeframe} Days)</span>
+                        <span className="text-xl font-black text-indigo-500">${(parseInt(retention.revenue.replace(/,/g, '')) * (timeframe/30)).toLocaleString()}+</span>
+                     </div>
+                     <p className="text-[10px] text-gray-500 italic leading-relaxed">
+                        "OS-powered triage captures 20% more deals by eliminating lead decay."
+                     </p>
                   </div>
-                  <p className="text-[10px] text-gray-500 italic">"Without AI, you lose 30% of leads. With WholeScale, retain 90%."</p>
-                  <div className="pt-4 border-t border-white/5 flex justify-between items-center">
-                    <span className="text-xs font-black text-indigo-400 uppercase tracking-widest">Est. Added Revenue</span>
-                    <span className="text-2xl font-black text-indigo-500">${retention.revenue}+</span>
-                  </div>
+                </div>
+
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Projected Advantage</span>
+                      <div className="flex gap-2">
+                         {(['area', 'bar', 'line'] as const).map(t => (
+                           <button 
+                             key={t}
+                             onClick={() => setChartType(t)}
+                             className={`p-2 rounded-lg border transition-all ${chartType === t ? 'bg-indigo-600/20 border-indigo-500/50 text-white' : 'bg-white/5 border-white/5 text-gray-600 hover:text-white'}`}
+                           >
+                              {t === 'area' ? <BarChart3 size={12} /> : t === 'bar' ? <BarChart3 size={12} className="rotate-90" /> : <TrendingUp size={12} />}
+                           </button>
+                         ))}
+                      </div>
+                   </div>
+                   
+                   <div className="h-[220px] w-full bg-[#0b1120]/50 rounded-2xl border border-white/5 p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                         {chartType === 'area' ? (
+                           <AreaChart data={chartData}>
+                              <defs>
+                                <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                              <XAxis dataKey="name" hide />
+                              <YAxis hide />
+                              <Tooltip 
+                                contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
+                                itemStyle={{ color: '#fff' }}
+                              />
+                              <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                           </AreaChart>
+                         ) : chartType === 'bar' ? (
+                           <BarChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                              <XAxis dataKey="name" hide />
+                              <YAxis hide />
+                              <Tooltip 
+                                contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
+                              />
+                              <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                           </BarChart>
+                         ) : (
+                           <LineChart data={chartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                              <XAxis dataKey="name" hide />
+                              <YAxis hide />
+                              <Tooltip 
+                                contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
+                              />
+                              <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} dot={false} />
+                           </LineChart>
+                         )}
+                      </ResponsiveContainer>
+                   </div>
                 </div>
               </div>
             </div>

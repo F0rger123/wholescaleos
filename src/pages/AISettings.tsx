@@ -16,6 +16,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const [aiName, setAiName] = useState('OS Bot');
+  const [aiPersonality, setAiPersonalityState] = useState('');
   const [aiTone, setAiTone] = useState('friendly');
   const [showWidget, setShowWidget] = useState(false);
   const [aiRules, setAiRules] = useState<any[]>([]);
@@ -23,7 +24,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   const [newAction, setNewAction] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [enabledPrebuilt, setEnabledPrebuilt] = useState<string[]>([]);
-  const { currentUser, setShowFloatingAIWidget } = useStore();
+  const { currentUser, setShowFloatingAIWidget, aiName: storeAiName, setAiName: setStoreAiName, aiPersonality: storeAiPersonality, setAiPersonality: setStoreAiPersonality } = useStore();
 
   const handleToggleWidget = (val: boolean) => {
     setShowWidget(val);
@@ -100,6 +101,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         
         const localAiName = localStorage.getItem('user_ai_name');
         if (localAiName) setAiName(localAiName);
+        else setAiName(storeAiName);
+
+        const localAiPersonality = localStorage.getItem('user_ai_personality');
+        if (localAiPersonality) setAiPersonalityState(localAiPersonality);
+        else setAiPersonalityState(storeAiPersonality);
+
         const localAiTone = localStorage.getItem('user_ai_tone');
         if (localAiTone) setAiTone(localAiTone);
         const localShowWidget = localStorage.getItem('user_show_floating_widget');
@@ -207,7 +214,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         await supabase.from('profiles').update({
           settings: {
             ...(profile?.settings || {}),
-            ai_name: aiName, ai_tone: aiTone, show_floating_widget: showWidget,
+            ai_name: aiName, ai_personality: aiPersonality, ai_tone: aiTone, show_floating_widget: showWidget,
             active_ai_provider: provider, active_ai_model: model,
             updated_at: new Date().toISOString()
           }
@@ -215,6 +222,10 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
         localStorage.setItem('user_ai_provider', provider);
         localStorage.setItem('user_ai_model', model);
+        localStorage.setItem('user_ai_name', aiName);
+        setStoreAiName(aiName);
+        localStorage.setItem('user_ai_personality', aiPersonality);
+        setStoreAiPersonality(aiPersonality);
         setSaveResult({ success: true, message: 'AI settings saved successfully.' });
         window.dispatchEvent(new CustomEvent('ai-settings-updated'));
       } catch (err: any) {
@@ -227,6 +238,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       localStorage.setItem('user_ai_provider', provider);
       localStorage.setItem('user_ai_model', model);
       localStorage.setItem('user_ai_name', aiName);
+      setStoreAiName(aiName);
+      localStorage.setItem('user_ai_personality', aiPersonality);
+      setStoreAiPersonality(aiPersonality);
       localStorage.setItem('user_ai_tone', aiTone);
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
       setSaveResult({ success: true, message: 'AI settings saved locally.' });
@@ -406,6 +420,21 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 <option value="direct">Direct (Concise & Efficient)</option>
                 <option value="custom">Custom (Follow Guidelines)</option>
               </select>
+            </div>
+          </div>
+          <div className="space-y-4 pt-4 border-t border-[var(--t-border)]">
+            <div>
+              <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Custom AI Personality</label>
+              <textarea
+                value={aiPersonality}
+                onChange={(e) => setAiPersonalityState(e.target.value)}
+                placeholder="e.g., 'Be friendly, use emojis, and call me boss. Focus on real estate ROI.'"
+                rows={4}
+                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
+              />
+              <p className="mt-1.5 text-xs text-[var(--t-text-muted)] italic">
+                This personality will be used to guide how the AI assistant talks and behaves.
+              </p>
             </div>
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--t-surface)]/50 rounded-xl border border-[var(--t-border)]">

@@ -519,6 +519,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   // Get AI Personality from profiles.settings
   let aiName = localStorage.getItem('user_ai_name') || 'OS Bot';
   let aiTone = localStorage.getItem('user_ai_tone') || 'friendly';
+  let aiPersonality = localStorage.getItem('user_ai_personality') || '';
 
   if (userId && isSupabaseConfigured && supabase) {
     try {
@@ -529,13 +530,14 @@ export async function processPrompt(prompt: string, context: Record<string, any>
         .maybeSingle();
       
       if (profile?.settings?.ai_name) aiName = profile.settings.ai_name;
+      if (profile?.settings?.ai_personality) aiPersonality = profile.settings.ai_personality;
       if (profile?.settings?.ai_tone) aiTone = profile.settings.ai_tone;
     } catch (err) {}
   }
 
   const enhancedContext = {
     ...context,
-    userPreferences: { aiName, aiTone },
+    userPreferences: { aiName, aiTone, aiPersonality },
     todaysSchedule: schedule,
     todaysTasks: todaysTasks,
     allTasks: allTasks,
@@ -554,6 +556,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
   const systemInstruction = `You are ${aiName}, a highly intelligent AI assistant deeply integrated into WholeScale OS — a real estate CRM platform.
 Your personality: ${toneInstructions[aiTone as keyof typeof toneInstructions] || toneInstructions.friendly}
+${aiPersonality ? `Additional Personality Guidelines: ${aiPersonality}` : ''}
 
 ## YOUR ROLE
 You help real estate wholesalers and agents manage leads, coordinate with their team, send SMS messages, track tasks, and get insights about their pipeline. You have full access to the user's data (leads, team, tasks, calendar) via the context provided.

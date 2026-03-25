@@ -274,7 +274,7 @@ export const MarketingLayout: React.FC = () => {
             <ul className="space-y-4 text-sm text-gray-400">
               <li><Link to="/features" className="hover:text-blue-400 transition-colors">Features</Link></li>
               <li><Link to="/pricing" className="hover:text-blue-400 transition-colors">Pricing</Link></li>
-              <li><Link to="#" className="text-gray-600 cursor-not-allowed">Integrations</Link></li>
+              <li><Link to="/integrations" className="hover:text-blue-400 transition-colors">Integrations</Link></li>
               <li><Link to="#" className="text-gray-600 cursor-not-allowed">Roadmap</Link></li>
             </ul>
           </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  Phone, Mail, Globe, Facebook, Instagram, Linkedin, Twitter, 
+  Mail, Globe, Facebook, Instagram, Linkedin, Twitter, 
   MapPin, Award, Star, 
   Download, QrCode, MessageSquare, ShieldCheck, ExternalLink,
   ChevronLeft, Loader2, Sparkles
@@ -333,7 +333,6 @@ END:VCARD`;
                     {agent.socialLinks?.x && <a href={agent.socialLinks.x} className="p-3 rounded-full bg-gray-600/10 text-gray-400 hover:bg-gray-100 hover:text-black transition-all"><Twitter size={20} /></a>}
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
                     <button 
                       onClick={generateVCard}
                       className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition-all"
@@ -341,11 +340,17 @@ END:VCARD`;
                       <Download size={14} />
                       vCard
                     </button>
-                    <button className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition-all">
+                    <button 
+                      onClick={() => {
+                        const url = window.location.href;
+                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+                        window.open(qrUrl, '_blank');
+                      }}
+                      className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:border-white transition-all"
+                    >
                       <QrCode size={14} />
                       QR Code
                     </button>
-                  </div>
                 </div>
               </div>
               
