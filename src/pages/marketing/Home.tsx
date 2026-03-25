@@ -1,21 +1,10 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useStore } from '../../store/useStore';
+import { Link } from 'react-router-dom';
 import {
   ArrowRight, Shield, Zap, Users, MessageSquare,
-  LayoutDashboard, Map, Calculator, Calendar
+  LayoutDashboard, Map
 } from 'lucide-react';
 
 export default function Home() {
-  const { isAuthenticated } = useStore();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
