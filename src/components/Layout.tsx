@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
 import { NotificationPanel } from './NotificationPanel';
@@ -14,7 +14,7 @@ import {
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
-  Layout as LayoutIcon, CheckCircle
+  Layout as LayoutIcon, CheckCircle, Mail
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -50,6 +50,7 @@ export function Layout() {
     Messages: [
       { to: '/notifications', label: 'Notification Inbox', icon: Bell },
       { to: '/sms', label: 'SMS', icon: Smartphone },
+      { to: '/email', label: 'Email', icon: Mail },
       { to: '/chat', label: 'Team Chat', icon: MessageSquare },
       { to: '/ai-test', label: aiName || 'OS Bot', icon: Bot },
     ],
@@ -294,12 +295,13 @@ export function Layout() {
         }}
       >
         {/* Logo */}
-        <div
-          className="flex items-center gap-3 px-5 py-5 border-b"
+        <Link
+          to="/"
+          className="flex items-center gap-3 px-5 py-5 border-b hover:bg-[var(--t-surface-hover)] transition-colors group"
           style={{ borderColor: 'var(--t-sidebar-border)' }}
         >
           <div
-            className="flex items-center justify-center w-10 h-10 rounded-xl text-white shrink-0"
+            className="flex items-center justify-center w-10 h-10 rounded-xl text-white shrink-0 group-hover:scale-110 transition-transform"
             style={{ background: 'var(--t-primary)' }}
           >
             <Building2 size={22} />
@@ -317,7 +319,7 @@ export function Layout() {
               </p>
             </div>
           )}
-        </div>
+        </Link>
 
         {/* Team Switcher - Fixed with smooth scrolling dropdown */}
         {sidebarOpen && (

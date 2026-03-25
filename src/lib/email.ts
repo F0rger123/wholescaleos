@@ -42,6 +42,31 @@ export interface EmailPayload {
   text?: string;
   from?: string;
   replyTo?: string;
+  threadId?: string;
+}
+
+export interface EmailThread {
+  id: string;
+  snippet: string;
+  historyId: string;
+  messages: EmailMessage[];
+  lastMessageAt: string;
+  participants: string[];
+  subject: string;
+  unread: boolean;
+}
+
+export interface EmailMessage {
+  id: string;
+  threadId: string;
+  labelIds: string[];
+  snippet: string;
+  payload: any;
+  from: string;
+  to: string;
+  subject: string;
+  date: string;
+  body: string;
 }
 
 export interface EmailResult {
@@ -703,6 +728,138 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error('Email send error (Gmail API):', msg);
     return { success: false, error: msg };
+  }
+}
+
+/**
+ * Fetch list of email threads from Gmail
+ */
+export async function listThreads(maxResults = 20): Promise<{ threads: any[], error?: string }> {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+
+  if (!isSupabaseConfigured || !supabase || !userId) return { threads: [] };
+
+  try {
+    const { data: conn } = await supabase
+      .from('user_connections')
+      .select('refresh_token')
+      .eq('user_id', userId)
+      .eq('provider', 'google')
+      .maybeSingle();
+
+    if (!conn?.refresh_token) return { threads: [], error: 'Gmail not connected' };
+
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: conn.refresh_token,
+        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
+        client_secret: "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",
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    const { access_token } = await refreshResponse.json();
+
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads?maxResults=${maxResults}`, {
+      headers: { 'Authorization': `Bearer ${access_token}` }
+    });
+
+    if (!response.ok) throw new Error('Gmail API failed');
+
+    const result = await response.json();
+    return { threads: result.threads || [] };
+  } catch (err) {
+    return { threads: [], error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+/**
+ * Get full thread details including messages
+ */
+export async function getThread(threadId: string): Promise<EmailThread | null> {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  if (!supabase || !userId) return null;
+
+  try {
+    const { data: conn } = await supabase
+      .from('user_connections')
+      .select('refresh_token')
+      .eq('user_id', userId)
+      .eq('provider', 'google')
+      .maybeSingle();
+
+    if (!conn?.refresh_token) return null;
+
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: conn.refresh_token,
+        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
+        client_secret: "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",
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    const { access_token } = await refreshResponse.json();
+
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`, {
+      headers: { 'Authorization': `Bearer ${access_token}` }
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    
+    // Process messages into our cleaner format
+    const messages = data.messages.map((m: any) => {
+      const headers = m.payload.headers;
+      const getHeader = (name: string) => headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+      
+      let body = '';
+      if (m.payload.parts) {
+        const textPart = m.payload.parts.find((p: any) => p.mimeType === 'text/plain');
+        const htmlPart = m.payload.parts.find((p: any) => p.mimeType === 'text/html');
+        const data = (htmlPart || textPart || m.payload)?.body?.data || '';
+        if (data) body = atob(data.replace(/-/g, '+').replace(/_/g, '/'));
+      } else {
+        const data = m.payload.body?.data || '';
+        if (data) body = atob(data.replace(/-/g, '+').replace(/_/g, '/'));
+      }
+
+      return {
+        id: m.id,
+        threadId: m.threadId,
+        from: getHeader('From'),
+        to: getHeader('To'),
+        subject: getHeader('Subject'),
+        date: getHeader('Date'),
+        snippet: m.snippet,
+        body
+      };
+    });
+
+    const firstMsg = messages[0];
+    const participants = Array.from(new Set(messages.map((m: any) => m.from))).filter(p => p !== store.currentUser?.email) as string[];
+
+    return {
+      id: data.id,
+      historyId: data.historyId,
+      messages,
+      snippet: data.messages[data.messages.length - 1].snippet,
+      lastMessageAt: messages[messages.length - 1].date,
+      participants,
+      subject: firstMsg?.subject || 'No Subject',
+      unread: data.messages.some((m: any) => m.labelIds?.includes('UNREAD'))
+    };
+
+  } catch (err) {
+    console.error('getThread error:', err);
+    return null;
   }
 }
 

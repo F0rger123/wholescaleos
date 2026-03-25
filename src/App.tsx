@@ -25,6 +25,8 @@ import { AISettings } from './pages/AISettings';
 import { SMSSettings } from './pages/SMSSettings';
 import { SMSInbox } from './pages/SMSInbox';
 import { NotificationInbox } from './pages/NotificationInbox';
+import EmailInbox from './pages/EmailInbox';
+import AgentProfile from './pages/AgentProfile';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 import { CursorEffects } from './components/CursorEffects';
 import { MarketingLayout } from './components/MarketingLayout';
@@ -161,6 +163,7 @@ export function App() {
           <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
+          <Route path="/agent/:name" element={<AgentProfile />} />
         </Route>
 
         {/* Public routes */}
@@ -192,6 +195,7 @@ export function App() {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/ai-test" element={<AITest />} />
           <Route path="/sms" element={<SMSInbox />} />
+          <Route path="/email" element={<EmailInbox />} />
           <Route path="/notifications" element={<NotificationInbox />} />
         </Route>
 

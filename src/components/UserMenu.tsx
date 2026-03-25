@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { LogOut, Settings, ChevronDown, User } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, User, Home, Globe } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 export function UserMenu() {
@@ -73,6 +73,26 @@ export function UserMenu() {
             <div className="p-1">
               <button
                 onClick={() => {
+                  navigate('/');
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
+                style={{ color: 'var(--t-text-secondary)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                  e.currentTarget.style.color = 'var(--t-text)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--t-text-secondary)';
+                }}
+              >
+                <Home size={16} />
+                Go Home
+              </button>
+
+              <button
+                onClick={() => {
                   navigate('/settings');
                   setIsOpen(false);
                 }}
@@ -113,6 +133,28 @@ export function UserMenu() {
               >
                 <User size={16} />
                 Profile
+              </button>
+
+              <div className="border-t my-1" style={{ borderColor: 'var(--t-border)' }} />
+
+              <button
+                onClick={() => {
+                  window.open('/', '_self');
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider font-bold rounded-lg transition-colors"
+                style={{ color: 'var(--t-text-muted)' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                  e.currentTarget.style.color = 'var(--t-primary)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--t-text-muted)';
+                }}
+              >
+                <Globe size={12} />
+                Back to wholescaleos.com
               </button>
 
               <div className="border-t my-1" style={{ borderColor: 'var(--t-border)' }} />
