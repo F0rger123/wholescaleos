@@ -9,6 +9,8 @@ import {
 import { useStore, QUICK_REACTIONS, PRESENCE_COLORS, type ChatMessage, type ChatAttachment, type ChatChannel } from '../store/useStore';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { uploadFile, generateUniqueFileName } from '../lib/storage';
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1288,7 +1290,9 @@ function MessageInput({
   const [isVoiceTyping, setIsVoiceTyping] = useState(false);
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -1389,16 +1393,36 @@ function MessageInput({
     }
   };
 
-  const handleFileAttach = () => {
-    const fileTypes: { type: ChatAttachment['type']; ext: string }[] = [
-      { type: 'document', ext: 'pdf' }, { type: 'document', ext: 'xlsx' }, { type: 'image', ext: 'png' },
-    ];
-    const ft = fileTypes[Math.floor(Math.random() * fileTypes.length)];
-    const mockFiles: ChatAttachment[] = [
-      { id: uuidv4(), url: '#', type: ft.type, name: `file_${Date.now()}.${ft.ext}`, size: Math.round(Math.random() * 5000000 + 100000) },
-    ];
-    setAttachments(prev => [...prev, ...mockFiles]);
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = generateUniqueFileName(file.name);
+    const bucket = file.type.startsWith('image/') ? 'chat-attachments' : 'chat-attachments'; // Simplified for now
+    
+    // Optimistically add to UI with a loading state or just wait for upload
+    const tempId = uuidv4();
+    try {
+      const { url, error } = await uploadFile('chat-attachments', fileName, file);
+      if (error) throw error;
+      if (url) {
+        const attachment: ChatAttachment = {
+          id: uuidv4(),
+          url,
+          type: file.type.startsWith('image/') ? 'image' : 
+                file.type.startsWith('video/') ? 'video' : 
+                file.type.startsWith('audio/') ? 'audio' : 'document',
+          name: file.name,
+          size: file.size,
+        };
+        setAttachments(prev => [...prev, attachment]);
+      }
+    } catch (err) {
+      console.error('File upload failed:', err);
+      alert('Failed to upload file');
+    }
   };
+
 
   const handleVoiceSend = (attachment: ChatAttachment) => {
     sendMessage(channelId, '🎤 Voice message', 'voice', [], null, [attachment]);
@@ -1469,11 +1493,18 @@ function MessageInput({
         <button onClick={() => setShowEmojis(!showEmojis)} className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:text-[var(--t-warning)] hover:bg-[var(--t-surface)]/80 transition-colors shrink-0 mb-0.5">
           <Smile size={18} />
         </button>
-        <button onClick={handleFileAttach} className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]/80 transition-colors shrink-0 mb-0.5"
+        <button onClick={() => fileInputRef.current?.click()} className="p-1.5 rounded-lg text-[var(--t-text-muted)] hover:bg-[var(--t-surface)]/80 transition-colors shrink-0 mb-0.5"
           style={{ color: 'var(--t-primary)' }}
         >
           <Paperclip size={18} />
         </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileAttach}
+          className="hidden"
+        />
+
 
         <textarea
           ref={inputRef}
