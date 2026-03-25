@@ -1,11 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Building2, Menu, X, ArrowRight, Github, Twitter, Linkedin } from 'lucide-react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { 
+  Building2, Menu, X, ArrowRight, Github, Twitter, 
+  Linkedin, LayoutDashboard, LogOut, Settings, User, 
+  ChevronDown
+} from 'lucide-react';
+import { useStore } from '../store/useStore';
+import { supabase } from '../lib/supabase';
 
 export const MarketingLayout: React.FC = () => {
+  const { isAuthenticated, currentUser } = useStore();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -14,6 +23,17 @@ export const MarketingLayout: React.FC = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const getInitials = () => {
+    if (!currentUser) return '';
+    if (currentUser.avatar && currentUser.avatar.length <= 2) return currentUser.avatar;
+    return currentUser.name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const navLinks = [
     { name: 'Features', href: '/features' },
@@ -53,15 +73,84 @@ export const MarketingLayout: React.FC = () => {
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
-              Log in
-            </Link>
-            <Link 
-              to="/login?signup=true" 
-              className="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 flex items-center gap-2"
-            >
-              Get Started <ArrowRight size={16} />
-            </Link>
+            {isAuthenticated ? (
+              <div className="flex items-center gap-6">
+                <Link 
+                  to="/dashboard" 
+                  className="flex items-center gap-2 text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  <LayoutDashboard size={18} />
+                  Go to Dashboard
+                </Link>
+                <div className="relative">
+                  <button 
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
+                      {getInitials()}
+                    </div>
+                    <ChevronDown size={14} className={`text-gray-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {userMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                      <div className="absolute right-0 mt-3 w-56 rounded-2xl bg-[#1e293b] border border-white/10 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-3 border-b border-white/5 mb-2">
+                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
+                          <p className="text-sm font-bold truncate">{currentUser?.name}</p>
+                        </div>
+                        <Link 
+                          to="/settings" 
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition-colors text-gray-300 hover:text-white"
+                        >
+                          <User size={18} /> Profile
+                        </Link>
+                        <Link 
+                          to="/settings" 
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition-colors text-gray-300 hover:text-white"
+                        >
+                          <Settings size={18} /> Settings
+                        </Link>
+                        <Link 
+                          to="/dashboard" 
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition-colors text-gray-300 hover:text-white"
+                        >
+                          <LayoutDashboard size={18} /> Dashboard
+                        </Link>
+                        <div className="h-px bg-white/5 my-2" />
+                        <button 
+                          onClick={async () => {
+                            if (supabase) await supabase.auth.signOut();
+                            navigate('/login');
+                            setUserMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-sm transition-colors text-red-400"
+                        >
+                          <LogOut size={18} /> Sign Out
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+                  Log in
+                </Link>
+                <Link 
+                  to="/login?signup=true" 
+                  className="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 flex items-center gap-2"
+                >
+                  Get Started <ArrowRight size={16} />
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -87,20 +176,61 @@ export const MarketingLayout: React.FC = () => {
               </Link>
             ))}
             <hr className="border-white/5" />
-            <Link 
-              to="/login" 
-              className="block text-lg font-medium text-gray-300"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Log in
-            </Link>
-            <Link 
-              to="/login?signup=true" 
-              className="block w-full py-3 rounded-xl bg-blue-600 text-center font-bold"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Get Started
-            </Link>
+            
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                  <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-bold">
+                    {getInitials()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">{currentUser?.name}</p>
+                    <p className="text-[10px] text-gray-500 truncate">{currentUser?.email}</p>
+                  </div>
+                </div>
+                <Link 
+                  to="/dashboard" 
+                  className="flex items-center gap-3 text-lg font-medium text-blue-400"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <LayoutDashboard size={20} /> Go to Dashboard
+                </Link>
+                <Link 
+                  to="/settings" 
+                  className="flex items-center gap-3 text-lg font-medium text-gray-300"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Settings size={20} /> Settings
+                </Link>
+                <button 
+                  onClick={async () => {
+                    if (supabase) await supabase.auth.signOut();
+                    navigate('/login');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 text-lg font-medium text-red-400"
+                >
+                  <LogOut size={20} /> Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/login" 
+                  className="block text-lg font-medium text-gray-300"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Log in
+                </Link>
+                <Link 
+                  to="/login?signup=true" 
+                  className="block w-full py-3 rounded-xl bg-blue-600 text-center font-bold"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         )}
       </header>
