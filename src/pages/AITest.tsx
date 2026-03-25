@@ -28,7 +28,7 @@ interface AIBotMessage {
   systemLog?: string;
 }
 
-export function AITest() {
+export default function AITest() {
   const navigate = useNavigate();
   const { 
     leads, currentUser, 

@@ -11,9 +11,9 @@ import {
   HardDrive, Send, Sparkles, ExternalLink, QrCode, Award, 
   Linkedin, Facebook, Instagram, Twitter, Share2
 } from 'lucide-react';
-import { AISettings } from './AISettings';
-import { SMSSettings } from './SMSSettings';
-import { ShortcutSettings } from './ShortcutSettings';
+import AISettings from './AISettings';
+import SMSSettings from './SMSSettings';
+import ShortcutSettings from './ShortcutSettings';
 import { Keyboard } from 'lucide-react';
 
 const TABS = [

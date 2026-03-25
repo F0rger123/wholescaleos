@@ -25,7 +25,7 @@ interface UserTeam {
   isCurrent: boolean;
 }
 
-export function Team() {
+export default function Team() {
   const {
     team, leads, tasks, teamConfig, currentUser,
     updateMemberStatus, setCustomStatus, updateMemberRole,

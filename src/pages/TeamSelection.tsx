@@ -15,7 +15,7 @@ interface TeamInfo {
   inviteCode: string;
 }
 
-export function TeamSelection() {
+export default function TeamSelection() {
   const navigate = useNavigate();
   const { currentUser, logout } = useStore();
   const [teams, setTeams] = useState<TeamInfo[]>([]);

@@ -35,7 +35,7 @@ const inputStyle = {
   '--tw-ring-color': 'var(--t-primary-dim)'
 };
 
-export function Tasks() {
+export default function Tasks() {
   const [searchParams] = useSearchParams();
   const taskId = searchParams.get('id');
 

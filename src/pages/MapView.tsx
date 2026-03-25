@@ -136,7 +136,7 @@ function scoreHex(score: number): string {
 
 // ─── Main MapView ───────────────────────────────────────────────────────────
 
-export function MapView() {
+export default function MapView() {
   const {
     leads, buyers, coverageAreas, mapFilters, mapSettings,
     toggleMapFilter, toggleLeadStatusFilter,

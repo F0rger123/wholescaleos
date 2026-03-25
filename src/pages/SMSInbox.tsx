@@ -48,7 +48,7 @@ interface Conversation {
   carrierHint?: string;
 }
 
-export function SMSInbox() {
+export default function SMSInbox() {
   const [searchParams] = useSearchParams();
   const phoneParam = searchParams.get('phone');
 

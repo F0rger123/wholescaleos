@@ -115,7 +115,7 @@ function isPasteRow(row: any): row is string[] {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-export function Imports() {
+export default function Imports() {
   const {
     importTemplates, importHistory, duplicateSettings,
     addImportTemplate, deleteImportTemplate,

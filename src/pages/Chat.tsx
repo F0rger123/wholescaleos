@@ -1631,7 +1631,7 @@ async function loadMessagesFromSupabase(channelId: string): Promise<ChatMessage[
 
 // ─── Main Chat Page ──────────────────────────────────────────────────────────
 
-export function Chat() {
+export default function Chat() {
   const {
     channels, messages, currentChannelId, setCurrentChannel, typingUsers,
     unreadCounts, markChannelRead, team, currentUser, setBulkData,

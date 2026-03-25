@@ -6,7 +6,7 @@ import { useStore } from '../store/useStore';
 
 type VerificationState = 'verifying' | 'success' | 'error' | 'already-verified';
 
-export function EmailConfirmed() {
+export default function EmailConfirmed() {
   const navigate = useNavigate();
   const { login, updateProfile, incrementLoginStreak } = useStore();
   const [state, setState] = useState<VerificationState>('verifying');

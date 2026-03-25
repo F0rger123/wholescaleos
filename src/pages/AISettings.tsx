@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { Key, Loader2, Check, AlertCircle, Save, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
 import { PREBUILT_RULES, getEnabledPrebuiltRules, setEnabledPrebuiltRules } from '../lib/prebuilt-rules';
 
-export function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
+export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic'>('gemini');
   const [geminiKey, setGeminiKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');

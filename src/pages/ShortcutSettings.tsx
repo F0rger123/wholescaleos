@@ -26,7 +26,7 @@ const DEFAULT_SHORTCUTS: Shortcut[] = [
   { id: 'dashboard', label: 'View Dashboard', keys: 'h', description: 'Back to home dashboard', enabled: true },
 ];
 
-export function ShortcutSettings() {
+export default function ShortcutSettings() {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>(DEFAULT_SHORTCUTS);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
