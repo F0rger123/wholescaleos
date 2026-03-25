@@ -4,7 +4,7 @@ import {
   Phone, Mail, Globe, Facebook, Instagram, Linkedin, Twitter, 
   MapPin, Award, Star, 
   Download, QrCode, MessageSquare, ShieldCheck, ExternalLink,
-  ChevronLeft, Loader2
+  ChevronLeft, Loader2, Sparkles
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
@@ -142,20 +142,20 @@ END:VCARD`;
 
   if (error || !agent) {
     return (
-      <div className="min-h-screen bg-[var(--t-bg)] flex flex-col items-center justify-center p-4 text-center">
-        <div className="p-4 rounded-full bg-red-500/10 mb-6">
-          <Phone className="w-12 h-12 text-red-500" />
+      <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-4 text-center text-white">
+        <div className="p-6 rounded-full bg-blue-500/10 mb-8 animate-pulse text-blue-500">
+          <Sparkles className="w-16 h-16" />
         </div>
-        <h2 className="text-2xl font-bold mb-2">Profile Not Found</h2>
-        <p className="text-gray-500 mb-8 max-w-sm">
-          We couldn't find the agent profile you're looking for. It may have been moved or set to private.
+        <h2 className="text-4xl font-black mb-4 italic tracking-tight">Profile Coming Soon</h2>
+        <p className="text-gray-400 mb-10 max-w-sm text-lg">
+          This agent is currently polishing their public profile. Please check back shortly for full details.
         </p>
         <button 
           onClick={() => navigate('/')}
-          className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 transition-all flex items-center gap-2"
+          className="px-8 py-4 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-500 transition-all flex items-center gap-3 shadow-xl shadow-blue-600/20"
         >
-          <ChevronLeft size={18} />
-          Back to Homepage
+          <ChevronLeft size={20} />
+          Back to WholeScale OS
         </button>
       </div>
     );

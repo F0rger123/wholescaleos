@@ -4,7 +4,8 @@ import { AuthCallback } from './pages/AuthCallback';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { SupabaseSync } from './lib/supabase-sync';
-import { Dashboard } from './pages/Dashboard';
+import Dashboard from './pages/Dashboard';
+import BillingProfile from './pages/BillingProfile';
 import Leads from './pages/Leads';
 import { MapView } from './pages/MapView';
 import { Team } from './pages/Team';
@@ -34,6 +35,11 @@ import Home from './pages/marketing/Home';
 import Features from './pages/marketing/Features';
 import Pricing from './pages/marketing/Pricing';
 import About from './pages/marketing/About';
+import Privacy from './pages/marketing/Privacy';
+import Terms from './pages/marketing/Terms';
+import Contact from './pages/marketing/Contact';
+import LeadShare from './pages/marketing/LeadShare';
+import ScrollToTop from './components/ScrollToTop';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -155,6 +161,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <CursorEffects />
       <Routes>
         {/* Marketing Site */}
@@ -163,6 +170,10 @@ export function App() {
           <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/share/:id" element={<LeadShare />} />
           <Route path="/agent/:name" element={<AgentProfile />} />
         </Route>
 
@@ -181,7 +192,8 @@ export function App() {
         {/* Protected routes */}
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/leads" element={<Leads />} />
+          <Route path="/dashboard/billing" element={<BillingProfile />} />
+          <Route path="/dashboard/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<Leads />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/team" element={<Team />} />

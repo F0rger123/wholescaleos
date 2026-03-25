@@ -179,6 +179,48 @@ export default function Pricing() {
         ))}
       </div>
 
+      {/* Feature Comparison Table */}
+      <section className="mt-32 max-w-7xl mx-auto px-6 overflow-x-auto">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-black mb-4 tracking-tight">Compare Features</h2>
+          <p className="text-gray-400">Deep dive into the infrastructure specifics.</p>
+        </div>
+        
+        <div className="min-w-[800px]">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-white/5">
+                <th className="py-6 px-4 text-xs font-black uppercase tracking-widest text-gray-500">Core Features</th>
+                {plans.map((p, i) => (
+                  <th key={i} className="py-6 px-4 text-center">
+                    <div className="text-sm font-bold text-white mb-1">{p.name}</div>
+                    <div className="text-[10px] text-blue-500 font-black">${calculatePrice(p.price)}/mo</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="text-sm text-gray-400">
+              {[
+                { label: 'AI Triage Credits', values: ['50/mo', 'Unlimited', 'Unlimited', 'Unlimited', 'Unlimited'] },
+                { label: 'Team Members', values: ['1', '1', '5', '20', 'Unlimited'] },
+                { label: 'Lead Management', values: ['Basic', 'Pro', 'Elite', 'Elite', 'Custom'] },
+                { label: 'Integrated SMS', values: ['Gateways', 'Direct', 'Direct', 'Direct', 'API Priority'] },
+                { label: 'Agent Profiles', values: ['No', 'Yes', 'Yes', 'Custom', 'Full White Label'] },
+                { label: 'White Labeling', values: ['No', 'No', 'No', 'Partial', 'Full Branding'] },
+                { label: 'Support Tier', values: ['Email', 'Standard', 'Priority', 'Dedicated', 'SLA & Training'] },
+              ].map((row, rIdx) => (
+                <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                  <td className="py-6 px-4 font-bold text-white/80">{row.label}</td>
+                  {row.values.map((v, vIdx) => (
+                    <td key={vIdx} className="py-6 px-4 text-center">{v}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {/* Trust Badges */}
       <section className="mt-32 max-w-6xl mx-auto px-6 text-center">
         <div className="inline-flex items-center gap-8 py-8 px-12 rounded-[2rem] bg-white/5 border border-white/5 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
