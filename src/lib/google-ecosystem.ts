@@ -59,8 +59,17 @@ export class GoogleEcosystemService {
     const res = await fetch('https://tasks.googleapis.com/tasks/v1/users/@me/lists', {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('Failed to fetch task lists');
-    return res.json();
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('[GoogleTasks] Fetch lists failed:', res.status, err);
+      if (res.status === 403) throw new Error('Permission denied (403). Please reconnect Google with Tasks scope.');
+      throw new Error(`Failed to fetch task lists (${res.status})`);
+    }
+    const data = await res.json();
+    if (!data.items || data.items.length === 0) {
+      return { items: [{ id: '@default', title: 'My Tasks' }] };
+    }
+    return data;
   }
 
   async getTasks(userId: string, tasklist: string = '@default') {

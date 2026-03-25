@@ -1,8 +1,30 @@
 import { useParams, Link } from 'react-router-dom';
-import { MessageSquare, ShieldCheck, ChevronLeft, Share2, MapPin, BadgeDollarSign, Calendar } from 'lucide-react';
+import { MessageSquare, ShieldCheck, ChevronLeft, Share2, MapPin, BadgeDollarSign, Calendar, Image as ImageIcon } from 'lucide-react';
+import { useStore } from '../../store/useStore';
 
 export default function LeadShare() {
   const { id } = useParams();
+  const { leads } = useStore();
+  const lead = leads.find(l => l.id === id);
+
+  if (!lead) {
+    return (
+      <div className="bg-[#0f172a] min-h-screen text-white flex items-center justify-center pt-20">
+        <div className="text-center space-y-6">
+           <div className="w-20 h-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-500 mx-auto">
+             <ShieldCheck size={40} />
+           </div>
+           <h1 className="text-2xl font-bold">Lead Not Found</h1>
+           <p className="text-gray-400">This share link may have expired or is incorrect.</p>
+           <Link to="/" className="inline-block px-8 py-3 rounded-xl bg-blue-600 font-bold">Back to Home</Link>
+        </div>
+      </div>
+    );
+  }
+
+  const displayPrice = lead.sharePrice || lead.estimatedValue || 0;
+  const displayDescription = lead.shareDescription || lead.notes || "No additional description provided by the agent.";
+  const displayMessage = lead.shareCustomMessage || "I thought you might be interested in this property. Let me know if you have any questions!";
 
   return (
     <div className="bg-[#0f172a] min-h-screen text-white pt-32 pb-20">
@@ -21,10 +43,32 @@ export default function LeadShare() {
             <div className="w-20 h-20 rounded-3xl bg-blue-600/20 flex items-center justify-center text-blue-500 mx-auto mb-6">
               <ShieldCheck size={40} />
             </div>
-            <h1 className="text-4xl font-black italic">Lead Information Sharing</h1>
+            <h1 className="text-4xl font-black italic">Property Review</h1>
             <p className="text-xl text-gray-400 max-w-xl mx-auto">
-              You are viewing a secure lead share for ID: <span className="text-blue-500 font-mono">{id}</span>
+              {lead.propertyAddress}
             </p>
+          </div>
+
+          {/* Property Image */}
+          <div className="relative aspect-video rounded-[2rem] overflow-hidden border border-white/5 bg-black/20 group">
+             {lead.sharePhotoUrl ? (
+               <img src={lead.sharePhotoUrl} className="w-full h-full object-cover" alt="Property" />
+             ) : (
+               <div className="w-full h-full flex items-center justify-center text-gray-700">
+                  <ImageIcon size={64} />
+               </div>
+             )}
+             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+             <div className="absolute bottom-8 left-8 right-8 flex items-end justify-between">
+                <div>
+                   <div className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-1">Status</div>
+                   <div className="px-3 py-1 rounded-lg bg-blue-600 text-[10px] font-black uppercase tracking-widest leading-relaxed">Exclusive Access</div>
+                </div>
+                <div className="text-right">
+                   <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">Listing ID</div>
+                   <div className="font-mono text-sm text-white">{lead.id.slice(0, 8)}</div>
+                </div>
+             </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 relative z-10">
@@ -33,8 +77,8 @@ export default function LeadShare() {
                 <MapPin size={20} />
                 <span className="font-bold uppercase tracking-widest text-[10px]">Property Location</span>
               </div>
-              <div className="text-2xl font-bold">[Property Address - Placeholder]</div>
-              <div className="text-sm text-gray-500">Full details available upon request.</div>
+              <div className="text-2xl font-bold">{lead.propertyAddress}</div>
+              <div className="text-sm text-gray-500">Full analysis report available for download.</div>
             </div>
 
             <div className="p-8 rounded-3xl bg-white/5 border border-white/10 space-y-4">
@@ -42,35 +86,39 @@ export default function LeadShare() {
                 <BadgeDollarSign size={20} />
                 <span className="font-bold uppercase tracking-widest text-[10px]">Estimated Value</span>
               </div>
-              <div className="text-2xl font-bold">$[Price - Placeholder]</div>
+              <div className="text-2xl font-bold">${displayPrice.toLocaleString()}</div>
               <div className="text-sm text-gray-500">Based on recent market analysis.</div>
             </div>
           </div>
 
+          <div className="p-10 rounded-3xl bg-gradient-to-br from-blue-600/10 to-indigo-600/10 border border-blue-500/20 relative z-10 space-y-4">
+             <div className="flex items-center gap-2 text-sm font-bold text-blue-400">
+                <MessageSquare size={18} /> Note from your agent
+             </div>
+             <p className="text-lg italic text-gray-300 leading-relaxed font-medium">"{displayMessage}"</p>
+          </div>
+
           <div className="p-8 rounded-3xl bg-blue-600 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-blue-600/20 relative z-10">
             <div className="space-y-1 text-center md:text-left">
-              <div className="text-lg font-black">Interested in this property?</div>
+              <div className="text-lg font-black italic uppercase tracking-tighter">Interested in this property?</div>
               <div className="text-sm text-blue-100 italic">Get direct access to the agent in charge.</div>
             </div>
-            <button className="px-8 py-4 rounded-xl bg-white text-blue-600 font-black flex items-center gap-2 hover:scale-105 transition-all">
+            <button className="px-8 py-4 rounded-xl bg-white text-blue-600 font-black flex items-center gap-2 hover:scale-105 transition-all shadow-xl">
               <MessageSquare size={20} /> Contact Agent
             </button>
           </div>
 
+          <div className="prose prose-invert max-w-none relative z-10 p-2">
+             <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-500 mb-6 border-b border-white/5 pb-4">Agent Description</h3>
+             <p className="text-gray-400 leading-relaxed whitespace-pre-wrap">{displayDescription}</p>
+          </div>
+
           <div className="text-center pt-8 border-t border-white/5 relative z-10">
              <div className="flex items-center justify-center gap-6 text-xs text-gray-500 font-bold uppercase tracking-widest">
-                <div className="flex items-center gap-2"><Calendar size={14} /> Shared: {new Date().toLocaleDateString()}</div>
+                <div className="flex items-center gap-2"><Calendar size={14} /> Shared: {new Date(lead.createdAt).toLocaleDateString()}</div>
                 <div className="flex items-center gap-2"><ShieldCheck size={14} /> Secure Link</div>
              </div>
           </div>
-        </div>
-
-        <div className="mt-12 text-center text-gray-600 space-y-4">
-           <h2 className="text-xl font-bold text-gray-400 italic">Lead Details Coming Soon</h2>
-           <p className="text-sm max-w-md mx-auto">
-             This agent is currently preparing the full documentation for this specific lead. 
-             Please check back shortly or contact the agent directly using the button above.
-           </p>
         </div>
       </div>
     </div>

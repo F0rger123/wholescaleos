@@ -121,7 +121,8 @@ export class GoogleCalendarService {
       const scopes = info.scope || '';
       return scopes.includes('https://www.googleapis.com/auth/gmail.send') 
           && scopes.includes('https://www.googleapis.com/auth/gmail.readonly')
-          && scopes.includes('https://www.googleapis.com/auth/contacts.readonly');
+          && scopes.includes('https://www.googleapis.com/auth/contacts.readonly')
+          && scopes.includes('https://www.googleapis.com/auth/tasks');
     } catch (err) {
       console.error('Error checking Workspace permissions:', err);
       return false;

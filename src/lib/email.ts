@@ -988,5 +988,41 @@ export async function unstarThread(threadId: string) {
 }
 
 export async function trashThread(threadId: string) {
-  return modifyThreadLabels(threadId, ['TRASH'], ['INBOX']);
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  if (!isSupabaseConfigured || !supabase || !userId) return false;
+
+  try {
+    const { data: conn } = await supabase
+      .from('user_connections')
+      .select('refresh_token')
+      .eq('user_id', userId)
+      .eq('provider', 'google')
+      .maybeSingle();
+
+    if (!conn?.refresh_token) return false;
+
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: conn.refresh_token,
+        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
+        client_secret: "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",
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    const { access_token } = await refreshResponse.json();
+
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}/trash`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${access_token}` }
+    });
+
+    return response.ok;
+  } catch (err) {
+    console.error('trashThread error:', err);
+    return false;
+  }
 }

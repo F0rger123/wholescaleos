@@ -132,6 +132,10 @@ export interface Lead {
   importSource?: string;
   photos?: string[];
   carrier?: string;
+  shareDescription?: string;
+  sharePrice?: number;
+  shareCustomMessage?: string;
+  sharePhotoUrl?: string;
   timeline: TimelineEntry[];
   statusHistory: StatusHistoryEntry[];
 }
@@ -189,6 +193,7 @@ export interface UserProfile {
   publicContactPhone?: boolean;
   acceptLeads?: boolean;
   website?: string;
+  aiCustomInstructions?: string;
 }
 
 export interface Task {
@@ -1762,6 +1767,8 @@ export const useStore = create<AppState>((set, get) => ({
               ...(newUser.publicContactPhone !== undefined && { public_contact_phone: newUser.publicContactPhone }),
               ...(newUser.acceptLeads !== undefined && { accept_leads: newUser.acceptLeads }),
               ...(newUser.website && { website: newUser.website }),
+              ...(newUser.aiCustomInstructions && { ai_personality: newUser.aiCustomInstructions }),
+              ...(newUser.avatarUrl && { avatar_url: newUser.avatarUrl }),
             }
           })
           .eq('id', currentUser.id);
