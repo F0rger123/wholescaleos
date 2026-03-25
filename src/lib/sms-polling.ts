@@ -345,8 +345,8 @@ export async function pollSMSMessages() {
       let isAutoReplyEnabled = false;
       try {
         if (userId && isSupabaseConfigured && supabase) {
-          const { data } = await supabase.from('agent_preferences').select('sms_auto_reply').eq('user_id', userId).maybeSingle();
-          isAutoReplyEnabled = !!data?.sms_auto_reply;
+          const { data } = await supabase.from('agent_preferences').select('sms_auto_reply_enabled').eq('user_id', userId).maybeSingle();
+          isAutoReplyEnabled = !!data?.sms_auto_reply_enabled;
         } else {
           isAutoReplyEnabled = localStorage.getItem('user_sms_auto_reply') === 'true';
         }

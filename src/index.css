@@ -649,3 +649,19 @@ input,
               border-color 0.2s ease,
               box-shadow 0.2s ease;
 }
+
+/* Page Transitions */
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-fade-in {
+  animation: page-fade-in 0.4s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
