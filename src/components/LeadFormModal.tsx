@@ -4,6 +4,7 @@ import { geocodeAddress } from '../lib/geocoding';
 import { detectCarrier } from '../lib/carrier-service';
 import { Loader2, Save, BarChart3 } from 'lucide-react';
 import { Modal } from './Modal';
+import { ConfirmModal } from './ConfirmModal';
 
 interface LeadFormModalProps {
   isOpen: boolean;
@@ -27,12 +28,11 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
 
   const [formData, setFormData] = useState(defaultData);
   const [initialData, setInitialData] = useState(defaultData);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
+  // Lead data loading effect
   useEffect(() => {
     if (isOpen) {
-      // Simple scroll lock
-      document.body.style.overflow = 'hidden';
-      
       let data;
       if (editingLead) {
         data = { 
@@ -57,20 +57,26 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
       }
       setFormData(data);
       setInitialData(data);
-
-      return () => {
-        document.body.style.overflow = '';
-      };
     }
   }, [isOpen, editingLead, defaultData]);
+
+  // Scroll lock effect
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const isDirty = JSON.stringify(formData) !== JSON.stringify(initialData);
 
   const handleCloseAttempt = () => {
     if (isDirty) {
-      if (window.confirm('Discard unsaved changes? Any progress will be lost.')) {
-        onClose();
-      }
+      setShowDiscardConfirm(true);
     } else {
       onClose();
     }
@@ -136,6 +142,7 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
   };
 
   return (
+    <>
     <Modal 
       isOpen={isOpen} 
       onClose={handleCloseAttempt}
@@ -366,6 +373,21 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
         </div>
       </form>
     </Modal>
+    
+    <ConfirmModal 
+      isOpen={showDiscardConfirm}
+      onClose={() => setShowDiscardConfirm(false)}
+      onConfirm={() => {
+        setShowDiscardConfirm(false);
+        onClose();
+      }}
+      title="Discard Changes?"
+      message="You have unsaved changes. Are you sure you want to discard them? Any progress will be lost."
+      confirmLabel="Discard"
+      cancelLabel="Cancel"
+      variant="danger"
+    />
+  </>
   );
 }
 
