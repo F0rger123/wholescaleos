@@ -565,7 +565,7 @@ export const AI_PRIORITY_COLORS: Record<AIPriorityLevel, { bg: string; text: str
 export function calculateDealScore(lead: Lead): number {
   // Value component: Logarithmic scaling for property value (more sensitive to lower values, capped at $1.5M)
   const valueCap = 1500000;
-  const valueScore = Math.min(Math.log10(Math.max(1, lead.estimatedValue)) / Math.log10(valueCap), 1) * 100;
+  const valueScore = Math.min(Math.log10(Math.max(1, lead.estimatedValue || 0)) / Math.log10(valueCap), 1) * 100;
 
   // Probability component: Direct from lead data
   const probScore = lead.probability || 40;

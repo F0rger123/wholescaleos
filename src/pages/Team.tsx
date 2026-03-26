@@ -807,7 +807,7 @@ export default function Team() {
           const memberRevenue = closedLeads.reduce((sum, l) => sum + (l.offerAmount || 0), 0);
           const memberDeals = closedLeads.length;
           
-          const activeLeads = memberLeads.filter((l) => !l.status.startsWith('closed')).length;
+          const activeLeads = memberLeads.filter((l) => !l.status?.startsWith('closed')).length;
           const memberTasks = tasks.filter(t => t.assignedTo === member.id);
           const pendingTasks = memberTasks.filter(t => t.status === 'todo' || t.status === 'in-progress');
           const overdueTasks = pendingTasks.filter(t => isPast(parseISO(t.dueDate)));

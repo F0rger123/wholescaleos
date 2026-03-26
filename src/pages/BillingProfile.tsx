@@ -192,7 +192,7 @@ function AnalyticsTab() {
     { label: 'Leads Managed', value: leads.length.toLocaleString(), trend: '+12%', color: 'blue' },
     { label: 'Closed Deals', value: leads.filter(l => l.status === 'closed-won').length.toString(), trend: '+5%', color: 'green' },
     { label: 'Revenue Generated', value: `$${Math.round(leads.filter(l => l.status === 'closed-won').reduce((s, l) => s + (l.offerAmount || 0), 0) / 1000)}k`, trend: '+18%', color: 'purple' },
-    { label: 'Active Pipeline', value: leads.filter(l => !l.status.startsWith('closed')).length.toString(), trend: '+3%', color: 'orange' }
+    { label: 'Active Pipeline', value: leads.filter(l => !l.status?.startsWith('closed')).length.toString(), trend: '+3%', color: 'orange' }
   ];
 
   // Growth Velocity Grouping
