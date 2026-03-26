@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
 import { LeadHoverCard } from '../components/LeadHoverCard';
 import { 
@@ -143,7 +143,9 @@ export default function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const [timeframe, setTimeframe] = useState<Timeframe>(
     (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d'
   );
@@ -161,19 +163,21 @@ export default function Dashboard() {
 
   const hoveredLead = leads.find(l => l.id === hoveredLeadId) ?? null;
 
-  const handleLeadMouseEnter = (e: React.MouseEvent, id: string) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setHoveredLeadId(id);
-    setHoverPos({ 
-      x: rect.right, 
-      y: rect.top, 
-      width: rect.width, 
-      height: rect.height 
-    });
+  const handleLeadMouseEnter = (e: React.MouseEvent, leadId: string) => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    setHoveredLeadId(leadId);
+    setHoverPos({ x: e.clientX, y: e.clientY });
   };
+
+  const handleLeadMouseMove = (e: React.MouseEvent) => {
+    setHoverPos({ x: e.clientX, y: e.clientY });
+  };
+
   const handleLeadMouseLeave = () => {
-    setHoveredLeadId(null);
-    setHoverPos(null);
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHoveredLeadId(null);
+      setHoverPos(null);
+    }, 200);
   };
 
   // ─── Calculations ────────────────────────────────────────
@@ -643,6 +647,7 @@ export default function Dashboard() {
                     <div 
                       className="relative"
                       onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
+                      onMouseMove={handleLeadMouseMove}
                       onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm font-medium text-[var(--t-on-surface)] truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
@@ -686,6 +691,7 @@ export default function Dashboard() {
                     <div 
                       className="relative"
                       onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
+                      onMouseMove={handleLeadMouseMove}
                       onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm text-[var(--t-on-surface)] font-medium truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
@@ -737,16 +743,15 @@ export default function Dashboard() {
       {hoveredLead && hoverPos && (() => {
         const cardWidth = 320;
         const cardHeight = 360; 
-        const margin = 16;
+        const margin = 20; // Extra buffer for the cursor
         
         let left = hoverPos.x + margin;
-        // Center vertically relative to the element
-        let top = hoverPos.y + (hoverPos.height / 2) - (cardHeight / 2);
+        let top = hoverPos.y - (cardHeight / 3); // Position slightly above cursor for natural feel
         let arrowPos = 'left';
 
         // Flip to left side if not enough space on the right
         if (left + cardWidth > window.innerWidth - margin) {
-          left = hoverPos.x - hoverPos.width - cardWidth - margin;
+          left = hoverPos.x - cardWidth - margin;
           arrowPos = 'right';
         }
 
@@ -758,14 +763,7 @@ export default function Dashboard() {
           top = margin;
         }
 
-        // Ensure the card doesn't overlap the element if flipped
-        if (arrowPos === 'right' && left + cardWidth > hoverPos.x - hoverPos.width) {
-             left = Math.max(margin, hoverPos.x - hoverPos.width - cardWidth - margin);
-        }
-
-        // Calculate arrow vertical position relative to the target element center
-        const elementCenterY = hoverPos.y + (hoverPos.height / 2);
-        const arrowTop = Math.max(20, Math.min(cardHeight - 20, elementCenterY - top - 6));
+        const arrowTop = Math.max(20, Math.min(cardHeight - 20, hoverPos.y - top - 6));
 
         return (
           <div
@@ -779,7 +777,9 @@ export default function Dashboard() {
               '--card-arrow-rotate': arrowPos === 'left' ? '-45deg' : '135deg',
               '--card-arrow-top': `${arrowTop}px`,
             } as any}
-            onMouseEnter={() => setHoveredLeadId(hoveredLeadId)}
+            onMouseEnter={() => {
+              if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+            }}
             onMouseLeave={handleLeadMouseLeave}
           >
             <LeadHoverCard lead={hoveredLead} />

@@ -39,18 +39,18 @@ export default function AgentProfile() {
           .single();
 
         if (error || !data) {
-          // Fallback to searching in current team members if demo mode
+          // Fallback to searching in current team members
           const store = useStore.getState();
           const found = store.team.find(m => m.name.toLowerCase() === displayName.toLowerCase());
           if (found) {
             setAgent({
                 ...found,
-                bio: 'Top-producing real estate professional with over 10 years of experience in luxury residential properties and investment portfolios.',
-                specialties: ['Luxury Homes', 'First-time Buyers', 'Investment Properties'],
-                licenseNumber: 'RE-123456789',
-                yearsExperience: 10,
-                socialLinks: { facebook: '#', instagram: '#', linkedin: '#', x: '#' },
-                website: 'www.wholescaleos.com',
+                bio: '',
+                specialties: [],
+                licenseNumber: '',
+                yearsExperience: 0,
+                socialLinks: {},
+                website: '',
                 acceptLeads: true,
                 testimonials: []
             });
@@ -66,11 +66,11 @@ export default function AgentProfile() {
             email: data.email,
             phone: data.phone,
             avatar: data.avatar,
-            avatarUrl: data.avatar_url || settings.avatar_url || settings.avatarUrl,
-            bio: settings.bio,
-            specialties: settings.specialties || [],
-            licenseNumber: settings.license_number || settings.licenseNumber,
-            yearsExperience: settings.years_experience || settings.yearsExperience,
+            avatarUrl: data.avatar_url || settings.avatar_url || settings.avatarUrl || data.avatarUrl,
+            bio: settings.bio || data.bio || '',
+            specialties: settings.specialties || data.specialties || [],
+            licenseNumber: settings.license_number || settings.licenseNumber || '',
+            yearsExperience: settings.years_experience || settings.yearsExperience || 0,
             languages: settings.languages || [],
             socialLinks: settings.social_links || settings.socialLinks || {},
             serviceAreas: settings.service_areas || settings.serviceArea || settings.serviceAreas || [],
@@ -79,7 +79,7 @@ export default function AgentProfile() {
             publicContactEmail: settings.public_contact_email !== false && settings.publicContactEmail !== false,
             publicContactPhone: settings.public_contact_phone !== false && settings.publicContactPhone !== false,
             acceptLeads: settings.accept_leads !== false && settings.acceptLeads !== false,
-            website: settings.website || ''
+            website: settings.website || data.website || ''
           });
         }
       } catch (err) {
@@ -256,14 +256,14 @@ END:VCARD`;
                 <div className="h-1 w-12 bg-blue-600 rounded-full" />
               </h2>
               <p className="text-lg text-gray-400 leading-relaxed">
-                {agent.bio || 'Your trusted advisor for all real estate needs. Specialized in delivering results with honesty, integrity, and local market expertise.'}
+                {agent.bio || 'This agent has not yet provided a professional biography. Please contact them directly for more information about their services and expertise.'}
               </p>
             </section>
 
             <section className="space-y-6">
               <h2 className="text-xl font-bold">Specialties & Expertise</h2>
               <div className="flex flex-wrap gap-3">
-                {(agent.specialties?.length ? agent.specialties : ['Residential', 'Commercial', 'Land', 'Investments']).map((specialty: string, i: number) => (
+                {(agent.specialties?.length ? agent.specialties : ['Licensed Agent', 'Real Estate Professional']).map((specialty: string, i: number) => (
                   <div 
                     key={i} 
                     className="px-4 py-2 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] text-sm font-medium hover:border-blue-500 hover:text-blue-500 transition-all cursor-default"
@@ -276,7 +276,7 @@ END:VCARD`;
 
             <section className="grid grid-cols-2 md:grid-cols-4 gap-6">
                <div className="p-6 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] text-center space-y-2">
-                  <div className="text-2xl font-black text-blue-500">{agent.yearsExperience || '10'}+</div>
+                  <div className="text-2xl font-black text-blue-500">{agent.yearsExperience || '—'}</div>
                   <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Years Exp</div>
                </div>
                <div className="p-6 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] text-center space-y-2">
@@ -299,10 +299,7 @@ END:VCARD`;
                 <div className="flex-1 h-px bg-[var(--t-border)]" />
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(agent.testimonials?.length ? agent.testimonials : [
-                  { id: '1', author: 'Mark Stevens', content: 'Absolutely the best agent I have worked with in 20 years of real estate investing.', rating: 5, date: '2023-10-12' },
-                  { id: '2', author: 'Emily Wright', content: ' Alex made the house hunting process fun instead of stressful. Highly recommend!', rating: 5, date: '2023-11-05' }
-                ]).map((t: any) => (
+                {(agent.testimonials?.length ? agent.testimonials : []).map((t: any) => (
                   <div key={t.id} className="p-6 rounded-3xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] space-y-4 hover:border-blue-500/30 transition-all group">
                     <div className="flex items-center justify-between">
                       <div className="flex gap-1">
@@ -319,6 +316,12 @@ END:VCARD`;
                     </div>
                   </div>
                 ))}
+                {!agent.testimonials?.length && (
+                  <div className="col-span-full p-8 rounded-3xl border-2 border-dashed border-[var(--t-border)] text-center space-y-2">
+                    <Star className="w-8 h-8 text-gray-600 mx-auto" />
+                    <p className="text-sm text-gray-500 font-medium">No public testimonials available yet.</p>
+                  </div>
+                )}
               </div>
             </section>
           </div>
@@ -340,7 +343,7 @@ END:VCARD`;
                       className="w-full h-16 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-3 font-bold transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-blue-600/20"
                     >
                       <MessageSquare size={20} />
-                      Text Alex
+                      Text {agent.name.split(' ')[0]}
                     </button>
                     <button 
                       onClick={() => handleContactAgent('email')}

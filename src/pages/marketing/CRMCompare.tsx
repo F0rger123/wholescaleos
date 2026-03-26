@@ -82,11 +82,11 @@ export default function CRMCompare() {
                   <div className="text-lg font-bold text-white">Monthly Cost</div>
                 </td>
                 <td className="py-10 px-8 text-center bg-blue-600/10">
-                  <div className="text-3xl font-black text-white">$49</div>
-                  <div className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-1">Sovereign Plan</div>
+                  <div className="text-3xl font-black text-white">$27</div>
+                  <div className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-1">Solo Plan</div>
                 </td>
                 {competitors.map((c, i) => {
-                  const yearlySavings = (c.price - 49) * 12;
+                  const yearlySavings = (c.price - 27) * 12;
                   return (
                     <td key={i} className="py-10 px-8 text-center group">
                       <div className="text-xl font-bold text-gray-400">${c.price}</div>

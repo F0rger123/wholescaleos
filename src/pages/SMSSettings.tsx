@@ -297,8 +297,8 @@ export default function SMSSettings() {
               <RefreshCw className="w-5 h-5" style={{ color: 'var(--t-info)' }} />
             </div>
             <div>
-              <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text-primary)' }}>SMS Auto-Reply</h2>
-              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Automatically respond to missed calls or texts.</p>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text-primary)' }}>Master AI Auto-Reply</h2>
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Completely enable or disable the AI from automatically responding to texts from leads.</p>
             </div>
           </div>
           <button
