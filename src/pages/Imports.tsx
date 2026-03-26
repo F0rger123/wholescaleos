@@ -122,9 +122,7 @@ export default function Imports() {
     addImportHistory, updateDuplicateSettings,
     getMockScrapedProperty, getMockPdfExtraction,
     importLeadsFromData, addLead, teamId,
-  } = useStore();
-
-  // Custom Fields State
+  } = useStore();  // Custom Fields State
   const [customFields, setCustomFields] = useState<Array<{ id: string; name: string; field_key: string; field_type: 'text' | 'number' }>>([]);
   const [showAddField, setShowAddField] = useState(false);
   const [newFieldName, setNewFieldName] = useState('');

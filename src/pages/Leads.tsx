@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, Lead, LeadStatus, calculateDealScore, calculatePriorityScore, generateNextAction, STATUS_LABELS, STATUS_FLOW } from '../store/useStore';
-import { supabase } from '../lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   Search, Plus, ChevronDown, ChevronRight, Phone, Mail, MapPin,
   DollarSign, Calendar, Edit2, Trash2, X, Check,
-  Sparkles, Loader2, Save, PhoneCall, Send,
+  Loader2, PhoneCall, Send,
   Users, Mic, Play, Pause, Square, Bot as Brain,
   Target, Zap, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
@@ -15,11 +14,9 @@ import {
   Share2, UserMinus, ExternalLink
 } from 'lucide-react';
 import { googleEcosystem } from '../lib/google-ecosystem';
-import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
 import { CallScriptModal } from '../components/CallScriptModal';
 import { BulkEmailModal } from '../components/BulkEmailModal';
 import { LeadFormModal } from '../components/LeadFormModal';
-import { Modal } from '../components/Modal';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -49,18 +46,13 @@ const SOURCE_BADGE: Record<string, string> = {
   'manual': 'bg-[var(--t-surface-hover)] text-[var(--t-text-muted)]',
 };
 
-interface CustomField { 
-  id: string; 
-  name: string; 
-  field_key: string; 
-  field_type: 'text' | 'number'; 
-}
+
 
 export default function Leads() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const store = useStore();
-  const { leads, updateLead, deleteLead, teamId, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto } = store;
+  const { leads, updateLead, deleteLead, teamId, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto, currentUser } = store;
   const saveStatus = (store as any).saveStatus || 'idle';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,7 +110,6 @@ export default function Leads() {
         }
       });
       if (added > 0) alert(`Synced ${added} new Keep notes!`);
-      else alert('No new Keep notes found for this lead.');
     } catch (err) {
       console.error('Failed to sync Keep notes', err);
       alert('Failed to sync Google Keep');
@@ -126,13 +117,6 @@ export default function Leads() {
       setSyncingKeep(p => ({ ...p, [leadId]: false }));
     }
   };
-
-  // AI Intelligence state
-  const [aiInsight, setAiInsight] = useState<Record<string, string>>({});
-  const [isGeneratingInsight, setIsGeneratingInsight] = useState<string | null>(null);
-  const [scriptTemplates, setScriptTemplates] = useState<Record<string, CallScriptTemplate[]>>({});
-  const [isGeneratingTemplates, setIsGeneratingTemplates] = useState<string | null>(null);
-
   // Bulk selection state
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'list'|'kanban'|'card'|'compact'|'map'>('list');
@@ -176,37 +160,13 @@ export default function Leads() {
   const recordingInterval = useRef<any>(null);
 
   const [noteText, setNoteText] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState<string | null>(null);
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [showAddField, setShowAddField] = useState(false);
-  const [newFieldName, setNewFieldName] = useState('');
-  const [newFieldType, setNewFieldType] = useState<'text' | 'number'>('text');
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [generatingScript, setGeneratingScript] = useState<string | null>(null);
-  const [scriptLoading, setScriptLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
 
   useEffect(() => {
-    if (!supabase || !teamId) return;
-    
-    const loadCustomFields = async () => {
-      const { data, error } = await supabase!
-        .from('custom_fields')
-        .select('*')
-        .eq('team_id', teamId)
-        .order('display_order');
-      
-      if (error) {
-        console.error('Error loading custom fields:', error);
-      } else if (data) {
-        setCustomFields(data);
-      }
-    };
-    
-    loadCustomFields();
+    // Custom fields are now managed via LeadFormModal
   }, [teamId]);
 
   useEffect(() => {
@@ -360,29 +320,7 @@ export default function Leads() {
     addCallRecording(lid, recordingTime); 
   };
 
-  const handleGenerateInsight = async (lead: Lead) => {
-    setIsGeneratingInsight(lead.id);
-    try {
-      const insight = await generateLeadInsight(lead);
-      setAiInsight(prev => ({ ...prev, [lead.id]: insight }));
-    } catch (err) {
-      alert('Failed to generate AI insight');
-    } finally {
-      setIsGeneratingInsight(null);
-    }
-  };
 
-  const handleGenerateTemplates = async (lead: Lead) => {
-    setIsGeneratingTemplates(lead.id);
-    try {
-      const templates = await generateCallScriptTemplates(lead);
-      setScriptTemplates(prev => ({ ...prev, [lead.id]: templates }));
-    } catch (err) {
-      alert('Failed to generate call script templates');
-    } finally {
-      setIsGeneratingTemplates(null);
-    }
-  };
   
 
 
@@ -464,163 +402,6 @@ export default function Leads() {
             <Plus className="w-4 h-4" /> Add Lead
           </button>
         </div>
-      </div>
-
-      {/* CUSTOM FIELDS */}
-      <div className="mb-6 p-4 border rounded-xl"
-        style={{ 
-          background: 'linear-gradient(to right, var(--t-primary-dim), var(--t-surface))', 
-          borderColor: 'var(--t-border-subtle)' 
-        }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5" style={{ color: 'var(--t-accent)' }} />
-            <h2 className="text-base font-semibold text-white">Custom Lead Fields</h2>
-            <span className="px-2 py-0.5 text-xs rounded-full" style={{ backgroundColor: 'var(--t-accent-dim)', color: 'var(--t-accent)' }}>
-              {customFields.length}
-            </span>
-          </div>
-          {!showAddField && (
-            <button 
-              onClick={() => setShowAddField(true)} 
-              className="flex items-center gap-1 px-3 py-1.5 text-white text-sm rounded-lg transition-opacity hover:opacity-90"
-              style={{ background: 'var(--t-accent)' }}
-            >
-              <Plus className="w-3 h-3" /> Add Field
-            </button>
-          )}
-        </div>
-
-        {showAddField && (
-          <div className="mb-3 flex items-center gap-2">
-            <input 
-              value={newFieldName} 
-              onChange={e => setNewFieldName(e.target.value)} 
-              placeholder="Field name (e.g., Lot Size, ARV, Equity)" 
-              className="flex-1 px-3 py-2 border rounded-lg text-sm outline-none" 
-              style={{ background: 'var(--t-input-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
-              autoFocus 
-            />
-            <select 
-              value={newFieldType} 
-              onChange={e => setNewFieldType(e.target.value as any)} 
-              className="px-3 py-2 border rounded-lg text-sm outline-none"
-              style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
-            >
-              <option value="text">Text</option>
-              <option value="number">Number</option>
-            </select>
-            <button 
-              onClick={async () => {
-                if (!newFieldName.trim()) return;
-                
-                const fieldKey = newFieldName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-                const newField = {
-                  id: uuidv4(),
-                  name: newFieldName.trim(),
-                  field_key: fieldKey,
-                  field_type: newFieldType
-                };
-                
-                try {
-                  if (supabase && teamId) {
-                    const { error } = await supabase
-                      .from('custom_fields')
-                      .insert([{ 
-                        ...newField, 
-                        team_id: teamId, 
-                        display_order: customFields.length 
-                      }]);
-                    
-                    if (error) {
-                      alert(`❌ Failed to save: ${error.message}`);
-                      return;
-                    }
-                  }
-                  
-                  setCustomFields(p => [...p, newField]);
-                  setNewFieldName('');
-                  setShowAddField(false);
-                  setSaveSuccess(true);
-                  setTimeout(() => setSaveSuccess(false), 3000);
-                  
-                } catch (err: any) {
-                  alert(`❌ Error: ${err.message}`);
-                }
-              }} 
-              className="p-2 bg-[var(--t-success)] text-white rounded-lg hover:bg-[var(--t-success)]/80"
-            >
-              <Check className="w-4 h-4" />
-            </button>
-            <button 
-              onClick={() => { 
-                setShowAddField(false); 
-                setNewFieldName(''); 
-              }} 
-              className="p-2 bg-[var(--t-surface-subtle)] text-white rounded-lg hover:bg-[var(--t-surface-hover)]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {saveSuccess && (
-          <div className="mb-3 p-2 bg-[var(--t-success)]/20 border border-[var(--t-warning)]/30 rounded-lg text-[var(--t-success)] text-xs flex items-center gap-1">
-            <Check size={12} />
-            Field saved to database!
-          </div>
-        )}
-
-        {customFields.length === 0 ? (
-          <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>No custom fields yet. Add fields like &quot;Lot Size&quot;, &quot;ARV&quot;, or &quot;Equity&quot;.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {customFields.map(f => (
-              <span 
-                key={f.id} 
-                className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-surface)] rounded-lg border border-[var(--t-border)] text-sm group"
-              >
-                <span className="text-white">{f.name}</span>
-                <span className={`px-1.5 py-0.5 text-xs rounded ${
-                  f.field_type === 'number' 
-                    ? 'bg-[var(--t-success)]/20 text-[var(--t-success)]' 
-                    : 'bg-[var(--t-primary-dim)] text-[var(--t-primary-text)]'
-                }`}>
-                  {f.field_type}
-                </span>
-                <button 
-                  onClick={async () => {
-                    if (!confirm(`Delete field "${f.name}"?`)) return;
-                    
-                    try {
-                      if (supabase) {
-                        const { error } = await supabase
-                          .from('custom_fields')
-                          .delete()
-                          .eq('id', f.id);
-                        
-                        if (error) {
-                          alert(`❌ Failed to delete: ${error.message}`);
-                          return;
-                        }
-                      }
-                      
-                      setCustomFields(p => p.filter(field => field.id !== f.id));
-                      alert('✅ Field deleted');
-                      
-                    } catch (err: any) {
-                      alert(`❌ Error: ${err.message}`);
-                    }
-                  }} 
-                  className="opacity-0 group-hover:opacity-100 text-[var(--t-text-muted)] hover:text-[var(--t-error)] transition-all"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* SEARCH / FILTER / SORT */}
@@ -1143,10 +924,7 @@ export default function Leads() {
                               <span className="text-sm font-bold">Edit Share Page</span>
                             </button>
                             <button 
-                              onClick={() => {
-                                const url = `${window.location.origin}/leads/${lead.id}/manage`;
-                                window.open(url, '_blank');
-                              }}
+                              onClick={() => navigate(`/leads/${lead.id}/manage`)}
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
                               style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
                             >
@@ -1212,55 +990,18 @@ export default function Leads() {
                         )}
 
                         {/* AI Call Script Button */}
-                        <div className="px-4 pb-4">
+                        <div className="px-4 pb-4 border-b border-[var(--t-border)]">
                           <button
-                            onClick={async () => {
-                              setScriptLoading(true);
-                              try {
-                                const script = await generateCallScript(lead);
-                                setGeneratingScript(script);
-                              } catch (err) {
-                                alert('Failed to generate script');
-                              } finally {
-                                setScriptLoading(false);
-                              }
-                            }}
-                            disabled={scriptLoading}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
+                            onClick={() => setShowScriptLibrary({ isOpen: true, lead })}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all hover:scale-[1.01] active:scale-95"
                             style={{ background: 'var(--t-surface-dim)', border: '1px solid var(--t-primary-dim)', color: 'var(--t-primary)' }}
                           >
-                            {scriptLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScriptIcon className="w-4 h-4" />}
-                            {scriptLoading ? 'Generating AI Call Script...' : 'Generate AI Call Script'}
+                            <ScriptIcon className="w-4 h-4" />
+                            Open AI Call Script Library
                           </button>
                         </div>
 
-                        {/* Custom Fields */}
-                        {customFields.length > 0 && (
-                          <div className="mx-4 mb-4 p-3 bg-[var(--t-accent-dim)] border border-[var(--t-accent)]/30 rounded-lg">
-                            <h4 className="text-[var(--t-accent)] text-sm font-medium mb-2 flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> Custom Fields
-                            </h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              {customFields.map(f => (
-                                <div key={f.id}>
-                                  <label className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{f.name}</label>
-                                  <input 
-                                    type={f.field_type === 'number' ? 'number' : 'text'} 
-                                    value={(customFieldValues[lead.id] || {})[f.field_key] || ''} 
-                                    onChange={e => { 
-                                      setCustomFieldValues(p => ({ 
-                                        ...p, 
-                                        [lead.id]: { ...(p[lead.id] || {}), [f.field_key]: e.target.value } 
-                                      })); 
-                                    }} 
-                                    className="w-full px-2 py-1 border rounded text-sm mt-0.5 outline-none" 
-                                    style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+
 
                         {/* Tabs */}
                         <div className="flex border-b px-4" style={{ borderColor: 'var(--t-border)' }}>
@@ -1476,115 +1217,29 @@ export default function Leads() {
                             </div>
                           )}
 
-                          {/* AI INSIGHTS */}
-                          {activeTab === 'aiInsights' && (
-                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                              {/* Strategy Section */}
-                              <div className="p-5 rounded-2xl border border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)] shadow-sm">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-[var(--t-primary-dim)]/50">
-                                      <Brain className="w-5 h-5 text-[var(--t-primary)]" />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-bold text-white text-lg">AI Analyst Insight</h4>
-                                      <p className="text-xs text-[var(--t-text-muted)]">Strategic tactical advantage</p>
-                                    </div>
-                                  </div>
-                                  <button 
-                                    onClick={() => handleGenerateInsight(lead)}
-                                    disabled={isGeneratingInsight === lead.id}
-                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg shadow-[var(--t-primary)]/20"
-                                    style={{ background: 'var(--t-primary)' }}
-                                  >
-                                    {isGeneratingInsight === lead.id ? (
-                                      <><Loader2 className="w-4 h-4 animate-spin" /> Analyzing Lead...</>
-                                    ) : (
-                                      <><Sparkles className="w-4 h-4" /> Generate Insight</>
-                                    )}
-                                  </button>
-                                </div>
-                                
-                                {aiInsight[lead.id] ? (
-                                  <div className="p-5 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] shadow-inner relative overflow-hidden group">
-                                    <div className="absolute top-0 left-0 w-1 h-full bg-[var(--t-primary)] opacity-50"></div>
-                                    <p className="text-[var(--t-text-secondary)] leading-relaxed text-sm md:text-base italic">
-                                      "{aiInsight[lead.id]}"
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
-                                    <Brain className="w-10 h-10 text-[var(--t-text-muted)] mx-auto mb-3 opacity-20" />
-                                    <p className="text-[var(--t-text-muted)] text-sm max-w-sm mx-auto">Need a tactical edge? Generate a dynamic AI insight based on this lead's specific motivation and status.</p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Script Library Section */}
-                              <div className="p-5 rounded-2xl border border-[var(--t-accent-dim)] bg-[var(--t-surface-dim)] shadow-sm">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2.5 rounded-xl bg-[var(--t-accent-dim)]/50">
-                                      <ScriptIcon className="w-5 h-5 text-[var(--t-accent)]" />
-                                    </div>
-                                    <div>
-                                      <h4 className="font-bold text-white text-lg">Personalized Call Scripts</h4>
-                                      <p className="text-xs text-[var(--t-text-muted)]">Tailored communication templates</p>
-                                    </div>
-                                  </div>
-                                  <button 
-                                    onClick={() => handleGenerateTemplates(lead)}
-                                    disabled={isGeneratingTemplates === lead.id}
-                                    className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2 shadow-lg shadow-[var(--t-accent)]/20"
-                                    style={{ background: 'var(--t-accent)' }}
-                                  >
-                                    {isGeneratingTemplates === lead.id ? (
-                                      <><Loader2 className="w-4 h-4 animate-spin" /> Developing Scripts...</>
-                                    ) : (
-                                      <><Zap className="w-4 h-4" /> Generate Templates</>
-                                    )}
-                                  </button>
-                                </div>
-
-                                {scriptTemplates[lead.id]?.length > 0 ? (
-                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {scriptTemplates[lead.id].map((tmpl, idx) => (
-                                      <div key={idx} className="flex flex-col p-5 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-accent-dim)] transition-all group/card shadow-sm hover:shadow-md">
-                                        <div className="flex items-center justify-between mb-3">
-                                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--t-accent-dim)] text-[var(--t-accent)]">{tmpl.category}</span>
-                                          <button 
-                                            onClick={() => {
-                                              navigator.clipboard.writeText(tmpl.script);
-                                              alert('Script copied to clipboard!');
-                                            }}
-                                            className="p-1.5 rounded-lg hover:bg-[var(--t-surface-hover)] transition-colors text-[var(--t-text-muted)] hover:text-[var(--t-accent)]"
-                                            title="Copy to clipboard"
-                                          >
-                                            <Save className="w-4 h-4" />
-                                          </button>
+                              {activeTab === 'aiInsights' && (
+                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                  {/* Strategy Section placeholder */}
+                                  <div className="p-5 rounded-2xl border border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)] shadow-sm">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2.5 rounded-xl bg-[var(--t-primary-dim)]/50">
+                                          <Brain className="w-5 h-5 text-[var(--t-primary)]" />
                                         </div>
-                                        <h5 className="text-white font-bold text-sm mb-2 group-hover/card:text-[var(--t-accent)] transition-colors">{tmpl.name}</h5>
-                                        <p className="text-xs text-[var(--t-text-muted)] line-clamp-4 leading-relaxed flex-1 mb-4">
-                                          {tmpl.script}
-                                        </p>
-                                        <button 
-                                          onClick={() => setShowScriptLibrary({ isOpen: true, lead: lead })}
-                                          className="w-full py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-[var(--t-accent)] hover:text-white border border-[var(--t-accent)]/30 text-[var(--t-accent)] flex items-center justify-center gap-2"
-                                        >
-                                          <ScriptIcon className="w-3.5 h-3.5" /> Open Library
-                                        </button>
+                                        <div>
+                                          <h4 className="font-bold text-white text-lg">AI Analyst Insight</h4>
+                                          <p className="text-xs text-[var(--t-text-muted)]">Strategic tactical advantage</p>
+                                        </div>
                                       </div>
-                                    ))}
+                                    </div>
+                                    
+                                    <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
+                                      <Brain className="w-10 h-10 text-[var(--t-text-muted)] mx-auto mb-3 opacity-20" />
+                                      <p className="text-[var(--t-text-muted)] text-sm max-w-sm mx-auto">AI Insights are currently being updated. Check back soon for deeper lead motivation analysis.</p>
+                                    </div>
                                   </div>
-                                ) : (
-                                  <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
-                                    <ScriptIcon className="w-10 h-10 text-[var(--t-text-muted)] mx-auto mb-3 opacity-20" />
-                                    <p className="text-[var(--t-text-muted)] text-sm max-w-sm mx-auto">Create a library of 3 personalized call scripts tailored specifically to this lead's motivations.</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                                </div>
+                              )}
 
                           {/* STATUS HISTORY */}
                           {activeTab === 'statusHistory' && (
@@ -1695,69 +1350,14 @@ export default function Leads() {
       />
 
       {/* Call Script Modal */}
-      {/* AI Generated Call Script Modal */}
-      <Modal
-        isOpen={!!generatingScript}
-        onClose={() => setGeneratingScript(null)}
-        zIndex={10000}
-        maxWidth="max-w-2xl"
-      >
-        <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[var(--t-primary-dim)]">
-              <Brain className="w-6 h-6 text-[var(--t-primary)]" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white">AI Generated Call Script</h3>
-              <p className="text-xs text-[var(--t-text-muted)]">Tailored for {leads.find(l => l.id === expandedLead)?.name}</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setGeneratingScript(null)}
-            className="p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-colors"
-            style={{ color: 'var(--t-text-muted)' }}
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-        
-        <div className="overflow-y-auto p-8 max-h-[60vh]">
-          <div className="prose prose-invert max-w-none">
-            <div className="whitespace-pre-wrap text-lg leading-relaxed text-[var(--t-text-secondary)]" style={{ fontFamily: 'var(--t-font-mono, monospace)' }}>
-              {generatingScript}
-            </div>
-          </div>
-        </div>
 
-        <div className="p-6 bg-[var(--t-surface-dim)] border-t flex gap-3" style={{ borderColor: 'var(--t-border)' }}>
-          <button
-            onClick={() => {
-              if (generatingScript) {
-                navigator.clipboard.writeText(generatingScript);
-                alert('Script copied to clipboard!');
-              }
-            }}
-            className="flex-1 py-3 rounded-xl font-bold bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] transition-all"
-            style={{ color: 'var(--t-text)' }}
-          >
-            Copy to Clipboard
-          </button>
-          <button
-            onClick={() => setGeneratingScript(null)}
-            className="flex-1 py-3 rounded-xl font-bold text-white transition-all hover:scale-[1.02]"
-            style={{ background: 'var(--t-primary)' }}
-          >
-            Close
-          </button>
-        </div>
-      </Modal>
 
       {/* CALL SCRIPT LIBRARY MODAL */}
       <CallScriptModal
         isOpen={showScriptLibrary.isOpen}
         onClose={() => setShowScriptLibrary({ isOpen: false, lead: null })}
-        leadName={showScriptLibrary.lead?.name || 'Selected Lead'}
-        templates={showScriptLibrary.lead?.id ? (scriptTemplates[showScriptLibrary.lead.id] || []) : []}
+        lead={showScriptLibrary.lead}
+        agentName={currentUser?.name || 'Agent'}
       />
       {/* Bulk Email Modal */}
       {showBulkEmail && (

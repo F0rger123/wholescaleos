@@ -33,20 +33,23 @@ import {
   Edit2, // Added
   Home, // Added
   DollarSign, // Added
-  TrendingUp // Added
+  TrendingUp, // Added
+  FileCode // Added
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { CallScriptModal } from '../components/CallScriptModal';
 
 export default function LeadManagement() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { leads, updateLead, deleteLead, addTimelineEntry } = useStore();
+  const { leads, updateLead, deleteLead, addTimelineEntry, currentUser } = useStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [noteText, setNoteText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editedLead, setEditedLead] = useState<Partial<Lead>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [showCallScript, setShowCallScript] = useState(false);
 
   const lead = leads.find(l => l.id === id);
 
@@ -168,6 +171,12 @@ export default function LeadManagement() {
               </div>
               <div className="w-10 h-10 rounded-full border-4 border-current opacity-20" style={{ color: scoreColors.bar }} />
             </div>
+            <button 
+              onClick={() => setShowCallScript(true)}
+              className="hidden lg:flex items-center gap-2 px-4 py-2 bg-[var(--t-surface-hover)] text-white rounded-xl font-bold text-sm border border-[var(--t-border)] hover:bg-[var(--t-surface-active)] transition-all"
+            >
+              <FileCode size={16} className="text-[var(--t-primary)]" /> Generate Script
+            </button>
             <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[var(--t-primary)] text-white rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary)]/20 hover:brightness-110 active:scale-95 transition-all">
               <Phone size={16} /> Call Lead
             </button>
@@ -809,6 +818,15 @@ export default function LeadManagement() {
           </div>
         </div>
       </div>
+
+      {lead && (
+        <CallScriptModal
+          isOpen={showCallScript}
+          onClose={() => setShowCallScript(false)}
+          lead={lead}
+          agentName={currentUser?.name}
+        />
+      )}
     </div>
   );
 }
