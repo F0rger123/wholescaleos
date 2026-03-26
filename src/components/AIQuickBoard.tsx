@@ -22,7 +22,7 @@ export function AIQuickBoard() {
   const agenda = useMemo(() => {
     const todayTasks = tasks.filter(t => t.dueDate && isToday(new Date(t.dueDate)));
     const hotLeads = [...leads]
-      .filter(l => !l.status.startsWith('closed'))
+      .filter(l => !l.status?.startsWith('closed'))
       .sort((a, b) => calculateDealScore(b) - calculateDealScore(a))
       .slice(0, 3);
     

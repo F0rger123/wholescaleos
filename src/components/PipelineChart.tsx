@@ -75,7 +75,7 @@ export function PipelineChart() {
 
   // Conversion rate
   const conversionRate = useMemo(() => {
-    const closed = filteredLeads.filter(l => l.status.startsWith('closed'));
+    const closed = filteredLeads.filter(l => l.status?.startsWith('closed'));
     if (closed.length === 0) return 0;
     const won = closed.filter(l => l.status === 'closed-won').length;
     return Math.round((won / closed.length) * 100);

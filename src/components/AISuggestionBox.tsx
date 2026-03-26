@@ -7,7 +7,7 @@ export function AISuggestionBox() {
   const navigate = useNavigate();
 
   const topLead = [...leads]
-    .filter(l => !l.status.startsWith('closed'))
+    .filter(l => !l.status?.startsWith('closed'))
     .sort((a, b) => calculateDealScore(b) - calculateDealScore(a))[0];
 
   const suggestions = [
