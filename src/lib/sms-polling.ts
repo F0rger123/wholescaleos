@@ -381,17 +381,48 @@ export async function pollSMSMessages() {
 
       // ── Safety Guard: Only auto-reply if sender is a known Lead ──
       let isKnownLead = false;
+      let userPhoneNumber = '';
+
       if (isAutoReplyEnabled) {
-        const { data: lead } = await supabase
-          .from('leads')
-          .select('id')
-          .eq('phone', phoneNumber)
-          .maybeSingle();
-        
-        if (lead) {
-          isKnownLead = true;
-        } else {
-          console.log(`[SMS Auto-Reply] Sender ${phoneNumber} is not a known lead. Skipping auto-reply.`);
+        // Fetch user's own phone number to avoid auto-replying to self
+        try {
+          if (userId && isSupabaseConfigured && supabase) {
+            const { data: prefs } = await supabase
+              .from('agent_preferences')
+              .select('phone_number')
+              .eq('user_id', userId)
+              .maybeSingle();
+            userPhoneNumber = prefs?.phone_number || '';
+          } else {
+            userPhoneNumber = localStorage.getItem('user_sms_phone') || '';
+          }
+          // Normalize user phone number
+          userPhoneNumber = userPhoneNumber.replace(/\D/g, '');
+          if (userPhoneNumber.length === 11 && userPhoneNumber.startsWith('1')) {
+            userPhoneNumber = userPhoneNumber.substring(1);
+          }
+        } catch (err) {
+          console.error('[SMS Auto-Reply] Failed to fetch user phone number:', err);
+        }
+
+        // HARD BLOCK: NEVER auto-reply to the user's own number
+        if (userPhoneNumber && phoneNumber === userPhoneNumber) {
+          console.log(`[SMS Auto-Reply] Sender ${phoneNumber} is the user's own number. Hard block triggered.`);
+          isAutoReplyEnabled = false;
+        }
+
+        if (isAutoReplyEnabled) {
+          const { data: lead } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('phone', phoneNumber)
+            .maybeSingle();
+          
+          if (lead) {
+            isKnownLead = true;
+          } else {
+            console.log(`[SMS Auto-Reply] Sender ${phoneNumber} is not a known lead. Skipping auto-reply.`);
+          }
         }
       }
 

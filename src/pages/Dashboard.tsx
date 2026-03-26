@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
-import { LeadHoverCard } from '../components/LeadHoverCard';
+import { useState, useEffect } from 'react';
+import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type Lead, type LeadSource } from '../store/useStore';
+import { LeadQuickViewModal } from '../components/LeadQuickViewModal';
 import { 
   Users, 
   Target, 
@@ -14,7 +14,9 @@ import {
   Flame,
   PieChart,
   BarChart3,
-  Activity
+  Activity,
+  Eye,
+  ExternalLink
 } from 'lucide-react';
 import { StreakBadge } from '../components/StreakBadge';
 import { TeamLeaderboard } from '../components/TeamLeaderboard';
@@ -142,10 +144,7 @@ type Timeframe = '7d' | '30d' | '90d' | 'all';
 export default function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
-  const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const leadElRefs = useRef<Record<string, HTMLElement | null>>({});
-  const hoverCardRef = useRef<HTMLDivElement | null>(null);
+  const [quickViewLead, setQuickViewLead] = useState<Lead | null>(null);
 
   const [timeframe, setTimeframe] = useState<Timeframe>(
     (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d'
@@ -162,26 +161,10 @@ export default function Dashboard() {
     return new Date(l.createdAt) >= cutoff;
   });
 
-  const hoveredLead = leads.find(l => l.id === hoveredLeadId) ?? null;
 
-  const setLeadRef = useCallback((leadId: string, el: HTMLElement | null) => {
-    leadElRefs.current[leadId] = el;
-  }, []);
-
-  const handleLeadMouseEnter = useCallback((leadId: string) => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    setHoveredLeadId(leadId);
-  }, []);
-
-  const handleLeadMouseLeave = useCallback(() => {
-    hoverTimeoutRef.current = setTimeout(() => {
-      setHoveredLeadId(null);
-    }, 250);
-  }, []);
-
-  const handleCardMouseEnter = useCallback(() => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-  }, []);
+  const handleOpenLead = (id: string) => {
+    window.open(`/leads/${id}/manage`, '_blank');
+  };
 
   // ─── Calculations ────────────────────────────────────────
   const dataToUse = filteredLeads || leads;
@@ -646,18 +629,27 @@ export default function Dashboard() {
                   >
                     {lead.name.split(' ').map((n) => n[0]).join('')}
                   </div>
-                  <div className="flex-1 min-w-0 relative">
-                    <div 
-                      className="relative inline-block max-w-full"
-                      ref={(el) => setLeadRef(lead.id, el)}
-                      onMouseEnter={() => handleLeadMouseEnter(lead.id)}
-                      onMouseLeave={handleLeadMouseLeave}
-                    >
-                      <p className="text-sm font-medium text-[var(--t-on-surface)] truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
-                        {lead.name}
-                      </p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--t-on-surface)] truncate">
+                      {lead.name}
+                    </p>
                     <p className="text-xs text-[var(--t-text-secondary)]">{STATUS_LABELS[lead.status]}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setQuickViewLead(lead)}
+                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
+                      title="Quick View"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleOpenLead(lead.id)}
+                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
+                      title="Open Lead"
+                    >
+                      <ExternalLink size={14} />
+                    </button>
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <span className={`text-sm font-black ${sc.text}`}>{score}</span>
@@ -690,18 +682,27 @@ export default function Dashboard() {
                       <Clock size={16} className="text-[var(--t-text-muted)]" />
                     )}
                   </div>
-                  <div className="flex-1 min-w-0 relative">
-                    <div 
-                      className="relative inline-block max-w-full"
-                      ref={(el) => setLeadRef(`recent-${lead.id}`, el)}
-                      onMouseEnter={() => handleLeadMouseEnter(lead.id)}
-                      onMouseLeave={handleLeadMouseLeave}
-                    >
-                      <p className="text-sm text-[var(--t-on-surface)] font-medium truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
-                        {lead.name}
-                      </p>
-                    </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-[var(--t-on-surface)] font-medium truncate">
+                      {lead.name}
+                    </p>
                     <p className="text-xs text-[var(--t-text-secondary)] truncate">{lead.propertyAddress}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button 
+                      onClick={() => setQuickViewLead(lead)}
+                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
+                      title="Quick View"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button 
+                      onClick={() => handleOpenLead(lead.id)}
+                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
+                      title="Open Lead"
+                    >
+                      <ExternalLink size={14} />
+                    </button>
                   </div>
                   <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${sc.bg} ${sc.text}`}>
                     <Zap size={8} />
@@ -743,60 +744,16 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {hoveredLead && (() => {
-        // Find the anchor element from our ref map
-        const anchorEl = leadElRefs.current[hoveredLead.id] || leadElRefs.current[`recent-${hoveredLead.id}`];
-        if (!anchorEl) return null;
-
-        const rect = anchorEl.getBoundingClientRect();
-        const cardWidth = 320;
-        const cardHeight = 380;
-        const gap = 12;
-        const margin = 16;
-
-        let arrowSide: 'left' | 'right' = 'left';
-        let left = rect.right + gap;
-        let anchorY = rect.top + rect.height / 2;
-
-        // Flip to left if not enough room on right
-        if (left + cardWidth > window.innerWidth - margin) {
-          left = rect.left - cardWidth - gap;
-          arrowSide = 'right';
-        }
-        // Clamp left
-        if (left < margin) left = margin;
-
-        let top = anchorY - cardHeight / 2;
-        // Viewport clamp vertically
-        if (top + cardHeight > window.innerHeight - margin) {
-          top = window.innerHeight - cardHeight - margin;
-        }
-        if (top < margin) top = margin;
-
-        // Arrow should point to the anchor's vertical center
-        const arrowTop = Math.max(16, Math.min(cardHeight - 16, anchorY - top));
-
-        return (
-          <div
-            ref={hoverCardRef}
-            className="fixed z-[9999] shadow-2xl pointer-events-auto"
-            style={{ 
-              left: `${left}px`, 
-              top: `${top}px`,
-              transition: 'left 0.15s ease, top 0.15s ease',
-              '--card-arrow-display': 'block',
-              '--card-arrow-left': arrowSide === 'left' ? '-6px' : 'auto',
-              '--card-arrow-right': arrowSide === 'right' ? '-6px' : 'auto',
-              '--card-arrow-rotate': arrowSide === 'left' ? '-45deg' : '135deg',
-              '--card-arrow-top': `${arrowTop}px`,
-            } as any}
-            onMouseEnter={handleCardMouseEnter}
-            onMouseLeave={handleLeadMouseLeave}
-          >
-            <LeadHoverCard lead={hoveredLead} />
-          </div>
-        );
-      })()}
+      {quickViewLead && (
+        <LeadQuickViewModal 
+          lead={quickViewLead} 
+          onClose={() => setQuickViewLead(null)}
+          onOpenFull={() => {
+            handleOpenLead(quickViewLead.id);
+            setQuickViewLead(null);
+          }}
+        />
+      )}
     </div>
   );
 }
