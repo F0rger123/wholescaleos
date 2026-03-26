@@ -1,5 +1,5 @@
 import { 
-  Check, Shield, Zap, Globe, Brain
+  Check, Shield, Zap, Globe, Bot as Brain
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 

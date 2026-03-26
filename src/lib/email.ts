@@ -63,7 +63,7 @@ export interface EmailMessage {
   labelIds: string[];
   snippet: string;
   payload: any;
-  from: string;
+  from: { name: string; email: string };
   to: string;
   subject: string;
   date: string;
@@ -771,7 +771,16 @@ export async function listThreads(maxResults = 20): Promise<{ threads: any[], er
     if (!response.ok) throw new Error('Gmail API failed');
 
     const result = await response.json();
-    return { threads: result.threads || [] };
+    const threadSummaries = result.threads || [];
+
+    // Fetch details for the first 10 threads in parallel to populate the inbox list
+    const detailPromises = threadSummaries.slice(0, 10).map((t: any) => getThread(t.id));
+    const detailedThreads = await Promise.all(detailPromises);
+    
+    // Merge snippets if detail fetch failed
+    const finalThreads = detailedThreads.filter(Boolean);
+
+    return { threads: finalThreads };
   } catch (err) {
     return { threads: [], error: err instanceof Error ? err.message : 'Unknown error' };
   }
@@ -832,10 +841,17 @@ export async function getThread(threadId: string): Promise<EmailThread | null> {
         if (data) body = atob(data.replace(/-/g, '+').replace(/_/g, '/'));
       }
 
+      const fromRaw = getHeader('From');
+      const fromMatch = fromRaw.match(/^(.*?) <(.*?)>$/);
+      const from = fromMatch ? {
+        name: fromMatch[1].replace(/^"|"$/g, '').trim() || fromMatch[2],
+        email: fromMatch[2].trim()
+      } : { name: fromRaw, email: fromRaw };
+
       return {
         id: m.id,
         threadId: m.threadId,
-        from: getHeader('From'),
+        from,
         to: getHeader('To'),
         subject: getHeader('Subject'),
         date: getHeader('Date'),

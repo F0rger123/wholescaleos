@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Loader2, Image as ImageIcon, FileText, CheckCircle2 } from 'lucide-react';
+import { Upload, X as CloseIcon, Loader2, Image as ImageIcon, FileText, CheckCircle2 } from 'lucide-react';
 import { uploadFile, generateUniqueFileName, StorageBucket } from '../lib/storage';
 
 interface FileUploaderProps {
@@ -152,7 +152,7 @@ export function FileUploader({
                 className="p-2 bg-white/20 hover:bg-white/40 rounded-full text-white backdrop-blur-sm transition-colors"
                 title="Remove"
               >
-                <X size={18} />
+                <CloseIcon size={18} />
               </button>
             </div>
             {isUploading && (
@@ -166,7 +166,7 @@ export function FileUploader({
 
         {error && (
           <p className="mt-2 text-xs text-[var(--t-error)] font-medium flex items-center gap-1">
-            <X size={12} /> {error}
+            <CloseIcon size={12} /> {error}
           </p>
         )}
       </div>

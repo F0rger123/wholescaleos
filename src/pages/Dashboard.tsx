@@ -143,7 +143,7 @@ export default function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [timeframe, setTimeframe] = useState<Timeframe>(
     (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d'
   );
@@ -162,8 +162,14 @@ export default function Dashboard() {
   const hoveredLead = leads.find(l => l.id === hoveredLeadId) ?? null;
 
   const handleLeadMouseEnter = (e: React.MouseEvent, id: string) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setHoveredLeadId(id);
-    setHoverPos({ x: e.clientX, y: e.clientY });
+    setHoverPos({ 
+      x: rect.right, 
+      y: rect.top, 
+      width: rect.width, 
+      height: rect.height 
+    });
   };
   const handleLeadMouseLeave = () => {
     setHoveredLeadId(null);
@@ -732,22 +738,34 @@ export default function Dashboard() {
       {hoveredLead && hoverPos && (() => {
         const cardWidth = 320;
         const cardHeight = 400; // Approximate
-        let left = hoverPos.x + 16;
-        let top = hoverPos.y + 16;
+        let left = hoverPos.x + 12;
+        let top = hoverPos.y - 12;
+        let arrowPos = 'left';
 
-        // Boundary checks
+        // Flip to left side if not enough space on the right
         if (left + cardWidth > window.innerWidth) {
-          left = hoverPos.x - cardWidth - 16;
+          left = hoverPos.x - hoverPos.width - cardWidth - 12;
+          arrowPos = 'right';
         }
+
+        // Vertical boundary clamping
         if (top + cardHeight > window.innerHeight) {
-          top = window.innerHeight - cardHeight - 16;
+          top = window.innerHeight - cardHeight - 12;
         }
-        if (top < 0) top = 16;
+        if (top < 12) top = 12;
 
         return (
           <div
             className="fixed z-[9999] shadow-2xl pointer-events-auto"
-            style={{ left, top }}
+            style={{ 
+              left, 
+              top,
+              '--card-arrow-display': 'block',
+              '--card-arrow-left': arrowPos === 'left' ? '-6px' : 'auto',
+              '--card-arrow-right': arrowPos === 'right' ? '-6px' : 'auto',
+              '--card-arrow-rotate': arrowPos === 'left' ? '-45deg' : '135deg',
+              '--card-arrow-top': arrowPos === 'left' ? '32px' : '32px', // Can refine this
+            } as any}
             onMouseEnter={() => setHoveredLeadId(hoveredLeadId)} // Keep open while mouse is on card
             onMouseLeave={handleLeadMouseLeave}
           >

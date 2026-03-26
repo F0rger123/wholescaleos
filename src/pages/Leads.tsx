@@ -19,6 +19,7 @@ import { googleEcosystem } from '../lib/google-ecosystem';
 import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
 import { CallScriptModal } from '../components/CallScriptModal';
 import { detectCarrier } from '../lib/carrier-service';
+import { BulkEmailModal } from '../components/BulkEmailModal';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -148,6 +149,7 @@ export default function Leads() {
   // Bulk selection state
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'list'|'kanban'|'card'|'compact'|'map'>('list');
+  const [showBulkEmail, setShowBulkEmail] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
@@ -459,15 +461,24 @@ export default function Leads() {
         <div className="flex gap-3">
 
           
-          {/* NEW: Bulk delete button */}
+          {/* NEW: Bulk actions */}
           {selectedLeads.size > 0 && (
-            <button 
-              onClick={() => setShowDeleteConfirm(true)} 
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity hover:opacity-90"
-              style={{ backgroundColor: 'var(--t-error)' }}
-            >
-              <Trash className="w-4 h-4" /> Delete Selected ({selectedLeads.size})
-            </button>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowBulkEmail(true)} 
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity hover:opacity-90"
+                style={{ backgroundColor: 'var(--t-primary)' }}
+              >
+                <Mail className="w-4 h-4" /> Bulk Email ({selectedLeads.size})
+              </button>
+              <button 
+                onClick={() => setShowDeleteConfirm(true)} 
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity hover:opacity-90"
+                style={{ backgroundColor: 'var(--t-error)' }}
+              >
+                <Trash className="w-4 h-4" /> Delete ({selectedLeads.size})
+              </button>
+            </div>
           )}
           
           <div className="flex bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg overflow-hidden shrink-0">
@@ -996,7 +1007,6 @@ export default function Leads() {
           const geo = lead.lat && lead.lat !== 30.2672;
           return (
             <div key={lead.id} className="border rounded-xl transition-colors" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.5)', borderColor: 'var(--t-border)' }}>
-              {/* LEAD ROW */}
               <div className="flex items-center gap-3 p-4">
                 {/* NEW: Selection checkbox */}
                 <div onClick={(e) => e.stopPropagation()}>
@@ -1066,6 +1076,7 @@ export default function Leads() {
                     <p className="font-semibold" style={{ color: 'var(--t-text)' }}>{fmt$(lead.estimatedValue || 0)}</p>
                     <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{lead.propertyType || 'Unknown'}</p>
                   </div>
+                </div>
                   <div className="flex gap-1 flex-shrink-0">
                     <button 
                       onClick={e => { e.stopPropagation(); openEdit(lead); }} 
@@ -1096,7 +1107,6 @@ export default function Leads() {
                     </button>
                   </div>
                 </div>
-              </div>
 
               {/* EXPANDED DETAIL */}
               {expandedLead === lead.id && (
@@ -1334,7 +1344,6 @@ export default function Leads() {
                         </div>
 
                         <div className="p-4">
-                          {/* TIMELINE */}
                           {activeTab === 'timeline' && (
                             <div>
                               <div className="flex flex-wrap gap-2 mb-4">
@@ -1402,11 +1411,11 @@ export default function Leads() {
                               </div>
 
                               <div className="space-y-3">
-                                {(lead.timeline || []).slice().reverse().map((entry, i) => {
+                                {(lead.timeline || []).slice().reverse().map((entry) => {
                                   const cfg = TIMELINE_ICONS[entry.type] || TIMELINE_ICONS.note;
                                   const Icon = cfg.icon;
                                   return (
-                                    <div key={i} className="flex gap-3">
+                                    <div key={entry.timestamp + entry.content} className="flex gap-3">
                                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
                                         <Icon className="w-4 h-4" />
                                       </div>
@@ -2023,8 +2032,10 @@ export default function Leads() {
             <div className="p-6 bg-[var(--t-surface-dim)] border-t flex gap-3" style={{ borderColor: 'var(--t-border)' }}>
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(generatingScript);
-                  alert('Script copied to clipboard!');
+                  if (generatingScript) {
+                    navigator.clipboard.writeText(generatingScript);
+                    alert('Script copied to clipboard!');
+                  }
                 }}
                 className="flex-1 py-3 rounded-xl font-bold bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] transition-all"
                 style={{ color: 'var(--t-text)' }}
@@ -2048,8 +2059,16 @@ export default function Leads() {
         isOpen={showScriptLibrary.isOpen}
         onClose={() => setShowScriptLibrary({ isOpen: false, lead: null })}
         leadName={showScriptLibrary.lead?.name || 'Selected Lead'}
-        templates={showScriptLibrary.lead ? (scriptTemplates[showScriptLibrary.lead.id] || []) : []}
+        templates={showScriptLibrary.lead?.id ? (scriptTemplates[showScriptLibrary.lead.id] || []) : []}
       />
+      {/* Bulk Email Modal */}
+      {showBulkEmail && (
+        <BulkEmailModal
+          isOpen={showBulkEmail}
+          onClose={() => setShowBulkEmail(false)}
+          selectedLeads={leads.filter(l => selectedLeads.has(l.id))}
+        />
+      )}
     </div>
   );
 }

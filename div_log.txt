@@ -1,0 +1,328 @@
+L450 [D=1] +1 -0 | <div className="p-6 max-w-7xl mx-auto" style={{ backgroundColor: 'var(--t-bg)' }}>
+L452 [D=2] +1 -0 | <div className="flex items-center justify-between mb-6">
+L453 [D=3] +1 -0 | <div>
+L460 [D=2] +0 -1 | </div>
+L461 [D=3] +1 -0 | <div className="flex gap-3">
+L466 [D=4] +1 -0 | <div className="flex gap-2">
+L481 [D=3] +0 -1 | </div>
+L484 [D=4] +1 -0 | <div className="flex bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg overflow-hidden shrink-0">
+L515 [D=3] +0 -1 | </div>
+L524 [D=2] +0 -1 | </div>
+L525 [D=1] +0 -1 | </div>
+L528 [D=2] +1 -0 | <div className="mb-6 p-4 border rounded-xl"
+L534 [D=3] +1 -0 | <div className="flex items-center justify-between mb-3">
+L535 [D=4] +1 -0 | <div className="flex items-center gap-2">
+L541 [D=3] +0 -1 | </div>
+L551 [D=2] +0 -1 | </div>
+L554 [D=3] +1 -0 | <div className="mb-3 flex items-center gap-2">
+L623 [D=2] +0 -1 | </div>
+L627 [D=3] +1 -0 | <div className="mb-3 p-2 bg-[var(--t-success)]/20 border border-[var(--t-warning)]/30 rounded-lg text-[var(--t-success)] text-xs flex items-center gap-1">
+L630 [D=2] +0 -1 | </div>
+L636 [D=3] +1 -0 | <div className="flex flex-wrap gap-2">
+L680 [D=2] +0 -1 | </div>
+L682 [D=1] +0 -1 | </div>
+L685 [D=2] +1 -0 | <div className="flex flex-wrap gap-3 mb-6">
+L686 [D=3] +1 -0 | <div className="flex-1 min-w-[200px] relative">
+L695 [D=2] +0 -1 | </div>
+L731 [D=1] +0 -1 | </div>
+L734 [D=2] +1 -0 | <div className="flex gap-2 overflow-x-auto pb-4 mb-2">
+L742 [D=3] +1 -0 | <div key={fName} className="relative group flex-shrink-0">
+L774 [D=2] +0 -1 | </div>
+L777 [D=3] +1 -0 | <div className="flex items-center gap-1 flex-shrink-0 bg-[var(--t-surface)] border border-[var(--t-primary)] rounded-full px-2" style={{ borderColor: 'var(--t-primary)' }}>
+L804 [D=2] +0 -1 | </div>
+L813 [D=1] +0 -1 | </div>
+L816 [D=2] +1 -0 | <div className="space-y-3">
+L819 [D=3] +1 -0 | <div className="flex items-center gap-3 px-4 py-2 rounded-lg border" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+L820 [D=4] +1 -0 | <div className="flex items-center gap-2">
+L838 [D=3] +0 -1 | </div>
+L848 [D=2] +0 -1 | </div>
+L852 [D=3] +1 -0 | <div className="text-center py-16 bg-[var(--t-surface)]/30 rounded-xl">
+L862 [D=2] +0 -1 | </div>
+L864 [D=3] +1 -0 | <div className="flex gap-4 overflow-x-auto pb-6 pt-2 snap-x">
+L868 [D=4] +1 -0 | <div
+L874 [D=5] +1 -0 | <div className={`p-3 border-b border-[var(--t-border)] font-bold text-sm tracking-wide uppercase flex items-center justify-between ${STATUS_BADGE[statusKey] || 'text-white'}`}>
+L877 [D=4] +0 -1 | </div>
+L878 [D=5] +1 -0 | <div className="p-3 flex flex-col gap-3 min-h-[150px] overflow-y-auto max-h-[70vh]">
+L883 [D=6] +1 -0 | <div
+L890 [D=7] +1 -0 | <div className="flex justify-between items-start mb-2">
+L893 [D=6] +0 -1 | </div>
+L895 [D=7] +1 -0 | <div className="flex items-center justify-between">
+L896 [D=8] +1 -0 | <div className="flex gap-1.5">
+L899 [D=7] +0 -1 | </div>
+L901 [D=6] +0 -1 | </div>
+L902 [D=5] +0 -1 | </div>
+L905 [D=4] +0 -1 | </div>
+L906 [D=3] +0 -1 | </div>
+L909 [D=2] +0 -1 | </div>
+L911 [D=3] +1 -0 | <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+L916 [D=4] +1 -0 | <div key={lead.id} className="bg-[var(--t-surface)] border border-[var(--t-border)] p-4 rounded-xl shadow-sm hover:border-[var(--t-primary)]/50 transition-all cursor-pointer relative" onClick={() => openEdit(lead)}>
+L917 [D=5] +1 -0 | <div className="absolute top-2 right-2">
+L925 [D=4] +0 -1 | </div>
+L926 [D=5] +1 -0 | <div className="flex justify-between items-start mb-2 pr-6">
+L928 [D=4] +0 -1 | </div>
+L930 [D=5] +1 -0 | <div className="flex gap-2 mb-3">
+L933 [D=4] +0 -1 | </div>
+L934 [D=5] +1 -0 | <div className="flex items-center justify-between mt-auto pt-3 border-t border-[var(--t-border)]">
+L937 [D=4] +0 -1 | </div>
+L938 [D=3] +0 -1 | </div>
+L941 [D=2] +0 -1 | </div>
+L943 [D=3] +1 -0 | <div className="border border-[var(--t-border)] rounded-xl overflow-hidden bg-[var(--t-surface)]">
+L944 [D=4] +1 -0 | <div className="overflow-x-auto">
+L974 [D=3] +0 -1 | </div>
+L975 [D=2] +0 -1 | </div>
+L977 [D=3] +1 -0 | <div className="flex flex-col lg:flex-row gap-4 h-[70vh]">
+L978 [D=4] +1 -0 | <div className="w-full lg:w-1/3 flex flex-col gap-3 overflow-y-auto pr-2">
+L981 [D=5] +1 -0 | <div key={lead.id} onClick={() => setExpandedLead(expandedLead === lead.id ? null : lead.id)} className={`p-3 rounded-xl border cursor-pointer transition-all ${expandedLead === lead.id ? 'border-[var(--t-primary)] bg-[var(--t-surface-hover)]' : 'border-[var(--t-border)] bg-[var(--t-surface)]'}`}>
+L984 [D=6] +1 -0 | <div className="flex items-center justify-between mt-2">
+L987 [D=5] +0 -1 | </div>
+L988 [D=4] +0 -1 | </div>
+L991 [D=3] +0 -1 | </div>
+L992 [D=4] +1 -0 | <div className="flex-1 bg-[var(--t-surface-dim)] rounded-xl border border-[var(--t-border)] overflow-hidden relative">
+L1000 [D=3] +0 -1 | </div>
+L1001 [D=2] +0 -1 | </div>
+L1009 [D=3] +1 -0 | <div key={lead.id} className="border rounded-xl transition-colors" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.5)', borderColor: 'var(--t-border)' }}>
+L1010 [D=4] +1 -0 | <div className="flex items-center gap-3 p-4">
+L1012 [D=5] +1 -0 | <div onClick={(e) => e.stopPropagation()}>
+L1026 [D=4] +0 -1 | </div>
+L1028 [D=5] +1 -0 | <div
+L1032 [D=6] +1 -0 | <div className="flex-shrink-0">
+L1034 [D=5] +0 -1 | </div>
+L1035 [D=6] +1 -0 | <div
+L1040 [D=5] +0 -1 | </div>
+L1041 [D=6] +1 -0 | <div className="flex-1 min-w-0 relative">
+L1042 [D=7] +1 -0 | <div className="flex items-center gap-2 flex-wrap">
+L1043 [D=8] +1 -0 | <div className="relative">
+L1047 [D=7] +0 -1 | </div>
+L1066 [D=6] +0 -1 | </div>
+L1068 [D=7] +1 -0 | <div className="w-24 h-1 bg-[var(--t-surface-subtle)] rounded-full mt-1">
+L1069 [D=8] +1 -0 | <div
+L1073 [D=7] +0 -1 | </div>
+L1074 [D=6] +0 -1 | </div>
+L1075 [D=7] +1 -0 | <div className="text-right flex-shrink-0">
+L1078 [D=6] +0 -1 | </div>
+L1079 [D=7] +1 -0 | <div className="flex gap-1 flex-shrink-0">
+L1107 [D=6] +0 -1 | </div>
+L1108 [D=5] +0 -1 | </div>
+L1112 [D=6] +1 -0 | <div className="border-t" style={{ borderColor: 'var(--t-border)', backgroundColor: 'rgba(var(--t-surface-rgb), 0.5)' }}>
+L1122 [D=7] +1 -0 | <div className="m-4 p-4 border rounded-xl"
+L1128 [D=8] +1 -0 | <div className="flex items-start justify-between">
+L1129 [D=9] +1 -0 | <div className="flex items-start gap-3">
+L1130 [D=10] +1 -0 | <div className="p-2 rounded-lg" style={{ background: 'var(--t-primary-dim)' }}>
+L1132 [D=9] +0 -1 | </div>
+L1133 [D=10] +1 -0 | <div>
+L1137 [D=9] +0 -1 | </div>
+L1138 [D=8] +0 -1 | </div>
+L1146 [D=7] +0 -1 | </div>
+L1147 [D=6] +0 -1 | </div>
+L1151 [D=7] +1 -0 | <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 px-4 pb-4">
+L1160 [D=8] +1 -0 | <div key={i} className="p-3 rounded-lg group relative" style={{ backgroundColor: 'var(--t-surface-dim)' }}>
+L1161 [D=9] +1 -0 | <div className="flex items-center justify-between gap-1 text-xs mb-1" style={{ color: 'var(--t-text-muted)' }}>
+L1162 [D=10] +1 -0 | <div className="flex items-center gap-1">
+L1165 [D=9] +0 -1 | </div>
+L1175 [D=8] +0 -1 | </div>
+L1177 [D=7] +0 -1 | </div>
+L1179 [D=6] +0 -1 | </div>
+L1182 [D=7] +1 -0 | <div className="px-4 pb-4 flex gap-2">
+L1211 [D=6] +0 -1 | </div>
+L1215 [D=7] +1 -0 | <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+L1216 [D=8] +1 -0 | <div className="w-full h-48 rounded-xl overflow-hidden shadow-inner border border-[var(--t-border)] bg-[var(--t-surface-dim)] group relative">
+L1226 [D=7] +0 -1 | </div>
+L1227 [D=8] +1 -0 | <div className="w-full h-48 rounded-xl overflow-hidden shadow-inner border border-[var(--t-border)] bg-[var(--t-surface-dim)] group relative">
+L1237 [D=7] +0 -1 | </div>
+L1238 [D=6] +0 -1 | </div>
+L1243 [D=7] +1 -0 | <div className="px-4 pb-4">
+L1244 [D=8] +1 -0 | <div className="flex gap-2 overflow-x-auto">
+L1246 [D=9] +1 -0 | <div key={i} className="w-20 h-20 rounded-lg flex-shrink-0 flex items-center justify-center relative group" style={{ backgroundColor: 'var(--t-surface-dim)' }}>
+L1254 [D=8] +0 -1 | </div>
+L1265 [D=7] +0 -1 | </div>
+L1266 [D=6] +0 -1 | </div>
+L1270 [D=7] +1 -0 | <div className="px-4 pb-4">
+L1290 [D=6] +0 -1 | </div>
+L1294 [D=7] +1 -0 | <div className="mx-4 mb-4 p-3 bg-[var(--t-accent-dim)] border border-[var(--t-accent)]/30 rounded-lg">
+L1298 [D=8] +1 -0 | <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+L1300 [D=9] +1 -0 | <div key={f.id}>
+L1314 [D=8] +0 -1 | </div>
+L1316 [D=7] +0 -1 | </div>
+L1317 [D=6] +0 -1 | </div>
+L1321 [D=7] +1 -0 | <div className="flex border-b px-4" style={{ borderColor: 'var(--t-border)' }}>
+L1343 [D=6] +0 -1 | </div>
+L1345 [D=7] +1 -0 | <div className="p-4">
+L1347 [D=8] +1 -0 | <div>
+L1348 [D=9] +1 -0 | <div className="flex flex-wrap gap-2 mb-4">
+L1391 [D=8] +0 -1 | </div>
+L1393 [D=9] +1 -0 | <div className="flex gap-2 mb-4">
+L1410 [D=8] +0 -1 | </div>
+L1412 [D=9] +1 -0 | <div className="space-y-3">
+L1417 [D=10] +1 -0 | <div key={entry.timestamp + entry.content} className="flex gap-3">
+L1418 [D=11] +1 -0 | <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
+L1420 [D=10] +0 -1 | </div>
+L1421 [D=11] +1 -0 | <div className="flex-1">
+L1426 [D=10] +0 -1 | </div>
+L1427 [D=9] +0 -1 | </div>
+L1433 [D=8] +0 -1 | </div>
+L1436 [D=9] +1 -0 | <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
+L1441 [D=10] +1 -0 | <div key={r.id} className="p-3 rounded-lg mb-2" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.5)' }}>
+L1442 [D=11] +1 -0 | <div className="flex items-center justify-between">
+L1443 [D=12] +1 -0 | <div className="flex items-center gap-2">
+L1453 [D=11] +0 -1 | </div>
+L1454 [D=12] +1 -0 | <div>
+L1470 [D=11] +0 -1 | </div>
+L1471 [D=10] +0 -1 | </div>
+L1473 [D=11] +1 -0 | <div className="mt-3 p-3 rounded-lg space-y-2" style={{ backgroundColor: 'var(--t-surface)' }}>
+L1493 [D=10] +0 -1 | </div>
+L1495 [D=9] +0 -1 | </div>
+L1497 [D=8] +0 -1 | </div>
+L1499 [D=7] +0 -1 | </div>
+L1504 [D=8] +1 -0 | <div>
+L1505 [D=9] +1 -0 | <div className="flex items-center justify-center mb-6">
+L1506 [D=10] +1 -0 | <div className={`w-24 h-24 rounded-full border-4 flex items-center justify-center ${
+L1510 [D=9] +0 -1 | </div>
+L1511 [D=8] +0 -1 | </div>
+L1512 [D=9] +1 -0 | <div className="space-y-3">
+L1520 [D=10] +1 -0 | <div key={i}>
+L1521 [D=11] +1 -0 | <div className="flex justify-between text-sm mb-1">
+L1524 [D=10] +0 -1 | </div>
+L1525 [D=11] +1 -0 | <div className="h-2 bg-[var(--t-surface-subtle)] rounded-full">
+L1527 [D=10] +0 -1 | </div>
+L1528 [D=9] +0 -1 | </div>
+L1530 [D=8] +0 -1 | </div>
+L1531 [D=7] +0 -1 | </div>
+L1536 [D=8] +1 -0 | <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+L1538 [D=9] +1 -0 | <div className="p-5 rounded-2xl border border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)] shadow-sm">
+L1539 [D=10] +1 -0 | <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+L1540 [D=11] +1 -0 | <div className="flex items-center gap-3">
+L1541 [D=12] +1 -0 | <div className="p-2.5 rounded-xl bg-[var(--t-primary-dim)]/50">
+L1543 [D=11] +0 -1 | </div>
+L1544 [D=12] +1 -0 | <div>
+L1547 [D=11] +0 -1 | </div>
+L1548 [D=10] +0 -1 | </div>
+L1561 [D=9] +0 -1 | </div>
+L1564 [D=10] +1 -0 | <div className="p-5 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] shadow-inner relative overflow-hidden group">
+L1569 [D=9] +0 -1 | </div>
+L1571 [D=10] +1 -0 | <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
+L1574 [D=9] +0 -1 | </div>
+L1576 [D=8] +0 -1 | </div>
+L1579 [D=9] +1 -0 | <div className="p-5 rounded-2xl border border-[var(--t-accent-dim)] bg-[var(--t-surface-dim)] shadow-sm">
+L1580 [D=10] +1 -0 | <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+L1581 [D=11] +1 -0 | <div className="flex items-center gap-3">
+L1582 [D=12] +1 -0 | <div className="p-2.5 rounded-xl bg-[var(--t-accent-dim)]/50">
+L1584 [D=11] +0 -1 | </div>
+L1585 [D=12] +1 -0 | <div>
+L1588 [D=11] +0 -1 | </div>
+L1589 [D=10] +0 -1 | </div>
+L1602 [D=9] +0 -1 | </div>
+L1605 [D=10] +1 -0 | <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+L1607 [D=11] +1 -0 | <div key={idx} className="flex flex-col p-5 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-accent-dim)] transition-all group/card shadow-sm hover:shadow-md">
+L1608 [D=12] +1 -0 | <div className="flex items-center justify-between mb-3">
+L1620 [D=11] +0 -1 | </div>
+L1631 [D=10] +0 -1 | </div>
+L1633 [D=9] +0 -1 | </div>
+L1635 [D=10] +1 -0 | <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
+L1638 [D=9] +0 -1 | </div>
+L1640 [D=8] +0 -1 | </div>
+L1641 [D=7] +0 -1 | </div>
+L1646 [D=8] +1 -0 | <div>
+L1647 [D=9] +1 -0 | <div className="mb-4">
+L1649 [D=10] +1 -0 | <div className="flex flex-wrap gap-2">
+L1662 [D=9] +0 -1 | </div>
+L1663 [D=8] +0 -1 | </div>
+L1664 [D=9] +1 -0 | <div className="space-y-3">
+L1666 [D=10] +1 -0 | <div key={i} className="flex items-center gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--t-surface-dim)' }}>
+L1667 [D=11] +1 -0 | <div className="flex items-center gap-2 flex-1">
+L1675 [D=10] +0 -1 | </div>
+L1679 [D=9] +0 -1 | </div>
+L1684 [D=8] +0 -1 | </div>
+L1685 [D=7] +0 -1 | </div>
+L1690 [D=8] +1 -0 | <div className="space-y-4">
+L1691 [D=9] +1 -0 | <div className="flex items-center justify-between bg-[var(--t-surface-subtle)] p-4 rounded-xl border border-[var(--t-border)]">
+L1692 [D=10] +1 -0 | <div className="flex-1">
+L1695 [D=9] +0 -1 | </div>
+L1704 [D=8] +0 -1 | </div>
+L1707 [D=9] +1 -0 | <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+L1716 [D=10] +1 -0 | <div className="p-2 bg-[var(--t-surface-hover)] rounded-lg text-[var(--t-primary)] flex-shrink-0 group-hover:bg-[var(--t-primary-dim)] transition-colors">
+L1718 [D=9] +0 -1 | </div>
+L1719 [D=10] +1 -0 | <div className="flex-1 min-w-0">
+L1722 [D=9] +0 -1 | </div>
+L1725 [D=8] +0 -1 | </div>
+L1727 [D=9] +1 -0 | <div className="text-center py-10 border-2 border-dashed border-[var(--t-border)] rounded-2xl bg-[var(--t-surface)]/30">
+L1730 [D=8] +0 -1 | </div>
+L1732 [D=7] +0 -1 | </div>
+L1734 [D=6] +0 -1 | </div>
+L1738 [D=5] +0 -1 | </div>
+L1740 [D=4] +0 -1 | </div>
+L1743 [D=3] +0 -1 | </div>
+L1747 [D=4] +1 -0 | <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
+L1748 [D=5] +1 -0 | <div className="rounded-xl w-full max-w-md" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }} onClick={e => e.stopPropagation()}>
+L1749 [D=6] +1 -0 | <div className="p-6">
+L1750 [D=7] +1 -0 | <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--t-error-dim)] flex items-center justify-center">
+L1752 [D=6] +0 -1 | </div>
+L1757 [D=7] +1 -0 | <div className="flex gap-3">
+L1773 [D=6] +0 -1 | </div>
+L1774 [D=5] +0 -1 | </div>
+L1775 [D=4] +0 -1 | </div>
+L1776 [D=3] +0 -1 | </div>
+L1781 [D=4] +1 -0 | <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9000] p-4" onClick={() => setShowModal(false)}>
+L1782 [D=5] +1 -0 | <div className="rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+L1786 [D=6] +1 -0 | <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
+L1791 [D=5] +0 -1 | </div>
+L1793 [D=6] +1 -0 | <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+L1794 [D=7] +1 -0 | <div className="md:col-span-2">
+L1803 [D=6] +0 -1 | </div>
+L1804 [D=7] +1 -0 | <div>
+L1812 [D=6] +0 -1 | </div>
+L1813 [D=7] +1 -0 | <div>
+L1821 [D=6] +0 -1 | </div>
+L1822 [D=7] +1 -0 | <div>
+L1836 [D=6] +0 -1 | </div>
+L1837 [D=7] +1 -0 | <div>
+L1855 [D=6] +0 -1 | </div>
+L1856 [D=7] +1 -0 | <div className="md:col-span-2">
+L1863 [D=6] +0 -1 | </div>
+L1864 [D=7] +1 -0 | <div>
+L1877 [D=6] +0 -1 | </div>
+L1878 [D=7] +1 -0 | <div>
+L1886 [D=6] +0 -1 | </div>
+L1887 [D=7] +1 -0 | <div>
+L1895 [D=6] +0 -1 | </div>
+L1896 [D=7] +1 -0 | <div className="md:col-span-2">
+L1904 [D=6] +0 -1 | </div>
+L1905 [D=5] +0 -1 | </div>
+L1907 [D=6] +1 -0 | <div className="border-t border-[var(--t-border)] pt-4">
+L1911 [D=7] +1 -0 | <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+L1912 [D=8] +1 -0 | <div>
+L1922 [D=7] +0 -1 | </div>
+L1923 [D=8] +1 -0 | <div>
+L1933 [D=7] +0 -1 | </div>
+L1934 [D=8] +1 -0 | <div>
+L1944 [D=7] +0 -1 | </div>
+L1945 [D=8] +1 -0 | <div>
+L1955 [D=7] +0 -1 | </div>
+L1956 [D=6] +0 -1 | </div>
+L1957 [D=7] +1 -0 | <div className="mt-3 flex items-center gap-3">
+L1974 [D=6] +0 -1 | </div>
+L1975 [D=5] +0 -1 | </div>
+L1977 [D=6] +1 -0 | <div className="flex justify-end gap-3 pt-4 border-t border-[var(--t-border)]">
+L1995 [D=5] +0 -1 | </div>
+L1997 [D=4] +0 -1 | </div>
+L1998 [D=3] +0 -1 | </div>
+L2002 [D=4] +1 -0 | <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+L2003 [D=5] +1 -0 | <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+L2004 [D=6] +1 -0 | <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
+L2005 [D=7] +1 -0 | <div className="flex items-center gap-3">
+L2006 [D=8] +1 -0 | <div className="p-2 rounded-xl bg-[var(--t-primary-dim)]">
+L2008 [D=7] +0 -1 | </div>
+L2009 [D=8] +1 -0 | <div>
+L2012 [D=7] +0 -1 | </div>
+L2013 [D=6] +0 -1 | </div>
+L2021 [D=5] +0 -1 | </div>
+L2023 [D=6] +1 -0 | <div className="flex-1 overflow-y-auto p-8">
+L2024 [D=7] +1 -0 | <div className="prose prose-invert max-w-none">
+L2025 [D=8] +1 -0 | <div className="whitespace-pre-wrap text-lg leading-relaxed text-[var(--t-text-secondary)]" style={{ fontFamily: 'var(--t-font-mono, monospace)' }}>
+L2027 [D=7] +0 -1 | </div>
+L2028 [D=6] +0 -1 | </div>
+L2029 [D=5] +0 -1 | </div>
+L2031 [D=6] +1 -0 | <div className="p-6 bg-[var(--t-surface-dim)] border-t flex gap-3" style={{ borderColor: 'var(--t-border)' }}>
+L2051 [D=5] +0 -1 | </div>
+L2052 [D=4] +0 -1 | </div>
+L2053 [D=3] +0 -1 | </div>
+L2071 [D=2] +0 -1 | </div>

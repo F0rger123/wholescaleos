@@ -1560,6 +1560,14 @@ interface AppState {
   // Cursor Effects
   cursorSettings: CursorSettings;
   setCursorSettings: (settings: Partial<CursorSettings>) => void;
+
+  // History
+  history: any[];
+  future: any[];
+  undo: () => void;
+  redo: () => void;
+  saveToHistory: () => void;
+  clearHistory: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1571,6 +1579,64 @@ export const useStore = create<AppState>((set, get) => ({
   authError: null,
   showFloatingAIWidget: false,
   activeLeadModalId: null,
+  saveStatus: 'idle',
+
+  // History State
+  history: [],
+  future: [],
+
+  // History Actions
+  saveToHistory: () => {
+    const { history, ...currentSnapshot } = get();
+    // Exclude functional members and future from snapshot to keep it serializable/clean
+    const { 
+      saveToHistory, undo, redo, clearHistory, future,
+      // Add any other non-serializable or large state items to exclude if needed
+      ...serializableState 
+    } = currentSnapshot;
+    
+    set((s) => ({
+      history: [...s.history.slice(-49), JSON.parse(JSON.stringify(serializableState))],
+      future: []
+    }));
+  },
+
+  undo: () => {
+    const { history } = get();
+    if (history.length === 0) return;
+
+    const prevState = history[history.length - 1];
+    const newHistory = history.slice(0, -1);
+
+    // Capture current state to future before moving back
+    const { history: _h, future, saveToHistory, undo, redo, clearHistory, ...current } = get();
+    
+    set({
+      ...prevState,
+      history: newHistory,
+      future: [JSON.parse(JSON.stringify(current)), ...future.slice(0, 49)]
+    });
+  },
+
+  redo: () => {
+    const { future } = get();
+    if (future.length === 0) return;
+
+    const nextState = future[0];
+    const newFuture = future.slice(1);
+
+    // Capture current state to history before moving forward
+    const { history, future: _f, saveToHistory, undo, redo, clearHistory, ...current } = get();
+
+    set({
+      ...nextState,
+      history: [...history.slice(-49), JSON.parse(JSON.stringify(current))],
+      future: newFuture
+    });
+  },
+
+  clearHistory: () => set({ history: [], future: [] }),
+
   setActiveLeadModalId: (id) => set({ activeLeadModalId: id }),
   aiName: typeof window !== 'undefined' ? localStorage.getItem('user_ai_name') || 'OS Bot' : 'OS Bot',
   setAiName: (name) => {
@@ -1848,6 +1914,7 @@ export const useStore = create<AppState>((set, get) => ({
   leads: [],
 
   addLead: (lead) => {
+    get().saveToHistory();
     const now = new Date().toISOString();
     const newId = uuidv4();
     const newLead = {
@@ -1883,6 +1950,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateLead: (id, updates) => {
+    get().saveToHistory();
     set((s) => ({
       leads: s.leads.map((l) => l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l),
     }));
@@ -1914,6 +1982,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteLead: (id) => {
+    get().saveToHistory();
     set((s) => ({ leads: s.leads.filter((l) => l.id !== id) }));
     if (isSupabaseConfigured && supabase) leadsService.remove(id).catch(() => {});
   },
@@ -1994,10 +2063,13 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  addTeamMember: (member) =>
-    set((s) => ({ team: [...s.team, { ...member, id: uuidv4() }] })),
+  addTeamMember: (member) => {
+    get().saveToHistory();
+    set((s) => ({ team: [...s.team, { ...member, id: uuidv4() }] }));
+  },
 
   removeTeamMember: (id) => {
+    get().saveToHistory();
     set((s) => ({ team: s.team.filter((m) => m.id !== id) }));
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
@@ -2043,6 +2115,7 @@ export const useStore = create<AppState>((set, get) => ({
   tasks: [],
 
   addTask: (task) => {
+    get().saveToHistory();
     const newId = uuidv4();
     const now = new Date().toISOString();
     set((s) => ({ tasks: [...s.tasks, { ...task, id: newId, createdAt: now, completedAt: null }] }));
@@ -2069,6 +2142,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateTask: (id, updates) => {
+    get().saveToHistory();
     set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, ...updates } : t) }));
     if (isSupabaseConfigured && supabase) {
       const dbUp: Record<string, unknown> = {};
@@ -2082,11 +2156,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteTask: (id) => {
+    get().saveToHistory();
     set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
     if (isSupabaseConfigured && supabase) tasksService.remove(id).catch(() => {});
   },
 
   completeTask: (id) => {
+    get().saveToHistory();
     const now = new Date().toISOString();
     set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'done' as TaskStatus, completedAt: now } : t) }));
     if (isSupabaseConfigured && supabase) tasksService.complete(id).catch(() => {});

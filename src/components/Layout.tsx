@@ -14,7 +14,7 @@ import {
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
-  Layout as LayoutIcon, CheckCircle, Mail
+  Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -36,8 +36,24 @@ export function Layout() {
     searchResults, performSearch,
     aiName,
     activeLeadModalId,
-    setActiveLeadModalId
+    setActiveLeadModalId,
+    undo, redo, history, future
   } = useStore();
+
+  const [lastSaved, setLastSaved] = useState<Date>(new Date());
+  useEffect(() => {
+    // Update last saved time when core data changes
+    const unsub = useStore.subscribe((state, prevState) => {
+      if (
+        state.leads !== prevState.leads || 
+        state.tasks !== prevState.tasks || 
+        state.team !== prevState.team
+      ) {
+        setLastSaved(new Date());
+      }
+    });
+    return unsub;
+  }, []);
 
   const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
     Core: [
@@ -218,6 +234,16 @@ export function Layout() {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         setShowNotes(prev => !prev);
+      }
+
+      // Undo / Redo Shortcuts
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+        e.preventDefault();
+        redo();
       }
     };
 
@@ -724,6 +750,38 @@ export function Layout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Undo / Redo */}
+            <div className="flex items-center gap-1 mr-2 px-2 py-1 rounded-lg bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
+              <button
+                onClick={undo}
+                disabled={history.length === 0}
+                className="p-1.5 rounded-md transition-all hover:bg-[var(--t-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ color: 'var(--t-text-muted)' }}
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 size={16} />
+              </button>
+              <button
+                onClick={redo}
+                disabled={future.length === 0}
+                className="p-1.5 rounded-md transition-all hover:bg-[var(--t-surface-hover)] disabled:opacity-30 disabled:cursor-not-allowed"
+                style={{ color: 'var(--t-text-muted)' }}
+                title="Redo (Ctrl+Y)"
+              >
+                <Redo2 size={16} />
+              </button>
+            </div>
+
+            {/* Auto-save Indicator */}
+            <div className="hidden md:flex items-center gap-2 mr-4 px-3 py-1 rounded-full bg-[var(--t-success-dim)]/5 border border-[var(--t-success-dim)]/10">
+              <CloudCheck size={14} className="text-[var(--t-success)]" />
+              <span className="text-[10px] font-medium text-[var(--t-text-muted)]">
+                Last saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+
+            <div className="w-px h-6 mx-1" style={{ background: 'var(--t-border)' }} />
+
             {/* Bookshelf Docked Buttons */}
             <div className="flex items-center gap-1">
               {aiDocked && (

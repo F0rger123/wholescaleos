@@ -21,7 +21,19 @@ export const LeadHoverCard: React.FC<LeadHoverCardProps> = ({ lead }) => {
     .slice(0, 3);
 
   return (
-    <div className="w-80 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 z-[3000]">
+    <div className="relative w-80 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 z-[3000]">
+      {/* Arrow */}
+      <div 
+        className="absolute w-3 h-3 bg-[var(--t-surface)] border-l border-t border-[var(--t-border)] z-[-1]"
+        style={{ 
+          display: 'var(--card-arrow-display, block)',
+          left: 'var(--card-arrow-left, -6px)',
+          right: 'var(--card-arrow-right, auto)',
+          top: 'var(--card-arrow-top, 32px)',
+          transform: 'rotate(var(--card-arrow-rotate, -45deg))'
+        }}
+      />
+      
       {/* Header with Score */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--t-border)]">
         <div>
