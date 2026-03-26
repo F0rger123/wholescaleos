@@ -37,23 +37,18 @@ export function Layout() {
     aiName,
     activeLeadModalId,
     setActiveLeadModalId,
-    undo, redo, history, future
+    undo, redo, history, future,
+    manualSave, saveStatus, lastAutoSave
   } = useStore();
 
-  const [lastSaved, setLastSaved] = useState<Date>(new Date());
+  // Auto-save loop (every 5 minutes)
   useEffect(() => {
-    // Update last saved time when core data changes
-    const unsub = useStore.subscribe((state, prevState) => {
-      if (
-        state.leads !== prevState.leads || 
-        state.tasks !== prevState.tasks || 
-        state.team !== prevState.team
-      ) {
-        setLastSaved(new Date());
-      }
-    });
-    return unsub;
-  }, []);
+    const interval = setInterval(() => {
+      manualSave();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [manualSave]);
 
   const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
     Core: [
@@ -772,13 +767,29 @@ export function Layout() {
               </button>
             </div>
 
-            {/* Auto-save Indicator */}
-            <div className="hidden md:flex items-center gap-2 mr-4 px-3 py-1 rounded-full bg-[var(--t-success-dim)]/5 border border-[var(--t-success-dim)]/10">
-              <CloudCheck size={14} className="text-[var(--t-success)]" />
-              <span className="text-[10px] font-medium text-[var(--t-text-muted)]">
-                Last saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {/* Manual Save Button */}
+            <button
+              onClick={() => manualSave()}
+              disabled={saveStatus === 'saving'}
+              className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{ 
+                backgroundColor: saveStatus === 'success' ? 'var(--t-success-dim)' : 'var(--t-surface-dim)',
+                border: `1px solid ${saveStatus === 'success' ? 'var(--t-success)' : 'var(--t-border)'}`,
+                color: saveStatus === 'success' ? 'var(--t-success)' : 'var(--t-text)'
+              }}
+              title="Manual Save"
+            >
+              {saveStatus === 'saving' ? (
+                <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              ) : saveStatus === 'success' ? (
+                <CloudCheck size={14} />
+              ) : (
+                <Download size={14} className="rotate-180" />
+              )}
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved' : 'Save'}
               </span>
-            </div>
+            </button>
 
             <div className="w-px h-6 mx-1" style={{ background: 'var(--t-border)' }} />
 

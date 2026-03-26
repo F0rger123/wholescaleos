@@ -665,3 +665,15 @@ input,
 .animate-page-fade-in {
   animation: page-fade-in 0.4s cubic-bezier(0, 0, 0.2, 1) forwards;
 }
+
+/* ─── Modal Scroll Lock ──────────────────────────────────────────────────── */
+
+.modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+  -webkit-overflow-scrolling: none;
+  overscroll-behavior: none;
+}

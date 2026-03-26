@@ -239,12 +239,16 @@ export default function Dashboard() {
   const leadTrendData = Array.from({ length: 12 }).map((_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - (11 - i) * (days / 11));
-    const countAtDate = dataToUse.filter(l => new Date(l.createdAt) <= date).length;
+    const leadsAtDate = dataToUse.filter(l => new Date(l.createdAt) <= date);
+    const wonAtDate = leadsAtDate.filter(l => l.status === 'closed-won');
+    const conversionRate = leadsAtDate.length > 0
+      ? Math.round((wonAtDate.length / leadsAtDate.length) * 100)
+      : 0;
+
     return {
       name: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-      leads: countAtDate,
-      avgSize: Math.floor(250000 + Math.random() * 50000),
-      responseTime: 2 + Math.random() * 5 // Mock hours
+      leads: leadsAtDate.length,
+      conversionRate
     };
   });
 
@@ -456,7 +460,7 @@ export default function Dashboard() {
               <div className="hidden sm:flex items-center gap-4 text-[10px] ml-4">
                 <div className="flex items-center gap-1.5 text-[var(--t-primary)]">
                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />
-                  <span>Response Time</span>
+                  <span>Conversion Rate</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[var(--t-success)]">
                   <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)]" />
@@ -480,9 +484,16 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
                   <YAxis hide />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }}
+                    formatter={(value: any, name?: any) => {
+                      if (name === 'conversionRate') return [`${value}%`, 'Conversion Rate'];
+                      if (name === 'leads') return [value, 'Total Leads'];
+                      return [value, name || ''];
+                    }}
+                  />
                   <Line type="monotone" dataKey="leads" stroke="var(--t-success)" strokeWidth={3} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="responseTime" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="conversionRate" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
                 </LineChart>
               ) : (
                 <AreaChart data={leadTrendData}>
@@ -495,9 +506,16 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
                   <YAxis hide />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }}
+                    formatter={(value: any, name?: any) => {
+                      if (name === 'conversionRate') return [`${value}%`, 'Conversion Rate'];
+                      if (name === 'leads') return [value, 'Total Leads'];
+                      return [value, name || ''];
+                    }}
+                  />
                   <Area type="monotone" dataKey="leads" stroke="var(--t-success)" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={3} />
-                  <Line type="monotone" dataKey="responseTime" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="conversionRate" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
                 </AreaChart>
               )}
             </ResponsiveContainer>

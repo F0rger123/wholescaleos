@@ -87,6 +87,19 @@ export default function Leads() {
   const [scriptLoading, setScriptLoading] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
+  // Modal Scroll Lock
+  useEffect(() => {
+    if (showModal || showDiscardConfirm) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showModal, showDiscardConfirm]);
+
+
   // Google Drive state
   const [driveFiles, setDriveFiles] = useState<Record<string, any[]>>({});
   const [fetchingDrive, setFetchingDrive] = useState<Record<string, boolean>>({});
@@ -1822,11 +1835,11 @@ export default function Leads() {
 
       {/* DISCARD CONFIRMATION MODAL */}
       {showDiscardConfirm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[10000] p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-[11000] p-4" onClick={(e) => e.stopPropagation()}>
           <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[32px] p-8 max-w-[400px] w-full shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-12 h-12 rounded-full bg-[var(--t-warning)]/20 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-6 h-6 text-[var(--t-warning)]" />
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Discard changes?</h3>
               <p className="text-[var(--t-text-muted)] text-sm">
@@ -1836,7 +1849,7 @@ export default function Leads() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDiscardConfirm(false)}
-                className="flex-1 px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] text-[var(--t-text)] rounded-xl font-semibold transition-colors"
+                className="flex-1 px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] text-[var(--t-text)] rounded-xl font-bold text-sm transition-all"
               >
                 Cancel
               </button>
@@ -1844,8 +1857,9 @@ export default function Leads() {
                 onClick={() => {
                   setShowDiscardConfirm(false);
                   setShowModal(false);
+                  setEditingLead(null);
                 }}
-                className="flex-1 px-4 py-2 bg-[var(--t-error)] hover:bg-[var(--t-error-hover)] text-white rounded-xl font-semibold transition-colors"
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-900/20"
               >
                 Discard
               </button>
