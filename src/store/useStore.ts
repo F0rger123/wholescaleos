@@ -1611,6 +1611,10 @@ interface AppState {
   aiPersonality: string;
   setAiPersonality: (personality: string) => void;
 
+  // Dashboard Layout
+  dashboardLayout: any[];
+  setDashboardLayout: (layout: any[]) => void;
+
   // Global Lead Modal State
   activeLeadModalId: string | null;
   setActiveLeadModalId: (id: string | null) => void;
@@ -1698,7 +1702,7 @@ export const useStore = create<AppState>((set, get) => ({
   smsAutoReplyMessage: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-message') || 'Thanks for your message! I will get back to you soon.' : 'Thanks for your message! I will get back to you soon.',
 
   // —— AI State ——————————————————————————————————————————————
-  aiName: 'Aria',
+  aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
   aiModel: 'gpt-4o',
   aiPersonality: 'Professional, efficient, and proactive real estate assistant.',
   aiUsage: (() => {
@@ -1735,6 +1739,17 @@ export const useStore = create<AppState>((set, get) => ({
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes') || '' : '',
   showQuickNotes: false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
+
+  // —— Dashboard Layout ——————————————————————————————————————
+  dashboardLayout: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('dashboard-layout');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return [];
+  })(),
 
   login: async (email, password) => {
     set({ authLoading: true, authError: null });
@@ -1853,6 +1868,24 @@ export const useStore = create<AppState>((set, get) => ({
       
       if (error) throw error;
       if (profile) {
+        // Recovery: If profile doesn't have team_id, check team_members table
+        let teamId = profile.team_id || null;
+        if (!teamId && isSupabaseConfigured && supabase) {
+          const { data: membership } = await supabase
+            .from('team_members')
+            .select('team_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (membership) {
+            teamId = membership.team_id;
+          }
+        }
+
+        // Fallback to localStorage if still null
+        if (!teamId && typeof window !== 'undefined') {
+          teamId = localStorage.getItem('wholescale-preferred-team');
+        }
+
         set((s) => ({ 
           currentUser: s.currentUser ? {
             ...s.currentUser,
@@ -1860,22 +1893,22 @@ export const useStore = create<AppState>((set, get) => ({
             email: profile.email || s.currentUser.email,
             name: profile.full_name || s.currentUser.name,
             avatar: profile.avatar_url || s.currentUser.avatar,
-            teamId: profile.team_id || (s.currentUser as any).teamId,
+            teamId: teamId || (s.currentUser as any).teamId,
           } : {
             id: profile.id,
             email: profile.email || '',
             name: profile.full_name || '',
             avatar: profile.avatar_url || '',
-            teamId: profile.team_id || null,
+            teamId: teamId,
             phone: profile.phone || '',
             teamRole: profile.team_role || 'member',
             emailVerified: profile.email_verified || false,
             createdAt: profile.created_at || new Date().toISOString(),
             settings: profile.settings || {},
           },
-          teamId: profile.team_id || null
+          teamId: teamId
         }));
-        console.log('DEBUG: Profile fetched. teamId:', profile.team_id);
+        console.log('DEBUG: Profile fetched. teamId:', teamId);
       }
     } catch (err) {
       console.error('DEBUG: Failed to fetch profile:', err);
@@ -1898,8 +1931,16 @@ export const useStore = create<AppState>((set, get) => ({
     
     // Recovery: If no teamId but we have a user, ensure profile is loaded
     if (!teamId && currentUser && isSupabaseConfigured && supabase) {
-      await get().fetchProfile(currentUser.id);
-      teamId = get().teamId;
+      // Check localStorage first
+      const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('wholescale-preferred-team') : null;
+      if (storedTeamId) {
+        console.log('DEBUG: Recovered teamId from localStorage:', storedTeamId);
+        set({ teamId: storedTeamId });
+        teamId = storedTeamId;
+      } else {
+        await get().fetchProfile(currentUser.id);
+        teamId = get().teamId;
+      }
     }
     
     if (!teamId || !isSupabaseConfigured || !supabase) {
@@ -3701,9 +3742,21 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({ notificationSettings: { ...s.notificationSettings, ...updates } }));
   },
 
-  setAiName: (name: string) => set({ aiName: name }),
+  setAiName: (name: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-ai-name', name);
+    }
+    set({ aiName: name });
+  },
   setAiModel: (model: string) => set({ aiModel: model }),
   setAiPersonality: (personality: string) => set({ aiPersonality: personality }),
+
+  setDashboardLayout: (layout: any[]) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dashboard-layout', JSON.stringify(layout));
+    }
+    set({ dashboardLayout: layout });
+  },
 
   setCursorSettings: (settings: Partial<CursorSettings>) => {
     set((s: any) => ({ cursorSettings: { ...s.cursorSettings, ...settings } }));

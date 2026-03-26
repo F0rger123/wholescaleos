@@ -38,7 +38,7 @@ export function Layout() {
     activeLeadModalId,
     setActiveLeadModalId,
     undo, redo, history, future,
-    manualSave, saveStatus, lastAutoSave
+    manualSave, saveStatus
   } = useStore();
 
   // Auto-save loop (every 5 minutes)

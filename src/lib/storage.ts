@@ -14,7 +14,7 @@ export async function uploadFile(
   bucket: StorageBucket,
   path: string,
   file: File,
-  onProgress?: (progress: number) => void
+  _onProgress?: (progress: number) => void
 ): Promise<UploadResult> {
   if (!isSupabaseConfigured || !supabase) {
     return { url: null, error: new Error('Supabase is not configured') };
