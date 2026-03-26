@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, AlertCircle } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -22,13 +23,15 @@ export function ConfirmModal({
   cancelLabel = 'Cancel',
   variant = 'primary'
 }: ConfirmModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 pointer-events-auto">
-      <div className="w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
-        style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      zIndex={11000}
+      maxWidth="max-w-sm"
+      showClose={false}
+    >
+      <div className="flex flex-col">
         <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
           <h3 className="text-sm font-bold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
             {variant === 'danger' ? <AlertCircle className="w-4 h-4 text-[var(--t-error)]" /> : <div className="w-2 h-2 rounded-full" style={{ background: 'var(--t-primary)' }} />}
@@ -71,6 +74,7 @@ export function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
+

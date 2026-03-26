@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, Lead, LeadStatus, calculateDealScore, calculatePriorityScore, generateNextAction, STATUS_LABELS, STATUS_FLOW } from '../store/useStore';
 import { supabase } from '../lib/supabase';
-import { geocodeAddress } from '../lib/geocoding';
 import { v4 as uuidv4 } from 'uuid';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
@@ -10,7 +9,7 @@ import {
   DollarSign, Calendar, Edit2, Trash2, X, Check,
   Sparkles, Loader2, Save, PhoneCall, Send,
   Users, Mic, Play, Pause, Square, Bot as Brain,
-  Target, Zap, BarChart3, RefreshCw,
+  Target, Zap, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
   Trash, AlertTriangle, FileText as ScriptIcon, Folder,
   Share2, UserMinus, ExternalLink
@@ -18,8 +17,9 @@ import {
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { generateCallScript, generateLeadInsight, generateCallScriptTemplates, CallScriptTemplate } from '../lib/gemini';
 import { CallScriptModal } from '../components/CallScriptModal';
-import { detectCarrier } from '../lib/carrier-service';
 import { BulkEmailModal } from '../components/BulkEmailModal';
+import { LeadFormModal } from '../components/LeadFormModal';
+import { Modal } from '../components/Modal';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -60,7 +60,7 @@ export default function Leads() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const store = useStore();
-  const { leads, addLead, updateLead, deleteLead, teamId, team, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto } = store;
+  const { leads, updateLead, deleteLead, teamId, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto } = store;
   const saveStatus = (store as any).saveStatus || 'idle';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,34 +70,7 @@ export default function Leads() {
   const [expandedLead, setExpandedLead] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('timeline');
   const [showModal, setShowModal] = useState(false);
-  const [editingLead, setEditingLead] = useState<Lead | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [noteText, setNoteText] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
-  const [showTranscript, setShowTranscript] = useState<string | null>(null);
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [showAddField, setShowAddField] = useState(false);
-  const [newFieldName, setNewFieldName] = useState('');
-  const [newFieldType, setNewFieldType] = useState<'text' | 'number'>('text');
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [generatingScript, setGeneratingScript] = useState<string | null>(null);
-  const [scriptLoading, setScriptLoading] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-
-  // Modal Scroll Lock
-  useEffect(() => {
-    if (showModal || showDiscardConfirm) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, [showModal, showDiscardConfirm]);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
 
 
   // Google Drive state
@@ -203,13 +176,19 @@ export default function Leads() {
   const [showScriptLibrary, setShowScriptLibrary] = useState<{ isOpen: boolean; lead: Lead | null }>({ isOpen: false, lead: null });
   const recordingInterval = useRef<any>(null);
 
-  const [formData, setFormData] = useState({
-    name: '', email: '', phone: '', propertyAddress: '',
-    propertyType: 'single-family', estimatedValue: '', offerAmount: '',
-    status: 'new', notes: '',
-    assignedTo: '', source: 'other',
-    probability: '50', engagementLevel: '3', timelineUrgency: '3', competitionLevel: '3',
-  });
+  const [noteText, setNoteText] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const [showTranscript, setShowTranscript] = useState<string | null>(null);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [showAddField, setShowAddField] = useState(false);
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldType, setNewFieldType] = useState<'text' | 'number'>('text');
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, Record<string, string>>>({});
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [generatingScript, setGeneratingScript] = useState<string | null>(null);
+  const [scriptLoading, setScriptLoading] = useState(false);
 
   useEffect(() => {
     if (!supabase || !teamId) return;
@@ -256,35 +235,7 @@ export default function Leads() {
     return () => { if (recordingInterval.current) clearInterval(recordingInterval.current); };
   }, [isRecording]);
   
-  // Robust scroll lock for modals
-  useEffect(() => {
-    const isAnyModalOpen = showModal || showDiscardConfirm;
-    if (isAnyModalOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.height = '100vh';
-      document.documentElement.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-      document.documentElement.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-      document.documentElement.style.overflow = '';
-    };
-  }, [showModal, showDiscardConfirm]);
-
-  // Escape key listener for modal discard confirmation
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showModal && !showDiscardConfirm) {
-        setShowDiscardConfirm(true);
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [showModal, showDiscardConfirm]);
+  // Robust escape key listener removed as Modal component handles it
 
   const getDaysInStatus = (lead: Lead) => {
     const hist = lead.statusHistory;
@@ -359,80 +310,16 @@ export default function Leads() {
   };
 
   const openAdd = () => { 
-    setEditingLead(null); 
-    setFormData({ 
-      name: '', email: '', phone: '', propertyAddress: '', 
-      propertyType: 'single-family', estimatedValue: '', offerAmount: '', 
-      status: 'new', notes: '', 
-      assignedTo: '', source: 'other',
-      probability: '50', engagementLevel: '3', timelineUrgency: '3', competitionLevel: '3' 
-    }); 
+    setEditingLeadId(null); 
     setShowModal(true); 
   };
   
   const openEdit = (l: Lead) => { 
-    setEditingLead(l); 
-    setFormData({ 
-      name: l.name || '', 
-      email: l.email || '', 
-      phone: l.phone || '', 
-      propertyAddress: l.propertyAddress || '', 
-      propertyType: l.propertyType || 'single-family', 
-      estimatedValue: (l.estimatedValue || '').toString(), 
-      offerAmount: (l.offerAmount || '').toString(), 
-      status: l.status || 'new', 
-      notes: l.notes || '', 
-      assignedTo: l.assignedTo || '',
-      source: l.source || 'other',
-      probability: (l.probability || 50).toString(), 
-      engagementLevel: (l.engagementLevel || 3).toString(), 
-      timelineUrgency: (l.timelineUrgency || 3).toString(), 
-      competitionLevel: (l.competitionLevel || 3).toString() 
-    }); 
+    setEditingLeadId(l.id); 
     setShowModal(true); 
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); 
-    setSaving(true);
-    let lat = 30.2672, lng = -97.7431;
-    if (formData.propertyAddress) { 
-      const c = await geocodeAddress(formData.propertyAddress); 
-      if (c) { lat = c.lat; lng = c.lng; } 
-    }
-    const d: any = { 
-      name: formData.name, 
-      email: formData.email, 
-      phone: formData.phone, 
-      propertyAddress: formData.propertyAddress, 
-      propertyType: formData.propertyType, 
-      estimatedValue: parseFloat(formData.estimatedValue) || 0, 
-      offerAmount: parseFloat(formData.offerAmount) || 0, 
-      status: formData.status, 
-      notes: formData.notes, 
-      assignedTo: formData.assignedTo,
-      lat, lng, 
-      source: formData.source || 'other', 
-      probability: parseInt(formData.probability), 
-      engagementLevel: parseInt(formData.engagementLevel), 
-      timelineUrgency: parseInt(formData.timelineUrgency), 
-      competitionLevel: parseInt(formData.competitionLevel) 
-    };
-    if (editingLead) {
-      updateLead(editingLead.id, d);
-      if (d.phone && d.phone !== editingLead.phone) {
-        detectCarrier(d.phone).then(res => {
-          if (res.carrier) updateLead(editingLead.id, { carrier: res.carrier });
-        });
-      }
-    } else {
-      detectCarrier(d.phone).then(res => {
-        addLead({ ...d, carrier: res.carrier });
-      });
-    }
-    setSaving(false); 
-    setShowModal(false);
-  };
+  // handleSubmit functionality moved to LeadFormModal component
 
   const handleDel = (id: string) => { 
     if (confirm('Delete this lead?')) { 
@@ -1833,336 +1720,70 @@ export default function Leads() {
         </div>
       )}
 
-      {/* DISCARD CONFIRMATION MODAL */}
-      {showDiscardConfirm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-2xl flex items-center justify-center z-[11000] p-4" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[32px] p-8 max-w-[400px] w-full shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="flex flex-col items-center text-center mb-6">
-              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Discard changes?</h3>
-              <p className="text-[var(--t-text-muted)] text-sm">
-                You have unsaved changes. Are you sure you want to discard this lead?
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDiscardConfirm(false)}
-                className="flex-1 px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] text-[var(--t-text)] rounded-xl font-bold text-sm transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowDiscardConfirm(false);
-                  setShowModal(false);
-                  setEditingLead(null);
-                }}
-                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-900/20"
-              >
-                Discard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* New Centralized Lead Form Modal */}
+      <LeadFormModal 
+        isOpen={showModal} 
+        onClose={() => setShowModal(false)} 
+        leadId={editingLeadId} 
+      />
 
-      {/* ADD/EDIT MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9000] p-4" onClick={() => setShowDiscardConfirm(true)}>
-          <div className="rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto" 
-            style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
-              <h2 className="text-lg font-semibold text-white">{editingLead ? 'Edit Lead' : 'Add New Lead'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 rounded-lg transition-colors" style={{ color: 'var(--t-text-muted)' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--t-text)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--t-text-muted)'}>
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-2">
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Name *</label>
-                  <input 
-                    type="text" 
-                    value={formData.name} 
-                    onChange={e => setFormData({ ...formData, name: e.target.value })} 
-                    required 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-white" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Email</label>
-                  <input 
-                    type="email" 
-                    value={formData.email} 
-                    onChange={e => setFormData({ ...formData, email: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Phone</label>
-                  <input 
-                    type="tel" 
-                    value={formData.phone} 
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Status</label>
-                  <select 
-                    value={formData.status} 
-                    onChange={e => setFormData({ ...formData, status: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
-                    style={{ colorScheme: 'dark' }}
-                  >
-                    <option value="new" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>New</option>
-                    <option value="contacted" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Contacted</option>
-                    <option value="qualified" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Qualified</option>
-                    <option value="negotiating" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Negotiating</option>
-                    <option value="closed-won" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Closed Won</option>
-                    <option value="closed-lost" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Closed Lost</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Assigned To</label>
-                  <select 
-                    value={formData.assignedTo} 
-                    onChange={e => setFormData({ ...formData, assignedTo: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
-                    style={{ colorScheme: 'dark' }}
-                  >
-                    <option value="" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Unassigned</option>
-                    {team.map(m => (
-                      <option key={m.id} value={m.id} style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Property Address</label>
-                  <input 
-                    value={formData.propertyAddress} 
-                    onChange={e => setFormData({ ...formData, propertyAddress: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Property Type</label>
-                  <select 
-                    value={formData.propertyType} 
-                    onChange={e => setFormData({ ...formData, propertyType: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
-                    style={{ colorScheme: 'dark' }}
-                  >
-                    <option value="single-family" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Single Family</option>
-                    <option value="multi-family" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Multi Family</option>
-                    <option value="commercial" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Commercial</option>
-                    <option value="land" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Land</option>
-                    <option value="condo" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Condo</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Lead Source</label>
-                  <select 
-                    value={formData.source} 
-                    onChange={e => setFormData({ ...formData, source: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
-                    style={{ colorScheme: 'dark' }}
-                  >
-                    <option value="bandit-signs" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Bandit Signs</option>
-                    <option value="personal-relations" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Personal Relations</option>
-                    <option value="pay-per-lead" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Pay Per Lead</option>
-                    <option value="doorknocking" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Doorknocking</option>
-                    <option value="referral" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Referral</option>
-                    <option value="website" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Website</option>
-                    <option value="social-media" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Social Media</option>
-                    <option value="open-house" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Open House</option>
-                    <option value="fsbo" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>FSBO</option>
-                    <option value="cold-call" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Cold Call</option>
-                    <option value="email-campaign" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Email Campaign</option>
-                    <option value="other" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Estimated Value</label>
-                  <input 
-                    type="number" 
-                    value={formData.estimatedValue} 
-                    onChange={e => setFormData({ ...formData, estimatedValue: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Offer Amount</label>
-                  <input 
-                    type="number" 
-                    value={formData.offerAmount} 
-                    onChange={e => setFormData({ ...formData, offerAmount: e.target.value })} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Notes</label>
-                  <textarea 
-                    value={formData.notes} 
-                    onChange={e => setFormData({ ...formData, notes: e.target.value })} 
-                    rows={3} 
-                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)] resize-none" 
-                  />
-                </div>
-              </div>
-              
-              <div className="border-t border-[var(--t-border)] pt-4">
-                <h3 className="text-[var(--t-text)] font-medium mb-3 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" /> Deal Score Parameters
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-xs text-[var(--t-text-muted)] mb-1">Probability (0-100)</label>
-                    <input 
-                      type="number" 
-                      min="0" 
-                      max="100" 
-                      value={formData.probability} 
-                      onChange={e => setFormData({ ...formData, probability: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[var(--t-text-muted)] mb-1">Engagement (1-5)</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="5" 
-                      value={formData.engagementLevel} 
-                      onChange={e => setFormData({ ...formData, engagementLevel: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[var(--t-text-muted)] mb-1">Urgency (1-5)</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="5" 
-                      value={formData.timelineUrgency} 
-                      onChange={e => setFormData({ ...formData, timelineUrgency: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[var(--t-text-muted)] mb-1">Competition (1-5)</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="5" 
-                      value={formData.competitionLevel} 
-                      onChange={e => setFormData({ ...formData, competitionLevel: e.target.value })} 
-                      className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]" 
-                    />
-                  </div>
-                </div>
-                <div className="mt-3 flex items-center gap-3">
-                  <span className="text-sm text-[var(--t-text-muted)]">Preview:</span>
-                  {(() => {
-                    const previewScore = calculateDealScore({
-                      estimatedValue: parseFloat(formData.estimatedValue) || 0,
-                      probability: parseInt(formData.probability) || 50,
-                      engagementLevel: parseInt(formData.engagementLevel) || 3,
-                      timelineUrgency: parseInt(formData.timelineUrgency) || 3,
-                      competitionLevel: parseInt(formData.competitionLevel) || 3
-                    } as any);
-                    const sb = scoreBadge(previewScore);
-                    return (
-                      <span className={`px-3 py-1 rounded-full text-sm font-bold border ${sb.className}`} style={sb.style}>
-                        ⚡ {previewScore}
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-3 pt-4 border-t border-[var(--t-border)]">
-                <button 
-                  type="button" 
-                  onClick={() => setShowModal(false)} 
-                  className="px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] rounded-lg"
-                  style={{ color: 'var(--t-text)' }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={saving} 
-                  className="px-4 py-2 text-white rounded-lg flex items-center gap-2 hover:opacity-90 font-bold"
-                  style={{ background: 'var(--t-primary)' }}
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} 
-                  {editingLead ? 'Update' : 'Create Lead'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       {/* Call Script Modal */}
-      {generatingScript && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-            <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-[var(--t-primary-dim)]">
-                  <Brain className="w-6 h-6 text-[var(--t-primary)]" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">AI Generated Call Script</h3>
-                  <p className="text-xs text-[var(--t-text-muted)]">Tailored for {leads.find(l => l.id === expandedLead)?.name}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setGeneratingScript(null)}
-                className="p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-colors"
-                style={{ color: 'var(--t-text-muted)' }}
-              >
-                <X className="w-6 h-6" />
-              </button>
+      {/* AI Generated Call Script Modal */}
+      <Modal
+        isOpen={!!generatingScript}
+        onClose={() => setGeneratingScript(null)}
+        zIndex={10000}
+        maxWidth="max-w-2xl"
+      >
+        <div className="p-6 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-[var(--t-primary-dim)]">
+              <Brain className="w-6 h-6 text-[var(--t-primary)]" />
             </div>
-            
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="prose prose-invert max-w-none">
-                <div className="whitespace-pre-wrap text-lg leading-relaxed text-[var(--t-text-secondary)]" style={{ fontFamily: 'var(--t-font-mono, monospace)' }}>
-                  {generatingScript}
-                </div>
-              </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">AI Generated Call Script</h3>
+              <p className="text-xs text-[var(--t-text-muted)]">Tailored for {leads.find(l => l.id === expandedLead)?.name}</p>
             </div>
-
-            <div className="p-6 bg-[var(--t-surface-dim)] border-t flex gap-3" style={{ borderColor: 'var(--t-border)' }}>
-              <button
-                onClick={() => {
-                  if (generatingScript) {
-                    navigator.clipboard.writeText(generatingScript);
-                    alert('Script copied to clipboard!');
-                  }
-                }}
-                className="flex-1 py-3 rounded-xl font-bold bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] transition-all"
-                style={{ color: 'var(--t-text)' }}
-              >
-                Copy to Clipboard
-              </button>
-              <button
-                onClick={() => setGeneratingScript(null)}
-                className="flex-1 py-3 rounded-xl font-bold text-white transition-all hover:scale-[1.02]"
-                style={{ background: 'var(--t-primary)' }}
-              >
-                Close
-              </button>
+          </div>
+          <button 
+            onClick={() => setGeneratingScript(null)}
+            className="p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-colors"
+            style={{ color: 'var(--t-text-muted)' }}
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+        
+        <div className="overflow-y-auto p-8 max-h-[60vh]">
+          <div className="prose prose-invert max-w-none">
+            <div className="whitespace-pre-wrap text-lg leading-relaxed text-[var(--t-text-secondary)]" style={{ fontFamily: 'var(--t-font-mono, monospace)' }}>
+              {generatingScript}
             </div>
           </div>
         </div>
-      )}
+
+        <div className="p-6 bg-[var(--t-surface-dim)] border-t flex gap-3" style={{ borderColor: 'var(--t-border)' }}>
+          <button
+            onClick={() => {
+              if (generatingScript) {
+                navigator.clipboard.writeText(generatingScript);
+                alert('Script copied to clipboard!');
+              }
+            }}
+            className="flex-1 py-3 rounded-xl font-bold bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] transition-all"
+            style={{ color: 'var(--t-text)' }}
+          >
+            Copy to Clipboard
+          </button>
+          <button
+            onClick={() => setGeneratingScript(null)}
+            className="flex-1 py-3 rounded-xl font-bold text-white transition-all hover:scale-[1.02]"
+            style={{ background: 'var(--t-primary)' }}
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
 
       {/* CALL SCRIPT LIBRARY MODAL */}
       <CallScriptModal
