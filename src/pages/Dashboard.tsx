@@ -1,6 +1,6 @@
 /** Main CRM Dashboard */
 import { useState, useEffect, useRef } from 'react';
-import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource, type Timeframe } from '../store/useStore';
+import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
 import { 
   Users, 
   Target, 
@@ -104,7 +104,7 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; lab
 export default function Dashboard() {
   const navigate = useNavigate();
   const { 
-    leads, team, timeframe, setTimeframe,
+    leads, team,
     loginStreak, taskStreak, memberStreaks,
     dashboardLayout, setDashboardLayout
   } = useStore();
@@ -178,16 +178,7 @@ export default function Dashboard() {
     setDragOverIndex(null);
   };
 
-  const filteredLeads = leads.filter(l => {
-    if (timeframe === 'all') return true;
-    const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    return new Date(l.createdAt) >= cutoff;
-  });
-
-  // ─── Calculations ────────────────────────────────────────
-  const dataToUse = filteredLeads || leads;
+  const dataToUse = leads;
 
   const totalPipeline = dataToUse
     .filter((l) => !l.status.startsWith('closed'))
@@ -354,21 +345,6 @@ export default function Dashboard() {
               <RotateCcw size={14} />
             </button>
           )}
-          <div className="flex bg-[var(--t-surface-dim)] rounded-xl p-1 border border-[var(--t-border-subtle)]">
-            {(['7d', '30d', '90d', 'all'] as Timeframe[]).map((tf) => (
-              <button
-                key={tf}
-                onClick={() => setTimeframe(tf)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  timeframe === tf 
-                    ? 'bg-[var(--t-primary)] text-white shadow-lg' 
-                    : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
-                }`}
-              >
-                {tf.toUpperCase()}
-              </button>
-            ))}
-          </div>
           <StreakBadge streak={loginStreak} type="login" size="md" showLabel />
           {taskStreak > 0 && <StreakBadge streak={taskStreak} type="task" size="md" />}
         </div>
