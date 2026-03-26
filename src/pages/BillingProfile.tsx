@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   CreditCard, BarChart3, Users, User, 
   ChevronRight, Download, Plus, AlertCircle,
   Copy, Share2, Wallet, ArrowUpRight, Check,
-  Camera, Twitter, Linkedin
+  Camera, Twitter, Linkedin, Loader2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
@@ -183,12 +183,26 @@ function BillingTab() {
 }
 
 function AnalyticsTab() {
+  const { leads } = useStore();
+  const [timeframe, setTimeframe] = useState<'7D' | '1M' | '6M' | '1Y'>('1M');
+
+  // Timeframe calculation
+  
   const stats = [
-    { label: 'Leads Managed', value: '1,284', trend: '+12%', color: 'blue' },
-    { label: 'Closed Deals', value: '42', trend: '+5%', color: 'green' },
-    { label: 'Revenue Generated', value: '$840k', trend: '+18%', color: 'purple' },
-    { label: 'Lead Retention', value: '92%', trend: '+3%', color: 'orange' }
+    { label: 'Leads Managed', value: leads.length.toLocaleString(), trend: '+12%', color: 'blue' },
+    { label: 'Closed Deals', value: leads.filter(l => l.status === 'closed-won').length.toString(), trend: '+5%', color: 'green' },
+    { label: 'Revenue Generated', value: `$${Math.round(leads.filter(l => l.status === 'closed-won').reduce((s, l) => s + (l.offerAmount || 0), 0) / 1000)}k`, trend: '+18%', color: 'purple' },
+    { label: 'Active Pipeline', value: leads.filter(l => !l.status.startsWith('closed')).length.toString(), trend: '+3%', color: 'orange' }
   ];
+
+  // Growth Velocity Grouping
+  const chartData = Array.from({ length: 12 }).map((_, i) => {
+    const date = new Date();
+    const days = timeframe === '7D' ? 7 : timeframe === '1M' ? 30 : timeframe === '6M' ? 180 : 365;
+    date.setDate(date.getDate() - (11 - i) * (days / 11));
+    const count = leads.filter(l => new Date(l.createdAt) <= date).length;
+    return { h: Math.max(10, (count / (leads.length || 1)) * 100), count };
+  });
 
   return (
     <div className="space-y-8 reveal">
@@ -199,10 +213,10 @@ function AnalyticsTab() {
               <BarChart3 size={60} />
             </div>
             <div className="relative z-10 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{stat.label}</div>
-              <div className="text-3xl font-black">{stat.value}</div>
-              <div className={`text-[10px] font-black ${stat.trend.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>
-                {stat.trend} <span className="text-gray-500 opacity-50 uppercase">vs last month</span>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--t-text-muted)]">{stat.label}</div>
+              <div className="text-3xl font-black text-white">{stat.value}</div>
+              <div className={`text-[10px] font-black ${stat.trend.startsWith('+') ? 'text-[var(--t-success)]' : 'text-[var(--t-error)]'}`}>
+                {stat.trend} <span className="text-[var(--t-text-muted)] opacity-50 uppercase">vs last period</span>
               </div>
             </div>
           </div>
@@ -212,37 +226,43 @@ function AnalyticsTab() {
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] h-[400px] flex flex-col justify-between">
            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold italic">Growth Velocity</h3>
+              <h3 className="text-xl font-bold italic text-white uppercase tracking-tighter">Growth Velocity</h3>
               <div className="flex gap-2">
-                 {['7D', '1M', '6M', '1Y'].map(p => (
-                   <button key={p} className={`px-3 py-1 rounded-lg text-[10px] font-black ${p === '1M' ? 'bg-blue-600' : 'bg-white/5 text-gray-500'}`}>{p}</button>
+                 {(['7D', '1M', '6M', '1Y'] as const).map(p => (
+                   <button 
+                    key={p} 
+                    onClick={() => setTimeframe(p)}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black transition-all ${timeframe === p ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-[var(--t-text-muted)] hover:bg-white/10'}`}
+                   >
+                    {p}
+                   </button>
                  ))}
               </div>
            </div>
            
            <div className="flex-1 flex items-end gap-2 pb-4">
-              {[40, 60, 45, 90, 65, 80, 55, 100, 70, 85, 95, 110].map((h, i) => (
-                <div key={i} className="flex-1 bg-gradient-to-t from-blue-600/20 to-blue-500/60 rounded-t-lg group relative" style={{ height: `${h}%` }}>
-                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-blue-600 text-[9px] font-black px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all">+{h}</div>
+              {chartData.map((d, i) => (
+                <div key={i} className="flex-1 bg-gradient-to-t from-blue-600/20 to-blue-500/60 rounded-t-lg group relative" style={{ height: `${d.h}%` }}>
+                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-blue-600 text-[9px] font-black px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all text-white shadow-xl z-20 whitespace-nowrap">{d.count} Leads</div>
                 </div>
               ))}
            </div>
         </div>
 
-        <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-[#1e293b] to-[#0f172a] border border-blue-500/20 space-y-8 relative overflow-hidden">
+        <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-[var(--t-surface-dim)] to-[var(--t-surface)] border border-blue-500/20 space-y-8 relative overflow-hidden">
            <div className="absolute inset-0 bg-blue-600/5 blur-[100px]" />
            <div className="relative z-10">
-              <h3 className="text-xl font-bold mb-2">Time Saved</h3>
-              <p className="text-xs text-gray-400 mb-8 leading-relaxed">AI automation has offloaded hours of administrative work this month.</p>
+              <h3 className="text-xl font-bold mb-2 text-white italic uppercase tracking-tighter">Time Saved</h3>
+              <p className="text-xs text-[var(--t-text-muted)] mb-8 leading-relaxed">AI automation has offloaded hours of administrative work this month.</p>
               
               <div className="space-y-6">
                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                    <span className="text-xs font-bold text-gray-400">Total Hours Saved</span>
+                    <span className="text-xs font-bold text-[var(--t-text-muted)]">Total Hours Saved</span>
                     <span className="text-xl font-black text-blue-500">142h</span>
                  </div>
                  <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                    <span className="text-xs font-bold text-gray-400">Estimated Value</span>
-                    <span className="text-xl font-black text-green-500">$7,100</span>
+                    <span className="text-xs font-bold text-[var(--t-text-muted)]">Estimated Value</span>
+                    <span className="text-xl font-black text-[var(--t-success)]">$7,100</span>
                  </div>
               </div>
               
@@ -351,22 +371,101 @@ function ReferralTab({ code, onCopy, copied }: { code: string; onCopy: () => voi
 }
 
 function ProfileTab({ user }: { user: any }) {
+  const { updateProfile } = useStore();
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
+    bio: user?.bio || '',
+    licenseNumber: user?.licenseNumber || '',
+    socialLinks: {
+      twitter: user?.socialLinks?.twitter || user?.socialLinks?.x || '',
+      linkedin: user?.socialLinks?.linkedin || '',
+    }
+  });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Limit size to 1MB for base64 storage
+    if (file.size > 1024 * 1024) {
+      alert('Photo must be less than 1MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      try {
+        setSaving(true);
+        await updateProfile({ avatarUrl: base64String });
+        alert('Photo updated successfully!');
+      } catch (err) {
+        console.error('Failed to upload photo:', err);
+        alert('Failed to upload photo.');
+      } finally {
+        setSaving(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateProfile({
+        name: formData.name,
+        phone: formData.phone,
+        bio: formData.bio,
+        licenseNumber: formData.licenseNumber,
+        socialLinks: {
+          x: formData.socialLinks.twitter,
+          linkedin: formData.socialLinks.linkedin
+        }
+      });
+      alert('Profile updated successfully!');
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 reveal">
       <div className="lg:col-span-2 space-y-12">
         <section className="space-y-8">
           <div className="flex items-center gap-6">
             <div className="relative group">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handlePhotoUpload} 
+                accept="image/*" 
+                className="hidden" 
+              />
               <div className="w-32 h-32 rounded-3xl bg-blue-600 overflow-hidden flex items-center justify-center text-4xl font-black text-white shadow-2xl">
-                {user?.name?.[0] || 'A'}
+                {user?.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  user?.avatar || user?.name?.[0] || 'A'
+                )}
               </div>
-              <button className="absolute -bottom-2 -right-2 p-3 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] shadow-xl hover:scale-110 transition-all text-blue-500">
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-2 -right-2 p-3 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] shadow-xl hover:scale-110 transition-all text-blue-500"
+              >
                 <Camera size={18} />
               </button>
             </div>
             <div className="space-y-1">
-               <h2 className="text-2xl font-black italic">{user?.name || 'Authorized User'}</h2>
-               <p className="text-gray-500 text-sm">{user?.email || 'user@wholescaleos.com'}</p>
+               <h2 className="text-2xl font-black italic text-white">{formData.name || 'Authorized User'}</h2>
+               <p className="text-[var(--t-text-muted)] text-sm">{formData.email || 'user@wholescaleos.com'}</p>
                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-black text-blue-400 uppercase tracking-widest mt-2">
                   <Check size={12} /> Pro Affiliate
                </div>
@@ -375,39 +474,79 @@ function ProfileTab({ user }: { user: any }) {
 
           <div className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Full Name</label>
-              <input type="text" defaultValue={user?.name} className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none transition-all" />
+              <label className="text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-[0.2em] ml-1">Full Name</label>
+              <input 
+                type="text" 
+                value={formData.name} 
+                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm text-white focus:border-blue-500 outline-none transition-all" 
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Official Email</label>
-              <input type="email" defaultValue={user?.email} className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none transition-all" />
+              <label className="text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-[0.2em] ml-1">Official Email</label>
+              <input 
+                type="email" 
+                value={formData.email} 
+                disabled
+                className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm text-[var(--t-text-muted)] outline-none cursor-not-allowed opacity-60" 
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Phone Number</label>
-              <input type="tel" placeholder="+1 (555) 000-0000" className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none transition-all" />
+              <label className="text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-[0.2em] ml-1">Phone Number</label>
+              <input 
+                type="tel" 
+                placeholder="+1 (555) 000-0000" 
+                value={formData.phone}
+                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm text-white focus:border-blue-500 outline-none transition-all" 
+              />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Professional License #</label>
-              <input type="text" placeholder="RE-123456789" className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none transition-all" />
+              <label className="text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-[0.2em] ml-1">Professional License #</label>
+              <input 
+                type="text" 
+                placeholder="RE-123456789" 
+                value={formData.licenseNumber}
+                onChange={e => setFormData({ ...formData, licenseNumber: e.target.value })}
+                className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm text-white focus:border-blue-500 outline-none transition-all" 
+              />
             </div>
           </div>
         </section>
 
         <section className="space-y-4">
-           <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Professional Bio</label>
-           <textarea rows={4} placeholder="Tell the world about your expertise..." className="w-full px-5 py-4 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm focus:border-blue-500 outline-none transition-all resize-none" />
+           <label className="text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-[0.2em] ml-1">Professional Bio</label>
+           <textarea 
+            rows={4} 
+            placeholder="Tell the world about your expertise..." 
+            value={formData.bio}
+            onChange={e => setFormData({ ...formData, bio: e.target.value })}
+            className="w-full px-5 py-4 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm text-white focus:border-blue-500 outline-none transition-all resize-none" 
+           />
         </section>
 
         <section className="space-y-6">
-           <h3 className="text-sm font-black uppercase tracking-widest text-gray-500">Social Connections</h3>
+           <h3 className="text-sm font-black uppercase tracking-widest text-[var(--t-text-muted)]">Social Connections</h3>
            <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)]">
-                 <Twitter size={18} className="text-gray-500" />
-                 <input type="text" placeholder="@username" className="bg-transparent text-sm outline-none flex-1" />
+                 <Twitter size={18} className="text-[var(--t-text-muted)]" />
+                 <input 
+                  type="text" 
+                  placeholder="@username" 
+                  value={formData.socialLinks.twitter}
+                  onChange={e => setFormData({ ...formData, socialLinks: { ...formData.socialLinks, twitter: e.target.value }})}
+                  className="bg-transparent text-sm text-white outline-none flex-1" 
+                 />
               </div>
               <div className="flex items-center gap-4 p-4 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)]">
-                 <Linkedin size={18} className="text-gray-500" />
-                 <input type="text" placeholder="linkedin.com/in/..." className="bg-transparent text-sm outline-none flex-1" />
+                 <Linkedin size={18} className="text-[var(--t-text-muted)]" />
+                 <input 
+                  type="text" 
+                  placeholder="linkedin.com/in/..." 
+                  value={formData.socialLinks.linkedin}
+                  onChange={e => setFormData({ ...formData, socialLinks: { ...formData.socialLinks, linkedin: e.target.value }})}
+                  className="bg-transparent text-sm text-white outline-none flex-1" 
+                 />
               </div>
            </div>
         </section>
@@ -416,24 +555,24 @@ function ProfileTab({ user }: { user: any }) {
       <div className="space-y-8">
          <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-6">
             <div className="flex items-center justify-between">
-               <h3 className="text-lg font-bold">Public Profile</h3>
+               <h3 className="text-lg font-bold text-white">Public Profile</h3>
                <div className="w-12 h-6 rounded-full bg-blue-600 p-1 relative">
                   <div className="w-4 h-4 rounded-full bg-white absolute right-1" />
                </div>
             </div>
-            <p className="text-xs text-gray-500 leading-relaxed">
-               Enabling this allows agents and leads to view your public profile at <span className="text-blue-500 underline">wholescaleos.com/agent/{user?.name?.toLowerCase()?.replace(/\s+/g, '-')}</span>
+            <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
+               Enabling this allows agents and leads to view your public profile at <span className="text-blue-500 underline">wholescaleos.pages.dev/agent/{user?.name?.toLowerCase()?.replace(/\s+/g, '-')}</span>
             </p>
          </div>
 
          <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-6">
-            <h3 className="text-lg font-bold italic">Identity Verification</h3>
+            <h3 className="text-lg font-bold italic text-white">Identity Verification</h3>
             <div className="space-y-4">
-               <div className="flex items-center gap-3 text-xs text-green-500 font-bold">
+               <div className="flex items-center gap-3 text-xs text-[var(--t-success)] font-bold">
                   <Check size={16} /> Email Verified
                </div>
-               <div className="flex items-center gap-3 text-xs text-gray-500 font-bold">
-                  <div className="w-4 h-4 rounded-full border border-gray-500" /> Identity Pending
+               <div className="flex items-center gap-3 text-xs text-[var(--t-text-muted)] font-bold">
+                  <div className="w-4 h-4 rounded-full border border-[var(--t-text-muted)]" /> Identity Pending
                </div>
             </div>
             <button className="w-full py-3 rounded-xl bg-blue-600/10 border border-blue-500/20 text-blue-500 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all">
@@ -441,8 +580,13 @@ function ProfileTab({ user }: { user: any }) {
             </button>
          </div>
 
-         <button className="w-full py-5 rounded-2xl bg-blue-600 text-white font-black shadow-2xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-            Save Changes
+         <button 
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-5 rounded-2xl bg-blue-600 text-white font-black shadow-2xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2"
+         >
+            {saving ? <Loader2 size={18} className="animate-spin" /> : null}
+            {saving ? 'Saving...' : 'Save Changes'}
          </button>
       </div>
     </div>

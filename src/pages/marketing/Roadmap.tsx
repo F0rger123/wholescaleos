@@ -1,5 +1,5 @@
 import { 
-  Zap, Brain, Shield, Rocket, 
+  Zap, Bot as Brain, Shield, Rocket, 
   Target, Globe, Sparkles, Code
 } from 'lucide-react';
 

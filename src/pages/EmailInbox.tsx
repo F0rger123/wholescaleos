@@ -67,12 +67,14 @@ export default function EmailInbox() {
     setIsAnalyzing(true);
     try {
       const messages = thread.messages.slice(-5).map(m => ({
-        role: m.from.includes(currentUser?.email || 'me') ? 'assistant' : 'user' as 'assistant' | 'user',
+        role: m.from.email.includes(currentUser?.email || 'me') ? 'assistant' : 'user' as 'assistant' | 'user',
         content: m.snippet
       }));
       const analysis = await analyzeSMSConversation(messages);
-      if (analysis?.suggestedReplies) {
+      if (analysis?.suggestedReplies && analysis.suggestedReplies.length > 0) {
         setAiSuggestions(analysis.suggestedReplies);
+        // Pre-fill with the first suggestion if the reply box is empty
+        setReplyText(prev => prev.trim() === '' ? analysis.suggestedReplies[0] : prev);
       }
     } catch (err) {
       console.error('AI Analysis error:', err);
@@ -231,7 +233,7 @@ export default function EmailInbox() {
                 >
                   <div className="flex justify-between items-start mb-1">
                     <span className={`text-xs font-bold truncate flex-1 pr-2 ${thread.unread ? 'text-blue-400' : 'text-gray-300'}`}>
-                      {thread.participants?.[0] || 'Unknown'}
+                      {thread.messages[thread.messages.length - 1]?.from.name || thread.participants?.[0] || 'Unknown'}
                     </span>
                     <span className="text-[10px] text-gray-500 whitespace-nowrap">
                       {formatDate(thread.lastMessageAt || new Date().toISOString())}
@@ -261,7 +263,10 @@ export default function EmailInbox() {
                   </button>
                   <div className="min-w-0">
                     <h2 className="text-sm font-bold truncate text-white">{selectedThread.subject}</h2>
-                    <p className="text-[10px] text-gray-500 truncate">{selectedThread.participants.join(', ')}</p>
+                    <p className="text-[10px] text-gray-400 truncate">
+                      {selectedThread.messages[selectedThread.messages.length - 1]?.from.name} 
+                      <span className="text-gray-600 ml-1">&lt;{selectedThread.messages[selectedThread.messages.length - 1]?.from.email}&gt;</span>
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -291,18 +296,18 @@ export default function EmailInbox() {
               {/* Messages Content */}
               <div className="flex-1 overflow-y-auto p-4 space-y-8 scroll-smooth">
                 {selectedThread.messages.map((msg: any, idx: number) => {
-                  const isMe = msg.from.includes(currentUser?.email || 'me');
+                  const isMe = msg.from.email.includes(currentUser?.email || 'me');
                   return (
                     <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                       <div className={`max-w-[90%] lg:max-w-2xl p-5 rounded-2xl border ${isMe ? 'bg-blue-600/10 border-blue-500/20' : 'bg-[#1e293b]/50 border-white/5'}`}>
                         <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/5">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg">
-                              {msg.from.split(' ')[0][0]}
+                            <div className="w-80 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-[10px] font-bold text-white shadow-lg shrink-0">
+                              {msg.from.name[0]?.toUpperCase() || 'U'}
                             </div>
-                            <div>
-                               <p className="text-xs font-bold text-white leading-tight">{msg.from}</p>
-                               <p className="text-[10px] text-gray-500">{formatDate(msg.date)}</p>
+                            <div className="min-w-0">
+                               <p className="text-xs font-bold text-white leading-tight truncate">{msg.from.name}</p>
+                               <p className="text-[10px] text-gray-500 truncate">{msg.from.email}</p>
                             </div>
                           </div>
                           <span className="text-[10px] text-gray-500">#{idx + 1}</span>
