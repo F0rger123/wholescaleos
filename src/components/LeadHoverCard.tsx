@@ -102,11 +102,10 @@ export const LeadHoverCard: React.FC<LeadHoverCardProps> = ({ lead }) => {
         </p>
         <div className="flex gap-2">
           <Link 
-            to={`/leads/${lead.id}`}
-            target="_blank"
+            to={`/leads/${lead.id}/manage`}
             className="flex-1 py-1.5 px-2 bg-[var(--t-surface-hover)] text-[var(--t-text)] text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:bg-[var(--t-surface-active)] transition-all border border-[var(--t-border)]"
           >
-            Open in New Tab <ExternalLink className="w-3 h-3" />
+            Full Edit <ExternalLink className="w-3 h-3" />
           </Link>
           <button className="flex-1 py-1.5 px-2 bg-[var(--t-primary)] text-white text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:brightness-110 transition-all">
             Take Action <ArrowRight className="w-3 h-3" />

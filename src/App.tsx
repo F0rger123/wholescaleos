@@ -28,6 +28,7 @@ import SMSInbox from './pages/SMSInbox';
 import NotificationInbox from './pages/NotificationInbox';
 import EmailInbox from './pages/EmailInbox';
 import AgentProfile from './pages/AgentProfile';
+import LeadManagement from './pages/LeadManagement';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 import { CursorEffects } from './components/CursorEffects';
 import { MarketingLayout } from './components/MarketingLayout';
@@ -204,6 +205,7 @@ export function App() {
           <Route path="/dashboard/billing" element={<BillingProfile />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<Leads />} />
+          <Route path="/leads/:id/manage" element={<LeadManagement />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/team" element={<Team />} />
           <Route path="/tasks" element={<Tasks />} />

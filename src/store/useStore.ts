@@ -1825,9 +1825,9 @@ export const useStore = create<AppState>((set, get) => ({
         const { error } = await supabase
           .from('profiles')
           .update({
-            name: newUser.name,
+            full_name: newUser.name,
             phone: newUser.phone,
-            avatar: newUser.avatar,
+            avatar_url: newUser.avatarUrl,
             settings: {
               ...currentSettings,
               ...(newUser.bio && { bio: newUser.bio }),
