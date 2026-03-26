@@ -184,6 +184,7 @@ function getReplyGateway(fromHeader: string, phoneNumber: string): string | null
 // ── Auto-reply Loop Prevention ─────────────────────────────────────────────
 const lastAutoReplyTime = new Map<string, number>();
 const AUTO_REPLY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+const STALE_MESSAGE_THRESHOLD = 10 * 60 * 1000; // 10 minutes
 
 // ── Main Poll Function ─────────────────────────────────────────────────────
 export async function pollSMSMessages() {
@@ -357,6 +358,14 @@ export async function pollSMSMessages() {
 
       console.log(`[SMS Polling] Successfully stored message ${msg.id} from ${phoneNumber}`);
 
+      // ── Safety Guard: Ignore stale messages (older than 10 mins) ──
+      const msgTime = new Date(receivedAt).getTime();
+      const now = Date.now();
+      if (now - msgTime > STALE_MESSAGE_THRESHOLD) {
+        console.log(`[SMS Polling] Message ${msg.id} is stale (${Math.round((now - msgTime) / 60000)}m old), skipping auto-reply.`);
+        continue;
+      }
+
       const { notificationSettings, addNotification } = useStore.getState();
 
       // Fetch auto-reply preferences dynamically
@@ -370,6 +379,22 @@ export async function pollSMSMessages() {
         }
       } catch (err) {}
 
+      // ── Safety Guard: Only auto-reply if sender is a known Lead ──
+      let isKnownLead = false;
+      if (isAutoReplyEnabled) {
+        const { data: lead } = await supabase
+          .from('leads')
+          .select('id')
+          .eq('phone', phoneNumber)
+          .maybeSingle();
+        
+        if (lead) {
+          isKnownLead = true;
+        } else {
+          console.log(`[SMS Auto-Reply] Sender ${phoneNumber} is not a known lead. Skipping auto-reply.`);
+        }
+      }
+
       // ── In-app notification ──
       if (notificationSettings?.smsReceived) {
         addNotification({
@@ -381,7 +406,7 @@ export async function pollSMSMessages() {
       }
 
       // ── Auto-reply Logic with Loop Prevention ──
-      if (isAutoReplyEnabled) {
+      if (isAutoReplyEnabled && isKnownLead) {
         const lastReply = lastAutoReplyTime.get(phoneNumber) || 0;
         const now = Date.now();
 

@@ -453,101 +453,6 @@ export default function MapView() {
           </div>
         )}
 
-        {/* ── Filter Modal ── */}
-        {filterOpen && !isDrawing && (
-          <div className="absolute inset-0 z-[1001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-            <div className="border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
-              style={{
-                backgroundColor: 'var(--t-surface)',
-                borderColor: 'var(--t-border)',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-              }}
-            >
-              <div className="p-5 border-b flex items-center justify-between bg-[var(--t-surface-dim)]" style={{ borderColor: 'var(--t-border)' }}>
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-[var(--t-text)]">Map Filters</h3>
-                  <p className="text-[10px] text-[var(--t-text-muted)] mt-0.5">Customize your map view</p>
-                </div>
-                <button 
-                  onClick={() => setFilterOpen(false)} 
-                  className="p-2 hover:bg-white/5 rounded-xl transition-all group active:scale-90" 
-                  style={{ color: 'var(--t-text-muted)' }}
-                >
-                  <X size={20} className="group-hover:rotate-90 transition-transform" />
-                </button>
-              </div>
-              
-              <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                {/* Layer toggles */}
-                {([
-                  { key: 'showLeads' as const, label: 'Properties', icon: MapPin, count: filteredLeads.length },
-                  { key: 'showBuyers' as const, label: 'Buyers', icon: Users, count: filteredBuyers.length },
-                  { key: 'showCoverageAreas' as const, label: 'Zones', icon: Layers, count: filteredAreas.length },
-                  { key: 'showDrivingRoute' as const, label: 'Routes', icon: Navigation, count: 0 },
-                ]).map(({ key, label, icon: Icon, count }) => (
-                  <button
-                    key={key}
-                    onClick={() => toggleMapFilter(key)}
-                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-xs font-bold transition-all border ${
-                      key === 'showDrivingRoute' ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'
-                    }`}
-                    style={
-                      mapFilters[key]
-                        ? { backgroundColor: 'var(--t-primary-dim)', color: 'var(--t-primary-text)', borderColor: 'var(--t-primary)' }
-                        : { backgroundColor: 'var(--t-bg)', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }
-                    }
-                    disabled={key === 'showDrivingRoute'}
-                  >
-                    <span className="flex items-center gap-3">
-                      <div className={`p-1.5 rounded-lg ${mapFilters[key] ? 'bg-[var(--t-primary)] text-white' : 'bg-[var(--t-surface)]'}`}>
-                        <Icon size={14} />
-                      </div>
-                      {label}
-                    </span>
-                    <span className="text-[10px] font-black opacity-60 px-2 py-0.5 rounded-full bg-black/20">
-                      {key === 'showDrivingRoute' ? 'Soon' : count}
-                    </span>
-                  </button>
-                ))}
-
-                {/* Lead status sub-filters */}
-                {mapFilters.showLeads && (
-                  <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3 ml-1">Status Filter</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(Object.keys(LEAD_COLORS) as LeadStatus[]).map((status) => (
-                        <button
-                          key={status}
-                          onClick={() => toggleLeadStatusFilter(status)}
-                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold transition-all border group"
-                          style={
-                            mapFilters.leadStatusFilters[status]
-                              ? { backgroundColor: 'var(--t-bg)', color: 'var(--t-text)', borderColor: LEAD_COLORS[status] }
-                              : { backgroundColor: 'transparent', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }
-                          }
-                        >
-                          <span className={`w-2 h-2 rounded-full shrink-0 group-hover:scale-125 transition-transform`} 
-                                style={{ background: LEAD_COLORS[status], opacity: mapFilters.leadStatusFilters[status] ? 1 : 0.3, boxShadow: mapFilters.leadStatusFilters[status] ? `0 0 8px ${LEAD_COLORS[status]}88` : 'none' }} />
-                          {STATUS_LABELS[status]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              <div className="p-5 bg-[var(--t-surface-dim)] border-t flex flex-col gap-2" style={{ borderColor: 'var(--t-border)' }}>
-                 <button 
-                  onClick={() => setFilterOpen(false)}
-                  className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-500 shadow-xl shadow-blue-600/30 hover:shadow-blue-600/40 transition-all active:scale-95"
-                 >
-                   Apply Filters
-                 </button>
-                 <p className="text-[9px] text-center text-gray-500 font-medium">Auto-saves your preferences</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ── Detail Sidebar ── */}
         {(selectedLead || selectedBuyer || selectedArea) && (
@@ -814,6 +719,106 @@ export default function MapView() {
           </div>
         </div>
       </div>
+
+      {/* ── Fixed Filter Modal Overlay ── */}
+      {filterOpen && !isDrawing && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div 
+            className="fixed inset-0" 
+            onClick={() => setFilterOpen(false)} 
+          />
+          <div className="relative border rounded-[2.5rem] w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+            style={{
+              backgroundColor: 'var(--t-surface)',
+              borderColor: 'var(--t-border)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            <div className="p-6 border-b flex items-center justify-between bg-[var(--t-surface-dim)]" style={{ borderColor: 'var(--t-border)' }}>
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-[var(--t-text)]">Map Filters</h3>
+                <p className="text-[10px] text-[var(--t-text-muted)] mt-0.5 font-bold">Customize your map view</p>
+              </div>
+              <button 
+                onClick={() => setFilterOpen(false)} 
+                className="p-2.5 hover:bg-white/5 rounded-2xl transition-all group active:scale-90 border border-transparent hover:border-white/10" 
+                style={{ color: 'var(--t-text-muted)' }}
+              >
+                <X size={20} className="group-hover:rotate-90 transition-transform" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {/* Layer toggles */}
+              {([
+                { key: 'showLeads' as const, label: 'Properties', icon: MapPin, count: filteredLeads.length },
+                { key: 'showBuyers' as const, label: 'Buyers', icon: Users, count: filteredBuyers.length },
+                { key: 'showCoverageAreas' as const, label: 'Zones', icon: Layers, count: filteredAreas.length },
+                { key: 'showDrivingRoute' as const, label: 'Routes', icon: Navigation, count: 0 },
+              ]).map(({ key, label, icon: Icon, count }) => (
+                <button
+                  key={key}
+                  onClick={() => toggleMapFilter(key)}
+                  className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl text-xs font-black transition-all border ${
+                    key === 'showDrivingRoute' ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'
+                  }`}
+                  style={
+                    mapFilters[key]
+                      ? { backgroundColor: 'var(--t-primary-dim)', color: 'var(--t-primary-text)', borderColor: 'var(--t-primary)' }
+                      : { backgroundColor: 'var(--t-bg)', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }
+                  }
+                  disabled={key === 'showDrivingRoute'}
+                >
+                  <span className="flex items-center gap-4">
+                    <div className={`p-2 rounded-xl ${mapFilters[key] ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary)]/20' : 'bg-[var(--t-surface)]'}`}>
+                      <Icon size={16} />
+                    </div>
+                    {label}
+                  </span>
+                  <span className="text-[10px] font-black opacity-60 px-3 py-1 rounded-full bg-black/20">
+                    {key === 'showDrivingRoute' ? 'Soon' : count}
+                  </span>
+                </button>
+              ))}
+
+              {/* Lead status sub-filters */}
+              {mapFilters.showLeads && (
+                <div className="mt-6 pt-6 border-t" style={{ borderColor: 'var(--t-border)' }}>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-4 ml-1">Status Filter</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(Object.keys(LEAD_COLORS) as LeadStatus[]).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => toggleLeadStatusFilter(status)}
+                        className="flex items-center gap-2 px-4 py-3 rounded-2xl text-[10px] font-black transition-all border group"
+                        style={
+                          mapFilters.leadStatusFilters[status]
+                            ? { backgroundColor: 'var(--t-bg)', color: 'var(--t-text)', borderColor: LEAD_COLORS[status] }
+                            : { backgroundColor: 'transparent', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }
+                        }
+                      >
+                        <span className={`w-2 h-2 rounded-full shrink-0 group-hover:scale-125 transition-transform`} 
+                              style={{ background: LEAD_COLORS[status], opacity: mapFilters.leadStatusFilters[status] ? 1 : 0.3, boxShadow: mapFilters.leadStatusFilters[status] ? `0 0 8px ${LEAD_COLORS[status]}88` : 'none' }} />
+                        {STATUS_LABELS[status]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 bg-[var(--t-surface-dim)] border-t flex flex-col gap-3" style={{ borderColor: 'var(--t-border)' }}>
+               <button 
+                onClick={() => setFilterOpen(false)}
+                className="w-full py-4 rounded-[1.25rem] bg-blue-600 text-white font-black text-xs uppercase tracking-[0.1em] hover:bg-blue-500 shadow-2xl shadow-blue-600/30 hover:shadow-blue-600/40 transition-all active:scale-95"
+               >
+                 Close & Preview
+               </button>
+               <p className="text-[9px] text-center text-gray-500 font-black uppercase tracking-widest">Settings persist automatically</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
