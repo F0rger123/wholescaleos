@@ -695,7 +695,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
               <><WifiOff size={12} style={{ color: 'var(--t-warning)' }} /><span className="text-xs" style={{ color: 'var(--t-warning)' }}>Demo Mode</span></>
             )}
           </div>
-          <p className="text-xs opacity-40" style={{ color: 'var(--t-text)' }}>© 2024 WholeScale OS. All rights reserved.</p>
+          <p className="text-xs opacity-40" style={{ color: 'var(--t-text)' }}>© 2026 WholeScale OS. All rights reserved.</p>
         </div>
       </div>
 

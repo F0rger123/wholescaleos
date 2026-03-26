@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
 import { LeadHoverCard } from '../components/LeadHoverCard';
 import { 
@@ -143,8 +143,9 @@ export default function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
-  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const leadElRefs = useRef<Record<string, HTMLElement | null>>({});
+  const hoverCardRef = useRef<HTMLDivElement | null>(null);
 
   const [timeframe, setTimeframe] = useState<Timeframe>(
     (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d'
@@ -163,24 +164,24 @@ export default function Dashboard() {
 
   const hoveredLead = leads.find(l => l.id === hoveredLeadId) ?? null;
 
-  const handleLeadMouseEnter = (e: React.MouseEvent, leadId: string) => {
+  const setLeadRef = useCallback((leadId: string, el: HTMLElement | null) => {
+    leadElRefs.current[leadId] = el;
+  }, []);
+
+  const handleLeadMouseEnter = useCallback((leadId: string) => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setHoveredLeadId(leadId);
-    
-    // Anchor to element position
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setHoverPos({ 
-      x: rect.right + 12, // Offset 12px to the right
-      y: rect.top + (rect.height / 2) // Center vertically
-    });
-  };
+  }, []);
 
-  const handleLeadMouseLeave = () => {
+  const handleLeadMouseLeave = useCallback(() => {
     hoverTimeoutRef.current = setTimeout(() => {
       setHoveredLeadId(null);
-      setHoverPos(null);
-    }, 200);
-  };
+    }, 250);
+  }, []);
+
+  const handleCardMouseEnter = useCallback(() => {
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+  }, []);
 
   // ─── Calculations ────────────────────────────────────────
   const dataToUse = filteredLeads || leads;
@@ -647,8 +648,9 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0 relative">
                     <div 
-                      className="relative"
-                      onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
+                      className="relative inline-block max-w-full"
+                      ref={(el) => setLeadRef(lead.id, el)}
+                      onMouseEnter={() => handleLeadMouseEnter(lead.id)}
                       onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm font-medium text-[var(--t-on-surface)] truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
@@ -690,8 +692,9 @@ export default function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0 relative">
                     <div 
-                      className="relative"
-                      onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
+                      className="relative inline-block max-w-full"
+                      ref={(el) => setLeadRef(`recent-${lead.id}`, el)}
+                      onMouseEnter={() => handleLeadMouseEnter(lead.id)}
                       onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm text-[var(--t-on-surface)] font-medium truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
@@ -740,46 +743,54 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {hoveredLead && hoverPos && (() => {
+      {hoveredLead && (() => {
+        // Find the anchor element from our ref map
+        const anchorEl = leadElRefs.current[hoveredLead.id] || leadElRefs.current[`recent-${hoveredLead.id}`];
+        if (!anchorEl) return null;
+
+        const rect = anchorEl.getBoundingClientRect();
         const cardWidth = 320;
-        const cardHeight = 360; 
-        const margin = 20;
-        
-        let left = hoverPos.x;
-        let top = hoverPos.y - (cardHeight / 2);
-        let arrowPos = 'left';
+        const cardHeight = 380;
+        const gap = 12;
+        const margin = 16;
 
-        // Flip to left side if not enough space on the right
+        let arrowSide: 'left' | 'right' = 'left';
+        let left = rect.right + gap;
+        let anchorY = rect.top + rect.height / 2;
+
+        // Flip to left if not enough room on right
         if (left + cardWidth > window.innerWidth - margin) {
-          left = hoverPos.x - cardWidth - 24; 
-          arrowPos = 'right';
+          left = rect.left - cardWidth - gap;
+          arrowSide = 'right';
         }
+        // Clamp left
+        if (left < margin) left = margin;
 
-        // Viewport clamping
+        let top = anchorY - cardHeight / 2;
+        // Viewport clamp vertically
         if (top + cardHeight > window.innerHeight - margin) {
           top = window.innerHeight - cardHeight - margin;
         }
-        if (top < margin) {
-          top = margin;
-        }
+        if (top < margin) top = margin;
 
-        const arrowTop = Math.max(20, Math.min(cardHeight - 20, hoverPos.y - top - 6));
+        // Arrow should point to the anchor's vertical center
+        const arrowTop = Math.max(16, Math.min(cardHeight - 16, anchorY - top));
 
         return (
           <div
-            className="fixed z-[9999] shadow-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
+            ref={hoverCardRef}
+            className="fixed z-[9999] shadow-2xl pointer-events-auto"
             style={{ 
               left: `${left}px`, 
               top: `${top}px`,
+              transition: 'left 0.15s ease, top 0.15s ease',
               '--card-arrow-display': 'block',
-              '--card-arrow-left': arrowPos === 'left' ? '-6px' : 'auto',
-              '--card-arrow-right': arrowPos === 'right' ? '-6px' : 'auto',
-              '--card-arrow-rotate': arrowPos === 'left' ? '-45deg' : '135deg',
+              '--card-arrow-left': arrowSide === 'left' ? '-6px' : 'auto',
+              '--card-arrow-right': arrowSide === 'right' ? '-6px' : 'auto',
+              '--card-arrow-rotate': arrowSide === 'left' ? '-45deg' : '135deg',
               '--card-arrow-top': `${arrowTop}px`,
             } as any}
-            onMouseEnter={() => {
-              if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-            }}
+            onMouseEnter={handleCardMouseEnter}
             onMouseLeave={handleLeadMouseLeave}
           >
             <LeadHoverCard lead={hoveredLead} />
