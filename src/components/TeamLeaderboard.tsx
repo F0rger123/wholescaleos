@@ -6,8 +6,8 @@ const RANK_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 export function TeamLeaderboard() {
   const { team, leads, memberStreaks, loginStreak, taskStreak, currentUser } = useStore();
 
-  const leaderData = team.map(member => {
-    const assignedLeads = leads.filter(l => l.assignedTo === member.id);
+  const leaderData = (team || []).map(member => {
+    const assignedLeads = (leads || []).filter(l => l && (l.assignedTo === member.id || l.assignedTo === member.name));
     const closedWon = assignedLeads.filter(l => l.status === 'closed-won');
     const totalRevenue = closedWon.reduce((sum, l) => sum + (l.offerAmount || l.estimatedValue || 0), 0);
     const totalProfit = closedWon.reduce((sum, l) => {
@@ -23,8 +23,9 @@ export function TeamLeaderboard() {
       : 0;
 
     const isCurrentUser = member.id === currentUser?.id || member.email === currentUser?.email;
-    const lStreak = memberStreaks[member.id]?.login ?? (isCurrentUser ? loginStreak : 0);
-    const tStreak = memberStreaks[member.id]?.task ?? (isCurrentUser ? taskStreak : 0);
+    const streaks = memberStreaks || {};
+    const lStreak = streaks[member.id]?.login ?? (isCurrentUser ? loginStreak : 0);
+    const tStreak = streaks[member.id]?.task ?? (isCurrentUser ? taskStreak : 0);
 
     return {
       ...member,
@@ -36,7 +37,7 @@ export function TeamLeaderboard() {
       loginStreak: lStreak,
       taskStreak: tStreak,
     };
-  }).sort((a, b) => b.totalRevenue - a.totalRevenue);
+  }).sort((a, b) => (b.totalRevenue || 0) - (a.totalRevenue || 0));
 
   const maxRevenue = leaderData[0]?.totalRevenue || 1;
 

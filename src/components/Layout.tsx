@@ -73,9 +73,9 @@ export function Layout() {
     ],
   };
 
-  const onlineCount = team.filter(m => m.presenceStatus === 'online').length;
-  const pendingTaskCount = tasks.filter(t => t.status === 'todo' || t.status === 'in-progress').length;
-  const totalUnread = Object.values(unreadCounts).reduce((sum, c) => sum + c, 0);
+  const onlineCount = (team || []).filter(m => m.presenceStatus === 'online').length;
+  const pendingTaskCount = (tasks || []).filter(t => t.status === 'todo' || t.status === 'in-progress').length;
+  const totalUnread = Object.values(unreadCounts || {}).reduce((sum, c) => sum + (Number(c) || 0), 0);
 
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -363,7 +363,7 @@ export function Layout() {
                 {teamConfig.name || 'My Team'}
               </p>
               <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>
-                {team.length} member{team.length !== 1 ? 's' : ''}
+                {(team || []).length} member{(team || []).length !== 1 ? 's' : ''}
               </p>
             </div>
             <ChevronDown
@@ -562,7 +562,7 @@ export function Layout() {
             Online Now
           </p>
           <div className="space-y-1.5">
-            {team
+            {(team || [])
               .filter(m => m.presenceStatus !== 'offline')
               .slice(0, 4)
               .map(m => (
@@ -585,7 +585,7 @@ export function Layout() {
                   </div>
                 </div>
               ))}
-            {team.filter(m => m.presenceStatus !== 'offline').length === 0 && (
+            {(team || []).filter(m => m.presenceStatus !== 'offline').length === 0 && (
               <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>No one online</p>
             )}
           </div>

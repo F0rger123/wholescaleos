@@ -16,7 +16,8 @@ import { Building2, Loader2, Database, Wifi } from 'lucide-react';
 
 // ─── DB → Store Converters ────────────────────────────────────────────────────
 
-function dbLeadToStore(row: Record<string, unknown>, timeline: TimelineEntry[], statusHistory: StatusHistoryEntry[]): Lead {
+function dbLeadToStore(row: Record<string, unknown>, timeline: TimelineEntry[], statusHistory: StatusHistoryEntry[]): Lead | null {
+  if (!row || !row.id) return null;
   return {
     id: row.id as string,
     name: (row.name as string) || '',
@@ -53,7 +54,8 @@ function dbLeadToStore(row: Record<string, unknown>, timeline: TimelineEntry[], 
   };
 }
 
-function dbTeamMemberToStore(row: Record<string, unknown>, profile: Record<string, unknown> | null): TeamMember {
+function dbTeamMemberToStore(row: Record<string, unknown>, profile: Record<string, unknown> | null): TeamMember | null {
+  if (!row || (!row.user_id && !row.id)) return null;
   const name = (profile?.full_name as string) || (profile?.email as string)?.split('@')[0] || 'User';
   const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
   return {
@@ -341,22 +343,25 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
 
         // ── Step 4: Convert all data ─────────────────────────────────
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const leads: Lead[] = (leadsRes.data || []).map((row: any) =>
-          dbLeadToStore(row, timelineByLead[row.id as string] || [], statusHistByLead[row.id as string] || [])
-        );
+        const leads: Lead[] = (leadsRes.data || [])
+          .map((row: any) => dbLeadToStore(row, timelineByLead[row.id as string] || [], statusHistByLead[row.id as string] || []))
+          .filter((l): l is Lead => l !== null);
 
         // Enrich team members with deal counts from leads
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const team: TeamMember[] = (teamMembersRes.data || []).map((row: any) => {
-          const profile = row.profiles || null;
-          const member = dbTeamMemberToStore(row, profile);
-          // Count deals assigned to this member
-          member.dealsCount = leads.filter(l => l.assignedTo === member.name || l.assignedTo === member.id).length;
-          member.revenue = leads
-            .filter(l => (l.assignedTo === member.name || l.assignedTo === member.id) && l.status === 'closed-won')
-            .reduce((sum, l) => sum + l.estimatedValue, 0);
-          return member;
-        });
+        const team: TeamMember[] = (teamMembersRes.data || [])
+          .map((row: any) => {
+            const profile = row.profiles || null;
+            const member = dbTeamMemberToStore(row, profile);
+            if (!member) return null;
+            // Count deals assigned to this member
+            member.dealsCount = leads.filter(l => l && (l.assignedTo === member.name || l.assignedTo === member.id)).length;
+            member.revenue = leads
+              .filter(l => l && (l.assignedTo === member.name || l.assignedTo === member.id) && l.status === 'closed-won')
+              .reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0);
+            return member;
+          })
+          .filter((m): m is TeamMember => m !== null);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tasks: Task[] = (tasksRes.data || []).map((row: any) => dbTaskToStore(row));
@@ -466,15 +471,19 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
           // Don't add if we already have it (local optimistic update)
           if (state.leads.find(l => l.id === newRow.id)) return;
           const lead = dbLeadToStore(newRow as Record<string, unknown>, [], []);
-          useStore.setState({ leads: [...state.leads, lead] });
+          if (lead) {
+            useStore.setState({ leads: [...state.leads, lead] });
+          }
         } else if (eventType === 'UPDATE' && newRow) {
           const updated = dbLeadToStore(newRow as Record<string, unknown>,
             state.leads.find(l => l.id === newRow.id)?.timeline || [],
             state.leads.find(l => l.id === newRow.id)?.statusHistory || [],
           );
-          useStore.setState({
-            leads: state.leads.map(l => l.id === newRow.id ? { ...l, ...updated } : l),
-          });
+          if (updated) {
+            useStore.setState({
+              leads: state.leads.map(l => l.id === newRow.id ? { ...l, ...updated } : l),
+            });
+          }
         } else if (eventType === 'DELETE' && oldRow) {
           useStore.setState({ leads: state.leads.filter(l => l.id !== oldRow.id) });
         }
