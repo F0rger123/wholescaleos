@@ -13,8 +13,6 @@ import {
   RotateCcw,
   ChevronDown,
   LayoutGrid,
-  Sparkles,
-  Layout as LayoutIcon,
   AlertCircle,
   Flame,
   GripVertical
@@ -140,10 +138,22 @@ export default function Dashboard() {
   const { 
     leads, team,
     loginStreak, taskStreak, memberStreaks,
-    dashboardLayout, setDashboardLayout
+    dashboardLayout, setDashboardLayout,
+    dataLoaded
   } = useStore();
 
-  console.log('DEBUG: Dashboard rendering with leads:', leads?.length);
+  console.log('DEBUG: Dashboard rendering. dataLoaded:', dataLoaded, 'leads:', leads?.length, 'team:', team?.length);
+
+  // Quick fix: Show loading if data is not yet available
+  if (!dataLoaded || !leads || !team) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--t-bg)] p-8">
+        <div className="w-16 h-16 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin mb-6"></div>
+        <h2 className="text-2xl font-black text-white mb-2">Dashboard Loading</h2>
+        <p className="text-[var(--t-text-muted)] text-sm animate-pulse">Fetching your pipeline and team data...</p>
+      </div>
+    );
+  }
   const [isEditing, setIsEditing] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -254,12 +264,12 @@ export default function Dashboard() {
     .sort((a, b) => calculateDealScore(b) - calculateDealScore(a))
     .slice(0, 5);
 
-  const streakMembers = team.map(m => ({
+  const streakMembers = (team || []).map(m => ({
     id: m.id,
     name: m.name,
     avatar: m.avatar,
-    loginStreak: memberStreaks[m.id]?.login || 0,
-    taskStreak: memberStreaks[m.id]?.task || 0,
+    loginStreak: memberStreaks?.[m.id]?.login || 0,
+    taskStreak: memberStreaks?.[m.id]?.task || 0,
   }));
 
   const pipelineChange = 12.5; // Dummy trend
