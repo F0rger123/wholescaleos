@@ -220,8 +220,17 @@ export default function Leads() {
   useEffect(() => {
     if (id) {
       setExpandedLead(id);
+      
+      // Auto-open edit modal if ?edit=true is in URL
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('edit') === 'true') {
+        const lead = leads.find(l => l.id === id);
+        if (lead) {
+          openEdit(lead);
+        }
+      }
     }
-  }, [id]);
+  }, [id, leads]); // Added leads to dependency to ensure it opens once data is loaded
 
   useEffect(() => {
     if (isRecording) { 
@@ -1179,37 +1188,39 @@ export default function Leads() {
                           ))}
                         </div>
 
-                        {/* Quick Actions */}
-                        <div className="px-4 pb-4 flex gap-2">
-                           <button 
-                             onClick={() => {
-                               const url = `${window.location.origin}/#/share/${lead.id}`;
-                               navigator.clipboard.writeText(url);
-                               alert('Public lead link copied to clipboard!');
-                             }}
-                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
-                             style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
-                           >
-                             <Share2 size={16} className="group-hover:text-blue-500 transition-colors" /> 
-                             <span className="text-sm font-bold">Copy Link</span>
-                           </button>
-                           <button 
-                             onClick={() => navigate(`/leads/${lead.id}/share-edit`)}
-                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group text-blue-500"
-                             style={{ borderColor: 'var(--t-border)' }}
-                           >
-                             <ExternalLink size={16} className="group-hover:scale-110 transition-transform" /> 
-                             <span className="text-sm font-bold">Edit Share Page</span>
-                           </button>
-                           <button 
-                             onClick={() => navigate(`/leads/${lead.id}/share-edit`)}
-                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
-                             style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
-                           >
-                             <Edit2 size={16} className="group-hover:text-blue-500 transition-colors" /> 
-                             <span className="text-sm font-bold">Full Edit</span>
-                           </button>
-                        </div>
+                         <div className="px-4 pb-4 flex gap-2">
+                            <button 
+                              onClick={() => {
+                                const url = `${window.location.origin}/#/share/${lead.id}`;
+                                navigator.clipboard.writeText(url);
+                                alert('Public lead link copied to clipboard!');
+                              }}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
+                              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                            >
+                              <Share2 size={16} className="group-hover:text-blue-500 transition-colors" /> 
+                              <span className="text-sm font-bold">Copy Link</span>
+                            </button>
+                            <button 
+                              onClick={() => navigate(`/leads/${lead.id}/share-edit`)}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group text-blue-500"
+                              style={{ borderColor: 'var(--t-border)' }}
+                            >
+                              <ExternalLink size={16} className="group-hover:scale-110 transition-transform" /> 
+                              <span className="text-sm font-bold">Edit Share Page</span>
+                            </button>
+                            <button 
+                              onClick={() => {
+                                const url = `${window.location.origin}/#/leads/${lead.id}?edit=true`;
+                                window.open(url, '_blank');
+                              }}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
+                              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                            >
+                              <Edit2 size={16} className="group-hover:text-blue-500 transition-colors" /> 
+                              <span className="text-sm font-bold">Full Edit</span>
+                            </button>
+                         </div>
 
                         {/* Dual Maps: Satellite & Street View */}
                         {lead.propertyAddress && (

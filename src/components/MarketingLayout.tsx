@@ -47,6 +47,7 @@ export const MarketingLayout: React.FC = () => {
   const navLinks = [
     { name: 'Features', href: '/features' },
     { name: 'Pricing', href: '/pricing' },
+    { name: 'Compare', href: '/compare' },
     { name: 'About', href: '/about' },
   ];
 

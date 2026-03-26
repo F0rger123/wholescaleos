@@ -45,25 +45,14 @@ export default function AgentProfile() {
           if (found) {
             setAgent({
                 ...found,
-                // Mock extra fields for demo 
-                bio: 'Top-producing real estate professional with over 10 years of experience in luxury residential properties and investment portfolios. Dedicated to providing exceptional service and market expertise.',
-                specialties: ['Luxury Homes', 'First-time Buyers', 'Investment Properties', 'New Construction'],
+                bio: 'Top-producing real estate professional with over 10 years of experience in luxury residential properties and investment portfolios.',
+                specialties: ['Luxury Homes', 'First-time Buyers', 'Investment Properties'],
                 licenseNumber: 'RE-123456789',
                 yearsExperience: 10,
-                languages: ['English', 'Spanish'],
-                serviceAreas: ['Beverly Hills', 'Santa Monica', 'West Hollywood', 'Pacific Palisades'],
-                socialLinks: {
-                    facebook: '#',
-                    instagram: '#',
-                    linkedin: '#',
-                    x: '#'
-                },
-                website: 'www.alexhomes.com',
+                socialLinks: { facebook: '#', instagram: '#', linkedin: '#', x: '#' },
+                website: 'www.wholescaleos.com',
                 acceptLeads: true,
-                testimonials: [
-                    { id: '1', author: 'Sarah Johnson', content: 'Alex was incredible to work with. Found us our dream home in record time and negotiated a great price!', rating: 5, date: '2023-11-15' },
-                    { id: '2', author: 'Michael Chen', content: 'Highly professional and knowledgeable. The entire selling process was seamless from start to finish.', rating: 5, date: '2023-12-02' }
-                ]
+                testimonials: []
             });
           } else {
              setError('Agent profile not found');
@@ -77,19 +66,19 @@ export default function AgentProfile() {
             email: data.email,
             phone: data.phone,
             avatar: data.avatar,
-            avatarUrl: data.avatar_url || settings.avatarUrl,
+            avatarUrl: data.avatar_url || settings.avatar_url || settings.avatarUrl,
             bio: settings.bio,
             specialties: settings.specialties || [],
-            licenseNumber: settings.licenseNumber || settings.license_number,
-            yearsExperience: settings.yearsExperience || settings.years_experience,
+            licenseNumber: settings.license_number || settings.licenseNumber,
+            yearsExperience: settings.years_experience || settings.yearsExperience,
             languages: settings.languages || [],
-            socialLinks: settings.socialLinks || settings.social_links || {},
-            serviceAreas: settings.serviceAreas || settings.service_areas || [],
+            socialLinks: settings.social_links || settings.socialLinks || {},
+            serviceAreas: settings.service_areas || settings.serviceArea || settings.serviceAreas || [],
             testimonials: settings.testimonials || [],
-            isPublic: settings.isPublic !== false,
-            publicContactEmail: settings.publicContactEmail !== false,
-            publicContactPhone: settings.publicContactPhone !== false,
-            acceptLeads: settings.acceptLeads !== false,
+            isPublic: settings.is_public !== false && settings.isPublic !== false,
+            publicContactEmail: settings.public_contact_email !== false && settings.publicContactEmail !== false,
+            publicContactPhone: settings.public_contact_phone !== false && settings.publicContactPhone !== false,
+            acceptLeads: settings.accept_leads !== false && settings.acceptLeads !== false,
             website: settings.website || ''
           });
         }
