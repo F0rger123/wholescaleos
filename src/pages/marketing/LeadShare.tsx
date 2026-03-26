@@ -1,11 +1,84 @@
 import { useParams, Link } from 'react-router-dom';
-import { MessageSquare, ShieldCheck, ChevronLeft, Share2, MapPin, BadgeDollarSign, Calendar, Image as ImageIcon } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MessageSquare, ShieldCheck, ChevronLeft, Share2, MapPin, BadgeDollarSign, Calendar, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { supabase } from '../../lib/supabase';
 
 export default function LeadShare() {
   const { id } = useParams();
   const { leads } = useStore();
-  const lead = leads.find(l => l.id === id);
+  const [lead, setLead] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLead() {
+      if (!id) return;
+      
+      // Try store first (if logged in)
+      const cached = leads.find(l => l.id === id);
+      if (cached) {
+        setLead(cached);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch from Supabase for public users
+      try {
+        if (!supabase) {
+          setLoading(false);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('leads')
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching lead:', error.message);
+          setLoading(false);
+          return;
+        }
+
+        if (data) {
+          // Map DB fields to Lead interface
+          setLead({
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            status: data.status,
+            source: data.source,
+            propertyAddress: data.address,
+            propertyType: data.property_type,
+            estimatedValue: data.property_value,
+            offerAmount: data.offer_amount,
+            notes: data.notes,
+            createdAt: data.created_at,
+            shareDescription: data.share_description,
+            sharePrice: data.share_price,
+            shareCustomMessage: data.share_custom_message,
+            sharePhotoUrl: data.share_photo_url,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch lead for sharing:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchLead();
+  }, [id, leads]);
+
+  if (loading) {
+    return (
+      <div className="bg-[#0f172a] min-h-screen text-white flex items-center justify-center">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   if (!lead) {
     return (

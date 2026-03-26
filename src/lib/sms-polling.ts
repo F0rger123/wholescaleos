@@ -181,6 +181,10 @@ function getReplyGateway(fromHeader: string, phoneNumber: string): string | null
   return null;
 }
 
+// ── Auto-reply Loop Prevention ─────────────────────────────────────────────
+const lastAutoReplyTime = new Map<string, number>();
+const AUTO_REPLY_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+
 // ── Main Poll Function ─────────────────────────────────────────────────────
 export async function pollSMSMessages() {
   const store = useStore.getState();
@@ -282,6 +286,21 @@ export async function pollSMSMessages() {
         continue;
       }
 
+      // ── Safeguard: Ignore bounce/error notifications from carriers ──
+      const lowerSubject = subject.toLowerCase();
+      const lowerSnippet = detail.snippet?.toLowerCase() || '';
+      if (
+        lowerSubject.includes('delivery failure') || 
+        lowerSubject.includes('undelivered') || 
+        lowerSubject.includes('returned mail') ||
+        lowerSnippet.includes('message not delivered') ||
+        lowerSnippet.includes('failure notice')
+      ) {
+        console.log(`[SMS Polling] Ignoring bounce/error notification ${msg.id}`);
+        // Optionally store as an error message but don't auto-reply
+        continue;
+      }
+
       console.log(`[SMS Polling] Carrier message detected from: ${fromHeader}`);
 
       // Extract phone number from sender address
@@ -290,8 +309,8 @@ export async function pollSMSMessages() {
       if (phoneNumber.length === 11 && phoneNumber.startsWith('1')) {
         phoneNumber = phoneNumber.substring(1);
       }
-      if (!phoneNumber) {
-        console.warn(`[SMS Polling] Could not extract phone number from ${fromHeader}`);
+      if (!phoneNumber || phoneNumber.length < 10) {
+        console.warn(`[SMS Polling] Could not extract valid phone number from ${fromHeader}`);
         continue;
       }
 
@@ -304,7 +323,6 @@ export async function pollSMSMessages() {
       }
       
       // Fallback 2: Use snippet (Gmail's pre-rendered text preview)
-      // This is VERY reliable for SMS, as they are usually short and don't require full attachment parsing.
       if (!content.trim() && detail.snippet) {
         content = detail.snippet;
       }
@@ -323,7 +341,7 @@ export async function pollSMSMessages() {
       // ── Insert inbound SMS ──
       const { error: insertError } = await supabase.from('sms_messages').insert({
         user_id: userId,
-        agent_id: userId, // Set both for maximum compatibility across query variants
+        agent_id: userId,
         phone_number: phoneNumber,
         content,
         direction: 'inbound',
@@ -362,35 +380,36 @@ export async function pollSMSMessages() {
         });
       }
 
-      // ── Auto-reply ──
+      // ── Auto-reply Logic with Loop Prevention ──
       if (isAutoReplyEnabled) {
-        const replyGateway = getReplyGateway(fromHeader, phoneNumber);
-        if (replyGateway) {
-          // Generate AI response based on message content
-          const autoReplyText = await generateAutoReply(content, phoneNumber);
+        const lastReply = lastAutoReplyTime.get(phoneNumber) || 0;
+        const now = Date.now();
 
-          await sendGmail(accessToken, replyGateway, autoReplyText);
+        if (now - lastReply < AUTO_REPLY_COOLDOWN) {
+          console.log(`[SMS Auto-Reply] Skipping for ${phoneNumber} - cooldown active.`);
+        } else {
+          const replyGateway = getReplyGateway(fromHeader, phoneNumber);
+          if (replyGateway) {
+            // Update cooldown timestamp
+            lastAutoReplyTime.set(phoneNumber, now);
 
-          // Log the auto-reply as outbound
-          await supabase.from('sms_messages').insert({
-            user_id: userId,
-            agent_id: userId,
-            phone_number: phoneNumber,
-            content: autoReplyText,
-            direction: 'outbound',
-            created_at: new Date().toISOString(),
-            is_read: true
-          });
+            // Generate AI response based on message content
+            const autoReplyText = await generateAutoReply(content, phoneNumber);
+
+            await sendGmail(accessToken, replyGateway, autoReplyText);
+
+            // Log the auto-reply as outbound
+            await supabase.from('sms_messages').insert({
+              user_id: userId,
+              agent_id: userId,
+              phone_number: phoneNumber,
+              content: autoReplyText,
+              direction: 'outbound',
+              created_at: new Date().toISOString(),
+              is_read: true
+            });
+          }
         }
-      }
-
-      // ── Link to lead if phone matches ──
-      const leads = useStore.getState().leads;
-      const matchingLead = leads.find(l => l.phone?.replace(/\D/g, '') === phoneNumber);
-      if (matchingLead) {
-        await supabase.from('sms_messages')
-          .update({ lead_id: matchingLead.id })
-          .eq('gmail_message_id', msg.id);
       }
     }
   } catch (err) {

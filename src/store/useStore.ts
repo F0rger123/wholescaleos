@@ -1747,6 +1747,15 @@ export const useStore = create<AppState>((set, get) => ({
     // Persist to Supabase if configured
     if (isSupabaseConfigured && supabase) {
       try {
+        // Fetch current settings to merge
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('settings')
+          .eq('id', currentUser.id)
+          .maybeSingle();
+
+        const currentSettings = profile?.settings || {};
+
         const { error } = await supabase
           .from('profiles')
           .update({
@@ -1754,6 +1763,7 @@ export const useStore = create<AppState>((set, get) => ({
             phone: newUser.phone,
             avatar: newUser.avatar,
             settings: {
+              ...currentSettings,
               ...(newUser.bio && { bio: newUser.bio }),
               ...(newUser.specialties && { specialties: newUser.specialties }),
               ...(newUser.licenseNumber && { license_number: newUser.licenseNumber }),
@@ -1769,6 +1779,7 @@ export const useStore = create<AppState>((set, get) => ({
               ...(newUser.website && { website: newUser.website }),
               ...(newUser.aiCustomInstructions && { ai_personality: newUser.aiCustomInstructions }),
               ...(newUser.avatarUrl && { avatar_url: newUser.avatarUrl }),
+              updated_at: new Date().toISOString()
             }
           })
           .eq('id', currentUser.id);
