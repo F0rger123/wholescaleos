@@ -36,10 +36,11 @@ export function PipelineChart() {
   const [metric, setMetric] = useState<MetricType>('leads');
 
   const filteredLeads = useMemo(() => {
+    if (!leads || !Array.isArray(leads)) return [];
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    return leads.filter(l => new Date(l.createdAt) >= cutoff);
+    return leads.filter(l => l && l.createdAt && new Date(l.createdAt) >= cutoff);
   }, [leads, timeRange]);
 
   const data = useMemo(() => {
@@ -116,6 +117,18 @@ export function PipelineChart() {
     { range: '90d', label: '90D' },
     { range: '1y', label: '1Y' },
   ];
+
+  if (!leads || leads.length === 0) {
+    return (
+      <div className="h-[300px] w-full bg-[var(--t-surface-dim)] rounded-3xl border border-dashed border-[var(--t-border)] flex flex-col items-center justify-center p-8 text-center group">
+        <div className="w-12 h-12 rounded-full bg-[var(--t-surface)] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <Layers className="text-[var(--t-text-muted)] w-6 h-6" />
+        </div>
+        <p className="text-sm font-bold text-white mb-1">No Pipeline Data</p>
+        <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-widest">Leads will appear here as you add them</p>
+      </div>
+    );
+  }
 
   const renderChart = () => {
     const commonProps = {
