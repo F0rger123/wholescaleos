@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, X as CloseIcon, Loader2, Image as ImageIcon, FileText, CheckCircle2 } from 'lucide-react';
+import { Upload, X as CloseIcon, Loader2, CheckCircle2 } from 'lucide-react';
 import { uploadFile, generateUniqueFileName, StorageBucket } from '../lib/storage';
 
 interface FileUploaderProps {

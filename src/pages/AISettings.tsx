@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Key, Loader2, Check, AlertCircle, Save, Sparkles, ChevronDown, ChevronRight } from 'lucide-react';
+import { Key, Loader2, Check, AlertCircle, Save, Sparkles, ChevronDown, ChevronRight, Layout } from 'lucide-react';
 import { PREBUILT_RULES, getEnabledPrebuiltRules, setEnabledPrebuiltRules } from '../lib/prebuilt-rules';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
@@ -24,7 +24,16 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   const [newAction, setNewAction] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [enabledPrebuilt, setEnabledPrebuilt] = useState<string[]>([]);
-  const { currentUser, setShowFloatingAIWidget, aiName: storeAiName, setAiName: setStoreAiName, aiPersonality: storeAiPersonality, setAiPersonality: setStoreAiPersonality } = useStore();
+  const { 
+    aiName: storeAiName, 
+    setAiName: setStoreAiName,
+    aiPersonality: storeAiPersonality, 
+    setAiPersonality: setStoreAiPersonality,
+    currentUser, 
+    setShowFloatingAIWidget,
+    showGoalsForToday,
+    setShowGoalsForToday
+  } = useStore();
 
   const handleToggleWidget = (val: boolean) => {
     setShowWidget(val);
@@ -510,6 +519,27 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             Save AI Settings
+          </button>
+        </div>
+      </div>
+
+      {/* Dashboard Customization */}
+      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Layout className="w-5 h-5 text-[var(--t-primary)]" />
+          Dashboard Customization
+        </h2>
+        
+        <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-hover)]">
+          <div>
+            <p className="text-sm font-semibold text-white">Show "Goals for Today"</p>
+            <p className="text-xs text-[var(--t-text-muted)]">Toggle the AI-generated daily goals on your dashboard.</p>
+          </div>
+          <button
+            onClick={() => setShowGoalsForToday(!showGoalsForToday)}
+            className={`w-12 h-6 rounded-full transition-colors relative ${showGoalsForToday ? 'bg-[var(--t-success)]' : 'bg-[var(--t-surface-subtle)]'}`}
+          >
+            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showGoalsForToday ? 'left-[26px]' : 'left-1'}`} />
           </button>
         </div>
       </div>
