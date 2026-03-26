@@ -11,7 +11,7 @@ import {
   Users, Mic, Play, Pause, Square, Bot as Brain,
   Target, Zap, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
-  Trash, AlertTriangle, FileText as ScriptIcon, Folder,
+  Trash, FileText as ScriptIcon, Folder,
   Share2, UserMinus, ExternalLink
 } from 'lucide-react';
 import { googleEcosystem } from '../lib/google-ecosystem';
@@ -137,7 +137,6 @@ export default function Leads() {
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'list'|'kanban'|'card'|'compact'|'map'>('list');
   const [showBulkEmail, setShowBulkEmail] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [folders, setFolders] = useState<Record<string, string[]>>(() => {
@@ -293,6 +292,7 @@ export default function Leads() {
   };
 
   const handleBulkDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete ${selectedLeads.size} leads? This action cannot be undone.`)) return;
     setBulkDeleting(true);
     try {
       // Delete each selected lead
@@ -300,8 +300,7 @@ export default function Leads() {
         await deleteLead(leadId);
       }
       setSelectedLeads(new Set());
-      setShowDeleteConfirm(false);
-      alert(`✅ Successfully deleted ${selectedLeads.size} leads`);
+      alert(`✅ Successfully deleted leads`);
     } catch (error) {
       alert('❌ Failed to delete some leads');
     } finally {
@@ -413,11 +412,13 @@ export default function Leads() {
                 <Mail className="w-4 h-4" /> Bulk Email ({selectedLeads.size})
               </button>
               <button 
-                onClick={() => setShowDeleteConfirm(true)} 
-                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity hover:opacity-90"
+                onClick={handleBulkDelete} 
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: 'var(--t-error)' }}
+                disabled={bulkDeleting}
               >
-                <Trash className="w-4 h-4" /> Delete ({selectedLeads.size})
+                {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />}
+                Delete ({selectedLeads.size})
               </button>
             </div>
           )}
@@ -1685,40 +1686,6 @@ export default function Leads() {
           );
         })}
       </div>
-
-      {/* DELETE CONFIRMATION MODAL */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="rounded-xl w-full max-w-md" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }} onClick={e => e.stopPropagation()}>
-            <div className="p-6">
-              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--t-error-dim)] flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-[var(--t-error)]" />
-              </div>
-              <h3 className="text-lg font-semibold text-white text-center mb-2">Delete {selectedLeads.size} Leads?</h3>
-              <p className="text-sm text-center mb-6" style={{ color: 'var(--t-text-muted)' }}>
-                This action cannot be undone. All selected leads and their associated data will be permanently removed.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="flex-1 px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] rounded-lg font-medium"
-                  style={{ color: 'var(--t-text)' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={bulkDeleting}
-                  className="flex-1 px-4 py-2 bg-[var(--t-error)] hover:bg-[var(--t-error-hover)] text-white rounded-lg font-medium flex items-center justify-center gap-2"
-                >
-                  {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                  {bulkDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* New Centralized Lead Form Modal */}
       <LeadFormModal 

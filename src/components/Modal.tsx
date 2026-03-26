@@ -31,23 +31,17 @@ export const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setIsRendered(true);
-      document.body.classList.add('modal-open');
+      document.body.style.overflow = 'hidden';
     } else {
       const timer = setTimeout(() => {
         setIsRendered(false);
-        // Only remove if no other modals are open (approximate check)
-        if (document.querySelectorAll('[data-modal-backdrop]').length <= 1) {
-          document.body.classList.remove('modal-open');
-        }
-      }, 300); // Match animation duration
+        document.body.style.overflow = '';
+      }, 300);
       return () => clearTimeout(timer);
     }
 
     return () => {
-      // Cleanup on unmount
-      if (document.querySelectorAll('[data-modal-backdrop]').length <= 1) {
-        document.body.classList.remove('modal-open');
-      }
+      document.body.style.overflow = '';
     };
   }, [isOpen]);
 
