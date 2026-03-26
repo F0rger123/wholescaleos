@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   X, Activity, Target, ExternalLink, 
   Phone, Mail, MapPin
@@ -13,6 +13,17 @@ interface LeadQuickViewModalProps {
 }
 
 export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, onClose, onOpenFull }) => {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, []);
+
   const score = calculateDealScore(lead);
   const scoreBadge = getScoreColor(score);
   const nextAction = generateNextAction(lead);

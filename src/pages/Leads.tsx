@@ -243,15 +243,24 @@ export default function Leads() {
     return () => { if (recordingInterval.current) clearInterval(recordingInterval.current); };
   }, [isRecording]);
   
-  // Scroll lock for modal
+  // Robust scroll lock for modals
   useEffect(() => {
-    if (showModal) {
+    const isAnyModalOpen = showModal || showDiscardConfirm;
+    if (isAnyModalOpen) {
       document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+      document.documentElement.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
     }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [showModal]);
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.overflow = '';
+    };
+  }, [showModal, showDiscardConfirm]);
 
   // Escape key listener for modal discard confirmation
   useEffect(() => {
@@ -1813,8 +1822,8 @@ export default function Leads() {
 
       {/* DISCARD CONFIRMATION MODAL */}
       {showDiscardConfirm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
-          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[24px] p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xl flex items-center justify-center z-[10000] p-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[32px] p-8 max-w-[400px] w-full shadow-2xl animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-col items-center text-center mb-6">
               <div className="w-12 h-12 rounded-full bg-[var(--t-warning)]/20 flex items-center justify-center mb-4">
                 <AlertTriangle className="w-6 h-6 text-[var(--t-warning)]" />
