@@ -79,6 +79,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             .maybeSingle();
           
           if (profile?.settings?.ai_name) setAiName(profile.settings.ai_name);
+          if (profile?.settings?.ai_personality) setAiPersonalityState(profile.settings.ai_personality);
           if (profile?.settings?.ai_tone) setAiTone(profile.settings.ai_tone);
           if (profile?.settings?.show_floating_widget !== undefined) {
             setShowWidget(profile.settings.show_floating_widget);

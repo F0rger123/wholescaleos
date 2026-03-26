@@ -16,7 +16,7 @@ import SMSSettings from './SMSSettings';
 import ShortcutSettings from './ShortcutSettings';
 import { Keyboard } from 'lucide-react';
 import { FileUploader } from '../components/FileUploader';
-
+import { GoogleCalendarService } from '../lib/google-calendar';
 
 const TABS = [
   { id: 'general', label: 'General', icon: Building },
@@ -198,6 +198,11 @@ function GeneralTab() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleReconnectGoogle = () => {
+    const url = GoogleCalendarService.getInstance().getAuthUrl();
+    window.location.href = url;
+  };
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
@@ -309,7 +314,7 @@ function GeneralTab() {
             className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
             style={{
               backgroundColor: saving ? 'var(--t-surface-hover)' : 'var(--t-primary)',
-              color: saving ? 'var(--t-on-primary)' : 'var(--t-on-primary)',
+              color: 'var(--t-on-primary)',
             }}
           >
             {saving ? (
@@ -324,6 +329,36 @@ function GeneralTab() {
           </button>
         </div>
       </div>
+
+      {/* Google Integration Card */}
+      {isSupabaseConfigured && (
+        <div className="rounded-xl p-6 mt-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+          <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Connected Accounts</h2>
+          <p className="text-sm mb-6" style={{ color: 'var(--t-text-secondary)' }}>Manage third-party service connections for calendar, tasks, and email sync.</p>
+          
+          <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)]">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
+                <Globe size={20} />
+              </div>
+              <div>
+                <p className="text-sm font-bold">Google Ecosystem</p>
+                <p className="text-xs text-[var(--t-text-muted)]">Calendar, Tasks, Gmail, Drive</p>
+              </div>
+            </div>
+            <button
+              onClick={handleReconnectGoogle}
+              className="px-4 py-2 rounded-lg text-xs font-bold border border-[var(--t-primary)] text-[var(--t-primary)] hover:bg-[var(--t-primary)] hover:text-white transition-all flex items-center gap-2"
+            >
+              <RefreshCw size={14} />
+              Reconnect Google
+            </button>
+          </div>
+          <p className="mt-4 text-[10px] text-[var(--t-text-muted)] italic">
+            * Reconnecting will force a fresh permission screen. Ensure you check all boxes (Tasks, Calendar, etc.) to fix 403 errors.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -389,7 +424,7 @@ function ProfileTab() {
   };
 
   const nameSlug = currentUser?.name.toLowerCase().replace(/\s+/g, '-') || 'agent';
-  const publicUrl = `${window.location.origin}/agent/${nameSlug}`;
+  const publicUrl = `https://wholescaleos.pages.dev/agent/${nameSlug}`;
 
   return (
     <div className="space-y-6">

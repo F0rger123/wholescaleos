@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
-  TrendingUp, Activity, Target, ArrowRight
+  TrendingUp, Activity, Target, ArrowRight, ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Lead, generateNextAction, calculateDealScore, getScoreColor } from '../store/useStore';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -87,9 +88,18 @@ export const LeadHoverCard: React.FC<LeadHoverCardProps> = ({ lead }) => {
         <p className="text-[11px] text-[var(--t-text)] font-medium leading-relaxed mb-2">
           {nextAction.title}
         </p>
-        <button className="w-full py-1.5 px-2 bg-[var(--t-primary)] text-white text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:brightness-110 transition-all">
-          Take Action <ArrowRight className="w-3 h-3" />
-        </button>
+        <div className="flex gap-2">
+          <Link 
+            to={`/leads/${lead.id}`}
+            target="_blank"
+            className="flex-1 py-1.5 px-2 bg-[var(--t-surface-hover)] text-[var(--t-text)] text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:bg-[var(--t-surface-active)] transition-all border border-[var(--t-border)]"
+          >
+            Open in New Tab <ExternalLink className="w-3 h-3" />
+          </Link>
+          <button className="flex-1 py-1.5 px-2 bg-[var(--t-primary)] text-white text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:brightness-110 transition-all">
+            Take Action <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
       </div>
     </div>
   );

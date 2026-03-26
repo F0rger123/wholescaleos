@@ -13,7 +13,8 @@ import {
   ArrowDownRight,
   Flame,
   PieChart,
-  BarChart3
+  BarChart3,
+  Activity
 } from 'lucide-react';
 import { StreakBadge } from '../components/StreakBadge';
 import { TeamLeaderboard } from '../components/TeamLeaderboard';
@@ -27,6 +28,8 @@ import {
   Cell,
   PieChart as RePieChart, Pie,
   AreaChart, Area,
+  BarChart, Bar,
+  LineChart,
 } from 'recharts';
 
 // ─── Money Formatter ─────────────────────────────────────────────────────────
@@ -141,7 +144,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [hoveredLeadId, setHoveredLeadId] = useState<string | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
-  const [timeframe, setTimeframe] = useState<Timeframe>('30d');
+  const [timeframe, setTimeframe] = useState<Timeframe>(
+    (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d'
+  );
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'area' | 'pie'>(
+    (localStorage.getItem('dashboard-chart-type') as any) || 'line'
+  );
 
   const filteredLeads = leads.filter(l => {
     if (timeframe === 'all') return true;
@@ -226,10 +234,10 @@ export default function Dashboard() {
 
   // 2. Response Time / Lead Trend (Mocking historical trend if limited real data)
   const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
-  const leadTrendData = Array.from({ length: 10 }).map((_, i) => {
+  const leadTrendData = Array.from({ length: 12 }).map((_, i) => {
     const date = new Date();
-    date.setDate(date.getDate() - (10 - i) * (days / 10));
-    const countAtDate = leads.filter(l => new Date(l.createdAt) <= date).length;
+    date.setDate(date.getDate() - (11 - i) * (days / 11));
+    const countAtDate = dataToUse.filter(l => new Date(l.createdAt) <= date).length;
     return {
       name: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
       leads: countAtDate,
@@ -410,58 +418,86 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 theme-transition overflow-hidden">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-[var(--t-on-surface)]">Pipeline & Lead Trends</h2>
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1.5 text-[var(--t-primary)]">
-                <div className="w-2 h-2 rounded-full bg-[var(--t-primary)]" />
-                <span>Response Time (hrs)</span>
+            <div className="flex items-center gap-2">
+              <div className="flex bg-[var(--t-surface-dim)] rounded-lg p-1 border border-[var(--t-border-subtle)] mr-2">
+                {[
+                  { id: 'area', icon: Activity, label: 'Area' },
+                  { id: 'bar', icon: BarChart3, label: 'Bar' },
+                  { id: 'line', icon: TrendingUp, label: 'Line' },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setChartType(t.id as any);
+                    }}
+                    className={`p-1.5 rounded-md transition-all ${
+                      chartType === t.id 
+                        ? 'bg-[var(--t-primary)] text-white shadow-sm' 
+                        : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
+                    }`}
+                    title={t.label}
+                  >
+                    <t.icon size={14} />
+                  </button>
+                ))}
               </div>
-              <div className="flex items-center gap-1.5 text-[var(--t-success)]">
-                <div className="w-2 h-2 rounded-full bg-[var(--t-success)]" />
-                <span>Total Leads</span>
+              <button 
+                onClick={() => {
+                  localStorage.setItem('dashboard-chart-type', chartType);
+                  alert('Default chart view saved!');
+                }}
+                className="p-2 text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-colors"
+                title="Save as default view"
+              >
+                <div className="w-4 h-4 border-2 border-current rounded-sm flex items-center justify-center text-[8px] font-bold">S</div>
+              </button>
+              <div className="hidden sm:flex items-center gap-4 text-[10px] ml-4">
+                <div className="flex items-center gap-1.5 text-[var(--t-primary)]">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />
+                  <span>Response Time</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[var(--t-success)]">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)]" />
+                  <span>Total Leads</span>
+                </div>
               </div>
             </div>
           </div>
           <div className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={leadTrendData}>
-                <defs>
-                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--t-success)" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="var(--t-success)" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }}
-                />
-                <YAxis hide />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'var(--t-surface)', 
-                    borderColor: 'var(--t-border)',
-                    borderRadius: '12px',
-                    fontSize: '12px'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="leads" 
-                  stroke="var(--t-success)" 
-                  fillOpacity={1} 
-                  fill="url(#colorLeads)" 
-                  strokeWidth={3}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="responseTime" 
-                  stroke="var(--t-primary)" 
-                  strokeWidth={2} 
-                  dot={{ r: 4, fill: 'var(--t-primary)' }}
-                />
-              </AreaChart>
+              {chartType === 'bar' ? (
+                <BarChart data={leadTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }} />
+                  <Bar dataKey="leads" fill="var(--t-success)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              ) : chartType === 'line' ? (
+                <LineChart data={leadTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }} />
+                  <Line type="monotone" dataKey="leads" stroke="var(--t-success)" strokeWidth={3} dot={{ r: 4 }} />
+                  <Line type="monotone" dataKey="responseTime" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
+                </LineChart>
+              ) : (
+                <AreaChart data={leadTrendData}>
+                  <defs>
+                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--t-success)" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="var(--t-success)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }} />
+                  <Area type="monotone" dataKey="leads" stroke="var(--t-success)" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={3} />
+                  <Line type="monotone" dataKey="responseTime" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
+                </AreaChart>
+              )}
             </ResponsiveContainer>
           </div>
           
@@ -693,14 +729,32 @@ export default function Dashboard() {
       </div>
 
       {/* Single global LeadHoverCard — rendered once at page root to prevent duplicates */}
-      {hoveredLead && hoverPos && (
-        <div
-          className="fixed z-[9999] pointer-events-none shadow-2xl"
-          style={{ left: hoverPos.x + 16, top: hoverPos.y + 16 }}
-        >
-          <LeadHoverCard lead={hoveredLead} />
-        </div>
-      )}
+      {hoveredLead && hoverPos && (() => {
+        const cardWidth = 320;
+        const cardHeight = 400; // Approximate
+        let left = hoverPos.x + 16;
+        let top = hoverPos.y + 16;
+
+        // Boundary checks
+        if (left + cardWidth > window.innerWidth) {
+          left = hoverPos.x - cardWidth - 16;
+        }
+        if (top + cardHeight > window.innerHeight) {
+          top = window.innerHeight - cardHeight - 16;
+        }
+        if (top < 0) top = 16;
+
+        return (
+          <div
+            className="fixed z-[9999] shadow-2xl pointer-events-auto"
+            style={{ left, top }}
+            onMouseEnter={() => setHoveredLeadId(hoveredLeadId)} // Keep open while mouse is on card
+            onMouseLeave={handleLeadMouseLeave}
+          >
+            <LeadHoverCard lead={hoveredLead} />
+          </div>
+        );
+      })()}
     </div>
   );
 }
