@@ -45,6 +45,8 @@ export default function LeadManagement() {
   const [noteText, setNoteText] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editedLead, setEditedLead] = useState<Partial<Lead>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
 
   const lead = leads.find(l => l.id === id);
 
@@ -63,21 +65,30 @@ export default function LeadManagement() {
     );
   }
 
-  const handleEditToggle = () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
       // Save changes
-      if (id) { // Ensure id is not undefined
-        updateLead(id, editedLead);
-        addTimelineEntry(id, {
-          type: 'note',
-          content: 'Lead details updated.',
-          timestamp: new Date().toISOString(),
-          user: 'You'
-        });
+      if (id) {
+        setIsSaving(true);
+        try {
+          updateLead(id, editedLead);
+          addTimelineEntry(id, {
+            type: 'note',
+            content: 'Lead details updated.',
+            timestamp: new Date().toISOString(),
+            user: 'You'
+          });
+          setShowSaveSuccess(true);
+          setTimeout(() => setShowSaveSuccess(false), 3000);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsSaving(false);
+        }
       }
       setIsEditing(false);
     } else {
-      setEditedLead(lead);
+      setEditedLead({ ...lead });
       setIsEditing(true);
     }
   };
@@ -138,6 +149,11 @@ export default function LeadManagement() {
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${scoreColors.bg} ${scoreColors.text}`}>
                   {STATUS_LABELS[lead.status as LeadStatus]}
                 </span>
+                {showSaveSuccess && (
+                  <span className="flex items-center gap-1 text-[10px] font-bold text-green-500 animate-in fade-in zoom-in duration-300">
+                    <CheckCircle2 size={12} /> Changes Saved
+                  </span>
+                )}
               </div>
               <p className="text-xs text-[var(--t-text-muted)] flex items-center gap-1">
                 <MapPin size={12} /> {lead.propertyAddress}
@@ -217,13 +233,16 @@ export default function LeadManagement() {
                     </h2>
                     <button 
                       onClick={handleEditToggle}
+                      disabled={isSaving}
                       className={`px-4 py-2 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
                         isEditing 
                           ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/20' 
                           : 'bg-[var(--t-surface-hover)] text-white hover:bg-[var(--t-surface-active)] border border-[var(--t-border)]'
-                      }`}
+                      } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      {isEditing ? (
+                      {isSaving ? (
+                        <><Loader2 size={16} className="animate-spin" /> Saving...</>
+                      ) : isEditing ? (
                         <><Save size={16} /> Save Changes</>
                       ) : (
                         <><Edit2 size={16} /> Edit Details</>
@@ -310,17 +329,29 @@ export default function LeadManagement() {
                         </div>
                         <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
                           <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
-                            <DollarSign size={10} /> Property Value
+                            <Globe size={10} /> Lead Source
                           </p>
                           {isEditing ? (
-                            <input 
-                              type="number" // Changed to number for estimatedValue
-                              value={editedLead.estimatedValue || ''}
-                              onChange={(e) => handleInputChange('estimatedValue', parseFloat(e.target.value))} // Parse to float
+                            <select 
+                              value={editedLead.source || ''}
+                              onChange={(e) => handleInputChange('source', e.target.value)}
                               className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
-                            />
+                            >
+                              <option value="bandit-signs">Bandit Signs</option>
+                              <option value="personal-relations">Personal Relations</option>
+                              <option value="pay-per-lead">Pay Per Lead</option>
+                              <option value="doorknocking">Doorknocking</option>
+                              <option value="referral">Referral</option>
+                              <option value="website">Website</option>
+                              <option value="social-media">Social Media</option>
+                              <option value="open-house">Open House</option>
+                              <option value="fsbo">FSBO</option>
+                              <option value="cold-call">Cold Call</option>
+                              <option value="email-campaign">Email Campaign</option>
+                              <option value="other">Other</option>
+                            </select>
                           ) : (
-                            <p className="text-sm font-semibold text-white">${lead.estimatedValue.toLocaleString()}</p>
+                            <p className="text-sm font-semibold text-white capitalize">{(lead.source || 'other').replace('-', ' ')}</p>
                           )}
                         </div>
                         <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
@@ -330,7 +361,7 @@ export default function LeadManagement() {
                           {isEditing ? (
                             <select 
                               value={editedLead.status || ''}
-                              onChange={(e) => handleInputChange('status', e.target.value as LeadStatus)} // Cast to LeadStatus
+                              onChange={(e) => handleInputChange('status', e.target.value as LeadStatus)}
                               className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
                             >
                               {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -342,6 +373,42 @@ export default function LeadManagement() {
                           )}
                         </div>
                       </div>
+                    </div>
+                  </div>
+                  
+                  {/* Property Stats Grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                      <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1">Beds</p>
+                      {isEditing ? (
+                        <input type="number" value={editedLead.bedrooms || 0} onChange={(e) => handleInputChange('bedrooms', parseInt(e.target.value))} className="w-full bg-transparent border-b border-[var(--t-border)] text-white font-bold py-1 focus:outline-none focus:border-[var(--t-primary)]" />
+                      ) : (
+                        <p className="text-xl font-black text-white">{lead.bedrooms || 0}</p>
+                      )}
+                    </div>
+                    <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                      <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1">Baths</p>
+                      {isEditing ? (
+                        <input type="number" value={editedLead.bathrooms || 0} step="0.5" onChange={(e) => handleInputChange('bathrooms', parseFloat(e.target.value))} className="w-full bg-transparent border-b border-[var(--t-border)] text-white font-bold py-1 focus:outline-none focus:border-[var(--t-primary)]" />
+                      ) : (
+                        <p className="text-xl font-black text-white">{lead.bathrooms || 0}</p>
+                      )}
+                    </div>
+                    <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                      <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1">SqFt</p>
+                      {isEditing ? (
+                        <input type="number" value={editedLead.sqft || 0} onChange={(e) => handleInputChange('sqft', parseInt(e.target.value))} className="w-full bg-transparent border-b border-[var(--t-border)] text-white font-bold py-1 focus:outline-none focus:border-[var(--t-primary)]" />
+                      ) : (
+                        <p className="text-xl font-black text-white">{lead.sqft?.toLocaleString() || 0}</p>
+                      )}
+                    </div>
+                    <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                      <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1">Value</p>
+                      {isEditing ? (
+                        <input type="number" value={editedLead.estimatedValue || 0} onChange={(e) => handleInputChange('estimatedValue', parseInt(e.target.value))} className="w-full bg-transparent border-b border-[var(--t-border)] text-white font-bold py-1 focus:outline-none focus:border-[var(--t-primary)]" />
+                      ) : (
+                        <p className="text-xl font-black text-[var(--t-success)]">${lead.estimatedValue.toLocaleString()}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -478,15 +545,71 @@ export default function LeadManagement() {
             )}
 
             {activeTab === 'documents' && (
-              <div className="p-12 text-center">
-                <FileText className="w-20 h-20 text-[var(--t-primary)] mx-auto opacity-20 mb-6" />
-                <h3 className="text-xl font-bold text-white mb-2">Document Repository</h3>
-                <p className="text-[var(--t-text-muted)] text-sm max-w-sm mx-auto mb-8">
-                  Connect Google Drive to store and manage property contracts, titles, and inspection reports.
-                </p>
-                <button className="px-8 py-3 bg-[var(--t-surface-hover)] text-white border border-[var(--t-border)] rounded-2xl font-bold flex items-center gap-2 mx-auto hover:bg-[var(--t-surface-active)] transition-all">
-                  <Globe size={18} /> Connect Google Drive
-                </button>
+              <div className="p-8 space-y-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                    <FileText size={20} className="text-[var(--t-primary)]" />
+                    Property Documents
+                  </h3>
+                  <label className="px-4 py-2 bg-[var(--t-primary)] text-white rounded-xl font-bold text-sm cursor-pointer hover:brightness-110 active:scale-95 transition-all flex items-center gap-2">
+                    <FileText size={16} /> Upload Document
+                    <input type="file" className="hidden" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && id) {
+                        const newDoc = {
+                          id: Math.random().toString(36).substr(2, 9),
+                          name: file.name,
+                          url: '#', // In a real app, upload to Supabase Storage
+                          type: file.type,
+                          size: file.size,
+                          createdAt: new Date().toISOString()
+                        };
+                        updateLead(id, { documents: [...(lead.documents || []), newDoc] });
+                      }
+                    }} />
+                  </label>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  {(lead.documents || []).length > 0 ? (
+                    lead.documents.map((doc) => (
+                      <div key={doc.id} className="bg-[var(--t-surface-dim)] p-4 rounded-2xl border border-[var(--t-border)] flex items-center justify-between group">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-[var(--t-surface-active)] flex items-center justify-center text-[var(--t-text-muted)]">
+                            <FileText size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-white">{doc.name}</p>
+                            <p className="text-[10px] text-[var(--t-text-muted)]">
+                              {(doc.size / 1024).toFixed(1)} KB â€¢ Added {formatDistanceToNow(new Date(doc.createdAt))} ago
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="p-2 text-[var(--t-text-muted)] hover:text-white hover:bg-[var(--t-surface-hover)] rounded-lg transition-all">
+                            <DollarSign size={16} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if (window.confirm('Delete this document?')) {
+                                updateLead(lead.id, { documents: lead.documents.filter(d => d.id !== doc.id) });
+                              }
+                            }}
+                            className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-20 bg-[var(--t-surface-dim)] rounded-3xl border-2 border-dashed border-[var(--t-border)]">
+                      <FileText className="w-16 h-16 text-[var(--t-text-muted)] mx-auto opacity-20 mb-4" />
+                      <p className="text-sm text-[var(--t-text-muted)]">No documents uploaded yet.</p>
+                      <p className="text-xs text-[var(--t-text-muted)] mt-1">Upload titles, contracts, or inspection reports.</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -512,22 +635,78 @@ export default function LeadManagement() {
             )}
 
             {activeTab === 'share' && (
-              <div className="p-12 text-center">
-                <Share2 className="w-20 h-20 text-[var(--t-accent)] mx-auto opacity-20 mb-6" />
-                <h3 className="text-xl font-bold text-white mb-2">Pitch & Share Deal</h3>
-                <p className="text-[var(--t-text-muted)] text-sm max-w-sm mx-auto mb-8">
-                  Generate a public deal page to share with potential buyers. Control what information is visible.
-                </p>
-                <div className="bg-[var(--t-surface-dim)] p-6 rounded-3xl border border-[var(--t-border-subtle)] max-w-md mx-auto">
-                   <div className="flex items-center justify-between mb-4 pb-4 border-b border-[var(--t-border)]">
-                      <span className="text-sm font-bold text-white">Public Deal Page</span>
-                      <div className="w-12 h-6 bg-[var(--t-surface-active)] rounded-full relative cursor-pointer">
-                        <div className="absolute left-1 top-1 w-4 h-4 bg-[var(--t-text-muted)] rounded-full" />
+              <div className="p-8 space-y-8">
+                <div className="flex items-center gap-3 mb-2">
+                   <Share2 className="text-[var(--t-accent)]" size={24} />
+                   <h3 className="text-xl font-bold text-white">Pitch & Share Deal</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="bg-[var(--t-surface-dim)] p-6 rounded-3xl border border-[var(--t-border)]">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <p className="font-bold text-white">Public Deal Page</p>
+                          <p className="text-xs text-[var(--t-text-muted)]">Toggle visibility for potential buyers</p>
+                        </div>
+                        <button 
+                          onClick={() => updateLead(lead.id, { shareEnabled: !lead.shareEnabled })}
+                          className={`w-12 h-6 rounded-full relative transition-all ${lead.shareEnabled ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-hover)]'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${lead.shareEnabled ? 'left-7' : 'left-1'}`} />
+                        </button>
                       </div>
-                   </div>
-                   <button disabled className="w-full py-3 bg-[var(--t-accent)] text-white rounded-2xl font-bold flex items-center justify-center gap-2 opacity-50 cursor-not-allowed">
-                     <Globe size={18} /> Enable Public Link
-                   </button>
+
+                      <div className="space-y-4">
+                        <div>
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1">Access Password</p>
+                          <div className="relative">
+                            <Globe className="absolute left-3 top-2.5 text-[var(--t-text-muted)]" size={14} />
+                            <input 
+                              type="password"
+                              placeholder="Set access password..."
+                              value={lead.sharePassword || ''}
+                              onChange={(e) => updateLead(lead.id, { sharePassword: e.target.value })}
+                              className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl pl-9 pr-4 py-2 text-white text-sm outline-none focus:border-[var(--t-primary)]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="pt-4">
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-2">Public Link</p>
+                          <div className="flex gap-2">
+                             <div className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-3 py-2 text-[var(--t-text-muted)] text-xs truncate">
+                               {window.location.origin}/pitch/{lead.id}
+                             </div>
+                             <button 
+                               onClick={() => {
+                                 navigator.clipboard.writeText(`${window.location.origin}/pitch/${lead.id}`);
+                                 alert('Link copied!');
+                               }}
+                               className="px-3 py-2 bg-[var(--t-surface-hover)] text-white border border-[var(--t-border)] rounded-xl hover:bg-[var(--t-surface-active)]"
+                             >
+                                <Save size={14} />
+                             </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-br from-[var(--t-accent)]/10 to-transparent border border-[var(--t-accent)]/20 rounded-3xl p-6">
+                      <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                        <DollarSign size={16} className="text-[var(--t-accent)]" />
+                        Deal Packaging
+                      </h4>
+                      <p className="text-xs text-[var(--t-text-muted)] mb-6 leading-relaxed">
+                        Setting a password ensures only qualified buyers with your access code can view property details.
+                      </p>
+                      <button className="w-full py-3 bg-[var(--t-accent)] text-white rounded-2xl font-bold text-sm shadow-lg shadow-[var(--t-accent)]/20">
+                        Preview Deal Page
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

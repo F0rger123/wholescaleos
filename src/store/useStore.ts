@@ -7,9 +7,30 @@ import { themes } from '../styles/themes';
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost';
-export type LeadSource = 'website' | 'referral' | 'cold-call' | 'social-media' | 'mailer' | 'other';
+export type LeadSource = 
+  | 'bandit-signs' 
+  | 'personal-relations' 
+  | 'pay-per-lead' 
+  | 'doorknocking' 
+  | 'referral' 
+  | 'website' 
+  | 'social-media' 
+  | 'open-house' 
+  | 'fsbo' 
+  | 'cold-call' 
+  | 'email-campaign' 
+  | 'other';
 export type PropertyType = 'single-family' | 'multi-family' | 'commercial' | 'land' | 'condo';
 export type TimelineType = 'call' | 'email' | 'note' | 'status-change' | 'meeting' | 'task';
+
+export interface LeadDocument {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  createdAt: string;
+}
 export type PresenceStatus = 'online' | 'offline' | 'busy' | 'dnd';
 export type TeamRole = 'admin' | 'member' | 'viewer';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -116,8 +137,11 @@ export interface Lead {
   status: LeadStatus;
   source: LeadSource;
   propertyAddress: string;
-  propertyType: PropertyType;
+  propertyType: string; // Changed to string for more flexibility
   estimatedValue: number;
+  bedrooms: number;
+  bathrooms: number;
+  sqft: number;
   offerAmount: number;
   lat: number;
   lng: number;
@@ -136,6 +160,9 @@ export interface Lead {
   sharePrice?: number;
   shareCustomMessage?: string;
   sharePhotoUrl?: string;
+  sharePassword?: string;
+  shareEnabled?: boolean;
+  documents: LeadDocument[];
   timeline: TimelineEntry[];
   statusHistory: StatusHistoryEntry[];
 }
@@ -627,8 +654,18 @@ export function calculatePriorityScore(lead: Lead): { score: number; level: AIPr
   const contactUrgency = Math.min(daysSinceContact * 10, 100);
 
   const sourceQuality: Record<LeadSource, number> = {
-    'referral': 90, 'cold-call': 70, 'website': 65,
-    'social-media': 55, 'mailer': 50, 'other': 40,
+    'bandit-signs': 60,
+    'personal-relations': 95,
+    'pay-per-lead': 80,
+    'doorknocking': 75,
+    'referral': 90,
+    'website': 65,
+    'social-media': 55,
+    'open-house': 70,
+    'fsbo': 85,
+    'cold-call': 70,
+    'email-campaign': 50,
+    'other': 40,
   };
   const sourceScore = sourceQuality[lead.source];
   const engagementScore = (lead.engagementLevel / 5) * 100;
@@ -1913,27 +1950,36 @@ export const useStore = create<AppState>((set, get) => ({
   // â”€â”€ Leads (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   leads: [],
 
-  addLead: (lead) => {
+  addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'statusHistory'> & { id?: string, timeline?: TimelineEntry[], statusHistory?: StatusHistoryEntry[] }) => {
     get().saveToHistory();
     const now = new Date().toISOString();
-    const newId = uuidv4();
-    const newLead = {
-      ...lead, id: newId, createdAt: now, updatedAt: now,
-      timeline: [{ id: uuidv4(), type: 'note' as TimelineType, content: 'Lead created.', timestamp: now, user: 'System' }],
-      statusHistory: [{ fromStatus: null, toStatus: lead.status, timestamp: now, changedBy: 'System' }],
+    const newId = lead.id || uuidv4();
+    const newLead: Lead = {
+      ...lead,
+      id: newId,
+      createdAt: now,
+      updatedAt: now,
+      bedrooms: lead.bedrooms || 0,
+      bathrooms: lead.bathrooms || 0,
+      sqft: lead.sqft || 0,
+      source: lead.source || 'other',
+      documents: lead.documents || [],
+      timeline: lead.timeline || [{ id: uuidv4(), type: 'note' as TimelineType, content: 'Lead created.', timestamp: now, user: 'System' }],
+      statusHistory: lead.statusHistory || [{ fromStatus: null, toStatus: lead.status, timestamp: now, changedBy: 'System' }],
     };
     set((s) => ({ leads: [...s.leads, newLead] }));
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
       leadsService.create({
-        id: newId, team_id: teamId, name: lead.name, email: lead.email, phone: lead.phone,
-        address: lead.propertyAddress, property_type: lead.propertyType, property_value: lead.estimatedValue,
-        offer_amount: lead.offerAmount, status: lead.status, source: lead.source, notes: lead.notes,
-        lat: lead.lat, lng: lead.lng, assigned_to: lead.assignedTo,
-        probability: lead.probability, engagement_level: lead.engagementLevel,
-        timeline_urgency: lead.timelineUrgency, competition_level: lead.competitionLevel,
-        import_source: lead.importSource || null, photos: lead.photos || [],
-        carrier: lead.carrier || null
+        id: newId, team_id: teamId, name: newLead.name, email: newLead.email, phone: newLead.phone,
+        address: newLead.propertyAddress, property_type: newLead.propertyType, property_value: newLead.estimatedValue,
+        bedrooms: newLead.bedrooms, bathrooms: newLead.bathrooms, sqft: newLead.sqft,
+        offer_amount: newLead.offerAmount, status: newLead.status, source: newLead.source, notes: newLead.notes,
+        lat: newLead.lat, lng: newLead.lng, assigned_to: newLead.assignedTo,
+        probability: newLead.probability, engagement_level: newLead.engagementLevel,
+        timeline_urgency: newLead.timelineUrgency, competition_level: newLead.competitionLevel,
+        import_source: newLead.importSource || null, photos: newLead.photos || [],
+        carrier: newLead.carrier || null
       }).catch(() => {});
     }
 
@@ -1943,25 +1989,28 @@ export const useStore = create<AppState>((set, get) => ({
       addNotification({
         type: 'lead-assigned',
         title: 'New Lead Added',
-        message: `${lead.name} has been added to your pipeline.`,
+        message: `${newLead.name} has been added to your pipeline.`,
         link: '/leads'
       });
     }
   },
 
-  updateLead: (id, updates) => {
+  updateLead: (id, updates: Partial<Lead>) => {
     get().saveToHistory();
     set((s) => ({
       leads: s.leads.map((l) => l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l),
     }));
     if (isSupabaseConfigured) {
-      const dbUpdates: Record<string, unknown> = {};
+      const dbUpdates: Record<string, any> = {};
       if (updates.name !== undefined) dbUpdates.name = updates.name;
       if (updates.email !== undefined) dbUpdates.email = updates.email;
       if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
       if (updates.propertyAddress !== undefined) dbUpdates.address = updates.propertyAddress;
       if (updates.propertyType !== undefined) dbUpdates.property_type = updates.propertyType;
       if (updates.estimatedValue !== undefined) dbUpdates.property_value = updates.estimatedValue;
+      if (updates.bedrooms !== undefined) dbUpdates.bedrooms = updates.bedrooms;
+      if (updates.bathrooms !== undefined) dbUpdates.bathrooms = updates.bathrooms;
+      if (updates.sqft !== undefined) dbUpdates.sqft = updates.sqft;
       if (updates.offerAmount !== undefined) dbUpdates.offer_amount = updates.offerAmount;
       if (updates.status !== undefined) dbUpdates.status = updates.status;
       if (updates.source !== undefined) dbUpdates.source = updates.source;
@@ -1975,6 +2024,10 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.competitionLevel !== undefined) dbUpdates.competition_level = updates.competitionLevel;
       if (updates.photos !== undefined) dbUpdates.photos = updates.photos;
       if (updates.carrier !== undefined) dbUpdates.carrier = updates.carrier;
+      if (updates.sharePassword !== undefined) dbUpdates.share_password = updates.sharePassword;
+      if (updates.shareEnabled !== undefined) dbUpdates.share_enabled = updates.shareEnabled;
+      if (updates.documents !== undefined) dbUpdates.documents = updates.documents;
+      
       if (Object.keys(dbUpdates).length > 0) {
         leadsService.update(id, dbUpdates).catch(() => {});
       }
@@ -3118,16 +3171,19 @@ deleteChannel: (channelId) => {
         if (isDuplicate && state.duplicateSettings.action === 'skip') continue;
       }
 
-      const lead: Lead = {
+      const leadObj: Lead = {
         id: uuidv4(),
         name: d.name || 'Unknown',
         email: d.email || '',
         phone: d.phone || '',
         status: 'new',
-        source: d.source || 'other',
+        source: (d.source as LeadSource) || 'other',
         propertyAddress: d.address || '',
         propertyType: d.propertyType || 'single-family',
         estimatedValue: d.value || 0,
+        bedrooms: (d as any).bedrooms || 0,
+        bathrooms: (d as any).bathrooms || 0,
+        sqft: (d as any).sqft || 0,
         offerAmount: 0,
         lat: 30.2672,
         lng: -97.7431,
@@ -3141,6 +3197,7 @@ deleteChannel: (channelId) => {
         competitionLevel: 3,
         importSource: (d as any).importSource || 'import',
         photos: (d as any).photos || [],
+        documents: [],
         timeline: [{
           id: uuidv4(), type: 'note' as TimelineType,
           content: `Imported via bulk import.${d.notes ? ` Notes: ${d.notes}` : ''}`,
@@ -3148,7 +3205,7 @@ deleteChannel: (channelId) => {
         }],
         statusHistory: [{ fromStatus: null, toStatus: 'new', timestamp: now, changedBy: 'Import' }],
       };
-      newLeads.push(lead);
+      newLeads.push(leadObj);
       imported++;
     }
 
@@ -3165,6 +3222,9 @@ deleteChannel: (channelId) => {
         address: lead.propertyAddress,
         property_type: lead.propertyType,
         property_value: lead.estimatedValue,
+        bedrooms: lead.bedrooms,
+        bathrooms: lead.bathrooms,
+        sqft: lead.sqft,
         offer_amount: lead.offerAmount,
         status: lead.status,
         source: lead.source,
