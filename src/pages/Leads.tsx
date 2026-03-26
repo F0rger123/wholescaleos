@@ -85,6 +85,7 @@ export default function Leads() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [generatingScript, setGeneratingScript] = useState<string | null>(null);
   const [scriptLoading, setScriptLoading] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   // Google Drive state
   const [driveFiles, setDriveFiles] = useState<Record<string, any[]>>({});
@@ -193,7 +194,7 @@ export default function Leads() {
     name: '', email: '', phone: '', propertyAddress: '',
     propertyType: 'single-family', estimatedValue: '', offerAmount: '',
     status: 'new', notes: '',
-    assignedTo: '',
+    assignedTo: '', source: 'other',
     probability: '50', engagementLevel: '3', timelineUrgency: '3', competitionLevel: '3',
   });
 
@@ -241,6 +242,27 @@ export default function Leads() {
     }
     return () => { if (recordingInterval.current) clearInterval(recordingInterval.current); };
   }, [isRecording]);
+  
+  // Scroll lock for modal
+  useEffect(() => {
+    if (showModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [showModal]);
+
+  // Escape key listener for modal discard confirmation
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showModal && !showDiscardConfirm) {
+        setShowDiscardConfirm(true);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [showModal, showDiscardConfirm]);
 
   const getDaysInStatus = (lead: Lead) => {
     const hist = lead.statusHistory;
@@ -320,7 +342,7 @@ export default function Leads() {
       name: '', email: '', phone: '', propertyAddress: '', 
       propertyType: 'single-family', estimatedValue: '', offerAmount: '', 
       status: 'new', notes: '', 
-      assignedTo: '',
+      assignedTo: '', source: 'other',
       probability: '50', engagementLevel: '3', timelineUrgency: '3', competitionLevel: '3' 
     }); 
     setShowModal(true); 
@@ -339,6 +361,7 @@ export default function Leads() {
       status: l.status || 'new', 
       notes: l.notes || '', 
       assignedTo: l.assignedTo || '',
+      source: l.source || 'other',
       probability: (l.probability || 50).toString(), 
       engagementLevel: (l.engagementLevel || 3).toString(), 
       timelineUrgency: (l.timelineUrgency || 3).toString(), 
@@ -367,7 +390,7 @@ export default function Leads() {
       notes: formData.notes, 
       assignedTo: formData.assignedTo,
       lat, lng, 
-      source: 'other', 
+      source: formData.source || 'other', 
       probability: parseInt(formData.probability), 
       engagementLevel: parseInt(formData.engagementLevel), 
       timelineUrgency: parseInt(formData.timelineUrgency), 
@@ -1788,9 +1811,43 @@ export default function Leads() {
         </div>
       )}
 
+      {/* DISCARD CONFIRMATION MODAL */}
+      {showDiscardConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
+          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[24px] p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-12 h-12 rounded-full bg-[var(--t-warning)]/20 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6 text-[var(--t-warning)]" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Discard changes?</h3>
+              <p className="text-[var(--t-text-muted)] text-sm">
+                You have unsaved changes. Are you sure you want to discard this lead?
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDiscardConfirm(false)}
+                className="flex-1 px-4 py-2 bg-[var(--t-surface-subtle)] hover:bg-[var(--t-surface-hover)] text-[var(--t-text)] rounded-xl font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowDiscardConfirm(false);
+                  setShowModal(false);
+                }}
+                className="flex-1 px-4 py-2 bg-[var(--t-error)] hover:bg-[var(--t-error-hover)] text-white rounded-xl font-semibold transition-colors"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ADD/EDIT MODAL */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9000] p-4" onClick={() => setShowModal(false)}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9000] p-4" onClick={() => setShowDiscardConfirm(true)}>
           <div className="rounded-xl border w-full max-w-2xl max-h-[90vh] overflow-y-auto" 
             style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
             onClick={e => e.stopPropagation()}
@@ -1837,13 +1894,14 @@ export default function Leads() {
                     value={formData.status} 
                     onChange={e => setFormData({ ...formData, status: e.target.value })} 
                     className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
+                    style={{ colorScheme: 'dark' }}
                   >
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="negotiating">Negotiating</option>
-                    <option value="closed-won">Closed Won</option>
-                    <option value="closed-lost">Closed Lost</option>
+                    <option value="new" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>New</option>
+                    <option value="contacted" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Contacted</option>
+                    <option value="qualified" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Qualified</option>
+                    <option value="negotiating" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Negotiating</option>
+                    <option value="closed-won" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Closed Won</option>
+                    <option value="closed-lost" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Closed Lost</option>
                   </select>
                 </div>
                 <div>
@@ -1851,13 +1909,8 @@ export default function Leads() {
                   <select 
                     value={formData.assignedTo} 
                     onChange={e => setFormData({ ...formData, assignedTo: e.target.value })} 
-                    className="w-full px-3 py-2 border rounded-lg"
-                    style={{ 
-                      backgroundColor: 'var(--t-surface-dim)', 
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      colorScheme: 'dark',
-                    }}
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
+                    style={{ colorScheme: 'dark' }}
                   >
                     <option value="" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Unassigned</option>
                     {team.map(m => (
@@ -1879,12 +1932,35 @@ export default function Leads() {
                     value={formData.propertyType} 
                     onChange={e => setFormData({ ...formData, propertyType: e.target.value })} 
                     className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
+                    style={{ colorScheme: 'dark' }}
                   >
-                    <option value="single-family">Single Family</option>
-                    <option value="multi-family">Multi Family</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="land">Land</option>
-                    <option value="condo">Condo</option>
+                    <option value="single-family" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Single Family</option>
+                    <option value="multi-family" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Multi Family</option>
+                    <option value="commercial" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Commercial</option>
+                    <option value="land" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Land</option>
+                    <option value="condo" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Condo</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-[var(--t-text-muted)] mb-1">Lead Source</label>
+                  <select 
+                    value={formData.source} 
+                    onChange={e => setFormData({ ...formData, source: e.target.value })} 
+                    className="w-full px-3 py-2 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)]"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    <option value="bandit-signs" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Bandit Signs</option>
+                    <option value="personal-relations" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Personal Relations</option>
+                    <option value="pay-per-lead" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Pay Per Lead</option>
+                    <option value="doorknocking" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Doorknocking</option>
+                    <option value="referral" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Referral</option>
+                    <option value="website" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Website</option>
+                    <option value="social-media" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Social Media</option>
+                    <option value="open-house" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Open House</option>
+                    <option value="fsbo" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>FSBO</option>
+                    <option value="cold-call" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Cold Call</option>
+                    <option value="email-campaign" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Email Campaign</option>
+                    <option value="other" style={{ background: 'var(--t-surface)', color: 'var(--t-text)' }}>Other</option>
                   </select>
                 </div>
                 <div>
