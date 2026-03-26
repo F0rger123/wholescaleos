@@ -1357,7 +1357,7 @@ function BackupTab() {
                   </div>
                   <div>
                     <p className="text-sm font-bold">{backup.name}</p>
-                    <p className="text-[10px] text-[var(--t-text-muted)]">{new Date(backup.timestamp).toLocaleString()}</p>
+                    <p className="text-[10px] text-[var(--t-text-muted)]">{backup.timestamp ? new Date(backup.timestamp).toLocaleString() : 'Never'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

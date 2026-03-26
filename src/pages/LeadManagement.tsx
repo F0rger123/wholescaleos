@@ -416,7 +416,7 @@ export default function LeadManagement() {
                       {isEditing ? (
                         <input type="number" value={editedLead.estimatedValue || 0} onChange={(e) => handleInputChange('estimatedValue', parseInt(e.target.value))} className="w-full bg-transparent border-b border-[var(--t-border)] text-white font-bold py-1 focus:outline-none focus:border-[var(--t-primary)]" />
                       ) : (
-                        <p className="text-xl font-black text-[var(--t-success)]">${lead.estimatedValue.toLocaleString()}</p>
+                        <p className="text-xl font-black text-[var(--t-success)]">${(lead.estimatedValue || 0).toLocaleString()}</p>
                       )}
                     </div>
                   </div>
@@ -432,11 +432,11 @@ export default function LeadManagement() {
                       {/* Property Type and Estimated Value are now editable above, keeping Offer Amount and Potential Margin here */}
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-[var(--t-text-muted)]">Offer Amount</span>
-                        <span className="text-sm font-bold text-[var(--t-success)]">${lead.offerAmount.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-[var(--t-success)]">${(lead.offerAmount || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-[var(--t-text-muted)]">Potential Margin</span>
-                        <span className="text-sm font-black text-white">${(lead.estimatedValue - lead.offerAmount).toLocaleString()}</span>
+                        <span className="text-sm font-black text-white">${((lead.estimatedValue || 0) - (lead.offerAmount || 0)).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>

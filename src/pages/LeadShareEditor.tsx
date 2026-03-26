@@ -194,7 +194,7 @@ export default function LeadShareEditor() {
               </div>
               <div className="space-y-2">
                  <div className="text-lg font-bold truncate">{lead.propertyAddress}</div>
-                 <div className="text-blue-500 font-extrabold text-2xl">${form.sharePrice.toLocaleString()}</div>
+                  <div className="text-blue-500 font-extrabold text-2xl">${(form.sharePrice || 0).toLocaleString()}</div>
               </div>
               <div className="p-4 rounded-xl bg-blue-600/10 border border-blue-500/20">
                  <p className="text-xs text-blue-100 italic line-clamp-2">"{form.shareCustomMessage}"</p>

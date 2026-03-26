@@ -85,8 +85,8 @@ export function PipelineChart() {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const val = payload[0].value;
-      let displayVal = val.toLocaleString();
-      if (metric === 'revenue') displayVal = `$${val.toLocaleString()}`;
+      let displayVal = (val || 0).toLocaleString();
+      if (metric === 'revenue') displayVal = `$${(val || 0).toLocaleString()}`;
       else if (metric === 'conversion') {
         const total = filteredLeads.length;
         const percent = total > 0 ? Math.round((val / total) * 100) : 0;
@@ -249,7 +249,7 @@ export function PipelineChart() {
       </div>
 
       {/* Chart */}
-      <div className="h-[300px] w-full">
+      <div className="h-[300px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           {renderChart()}
         </ResponsiveContainer>

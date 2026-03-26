@@ -663,7 +663,7 @@ export default function Team() {
             +12% vs Lead Goal
           </div>
         </div>
-        <div className="h-[200px] w-full">
+        <div className="h-[200px] w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={performanceTrend}>
               <defs>
