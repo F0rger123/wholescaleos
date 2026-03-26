@@ -35,7 +35,7 @@ export default function AgentProfile() {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .ilike('name', displayName)
+          .ilike('full_name', displayName)
           .single();
 
         if (error || !data) {
@@ -62,7 +62,7 @@ export default function AgentProfile() {
           const settings = data.settings || {};
           setAgent({
             id: data.id,
-            name: data.name,
+            name: data.full_name || data.name,
             email: data.email,
             phone: data.phone,
             avatar: data.avatar,

@@ -166,11 +166,13 @@ export default function Dashboard() {
   const handleLeadMouseEnter = (e: React.MouseEvent, leadId: string) => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setHoveredLeadId(leadId);
-    setHoverPos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleLeadMouseMove = (e: React.MouseEvent) => {
-    setHoverPos({ x: e.clientX, y: e.clientY });
+    
+    // Anchor to element position
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setHoverPos({ 
+      x: rect.right + 12, // Offset 12px to the right
+      y: rect.top + (rect.height / 2) // Center vertically
+    });
   };
 
   const handleLeadMouseLeave = () => {
@@ -647,7 +649,6 @@ export default function Dashboard() {
                     <div 
                       className="relative"
                       onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
-                      onMouseMove={handleLeadMouseMove}
                       onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm font-medium text-[var(--t-on-surface)] truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
@@ -691,7 +692,6 @@ export default function Dashboard() {
                     <div 
                       className="relative"
                       onMouseEnter={(e) => handleLeadMouseEnter(e, lead.id)}
-                      onMouseMove={handleLeadMouseMove}
                       onMouseLeave={handleLeadMouseLeave}
                     >
                       <p className="text-sm text-[var(--t-on-surface)] font-medium truncate hover:text-[var(--t-primary)] cursor-pointer transition-colors">
@@ -743,15 +743,15 @@ export default function Dashboard() {
       {hoveredLead && hoverPos && (() => {
         const cardWidth = 320;
         const cardHeight = 360; 
-        const margin = 20; // Extra buffer for the cursor
+        const margin = 20;
         
-        let left = hoverPos.x + margin;
-        let top = hoverPos.y - (cardHeight / 3); // Position slightly above cursor for natural feel
+        let left = hoverPos.x;
+        let top = hoverPos.y - (cardHeight / 2);
         let arrowPos = 'left';
 
         // Flip to left side if not enough space on the right
         if (left + cardWidth > window.innerWidth - margin) {
-          left = hoverPos.x - cardWidth - margin;
+          left = hoverPos.x - cardWidth - 24; 
           arrowPos = 'right';
         }
 

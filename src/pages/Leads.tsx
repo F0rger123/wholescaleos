@@ -1211,7 +1211,7 @@ export default function Leads() {
                             </button>
                             <button 
                               onClick={() => {
-                                const url = `${window.location.origin}/leads/${lead.id}?edit=true`;
+                                const url = `${window.location.origin}/leads/${lead.id}/manage`;
                                 window.open(url, '_blank');
                               }}
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
