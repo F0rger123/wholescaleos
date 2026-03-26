@@ -585,7 +585,7 @@ export default function MapView() {
                     <div className="grid grid-cols-2 gap-1.5 text-xs mt-2">
                       <span className="flex items-center gap-1">
                         <DollarSign size={10} style={{ color: 'var(--t-success)' }} />
-                        ${lead.estimatedValue.toLocaleString()}
+                        ${(lead.estimatedValue || 0).toLocaleString()}
                       </span>
                       <span className="flex items-center gap-1">
                         <Building size={10} style={{ color: 'var(--t-primary)' }} />
@@ -840,11 +840,11 @@ function LeadDetail({ lead }: { lead: Lead }) {
       <div className="grid grid-cols-2 gap-2 text-[11px]">
         <div className="rounded-lg p-2" style={{ backgroundColor: 'var(--t-surface)' }}>
           <p className="text-[9px] uppercase" style={{ color: 'var(--t-text-muted)' }}>Value</p>
-          <p className="font-semibold" style={{ color: 'var(--t-text)' }}>${lead.estimatedValue.toLocaleString()}</p>
+          <p className="font-semibold" style={{ color: 'var(--t-text)' }}>${(lead.estimatedValue || 0).toLocaleString()}</p>
         </div>
         <div className="rounded-lg p-2" style={{ backgroundColor: 'var(--t-surface)' }}>
           <p className="text-[9px] uppercase" style={{ color: 'var(--t-text-muted)' }}>Offer</p>
-          <p className="font-semibold" style={{ color: 'var(--t-text)' }}>${lead.offerAmount.toLocaleString()}</p>
+          <p className="font-semibold" style={{ color: 'var(--t-text)' }}>${(lead.offerAmount || 0).toLocaleString()}</p>
         </div>
         <div className="rounded-lg p-2" style={{ backgroundColor: 'var(--t-surface)' }}>
           <p className="text-[9px] uppercase" style={{ color: 'var(--t-text-muted)' }}>Type</p>
@@ -907,7 +907,7 @@ function BuyerDetail({ buyer }: { buyer: Buyer }) {
           <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>{buyer.criteria.bedroomsMin}+ bed · {buyer.criteria.bathroomsMin}+ bath</p>
         )}
         {buyer.criteria.sqftMax > 0 && (
-          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>{buyer.criteria.sqftMin.toLocaleString()} – {buyer.criteria.sqftMax.toLocaleString()} sqft</p>
+          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>{(buyer.criteria.sqftMin || 0).toLocaleString()} – {(buyer.criteria.sqftMax || 0).toLocaleString()} sqft</p>
         )}
         {buyer.criteria.locationPreferences.length > 0 && (
           <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>{buyer.criteria.locationPreferences.join(', ')}</p>

@@ -35,7 +35,7 @@ function AnimatedCounter({ value, formatter }: { value: number; formatter?: (val
     return () => clearInterval(timer);
   }, [value]);
 
-  return <>{formatter ? formatter(displayed) : displayed.toLocaleString()}</>;
+  return <>{formatter ? formatter(displayed) : (displayed || 0).toLocaleString()}</>;
 }
 
 export function MetricCard({
@@ -50,7 +50,7 @@ export function MetricCard({
         <div>
           <p className="text-sm text-[var(--t-text-secondary)] font-medium">{title}</p>
           <div className="text-2xl font-bold text-[var(--t-on-surface)] mt-1">
-            {animated ? <AnimatedCounter value={value} formatter={formatter} /> : (formatter ? formatter(value) : value.toLocaleString())}
+            {animated ? <AnimatedCounter value={value} formatter={formatter} /> : (formatter ? formatter(value) : (value || 0).toLocaleString())}
           </div>
         </div>
         <div className={`p-2.5 rounded-xl ${color}`}>
