@@ -22,9 +22,9 @@ export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, on
     .slice(0, 3);
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
       <div 
-        className="relative w-full max-w-lg bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-[90%] sm:max-w-[80%] md:max-w-2xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

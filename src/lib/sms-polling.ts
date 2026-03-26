@@ -389,26 +389,29 @@ export async function pollSMSMessages() {
           if (userId && isSupabaseConfigured && supabase) {
             const { data: prefs } = await supabase
               .from('agent_preferences')
-              .select('phone_number')
+              .select('phone_number, sms_auto_reply_enabled')
               .eq('user_id', userId)
               .maybeSingle();
             userPhoneNumber = prefs?.phone_number || '';
+            isAutoReplyEnabled = !!prefs?.sms_auto_reply_enabled;
           } else {
             userPhoneNumber = localStorage.getItem('user_sms_phone') || '';
+            isAutoReplyEnabled = localStorage.getItem('user_sms_auto_reply') === 'true';
           }
-          // Normalize user phone number
-          userPhoneNumber = userPhoneNumber.replace(/\D/g, '');
-          if (userPhoneNumber.length === 11 && userPhoneNumber.startsWith('1')) {
-            userPhoneNumber = userPhoneNumber.substring(1);
+          // Normalize both numbers
+          const normUser = userPhoneNumber.replace(/\D/g, '');
+          const cleanUser = normUser.length === 11 && normUser.startsWith('1') ? normUser.substring(1) : normUser;
+          
+          const normSender = phoneNumber.replace(/\D/g, '');
+          const cleanSender = normSender.length === 11 && normSender.startsWith('1') ? normSender.substring(1) : normSender;
+
+          // HARD BLOCK: NEVER auto-reply to the user's own number or if master toggle is off
+          if (!isAutoReplyEnabled || (cleanUser && cleanSender === cleanUser)) {
+            console.log(`[SMS Auto-Reply] Blocked. Enabled: ${isAutoReplyEnabled}, Self-Reply: ${cleanSender === cleanUser}`);
+            isAutoReplyEnabled = false;
           }
         } catch (err) {
           console.error('[SMS Auto-Reply] Failed to fetch user phone number:', err);
-        }
-
-        // HARD BLOCK: NEVER auto-reply to the user's own number
-        if (userPhoneNumber && phoneNumber === userPhoneNumber) {
-          console.log(`[SMS Auto-Reply] Sender ${phoneNumber} is the user's own number. Hard block triggered.`);
-          isAutoReplyEnabled = false;
         }
 
         if (isAutoReplyEnabled) {
