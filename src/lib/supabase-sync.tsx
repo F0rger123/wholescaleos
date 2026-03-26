@@ -40,8 +40,16 @@ function dbLeadToStore(row: Record<string, unknown>, timeline: TimelineEntry[], 
     competitionLevel: Number(row.competition_level) || 3,
     importSource: (row.import_source as string) || undefined,
     photos: (row.photos as string[]) || [],
+    bedrooms: Number(row.bedrooms) || 0,
+    bathrooms: Number(row.bathrooms) || 0,
+    sqft: Number(row.sqft) || 0,
+    lastSoldPrice: Number(row.last_sold_price) || undefined,
+    lastSoldDate: (row.last_sold_date as string) || undefined,
+    estimatedEquity: Number(row.estimated_equity) || undefined,
+    recommendedOffer: Number(row.recommended_offer) || undefined,
     timeline,
     statusHistory,
+    documents: [], // Will be populated by fetch if needed, or initialized as empty
   };
 }
 

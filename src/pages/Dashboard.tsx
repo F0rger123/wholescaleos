@@ -1,5 +1,6 @@
+/** Main CRM Dashboard */
 import { useState, useEffect } from 'react';
-import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource, type Lead } from '../store/useStore';
+import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource, type Timeframe } from '../store/useStore';
 import { 
   Users, 
   Target, 
@@ -8,32 +9,19 @@ import {
   Zap, 
   Clock, 
   CheckCircle2, 
-  ArrowUpRight,
-  ArrowDownRight,
   Flame,
-  PieChart,
-  BarChart3,
-  Activity,
+  Map,
+  ChevronRight,
   ExternalLink,
-  Eye
+  ArrowUpRight,
 } from 'lucide-react';
 import { StreakBadge } from '../components/StreakBadge';
 import { TeamLeaderboard } from '../components/TeamLeaderboard';
-import { LeadQuickViewModal } from '../components/LeadQuickViewModal';
 import { AIDashboardSummary } from '../components/AIDashboardSummary';
+import { AISuggestionBox } from '../components/AISuggestionBox';
+import { MetricCard } from '../components/MetricCard';
 import { useNavigate } from 'react-router-dom';
-import {
-  ResponsiveContainer,
-  Line,
-  XAxis, YAxis,
-  CartesianGrid,
-  Tooltip,
-  Cell,
-  PieChart as RePieChart, Pie,
-  AreaChart, Area,
-  BarChart, Bar,
-  LineChart,
-} from 'recharts';
+
 
 // ─── Money Formatter ─────────────────────────────────────────────────────────
 
@@ -78,46 +66,6 @@ function AnimatedCounter({ value, formatter, duration = 1200 }: {
   return <>{displayed.toLocaleString()}</>;
 }
 
-// ─── Stat Card ───────────────────────────────────────────────────────────────
-
-function StatCard({
-  title, value, change, changeType, icon: Icon, color, animated, formatter, onClick,
-}: {
-  title: string; value: number; change: string; changeType: 'up' | 'down'; icon: React.ElementType; color: string;
-  animated?: boolean; formatter?: (val: number) => string;
-  onClick?: () => void;
-}) {
-  return (
-    <div 
-      onClick={onClick}
-      className={`bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 hover:border-[var(--t-border-strong)] transition-all theme-transition ${onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''}`}
-    >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-[var(--t-text-secondary)] font-medium">{title}</p>
-          <p className="text-2xl font-bold text-[var(--t-on-surface)] mt-1">
-            {animated ? <AnimatedCounter value={value} formatter={formatter} /> : (formatter ? formatter(value) : value)}
-          </p>
-        </div>
-        <div className={`p-2.5 rounded-xl ${color}`}>
-          <Icon size={20} />
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5 mt-3">
-        {changeType === 'up' ? (
-          <ArrowUpRight size={14} className="text-[var(--t-success)]" />
-        ) : (
-          <ArrowDownRight size={14} className="text-[var(--t-error)]" />
-        )}
-        <span className={`text-xs font-semibold ${changeType === 'up' ? 'text-[var(--t-success)]' : 'text-[var(--t-error)]'}`}>
-          {change}
-        </span>
-        <span className="text-xs text-[var(--t-text-muted)]">vs last month</span>
-      </div>
-    </div>
-  );
-}
-
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const statusBarColors: Record<string, string> = {
@@ -144,21 +92,15 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; lab
   other: { bg: 'var(--t-surface-hover)', text: 'var(--t-text-muted)', bar: 'var(--t-border)', label: 'Other' },
 };
 
-type Timeframe = '7d' | '30d' | '90d' | 'all';
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
-
-  const [timeframe, setTimeframe] = useState<Timeframe>(
-    (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d'
-  );
-  const [chartType, setChartType] = useState<'line' | 'bar' | 'area' | 'pie'>(
-    (localStorage.getItem('dashboard-chart-type') as any) || 'line'
-  );
-  const [selectedQuickViewLead, setSelectedQuickViewLead] = useState<Lead | null>(null);
+  const { 
+    leads, team, timeframe, setTimeframe,
+    loginStreak, taskStreak, memberStreaks
+  } = useStore();
 
   const filteredLeads = leads.filter(l => {
     if (timeframe === 'all') return true;
@@ -167,11 +109,6 @@ export default function Dashboard() {
     cutoff.setDate(cutoff.getDate() - days);
     return new Date(l.createdAt) >= cutoff;
   });
-
-
-  const handleOpenLead = (id: string) => {
-    window.open(`/leads/${id}/manage`, '_blank');
-  };
 
   // ─── Calculations ────────────────────────────────────────
   const dataToUse = filteredLeads || leads;
@@ -198,14 +135,14 @@ export default function Dashboard() {
   const activeDeals = dataToUse.filter(l => l.status === 'negotiating' || l.status === 'qualified');
   const projectedProfit = activeDeals.reduce((s, l) => {
     const margin = l.estimatedValue - l.offerAmount;
-    const prob = (l as any).probability / 100 || 0.5;
+    const prob = ((l as any).probability || 50) / 100;
     return s + (margin > 0 ? margin * prob : 0);
   }, 0);
   
   const negotiatingValue = dataToUse
     .filter(l => l.status === 'negotiating')
     .reduce((s, l) => s + l.estimatedValue, 0);
-  
+
   const monthlyProjection = Math.round((closedRevenue + projectedProfit * 0.6) / 3);
 
   // Source Stats
@@ -233,48 +170,6 @@ export default function Dashboard() {
     .sort((a, b) => calculateDealScore(b) - calculateDealScore(a))
     .slice(0, 5);
 
-  // ─── Analytics Data Calculations ───────────────────────────
-
-  // 2. Response Time / Lead Trend (Mocking historical trend if limited real data)
-  const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90;
-  const leadTrendData = Array.from({ length: 12 }).map((_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (11 - i) * (days / 11));
-    const leadsAtDate = dataToUse.filter(l => new Date(l.createdAt) <= date);
-    const wonAtDate = leadsAtDate.filter(l => l.status === 'closed-won');
-    const conversionRate = leadsAtDate.length > 0
-      ? Math.round((wonAtDate.length / leadsAtDate.length) * 100)
-      : 0;
-
-    return {
-      name: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-      leads: leadsAtDate.length,
-      conversionRate
-    };
-  });
-
-  // 3. Source Pie Data
-  const sourcePieData = Object.entries(sourceCounts).map(([source, count]) => {
-    const sc = SOURCE_COLORS[source as LeadSource] || SOURCE_COLORS.other;
-    return {
-      name: sc.label,
-      value: count,
-      color: sc.bar.startsWith('var') ? sc.bar : sc.bar
-    };
-  });
-
-  // 4. Heatmap Data (Hours vs Days)
-  const heatmapData = Array.from({ length: 7 }).map((_, d) => {
-    return Array.from({ length: 24 }).map((_, h) => {
-      // Find activity count for this hour/day
-      const count = dataToUse.filter(l => {
-        const dt = new Date(l.updatedAt);
-        return dt.getDay() === d && dt.getHours() === h;
-      }).length;
-      return count;
-    });
-  });
-
   // Streak leaderboard data
   const streakMembers = team.map(m => ({
     id: m.id,
@@ -286,10 +181,10 @@ export default function Dashboard() {
 
   // Calculate vs last month
   const lastMonthPipeline = totalPipeline * 0.875; 
-  const pipelineChange = ((totalPipeline - lastMonthPipeline) / lastMonthPipeline) * 100;
+  const pipelineChange = ((totalPipeline - lastMonthPipeline) / (lastMonthPipeline || 1)) * 100;
   
   const lastMonthRevenue = closedRevenue * 0.918; 
-  const revenueChange = ((closedRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+  const revenueChange = ((closedRevenue - lastMonthRevenue) / (lastMonthRevenue || 1)) * 100;
 
   return (
     <div className="space-y-6 theme-transition" style={{ backgroundColor: 'var(--t-bg)' }}>
@@ -321,11 +216,12 @@ export default function Dashboard() {
       </div>
 
       {/* AI Summary Widget */}
+      <AISuggestionBox />
       <AIDashboardSummary />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
+        <MetricCard
           title="Total Pipeline" value={totalPipeline}
           change={`${pipelineChange > 0 ? '+' : ''}${pipelineChange.toFixed(1)}%`}
           changeType={pipelineChange > 0 ? 'up' : 'down'} 
@@ -335,7 +231,7 @@ export default function Dashboard() {
           formatter={formatMoney}
           onClick={() => navigate('/leads')}
         />
-        <StatCard
+        <MetricCard
           title="Closed Revenue" value={closedRevenue}
           change={`${revenueChange > 0 ? '+' : ''}${revenueChange.toFixed(1)}%`}
           changeType={revenueChange > 0 ? 'up' : 'down'} 
@@ -345,14 +241,14 @@ export default function Dashboard() {
           formatter={formatMoney}
           onClick={() => navigate('/leads')}
         />
-        <StatCard
+        <MetricCard
           title="Active Leads" value={activeLeads}
           change="+3 this month" changeType="up" icon={Users}
           color="bg-[var(--t-accent)]/20 text-[var(--t-accent)]"
           animated={true}
           onClick={() => navigate('/leads')}
         />
-        <StatCard
+        <MetricCard
           title="Avg Deal Score" value={avgScore}
           change={`${winRate}% win rate`} changeType={winRate > 50 ? 'up' : 'down'} icon={Target}
           color="bg-[var(--t-warning)]/20 text-[var(--t-warning)]"
@@ -385,7 +281,7 @@ export default function Dashboard() {
         <div className="bg-gradient-to-br from-[var(--t-info)]/20 to-[var(--t-surface)] border border-[var(--t-info)]/30 rounded-2xl p-5 theme-transition">
           <div className="flex items-center gap-2 mb-3">
             <div className="p-2 rounded-lg bg-[var(--t-info)]/20">
-              <BarChart3 size={16} className="text-[var(--t-info)]" />
+              <Map size={16} className="text-[var(--t-info)]" />
             </div>
             <p className="text-sm text-[var(--t-info)] font-medium">Expected Monthly</p>
           </div>
@@ -427,104 +323,8 @@ export default function Dashboard() {
         {/* Pipeline & Trends */}
         <div className="lg:col-span-2 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 theme-transition overflow-hidden">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-[var(--t-on-surface)]">Pipeline & Lead Trends</h2>
-            <div className="flex items-center gap-2">
-              <div className="flex bg-[var(--t-surface-dim)] rounded-lg p-1 border border-[var(--t-border-subtle)] mr-2">
-                {[
-                  { id: 'area', icon: Activity, label: 'Area' },
-                  { id: 'bar', icon: BarChart3, label: 'Bar' },
-                  { id: 'line', icon: TrendingUp, label: 'Line' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      setChartType(t.id as any);
-                    }}
-                    className={`p-1.5 rounded-md transition-all ${
-                      chartType === t.id 
-                        ? 'bg-[var(--t-primary)] text-white shadow-sm' 
-                        : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
-                    }`}
-                    title={t.label}
-                  >
-                    <t.icon size={14} />
-                  </button>
-                ))}
-              </div>
-              <button 
-                onClick={() => {
-                  localStorage.setItem('dashboard-chart-type', chartType);
-                  alert('Default chart view saved!');
-                }}
-                className="p-2 text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-colors"
-                title="Save as default view"
-              >
-                <div className="w-4 h-4 border-2 border-current rounded-sm flex items-center justify-center text-[8px] font-bold">S</div>
-              </button>
-              <div className="hidden sm:flex items-center gap-4 text-[10px] ml-4">
-                <div className="flex items-center gap-1.5 text-[var(--t-primary)]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />
-                  <span>Conversion Rate</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[var(--t-success)]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)]" />
-                  <span>Total Leads</span>
-                </div>
-              </div>
-            </div>
+            <h2 className="text-lg font-semibold text-[var(--t-on-surface)]">Pipeline Overview</h2>
           </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {chartType === 'bar' ? (
-                <BarChart data={leadTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
-                  <YAxis hide />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }} />
-                  <Bar dataKey="leads" fill="var(--t-success)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              ) : chartType === 'line' ? (
-                <LineChart data={leadTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
-                  <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }}
-                    formatter={(value: any, name?: any) => {
-                      if (name === 'conversionRate') return [`${value}%`, 'Conversion Rate'];
-                      if (name === 'leads') return [value, 'Total Leads'];
-                      return [value, name || ''];
-                    }}
-                  />
-                  <Line type="monotone" dataKey="leads" stroke="var(--t-success)" strokeWidth={3} dot={{ r: 4 }} />
-                  <Line type="monotone" dataKey="conversionRate" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
-                </LineChart>
-              ) : (
-                <AreaChart data={leadTrendData}>
-                  <defs>
-                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--t-success)" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="var(--t-success)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
-                  <YAxis hide />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }}
-                    formatter={(value: any, name?: any) => {
-                      if (name === 'conversionRate') return [`${value}%`, 'Conversion Rate'];
-                      if (name === 'leads') return [value, 'Total Leads'];
-                      return [value, name || ''];
-                    }}
-                  />
-                  <Area type="monotone" dataKey="leads" stroke="var(--t-success)" fillOpacity={1} fill="url(#colorLeads)" strokeWidth={3} />
-                  <Line type="monotone" dataKey="conversionRate" stroke="var(--t-primary)" strokeWidth={2} dot={{ r: 4 }} />
-                </AreaChart>
-              )}
-            </ResponsiveContainer>
-          </div>
-          
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {pipelineStages.map((stage) => {
               const count = dataToUse.filter((l) => l.status === stage.key).length;
@@ -551,93 +351,38 @@ export default function Dashboard() {
         {/* Lead Source Stats */}
         <div className="bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 theme-transition flex flex-col">
           <div className="flex items-center gap-2 mb-4">
-            <PieChart size={18} className="text-[var(--t-info)]" />
-            <h2 className="text-lg font-semibold text-[var(--t-on-surface)]">Leads & Deal Size</h2>
+            <Map size={18} className="text-[var(--t-info)]" />
+            <h2 className="text-lg font-semibold text-[var(--t-on-surface)]">Lead Sources</h2>
           </div>
-          <div className="flex-1 min-h-[220px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <RePieChart>
-                <Pie
-                  data={sourcePieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {sourcePieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }}
-                />
-              </RePieChart>
-            </ResponsiveContainer>
+          <div className="space-y-2">
+            {Object.entries(sourceCounts)
+              .sort(([, countA], [, countB]) => countB - countA)
+              .map(([source, count]) => {
+                const sc = SOURCE_COLORS[source as LeadSource] || SOURCE_COLORS.other;
+                const totalLeads = dataToUse.length;
+                const percentage = totalLeads > 0 ? (count / totalLeads) * 100 : 0;
+                return (
+                  <div key={source} className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-[var(--t-on-surface)]">{sc.label}</span>
+                        <span className="text-xs text-[var(--t-text-secondary)]">{count} ({percentage.toFixed(0)}%)</span>
+                      </div>
+                      <div className="mt-1 h-1.5 bg-[var(--t-surface-active)] rounded-full overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${percentage}%`, backgroundColor: sc.bar }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            {sourcePieData.map((s, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                <span className="text-[10px] text-[var(--t-text-muted)] truncate">{s.name} ({s.value})</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 pt-6 border-t border-[var(--t-border-subtle)]">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-[var(--t-text-secondary)]">Avg Deal Size</span>
-              <span className="text-sm font-bold text-[var(--t-on-surface)]">{formatMoney(avgScore * 5000)}</span>
-            </div>
-            <div className="h-[40px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={leadTrendData}>
-                  <Area type="monotone" dataKey="avgSize" stroke="var(--t-primary)" fill="var(--t-primary-dim)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <button className="mt-4 text-xs text-[var(--t-primary)] hover:opacity-80 font-medium flex items-center gap-1 transition-colors">
+            View all sources <ChevronRight size={10} />
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Activity Heatmap */}
-        <div className="lg:col-span-1 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 theme-transition">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-[var(--t-on-surface)]">Activity Heatmap</h2>
-            <div className="flex gap-1">
-              {[0, 1, 2, 3].map(v => (
-                <div key={v} className={`w-2 h-2 rounded-sm ${v === 0 ? 'bg-[var(--t-surface-dim)]' : v === 1 ? 'bg-[var(--t-primary)]/20' : v === 2 ? 'bg-[var(--t-primary)]/50' : 'bg-[var(--t-primary)]'}`} />
-              ))}
-            </div>
-          </div>
-          <div className="flex flex-col gap-[2px]">
-            {heatmapData.map((day, d) => (
-              <div key={d} className="flex gap-[2px]">
-                <span className="w-4 text-[8px] text-[var(--t-text-muted)] uppercase">{['S','M','T','W','T','F','S'][d]}</span>
-                {day.map((count, h) => (
-                  <div 
-                    key={h}
-                    title={`${count} activity at ${h}:00`}
-                    className="flex-1 aspect-square rounded-sm transition-colors"
-                    style={{ 
-                      backgroundColor: count === 0 ? 'var(--t-surface-dim)' :
-                                      count === 1 ? 'var(--t-primary-dim)' :
-                                      count < 3 ? 'var(--t-primary)' : 'var(--t-primary-text)',
-                      opacity: count === 0 ? 0.3 : 0.6 + (count * 0.1)
-                    }}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-between text-[8px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest px-4">
-            <span>12 AM</span>
-            <span>12 PM</span>
-            <span>11 PM</span>
-          </div>
-        </div>
-
         {/* Top Deal Scores */}
         <div className="lg:col-span-1 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 theme-transition">
           <div className="flex items-center gap-2 mb-4">
@@ -665,14 +410,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button 
-                      onClick={() => setSelectedQuickViewLead(lead)}
-                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
-                      title="Quick View"
-                    >
-                      <Eye size={14} />
-                    </button>
-                    <button 
-                      onClick={() => handleOpenLead(lead.id)}
+                      onClick={() => navigate(`/leads/${lead.id}/manage`)}
                       className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
                       title="Open Lead"
                     >
@@ -718,14 +456,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <button 
-                      onClick={() => setSelectedQuickViewLead(lead)}
-                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
-                      title="Quick View"
-                    >
-                      <Eye size={14} />
-                    </button>
-                    <button 
-                      onClick={() => handleOpenLead(lead.id)}
+                      onClick={() => navigate(`/leads/${lead.id}/manage`)}
                       className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
                       title="Open Lead"
                     >
@@ -773,16 +504,6 @@ export default function Dashboard() {
       </div>
 
 
-      {selectedQuickViewLead && (
-        <LeadQuickViewModal 
-          lead={selectedQuickViewLead}
-          onClose={() => setSelectedQuickViewLead(null)}
-          onOpenFull={() => {
-            handleOpenLead(selectedQuickViewLead.id);
-            setSelectedQuickViewLead(null);
-          }}
-        />
-      )}
     </div>
   );
 }

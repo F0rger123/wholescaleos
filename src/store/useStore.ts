@@ -7,6 +7,7 @@ import { themes } from '../styles/themes';
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost';
+export type Timeframe = '7d' | '30d' | '90d' | 'all';
 export type LeadSource =
   | 'bandit-signs'
   | 'personal-relations'
@@ -160,6 +161,10 @@ export interface Lead {
   importSource?: string;
   photos?: string[];
   carrier?: string;
+  lastSoldPrice?: number;
+  lastSoldDate?: string;
+  estimatedEquity?: number;
+  recommendedOffer?: number;
   shareDescription?: string;
   sharePrice?: number;
   shareCustomMessage?: string;
@@ -1539,9 +1544,17 @@ interface AppState {
   showFloatingAIWidget: boolean;
   setShowFloatingAIWidget: (v: boolean) => void;
 
+  // Goals
+  showGoalsForToday: boolean;
+  setShowGoalsForToday: (v: boolean) => void;
+
   // Keyboard Shortcuts
   shortcutsEnabled: boolean;
   setShortcutsEnabled: (v: boolean) => void;
+
+  // Timeframe
+  timeframe: Timeframe;
+  setTimeframe: (tf: Timeframe) => void;
 
   // AI Usage Tracking
   aiUsage: Record<string, AIUsage>;
@@ -1631,7 +1644,26 @@ export const useStore = create<AppState>((set, get) => ({
   currentUser: null,
   authLoading: false,
   authError: null,
-  showFloatingAIWidget: false,
+  showFloatingAIWidget: typeof window !== 'undefined' ? localStorage.getItem('user_show_floating_widget') === 'true' : false,
+  showGoalsForToday: typeof window !== 'undefined' ? (localStorage.getItem('user_show_goals_today') !== 'false') : true, // Default true
+  setShowFloatingAIWidget: (show: boolean) => {
+    localStorage.setItem('user_show_floating_widget', show.toString());
+    set({ showFloatingAIWidget: show });
+  },
+  setShowGoalsForToday: (show: boolean) => {
+    localStorage.setItem('user_show_goals_today', show.toString());
+    set({ showGoalsForToday: show });
+  },
+  shortcutsEnabled: typeof window !== 'undefined' ? localStorage.getItem('user_shortcuts_enabled') !== 'false' : true,
+  setShortcutsEnabled: (v: boolean) => {
+    localStorage.setItem('user_shortcuts_enabled', v.toString());
+    set({ shortcutsEnabled: v });
+  },
+  timeframe: typeof window !== 'undefined' ? (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d' : '30d',
+  setTimeframe: (tf: Timeframe) => {
+    localStorage.setItem('dashboard-timeframe', tf);
+    set({ timeframe: tf });
+  },
   lastLoginDate: new Date().toISOString(),
   loginStreak: 0,
   taskStreak: 0,
@@ -1700,7 +1732,6 @@ export const useStore = create<AppState>((set, get) => ({
 
   // —— UI & Settings State ———————————————————————————————————
   notificationSettings: defaultNotificationSettings,
-  shortcutsEnabled: typeof window !== 'undefined' ? localStorage.getItem('wholescale-shortcuts-enabled') !== 'false' : true,
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes') || '' : '',
   showQuickNotes: false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
@@ -1853,17 +1884,30 @@ export const useStore = create<AppState>((set, get) => ({
 
   loadLeads: async () => {
     let { currentUser, teamId } = get();
+    
+    // Recovery: If no user in store, try to get from Supabase session
     if (!currentUser && isSupabaseConfigured && supabase) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         await get().fetchProfile(session.user.id);
-        teamId = get().teamId;
+        const stateAfterProfile = get();
+        currentUser = stateAfterProfile.currentUser;
+        teamId = stateAfterProfile.teamId;
       }
+    }
+    
+    // Recovery: If no teamId but we have a user, ensure profile is loaded
+    if (!teamId && currentUser && isSupabaseConfigured && supabase) {
+      await get().fetchProfile(currentUser.id);
+      teamId = get().teamId;
     }
     
     if (!teamId || !isSupabaseConfigured || !supabase) {
       console.log('DEBUG: loadLeads skipped. teamId:', teamId, 'isSupabaseConfigured:', isSupabaseConfigured);
       set({ dataLoaded: true });
+      if (teamId === null && isSupabaseConfigured) {
+        console.warn('CRITICAL: teamId is null. Leads cannot be loaded.');
+      }
       return;
     }
 
@@ -1874,8 +1918,23 @@ export const useStore = create<AppState>((set, get) => ({
         leadsService.fetchAll(teamId),
         tasksService.fetchAll(teamId)
       ]);
-      set({ leads, tasks, dataLoaded: true });
-      console.log('DEBUG: loadLeads successful:', { leads: leads.length, tasks: tasks.length });
+      
+      // Map leads to store format (ensuring new fields are present)
+      const mappedLeads: Lead[] = leads.map((l: any) => ({
+        ...l,
+        propertyAddress: l.address || l.propertyAddress,
+        estimatedValue: l.property_value || l.estimatedValue,
+        lastSoldPrice: l.last_sold_price || l.lastSoldPrice,
+        lastSoldDate: l.last_sold_date || l.lastSoldDate,
+        estimatedEquity: l.estimated_equity || l.estimatedEquity,
+        recommendedOffer: l.recommended_offer || l.recommendedOffer,
+        timeline: l.timeline_entries || l.timeline || [],
+        statusHistory: l.status_history || l.statusHistory || [],
+        documents: l.documents || [],
+      }));
+
+      set({ leads: mappedLeads, tasks, dataLoaded: true });
+      console.log('DEBUG: loadLeads successful:', { leads: mappedLeads.length, tasks: tasks.length });
     } catch (error) {
       console.error('DEBUG: loadLeads failed:', error);
       set({ dataLoaded: true });
@@ -2033,7 +2092,13 @@ export const useStore = create<AppState>((set, get) => ({
   // —— Sync ——————————————————————————————————————————————————
   teamId: null,
   dataLoaded: false,
-  setTeamId: (id: string | null) => set({ teamId: id }),
+  setTeamId: (teamId: string | null) => {
+    console.log('DEBUG: setTeamId called with:', teamId);
+    set({ teamId });
+    if (teamId) {
+      get().loadLeads();
+    }
+  },
   setDataLoaded: (loaded: boolean) => set({ dataLoaded: loaded }),
   setBulkData: (data: any) => set(data as Partial<AppState>),
 
@@ -3460,10 +3525,8 @@ export const useStore = create<AppState>((set, get) => ({
   setSMSMessages: (msgs) => set({ smsMessages: msgs }),
   addSMSMessage: (msg) => set((s: any) => ({ smsMessages: [...s.smsMessages, msg] })),
   markSMSAsRead: (id) => set((s: any) => ({
-    smsMessages: s.smsMessages.map((m: any) => m.id === id ? { ...m, read: true } : m)
+    smsMessages: s.messages.map((m: any) => m.id === id ? { ...m, read: true } : m)
   })),
-  setShowFloatingAIWidget: (v) => set({ showFloatingAIWidget: v }),
-  setShortcutsEnabled: (v) => set({ shortcutsEnabled: v }),
   incrementAiUsage: () => {},
   setAiUsage: (_model, _used, _limit) => {},
 

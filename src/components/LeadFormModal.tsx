@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore, LeadStatus, calculateDealScore, LeadSource } from '../store/useStore';
 import { geocodeAddress } from '../lib/geocoding';
 import { detectCarrier } from '../lib/carrier-service';
-import { Loader2, Save, BarChart3 } from 'lucide-react';
+import { BarChart3, Calculator, TrendingUp, Calendar } from 'lucide-react';
 import { Modal } from './Modal';
 import { ConfirmModal } from './ConfirmModal';
+import { SaveButton } from './SaveButton';
 
 interface LeadFormModalProps {
   isOpen: boolean;
@@ -14,7 +15,6 @@ interface LeadFormModalProps {
 
 export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
   const { leads, addLead, updateLead, team } = useStore();
-  const [saving, setSaving] = useState(false);
   
   const editingLead = leadId ? leads.find(l => l.id === leadId) : null;
   
@@ -24,11 +24,20 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
     status: 'new', notes: '', source: 'other' as LeadSource,
     assignedTo: '',
     probability: '50', engagementLevel: '3', timelineUrgency: '3', competitionLevel: '3',
+    lastSoldPrice: '', lastSoldDate: '', estimatedEquity: '', recommendedOffer: '',
   }), []);
 
   const [formData, setFormData] = useState(defaultData);
   const [initialData, setInitialData] = useState(defaultData);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+
+  // Appreciation Calculation
+  const appreciationPercent = useMemo(() => {
+    const val = parseFloat(formData.estimatedValue);
+    const sold = parseFloat(formData.lastSoldPrice);
+    if (!val || !sold || sold === 0) return 0;
+    return Math.round(((val - sold) / sold) * 100);
+  }, [formData.estimatedValue, formData.lastSoldPrice]);
 
   // Lead data loading effect
   useEffect(() => {
@@ -50,7 +59,11 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
           probability: (editingLead.probability || 50).toString(), 
           engagementLevel: (editingLead.engagementLevel || 3).toString(), 
           timelineUrgency: (editingLead.timelineUrgency || 3).toString(), 
-          competitionLevel: (editingLead.competitionLevel || 3).toString() 
+          competitionLevel: (editingLead.competitionLevel || 3).toString(),
+          lastSoldPrice: (editingLead.lastSoldPrice || '').toString(),
+          lastSoldDate: editingLead.lastSoldDate || '',
+          estimatedEquity: (editingLead.estimatedEquity || '').toString(),
+          recommendedOffer: (editingLead.recommendedOffer || '').toString(),
         };
       } else {
         data = defaultData;
@@ -82,9 +95,17 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); 
-    setSaving(true);
+  const handleRecommendOffer = () => {
+    const value = parseFloat(formData.estimatedValue) || 0;
+    if (!value) return;
+    
+    // Formula: Value * 0.7 - Repairs (Mock repairs as 10% of value for now)
+    const factor = formData.propertyType === 'multi-family' ? 0.75 : 0.7;
+    const calcOffer = Math.round(value * (factor - 0.1));
+    setFormData({ ...formData, recommendedOffer: calcOffer.toString(), offerAmount: calcOffer.toString() });
+  };
+
+  const onSave = async () => {
     let lat = 30.2672, lng = -97.7431;
     if (formData.propertyAddress) { 
       try {
@@ -108,38 +129,32 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
       probability: parseInt(formData.probability), 
       engagementLevel: parseInt(formData.engagementLevel), 
       timelineUrgency: parseInt(formData.timelineUrgency), 
-      competitionLevel: parseInt(formData.competitionLevel) 
+      competitionLevel: parseInt(formData.competitionLevel),
+      lastSoldPrice: parseFloat(formData.lastSoldPrice) || null,
+      lastSoldDate: formData.lastSoldDate || null,
+      estimatedEquity: parseFloat(formData.estimatedEquity) || null,
+      recommendedOffer: parseFloat(formData.recommendedOffer) || null,
     };
 
-    try {
-      let result;
-      if (editingLead) {
-        result = await updateLead(editingLead.id, d);
-        if (d.phone && d.phone !== editingLead.phone) {
-          detectCarrier(d.phone).then(res => {
-            if (res.carrier) updateLead(editingLead.id, { carrier: res.carrier });
-          });
-        }
-      } else {
-        const res = await detectCarrier(d.phone);
-        result = await addLead({ ...d, carrier: res.carrier });
+    let result;
+    if (editingLead) {
+      result = await updateLead(editingLead.id, d);
+      if (d.phone && d.phone !== editingLead.phone) {
+        detectCarrier(d.phone).then(res => {
+          if (res.carrier) updateLead(editingLead.id, { carrier: res.carrier });
+        });
       }
-
-      if (result && !result.success) {
-        alert(`Error saving lead: ${result.error?.message || 'Unknown error'}`);
-        setSaving(false);
-        return;
-      }
-      
-      setSaving(false); 
-      onClose();
-    } catch (err) {
-      console.error('Error saving lead:', err);
-      alert('A critical error occurred while saving the lead. Please check your connection.');
-      setSaving(false);
+    } else {
+      const res = await detectCarrier(d.phone);
+      result = await addLead({ ...d, carrier: res.carrier });
     }
-  };
 
+    if (result && !result.success) {
+      throw new Error(result.error?.message || 'Unknown error');
+    }
+    
+    setTimeout(() => onClose(), 1000);
+  };
 
   const scoreBadge = (s: number) => {
     if (s >= 80) return { className: 'border-green-500/40', style: { backgroundColor: 'rgba(0, 128, 0, 0.2)', color: '#00FF00' } };
@@ -155,9 +170,9 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
       isOpen={isOpen} 
       onClose={handleCloseAttempt}
       title={editingLead ? 'Edit Lead' : 'Add New Lead'}
-      maxWidth="max-w-2xl"
+      maxWidth="max-w-3xl"
     >
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <form onSubmit={(e) => e.preventDefault()} className="p-6 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Name *</label>
@@ -166,6 +181,7 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
               value={formData.name} 
               onChange={e => setFormData({ ...formData, name: e.target.value })} 
               required 
+              placeholder="e.g. John Smith"
               className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
             />
           </div>
@@ -175,6 +191,7 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
               type="email" 
               value={formData.email} 
               onChange={e => setFormData({ ...formData, email: e.target.value })} 
+              placeholder="smith@example.com"
               className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
             />
           </div>
@@ -184,6 +201,21 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
               type="tel" 
               value={formData.phone} 
               onChange={e => setFormData({ ...formData, phone: e.target.value })} 
+              placeholder="(555) 123-4567"
+              className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
+            />
+          </div>
+          
+          <div className="md:col-span-2 pt-4 border-t border-[var(--t-border-subtle)]">
+            <h3 className="text-xs font-black text-[var(--t-primary)] uppercase tracking-[0.2em] mb-4">Property & Logistics</h3>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Property Address</label>
+            <input 
+              value={formData.propertyAddress} 
+              onChange={e => setFormData({ ...formData, propertyAddress: e.target.value })} 
+              placeholder="123 Main St, Austin, TX"
               className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
             />
           </div>
@@ -217,29 +249,104 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
               ))}
             </select>
           </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Property Address</label>
-            <input 
-              value={formData.propertyAddress} 
-              onChange={e => setFormData({ ...formData, propertyAddress: e.target.value })} 
-              className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
-            />
+
+          <div className="md:col-span-2 pt-4 border-t border-[var(--t-border-subtle)]">
+            <h3 className="text-xs font-black text-[var(--t-success)] uppercase tracking-[0.2em] mb-4">Financial Details</h3>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Estimated Value</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-secondary)] font-bold">$</span>
+              <input 
+                type="number" 
+                value={formData.estimatedValue} 
+                onChange={e => setFormData({ ...formData, estimatedValue: e.target.value })} 
+                className="w-full pl-8 pr-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
+              />
+            </div>
           </div>
           <div>
-            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Property Type</label>
-            <select 
-              value={formData.propertyType} 
-              onChange={e => setFormData({ ...formData, propertyType: e.target.value })} 
-              className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-[var(--t-text)] focus:outline-none focus:border-[var(--t-primary)] transition-all appearance-none"
-              style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-primary)', borderColor: 'var(--t-border)' }}
-            >
-              <option value="single-family">Single Family</option>
-              <option value="multi-family">Multi Family</option>
-              <option value="commercial">Commercial</option>
-              <option value="land">Land</option>
-              <option value="condo">Condo</option>
-            </select>
+            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Last Sold Price</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-secondary)] font-bold">$</span>
+              <input 
+                type="number" 
+                value={formData.lastSoldPrice} 
+                onChange={e => setFormData({ ...formData, lastSoldPrice: e.target.value })} 
+                className="w-full pl-8 pr-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
+              />
+              {appreciationPercent !== 0 && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <TrendingUp size={12} className={appreciationPercent > 0 ? 'text-[var(--t-success)]' : 'text-[var(--t-error)]'} />
+                  <span className={`text-[10px] font-black ${appreciationPercent > 0 ? 'text-[var(--t-success)]' : 'text-[var(--t-error)]'}`}>
+                    {appreciationPercent}%
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+
+          <div>
+            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Last Sold Date</label>
+            <div className="relative">
+              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-secondary)]" size={16} />
+              <input 
+                type="date" 
+                value={formData.lastSoldDate} 
+                onChange={e => setFormData({ ...formData, lastSoldDate: e.target.value })} 
+                className="w-full pl-11 pr-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all appearance-none" 
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Estimated Equity</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-secondary)] font-bold">$</span>
+              <input 
+                type="number" 
+                value={formData.estimatedEquity} 
+                onChange={e => setFormData({ ...formData, estimatedEquity: e.target.value })} 
+                className="w-full pl-8 pr-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
+              />
+            </div>
+          </div>
+
+          <div className="md:col-span-2 p-1 bg-[var(--t-surface-subtle)] rounded-[20px]">
+            <div className="bg-[var(--t-surface-dim)] p-4 rounded-[18px] border border-[var(--t-border-subtle)] flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--t-success-dim)] flex items-center justify-center">
+                  <Calculator className="text-[var(--t-success)]" size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-[var(--t-text-muted)] uppercase tracking-wider">Recommended Offer</p>
+                  <p className="text-lg font-black text-white">{formData.recommendedOffer ? `$${parseInt(formData.recommendedOffer).toLocaleString()}` : '$0'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleRecommendOffer}
+                disabled={!formData.estimatedValue}
+                className="px-4 py-2 bg-[var(--t-success)] text-white text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              >
+                Auto-Calculate
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Final Offer Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-secondary)] font-bold">$</span>
+              <input 
+                type="number" 
+                value={formData.offerAmount} 
+                onChange={e => setFormData({ ...formData, offerAmount: e.target.value })} 
+                className="w-full pl-8 pr-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
+              />
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Lead Source</label>
             <select 
@@ -262,30 +369,14 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
               <option value="other">Other</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Estimated Value</label>
-            <input 
-              type="number" 
-              value={formData.estimatedValue} 
-              onChange={e => setFormData({ ...formData, estimatedValue: e.target.value })} 
-              className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Offer Amount</label>
-            <input 
-              type="number" 
-              value={formData.offerAmount} 
-              onChange={e => setFormData({ ...formData, offerAmount: e.target.value })} 
-              className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all" 
-            />
-          </div>
+
           <div className="md:col-span-2">
             <label className="block text-sm font-bold text-[var(--t-text-muted)] mb-2 uppercase tracking-widest">Notes</label>
             <textarea 
               value={formData.notes} 
               onChange={e => setFormData({ ...formData, notes: e.target.value })} 
               rows={4} 
+              placeholder="Add any additional context here..."
               className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-white focus:outline-none focus:border-[var(--t-primary)] transition-all resize-none" 
             />
           </div>
@@ -369,15 +460,11 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
           >
             Cancel
           </button>
-          <button 
-            type="submit" 
-            disabled={saving} 
-            className="px-8 py-3 text-white rounded-2xl flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all font-bold shadow-lg shadow-[var(--t-primary)]/20"
-            style={{ background: 'var(--t-primary)' }}
-          >
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} 
-            {editingLead ? 'Update Lead' : 'Create Lead'}
-          </button>
+          <SaveButton 
+            onSave={onSave}
+            disabled={!formData.name}
+            label={editingLead ? 'Update Lead' : 'Create Lead'}
+          />
         </div>
       </form>
     </Modal>
