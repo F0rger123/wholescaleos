@@ -175,7 +175,7 @@ export default function Dashboard() {
     analytics: { label: 'Analytics', icon: TrendingUp, layout: ['profit-projection', 'pipeline-trends'] },
   };
 
-  const currentLayout = dashboardLayout?.length > 0 ? dashboardLayout : DEFAULT_LAYOUT;
+  const currentLayout = (dashboardLayout && Array.isArray(dashboardLayout) && dashboardLayout.length > 0) ? dashboardLayout : DEFAULT_LAYOUT;
 
   const moveWidget = (from: number, to: number) => {
     const next = [...currentLayout];
@@ -219,18 +219,18 @@ export default function Dashboard() {
   // Calculations
   const dataToUse = leads || [];
   const totalPipeline = dataToUse
-    .filter((l) => !l.status?.startsWith('closed'))
-    .reduce((sum, l) => sum + (l.estimatedValue || 0), 0);
+    .filter((l) => l && l.status && !l.status.startsWith('closed'))
+    .reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0);
   const closedRevenue = dataToUse
     .filter((l) => l.status === 'closed-won')
     .reduce((sum, l) => sum + (l.offerAmount || 0), 0);
   const activeLeads = dataToUse.filter((l) => !l.status?.startsWith('closed')).length;
   const closedLeads = dataToUse.filter((l) => l.status?.startsWith('closed'));
-  const winRate = closedLeads.length > 0
-    ? Math.round((dataToUse.filter((l) => l.status === 'closed-won').length / (closedLeads.length || 1)) * 100)
+  const winRate = (closedLeads || []).length > 0
+    ? Math.round((dataToUse.filter((l) => l && l.status === 'closed-won').length / (closedLeads.length || 1)) * 100)
     : 0;
 
-  const activeDeals = dataToUse.filter(l => l.status === 'negotiating' || l.status === 'qualified');
+  const activeDeals = dataToUse.filter(l => l && (l.status === 'negotiating' || l.status === 'qualified'));
   const projectedProfit = activeDeals.reduce((s, l) => {
     const margin = (l.estimatedValue || 0) - (l.offerAmount || 0);
     const prob = ((l as any).probability || 50) / 100;
@@ -246,9 +246,10 @@ export default function Dashboard() {
     const src = l.source || 'other';
     sourceCounts[src] = (sourceCounts[src] || 0) + 1;
   });
-  const recentLeads = [...dataToUse].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  ).slice(0, 6);
+  const recentLeads = [...dataToUse]
+    .filter(l => l && l.updatedAt)
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 6);
 
   const pipelineStages = [
     { label: 'New', key: 'new' },
@@ -264,12 +265,14 @@ export default function Dashboard() {
     .sort((a, b) => calculateDealScore(b) - calculateDealScore(a))
     .slice(0, 5);
 
-  const streakMembers = (team || []).map(m => ({
+  const streakMembers = (team || [])
+    .filter(m => m && m.id)
+    .map(m => ({
     id: m.id,
-    name: m.name,
-    avatar: m.avatar,
-    loginStreak: memberStreaks?.[m.id]?.login || 0,
-    taskStreak: memberStreaks?.[m.id]?.task || 0,
+    name: m.name || 'Unknown',
+    avatar: m.avatar || 'U',
+    loginStreak: (memberStreaks && memberStreaks[m.id]?.login) || 0,
+    taskStreak: (memberStreaks && memberStreaks[m.id]?.task) || 0,
   }));
 
   const pipelineChange = 12.5; // Dummy trend

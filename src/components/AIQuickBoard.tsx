@@ -20,14 +20,14 @@ export function AIQuickBoard() {
 
   // ─── Data Aggregation ──────────────────────────────────────
   const agenda = useMemo(() => {
-    const todayTasks = tasks.filter(t => t.dueDate && isToday(new Date(t.dueDate)));
-    const hotLeads = [...leads]
-      .filter(l => !l.status?.startsWith('closed'))
+    const todayTasks = (tasks || []).filter(t => t && t.dueDate && isToday(new Date(t.dueDate)));
+    const hotLeads = [...(leads || [])]
+      .filter(l => l && l.status && !l.status.startsWith('closed'))
       .sort((a, b) => calculateDealScore(b) - calculateDealScore(a))
       .slice(0, 3);
     
-    const completedToday = tasks.filter(t => t.completedAt && isToday(new Date(t.completedAt))).length;
-    const incomingToday = leads.filter(l => isToday(new Date(l.createdAt))).length;
+    const completedToday = (tasks || []).filter(t => t && t.completedAt && isToday(new Date(t.completedAt))).length;
+    const incomingToday = (leads || []).filter(l => l && l.createdAt && isToday(new Date(l.createdAt))).length;
 
     return {
       todayTasks,
