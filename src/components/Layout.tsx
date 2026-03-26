@@ -309,7 +309,7 @@ export function Layout() {
     <div className="flex h-full" style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}>
       {/* Sidebar */}
       <aside
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} flex flex-col border-r transition-all duration-300 shrink-0`}
+        className={`${sidebarOpen ? 'w-64' : 'w-20'} flex flex-col border-r transition-[width] duration-200 ease-in-out shrink-0`}
         style={{
           background: 'var(--t-sidebar-bg)',
           borderColor: 'var(--t-sidebar-border)',
@@ -327,54 +327,52 @@ export function Layout() {
           >
             <Building2 size={22} />
           </div>
-          {sidebarOpen && (
-            <div className="overflow-hidden">
-              <h1 className="text-lg font-bold leading-tight tracking-tight" style={{ color: 'var(--t-text)' }}>
-                WholeScale
-              </h1>
-              <p
-                className="text-[10px] uppercase tracking-widest font-semibold"
-                style={{ color: 'var(--t-primary-text)' }}
-              >
-                OS
-              </p>
-            </div>
-          )}
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${sidebarOpen ? 'max-w-[150px] opacity-100 ml-0' : 'max-w-0 opacity-0 ml-0'}`}>
+            <h1 className="text-lg font-bold leading-tight tracking-tight whitespace-nowrap" style={{ color: 'var(--t-text)' }}>
+              WholeScale
+            </h1>
+            <p
+              className="text-[10px] uppercase tracking-widest font-semibold"
+              style={{ color: 'var(--t-primary-text)' }}
+            >
+              OS
+            </p>
+          </div>
         </Link>
 
         {/* Team Switcher - Fixed with smooth scrolling dropdown */}
-        {sidebarOpen && (
-          <div
-            className="mx-3 mt-3 rounded-xl border overflow-visible relative"
-            style={{
-              background: 'var(--t-input-bg, rgba(0,0,0,0.2))',
-              borderColor: 'var(--t-sidebar-border)',
-            }}
+        <div
+          className={`mx-3 mt-3 rounded-xl border overflow-visible relative transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 border-none overflow-hidden'}`}
+          style={{
+            background: 'var(--t-input-bg, rgba(0,0,0,0.2))',
+            borderColor: 'var(--t-sidebar-border)',
+          }}
+        >
+          <button
+            onClick={() => setShowTeamDropdown(!showTeamDropdown)}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--t-surface-hover)]"
           >
-            <button
-              onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--t-surface-hover)]"
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: 'var(--t-primary-dim, rgba(59,130,246,0.15))' }}
             >
-              <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: 'var(--t-primary-dim, rgba(59,130,246,0.15))' }}
-              >
-                <Building2 size={13} style={{ color: 'var(--t-primary)' }} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate" style={{ color: 'var(--t-text)' }}>
-                  {teamConfig.name || 'My Team'}
-                </p>
-                <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>
-                  {team.length} member{team.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <ChevronDown
-                size={14}
-                className={`transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
-                style={{ color: 'var(--t-text-muted)' }}
-              />
-            </button>
+              <Building2 size={13} style={{ color: 'var(--t-primary)' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold truncate" style={{ color: 'var(--t-text)' }}>
+                {teamConfig.name || 'My Team'}
+              </p>
+              <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>
+                {team.length} member{team.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <ChevronDown
+              size={14}
+              className={`transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+              style={{ color: 'var(--t-text-muted)' }}
+            />
+          </button>
+          {/* Dropdown Menu - rest omitted for brevity in replacement but kept in file */}
 
             {/* Dropdown Menu - Fixed with smooth scrolling */}
             {showTeamDropdown && (
@@ -460,7 +458,6 @@ export function Layout() {
               </>
             )}
           </div>
-        )}
 
         {/* Nav */}
         <nav className="flex-1 flex flex-col p-3 mt-2 overflow-y-auto">
@@ -469,24 +466,24 @@ export function Layout() {
 
             return (
               <div key={sectionName} className={sectionIndex > 0 ? "pt-2 space-y-1" : "space-y-1"}>
-                {sidebarOpen && (
-                  <button
-                    onClick={() => toggleSection(sectionName)}
-                    className="w-full flex items-center justify-between px-3 py-1 mb-1 group"
-                  >
+                <button
+                  onClick={() => toggleSection(sectionName)}
+                  className="w-full flex items-center justify-between px-3 py-1 mb-1 group"
+                >
+                  <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
                     <span 
-                      className="text-[10px] uppercase tracking-wider font-semibold transition-colors group-hover:text-current"
+                      className="text-[10px] uppercase tracking-wider font-semibold transition-colors group-hover:text-current whitespace-nowrap"
                       style={{ color: 'var(--t-text-muted)' }}
                     >
                       {sectionName}
                     </span>
-                    <ChevronDown
-                      size={14}
-                      className={`transition-transform duration-200 group-hover:text-current ${isCollapsed ? '-rotate-90' : ''}`}
-                      style={{ color: 'var(--t-text-muted)' }}
-                    />
-                  </button>
-                )}
+                  </div>
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 group-hover:text-current ${isCollapsed ? '-rotate-90' : ''} ${!sidebarOpen ? 'opacity-0' : 'opacity-100'}`}
+                    style={{ color: 'var(--t-text-muted)' }}
+                  />
+                </button>
                 
                 {(!isCollapsed || !sidebarOpen) && (
                   <div className="flex flex-col gap-1">
@@ -515,18 +512,22 @@ export function Layout() {
                           })}
                         >
                           <Icon size={20} className="shrink-0" />
-                          {sidebarOpen && <span className="flex-1">{label}</span>}
-                          {sidebarOpen && badge > 0 && (
-                            <span
-                              className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
-                              style={{
-                                background: label === 'Tasks' ? 'var(--t-warning)' :
-                                            label === 'Chat' ? 'var(--t-primary)' :
-                                            'var(--t-success)',
-                              }}
-                            >
-                              {badge}
-                            </span>
+                          <span className={`flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
+                            {label}
+                          </span>
+                          {badge > 0 && (
+                            <div className={`transition-all duration-300 overflow-hidden ${sidebarOpen ? 'max-w-[40px] opacity-100' : 'max-w-0 opacity-0'}`}>
+                              <span
+                                className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
+                                style={{
+                                  background: label === 'Tasks' ? 'var(--t-warning)' :
+                                              label === 'Chat' ? 'var(--t-primary)' :
+                                              'var(--t-success)',
+                                }}
+                              >
+                                {badge}
+                              </span>
+                            </div>
                           )}
                           {!sidebarOpen && badge > 0 && (
                             <span
@@ -553,44 +554,42 @@ export function Layout() {
         </nav>
 
         {/* Online Team Members */}
-        {sidebarOpen && (
-          <div
-            className="px-4 py-3 border-t"
-            style={{ borderColor: 'var(--t-sidebar-border)' }}
-          >
-            <p className="text-[10px] uppercase tracking-wider font-semibold mb-2" style={{ color: 'var(--t-text-muted)' }}>
-              Online Now
-            </p>
-            <div className="space-y-1.5">
-              {team
-                .filter(m => m.presenceStatus !== 'offline')
-                .slice(0, 4)
-                .map(m => (
-                  <div key={m.id} className="flex items-center gap-2">
-                    <div className="relative">
-                      <div
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                        style={{ background: `linear-gradient(135deg, var(--t-avatar-from), var(--t-avatar-to))` }}
-                      >
-                        {m.avatar}
-                      </div>
-                      <span className="absolute -bottom-0.5 -right-0.5">
-                        <StatusIndicator status={m.presenceStatus} size="sm" />
-                      </span>
+        <div
+          className={`px-4 py-3 border-t transition-all duration-300 overflow-hidden ${sidebarOpen ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0 py-0 border-none'}`}
+          style={{ borderColor: 'var(--t-sidebar-border)' }}
+        >
+          <p className="text-[10px] uppercase tracking-wider font-semibold mb-2 whitespace-nowrap" style={{ color: 'var(--t-text-muted)' }}>
+            Online Now
+          </p>
+          <div className="space-y-1.5">
+            {team
+              .filter(m => m.presenceStatus !== 'offline')
+              .slice(0, 4)
+              .map(m => (
+                <div key={m.id} className="flex items-center gap-2">
+                  <div className="relative">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                      style={{ background: `linear-gradient(135deg, var(--t-avatar-from), var(--t-avatar-to))` }}
+                    >
+                      {m.avatar}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs truncate" style={{ color: 'var(--t-text-secondary)' }}>
-                        {m.name.split(' ')[0]}
-                      </p>
-                    </div>
+                    <span className="absolute -bottom-0.5 -right-0.5">
+                      <StatusIndicator status={m.presenceStatus} size="sm" />
+                    </span>
                   </div>
-                ))}
-              {team.filter(m => m.presenceStatus !== 'offline').length === 0 && (
-                <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>No one online</p>
-              )}
-            </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs truncate" style={{ color: 'var(--t-text-secondary)' }}>
+                      {m.name.split(' ')[0]}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            {team.filter(m => m.presenceStatus !== 'offline').length === 0 && (
+              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>No one online</p>
+            )}
           </div>
-        )}
+        </div>
       </aside>
 
       {/* Main content */}

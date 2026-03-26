@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -32,7 +33,9 @@ export const Modal: React.FC<ModalProps> = ({
     if (isOpen) {
       setIsRendered(true);
       document.body.style.overflow = 'hidden';
+      document.body.classList.add('modal-blur-active');
     } else {
+      document.body.classList.remove('modal-blur-active');
       const timer = setTimeout(() => {
         setIsRendered(false);
         document.body.style.overflow = '';
@@ -42,12 +45,13 @@ export const Modal: React.FC<ModalProps> = ({
 
     return () => {
       document.body.style.overflow = '';
+      document.body.classList.remove('modal-blur-active');
     };
   }, [isOpen]);
 
   if (!isOpen && !isRendered) return null;
 
-  return (
+  return createPortal(
     <div 
       data-modal-backdrop
       className={`fixed inset-0 flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl transition-all duration-300 ${
@@ -85,6 +89,7 @@ export const Modal: React.FC<ModalProps> = ({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

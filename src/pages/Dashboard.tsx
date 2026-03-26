@@ -1,5 +1,5 @@
 /** Main CRM Dashboard */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource, type Timeframe } from '../store/useStore';
 import { 
   Users, 
@@ -14,11 +14,14 @@ import {
   Settings,
   Check,
   RotateCcw,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  LayoutGrid,
+  Save
 } from 'lucide-react';
 import { StreakBadge } from '../components/StreakBadge';
 import { TeamLeaderboard } from '../components/TeamLeaderboard';
-import { AIDashboardSummary } from '../components/AIDashboardSummary';
+
 import { AIQuickBoard } from '../components/AIQuickBoard';
 import { PipelineChart } from '../components/PipelineChart';
 import { MetricCard } from '../components/MetricCard';
@@ -107,6 +110,10 @@ export default function Dashboard() {
   } = useStore();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const presetsRef = useRef<HTMLDivElement>(null);
 
   // Widget Registry
   const DEFAULT_LAYOUT = [
@@ -117,6 +124,12 @@ export default function Dashboard() {
     'leaderboard-recent'
   ];
 
+  const PRESETS: Record<string, { label: string; icon: any; layout: string[] }> = {
+    default: { label: 'Default', icon: LayoutGrid, layout: DEFAULT_LAYOUT },
+    focused: { label: 'Focused', icon: Target, layout: ['quick-board', 'leaderboard-recent'] },
+    analytics: { label: 'Analytics', icon: TrendingUp, layout: ['profit-projection', 'pipeline-trends'] },
+  };
+
   const currentLayout = dashboardLayout?.length > 0 ? dashboardLayout : DEFAULT_LAYOUT;
 
   const moveWidget = (from: number, to: number) => {
@@ -124,6 +137,45 @@ export default function Dashboard() {
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
     setDashboardLayout(next);
+  };
+
+  // Close presets dropdown on outside click
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (presetsRef.current && !presetsRef.current.contains(e.target as Node)) {
+        setShowPresets(false);
+      }
+    };
+    if (showPresets) document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [showPresets]);
+
+  // Drag handlers
+  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+  };
+  const handleDragOver = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (index !== dragOverIndex) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (index: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    const fromIndex = Number(e.dataTransfer.getData('text/plain'));
+    if (!isNaN(fromIndex) && fromIndex !== index) {
+      moveWidget(fromIndex, index);
+    }
+    setDragOverIndex(null);
+    setDragIndex(null);
+  };
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   const filteredLeads = leads.filter(l => {
@@ -218,7 +270,70 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold text-[var(--t-on-background)]">Dashboard</h1>
           <p className="text-[var(--t-text-secondary)] text-sm mt-1">Welcome back. Here's your pipeline overview.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Preset Dropdown */}
+          <div className="relative" ref={presetsRef}>
+            <button
+              onClick={() => setShowPresets(!showPresets)}
+              className="p-2 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white transition-all flex items-center gap-2 text-xs font-bold"
+            >
+              <LayoutGrid size={14} />
+              Presets
+              <ChevronDown size={12} className={`transition-transform ${showPresets ? 'rotate-180' : ''}`} />
+            </button>
+            {showPresets && (
+              <div className="absolute right-0 mt-2 w-56 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl z-50 overflow-hidden">
+                {Object.entries(PRESETS).map(([key, preset]) => {
+                  const Icon = preset.icon;
+                  const isActive = JSON.stringify(currentLayout) === JSON.stringify(preset.layout);
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setDashboardLayout(preset.layout); setShowPresets(false); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-bold transition-colors text-left ${
+                        isActive ? 'bg-[var(--t-primary-dim)] text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] hover:text-white'
+                      }`}
+                    >
+                      <Icon size={14} />
+                      {preset.label}
+                      {isActive && <Check size={12} className="ml-auto" />}
+                    </button>
+                  );
+                })}
+                <div className="border-t border-[var(--t-border)]">
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('dashboard-custom-preset', JSON.stringify(currentLayout));
+                      setShowPresets(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-[var(--t-success)] hover:bg-[var(--t-success)]/10 transition-colors text-left"
+                  >
+                    <Save size={14} />
+                    Save Current as Custom
+                  </button>
+                  {(() => {
+                    try {
+                      const saved = localStorage.getItem('dashboard-custom-preset');
+                      if (saved) {
+                        const custom = JSON.parse(saved);
+                        return (
+                          <button
+                            onClick={() => { setDashboardLayout(custom); setShowPresets(false); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold text-[var(--t-accent)] hover:bg-[var(--t-accent)]/10 transition-colors text-left"
+                          >
+                            <LayoutGrid size={14} />
+                            Load Custom
+                          </button>
+                        );
+                      }
+                    } catch { /* ignore */ }
+                    return null;
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setIsEditing(!isEditing)}
             className={`p-2 rounded-xl border transition-all flex items-center gap-2 text-xs font-bold ${
@@ -262,16 +377,12 @@ export default function Dashboard() {
       {/* Widgets Container */}
       <div className="space-y-6">
         {currentLayout.map((widgetId, index) => {
-          const isFirst = index === 0;
-          const isLast = index === currentLayout.length - 1;
-
           const renderWidget = () => {
             switch (widgetId) {
               case 'quick-board':
                 return (
                   <div key="quick-board" className="space-y-4">
                     <AIQuickBoard />
-                    <AIDashboardSummary />
                   </div>
                 );
               case 'stats-grid':
@@ -456,7 +567,7 @@ export default function Dashboard() {
                           const sc = getScoreColor(score);
                           return (
                             <div key={lead.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-colors cursor-pointer"
-                              onClick={() => navigate(`/leads?id=${lead.id}`)}
+                              onClick={() => navigate(`/leads/${lead.id}/manage`)}
                             >
                               <span className="text-sm font-bold text-[var(--t-text-muted)] w-4 text-center">{i + 1}</span>
                               <div 
@@ -487,7 +598,7 @@ export default function Dashboard() {
                           return (
                             <div 
                               key={lead.id} 
-                              onClick={() => navigate(`/leads?id=${lead.id}`)}
+                              onClick={() => navigate(`/leads/${lead.id}/manage`)}
                               className="flex items-center gap-4 p-3 rounded-xl border border-[var(--t-border-subtle)] hover:bg-[var(--t-surface-hover)] transition-colors cursor-pointer group/lead"
                             >
                               <div className="w-10 h-10 rounded-xl bg-[var(--t-surface-dim)] flex items-center justify-center font-bold text-[var(--t-primary)] group-hover/lead:scale-110 transition-transform">
@@ -553,31 +664,27 @@ export default function Dashboard() {
           };
 
           return (
-            <div key={widgetId} className="relative group/widget">
+            <div
+              key={widgetId}
+              className={`relative group/widget transition-all duration-200 ${
+                isEditing ? 'cursor-grab active:cursor-grabbing' : ''
+              } ${
+                dragIndex === index ? 'opacity-40 scale-[0.98]' : ''
+              } ${
+                dragOverIndex === index && dragIndex !== index ? 'border-t-2 border-[var(--t-primary)] pt-2' : ''
+              }`}
+              draggable={isEditing}
+              onDragStart={handleDragStart(index)}
+              onDragOver={handleDragOver(index)}
+              onDrop={handleDrop(index)}
+              onDragEnd={handleDragEnd}
+            >
               {isEditing && (
-                <div className="absolute -left-12 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-10 opacity-0 group-hover/widget:opacity-100 transition-opacity">
-                  <button
-                    disabled={isFirst}
-                    onClick={() => moveWidget(index, index - 1)}
-                    className="p-2 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white disabled:opacity-20 active:scale-90 transition-all shadow-xl"
-                  >
-                    <ArrowUpRight className="w-4 h-4 -rotate-90" />
-                  </button>
-                  <div
-                    className="p-2 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text-muted)] cursor-grab active:cursor-grabbing shadow-xl"
-                  >
-                    <GripVertical size={16} />
-                  </div>
-                  <button
-                    disabled={isLast}
-                    onClick={() => moveWidget(index, index + 1)}
-                    className="p-2 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white disabled:opacity-20 active:scale-90 transition-all shadow-xl"
-                  >
-                    <ArrowUpRight className="w-4 h-4 rotate-90" />
-                  </button>
+                <div className="absolute -left-8 top-4 z-10 opacity-30 group-hover/widget:opacity-100 transition-opacity">
+                  <GripVertical size={18} className="text-[var(--t-text-muted)]" />
                 </div>
               )}
-              <div className={`transition-all duration-300 ${isEditing ? 'pl-4 hover:translate-x-2' : ''}`}>
+              <div className={`transition-all duration-300 ${isEditing ? 'pl-4 rounded-xl border border-dashed border-[var(--t-border)] hover:border-[var(--t-primary)]/40 py-2' : ''}`}>
                 {renderWidget()}
               </div>
             </div>

@@ -169,7 +169,7 @@ export function AIQuickBoard() {
               {agenda.hotLeads.length > 0 ? (
                 agenda.hotLeads.slice(0, 2).map(lead => (
                   <div key={lead.id} className="p-3 rounded-2xl bg-[var(--t-surface)]/40 border border-[var(--t-border-subtle)] hover:border-[var(--t-primary)]/30 transition-colors cursor-pointer group/item"
-                    onClick={() => navigate(`/leads?id=${lead.id}`)}
+                    onClick={() => navigate(`/leads/${lead.id}/manage`)}
                   >
                     <p className="text-xs text-white font-medium truncate">{lead.name}</p>
                     <div className="flex justify-between items-center mt-1">
@@ -186,7 +186,7 @@ export function AIQuickBoard() {
             </div>
             
             <button 
-              onClick={() => navigate('/chat')}
+              onClick={() => navigate('/ai-test')}
               className="w-full mt-2 py-3 bg-[var(--t-primary)] hover:bg-[var(--t-primary-active)] text-white text-xs font-bold rounded-2xl transition-all shadow-lg shadow-[var(--t-primary)]/20 active:scale-[0.98]"
             >
               Consult {aiName} Assistant
