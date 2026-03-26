@@ -14,13 +14,9 @@ interface LeadQuickViewModalProps {
 
 export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, onClose, onOpenFull }) => {
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    document.body.style.height = '100vh';
-    document.documentElement.style.overflow = 'hidden';
+    document.body.classList.add('modal-open');
     return () => {
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-      document.documentElement.style.overflow = '';
+      document.body.classList.remove('modal-open');
     };
   }, []);
 
@@ -33,7 +29,10 @@ export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, on
     .slice(0, 3);
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 bg-black/70 backdrop-blur-md animate-in fade-in duration-300">
+    <div 
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300"
+      onClick={onClose}
+    >
       <div 
         className="relative w-full max-w-[90%] sm:max-w-[80%] md:max-w-2xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}

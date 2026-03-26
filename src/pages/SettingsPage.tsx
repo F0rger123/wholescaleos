@@ -7,14 +7,13 @@ import {
   Check, Globe, Building, Mail, Phone, MapPin,
   Upload, Download, Trash2, RefreshCw, Smartphone, Lock,
   Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
-  Users, UserMinus,
+  Users, UserMinus, Plus, Keyboard,
   HardDrive, Send, Sparkles, ExternalLink, QrCode, Award, 
   Linkedin, Facebook, Instagram, Twitter, Share2
 } from 'lucide-react';
 import AISettings from './AISettings';
 import SMSSettings from './SMSSettings';
 import ShortcutSettings from './ShortcutSettings';
-import { Keyboard } from 'lucide-react';
 import { FileUploader } from '../components/FileUploader';
 import { GoogleCalendarService } from '../lib/google-calendar';
 
@@ -1265,77 +1264,149 @@ function EmailTab() {
    BACKUP TAB
    ============================================================ */
 function BackupTab() {
-  const { leads, tasks, buyers, coverageAreas, team, teamId } = useStore();
-  const [backingUp, setBackingUp] = useState(false);
-  const [backupResult, setBackupResult] = useState<string | null>(null);
+  const { 
+    leads, tasks, team, buyers, coverageAreas,
+    lastAutoSave, backups, manualSave, saveStatus,
+    createBackup, revertToBackup, deleteBackup, exportData
+  } = useStore();
+  
+  const [backupName, setBackupName] = useState('');
 
-  const handleBackup = async () => {
-    setBackingUp(true);
-    setBackupResult(null);
-
-    const backupData = {
-      version: '1.0',
-      createdAt: new Date().toISOString(),
-      teamId,
-      data: { leads, tasks, buyers, coverageAreas, team },
-      summary: {
-        leads: leads.length,
-        tasks: tasks.length,
-        buyers: buyers.length,
-        coverageAreas: coverageAreas.length,
-        teamMembers: team.length,
-      },
-    };
-
-    // Download as JSON
-    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `wholescale-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    setBackingUp(false);
-    setBackupResult('Backup downloaded successfully!');
-    setTimeout(() => setBackupResult(null), 5000);
+  const getTimeAgo = (timestamp: string | null) => {
+    if (!timestamp) return 'Never';
+    const seconds = Math.floor((new Date().getTime() - new Date(timestamp).getTime()) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    return new Date(timestamp).toLocaleDateString();
   };
 
   return (
     <div className="space-y-6">
+      {/* Auto-save Status */}
       <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Backup & Restore</h2>
-        <p className="text-sm mb-4" style={{ color: 'var(--t-text-secondary)' }}>Download a backup of all your team's data</p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>Data Resilience</h2>
+            <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Your data is automatically saved every 5 minutes.</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--t-text-muted)' }}>Last Auto-Saved</p>
+            <p className="text-sm font-mono" style={{ color: 'var(--t-primary)' }}>{getTimeAgo(lastAutoSave)}</p>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)]">
+          <div className="flex-1">
+            <p className="text-sm font-medium mb-1">Manual Save</p>
+            <p className="text-xs text-[var(--t-text-muted)]">Force a synchronization of all current workspace data.</p>
+          </div>
+          <button
+            onClick={() => manualSave()}
+            disabled={saveStatus === 'saving'}
+            className="px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+            style={{ 
+              backgroundColor: saveStatus === 'success' ? 'var(--t-success-dim)' : 'var(--t-primary)',
+              color: saveStatus === 'success' ? 'var(--t-success)' : 'var(--t-on-primary)'
+            }}
+          >
+            {saveStatus === 'saving' ? <Loader2 size={14} className="animate-spin" /> : saveStatus === 'success' ? <Check size={14} /> : <Save size={14} />}
+            {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? 'Saved' : 'Save Now'}
+          </button>
+        </div>
+      </div>
+
+      {/* Manual Backups */}
+      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--t-text)' }}>System Backups</h2>
+        
+        <div className="flex gap-2 mb-6">
+          <input
+            type="text"
+            value={backupName}
+            onChange={(e) => setBackupName(e.target.value)}
+            placeholder="Backup name (optional)..."
+            className="flex-1 px-4 py-2 rounded-lg text-sm"
+            style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+          />
+          <button
+            onClick={() => {
+              createBackup(backupName);
+              setBackupName('');
+            }}
+            className="px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2"
+            style={{ backgroundColor: 'var(--t-surface-hover)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+          >
+            <Plus size={14} /> Create Backup
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {backups.length === 0 ? (
+            <div className="text-center py-8 rounded-xl border border-dashed border-[var(--t-border)]">
+              <p className="text-sm text-[var(--t-text-muted)]">No backups found</p>
+            </div>
+          ) : (
+            backups.map((backup) => (
+              <div key={backup.id} className="flex items-center justify-between p-4 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] flex items-center justify-center text-[var(--t-text-muted)]">
+                    <Database size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">{backup.name}</p>
+                    <p className="text-[10px] text-[var(--t-text-muted)]">{new Date(backup.timestamp).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => revertToBackup(backup.id)}
+                    className="p-2 rounded-lg hover:bg-[var(--t-primary-dim)] text-[var(--t-primary)] transition-colors"
+                    title="Restore this backup"
+                  >
+                    <RefreshCw size={16} />
+                  </button>
+                  <button
+                    onClick={() => deleteBackup(backup.id)}
+                    className="p-2 rounded-lg hover:bg-red-500/10 text-red-500 transition-colors"
+                    title="Delete backup"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Export Data */}
+      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Data Portability</h2>
+        <p className="text-sm mb-6" style={{ color: 'var(--t-text-secondary)' }}>Export all your workspace data to a standardized JSON format for external use.</p>
+        
+        <div className="grid grid-cols-4 gap-3 mb-6">
           {[
-            ['Leads', leads.length],
-            ['Tasks', tasks.length],
-            ['Buyers', buyers.length],
-            ['Team', team.length],
-          ].map(([label, count]) => (
-            <div key={label as string} className="p-3 rounded-lg text-center" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-              <p className="text-xl font-bold" style={{ color: 'var(--t-primary)' }}>{count}</p>
-              <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>{label}</p>
+            { label: 'Leads', count: leads.length },
+            { label: 'Tasks', count: tasks.length },
+            { label: 'Buyers', count: buyers.length },
+            { label: 'Areas', count: coverageAreas.length },
+          ].map((item) => (
+            <div key={item.label} className="p-3 rounded-lg text-center bg-[var(--t-bg)] border border-[var(--t-border)]">
+              <p className="text-lg font-bold" style={{ color: 'var(--t-primary)' }}>{item.count}</p>
+              <p className="text-[10px] uppercase tracking-tighter" style={{ color: 'var(--t-text-muted)' }}>{item.label}</p>
             </div>
           ))}
         </div>
 
-        {backupResult && (
-          <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: 'var(--t-success-dim)', border: '1px solid var(--t-success)' }}>
-            <Check size={16} style={{ color: 'var(--t-success)' }} />
-            <span className="text-sm" style={{ color: 'var(--t-success)' }}>{backupResult}</span>
-          </div>
-        )}
-
         <button
-          onClick={handleBackup}
-          disabled={backingUp}
-          className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-          style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+          onClick={exportData}
+          className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-[var(--t-surface-hover)]"
+          style={{ border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
         >
-          {backingUp ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-          {backingUp ? 'Creating Backup...' : 'Download Backup'}
+          <Download size={16} /> Export All Data (.json)
         </button>
       </div>
     </div>
