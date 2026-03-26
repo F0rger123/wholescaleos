@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type Lead, type LeadSource } from '../store/useStore';
-import { LeadQuickViewModal } from '../components/LeadQuickViewModal';
+import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
 import { 
   Users, 
   Target, 
@@ -15,7 +14,6 @@ import {
   PieChart,
   BarChart3,
   Activity,
-  Eye,
   ExternalLink
 } from 'lucide-react';
 import { StreakBadge } from '../components/StreakBadge';
@@ -150,7 +148,6 @@ type Timeframe = '7d' | '30d' | '90d' | 'all';
 export default function Dashboard() {
   const { leads, team, loginStreak, taskStreak, memberStreaks } = useStore();
   const navigate = useNavigate();
-  const [quickViewLead, setQuickViewLead] = useState<Lead | null>(null);
 
   const [timeframe, setTimeframe] = useState<Timeframe>(
     (localStorage.getItem('dashboard-timeframe') as Timeframe) || '30d'
@@ -661,13 +658,6 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button 
-                      onClick={() => setQuickViewLead(lead)}
-                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
-                      title="Quick View"
-                    >
-                      <Eye size={14} />
-                    </button>
-                    <button 
                       onClick={() => handleOpenLead(lead.id)}
                       className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
                       title="Open Lead"
@@ -713,13 +703,6 @@ export default function Dashboard() {
                     <p className="text-xs text-[var(--t-text-secondary)] truncate">{lead.propertyAddress}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <button 
-                      onClick={() => setQuickViewLead(lead)}
-                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
-                      title="Quick View"
-                    >
-                      <Eye size={14} />
-                    </button>
                     <button 
                       onClick={() => handleOpenLead(lead.id)}
                       className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
@@ -768,16 +751,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {quickViewLead && (
-        <LeadQuickViewModal 
-          lead={quickViewLead} 
-          onClose={() => setQuickViewLead(null)}
-          onOpenFull={() => {
-            handleOpenLead(quickViewLead.id);
-            setQuickViewLead(null);
-          }}
-        />
-      )}
+
     </div>
   );
 }
