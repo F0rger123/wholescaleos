@@ -480,6 +480,9 @@ export default function Home() {
             <Link to="/pricing" className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-bold backdrop-blur-md">
               View All Tiers
             </Link>
+            <Link to="/compare" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-transparent text-white/70 hover:text-white text-sm font-bold flex items-center justify-center gap-2 transition-all">
+              Compare to Others <ArrowRight size={16} />
+            </Link>
           </div>
         </div>
       </section>

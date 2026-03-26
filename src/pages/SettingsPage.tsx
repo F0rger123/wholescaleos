@@ -466,13 +466,27 @@ function ProfileTab() {
         
         {formData.isPublic && (
           <div className="mt-6 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 flex items-center justify-between gap-4">
-             <code className="text-[10px] text-blue-400 font-mono truncate">{publicUrl}</code>
-             <button 
-              onClick={() => { navigator.clipboard.writeText(publicUrl); }}
-              className="text-[10px] uppercase font-black tracking-widest text-blue-500 hover:text-blue-400 transition-colors shrink-0"
-             >
-               Copy Link
-             </button>
+             <code className="text-[10px] text-blue-400 font-mono truncate mr-auto">{publicUrl}</code>
+             <div className="flex items-center gap-4 shrink-0">
+               <button 
+                onClick={() => { 
+                  navigator.clipboard.writeText(publicUrl);
+                  alert('Link copied to clipboard!');
+                }}
+                className="text-[10px] uppercase font-black tracking-widest text-blue-500 hover:text-blue-400 transition-colors"
+               >
+                 Copy Link
+               </button>
+               <div className="w-px h-3 bg-blue-500/20" />
+               <a 
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] uppercase font-black tracking-widest text-blue-500 hover:text-blue-400 transition-colors flex items-center gap-1"
+               >
+                 Open Profile <ExternalLink size={10} />
+               </a>
+             </div>
           </div>
         )}
       </div>

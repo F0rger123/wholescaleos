@@ -5,21 +5,19 @@ import { Link } from 'react-router-dom';
 
 export default function CRMCompare() {
   const competitors = [
-    { name: 'PropStream', color: 'blue' },
-    { name: 'Wise Agent', color: 'green' },
-    { name: 'RealGeeks', color: 'indigo' },
-    { name: 'Follow Up Boss', color: 'purple' }
+    { name: 'PropStream', color: 'blue', price: 99 },
+    { name: 'Wise Agent', color: 'green', price: 32 },
+    { name: 'Follow Up Boss', color: 'purple', price: 69 },
+    { name: 'kvCORE', color: 'indigo', price: 499 }
   ];
 
   const features = [
-    { name: 'AI Lead Triage', ws: true, others: [false, false, false, false] },
-    { name: 'Built-in Skip Tracing', ws: true, others: [true, false, false, false] },
-    { name: 'Unlimited AI Credits*', ws: true, others: [false, false, false, false] },
-    { name: 'Integrated SMS Inbox', ws: true, others: [false, true, true, true] },
-    { name: 'Custom AI Personality', ws: true, others: [false, false, false, false] },
-    { name: 'Public Lead Sharing', ws: true, others: [false, false, false, false] },
-    { name: 'Voice AI Automations', ws: true, others: [false, false, false, false] },
-    { name: 'White Label Option', ws: true, others: [false, false, false, false] },
+    { name: 'Sovereign AI Assistant', ws: true, others: [false, false, false, true] },
+    { name: 'Integrated SMS & WhatsApp', ws: true, others: [false, true, true, true] },
+    { name: 'Google Calendar Sync', ws: true, others: [true, true, true, true] },
+    { name: 'Team Collaboration Hub', ws: true, others: [false, true, true, true] },
+    { name: 'Native iOS/Android App', ws: true, others: [true, true, true, true] },
+    { name: 'White-Label Branding', ws: true, others: [false, false, false, false] },
     { name: 'Zero Setup Fees', ws: true, others: [true, true, false, false] },
   ];
 
@@ -70,12 +68,37 @@ export default function CRMCompare() {
                           <Check size={14} strokeWidth={2.5} />
                         </div>
                       ) : (
-                        <div className="text-gray-700 font-black">â€”</div>
+                        <div className="text-gray-700 font-black">—</div>
                       )}
                     </td>
                   ))}
                 </tr>
               ))}
+              
+              {/* Pricing Row */}
+              <tr className="bg-white/[0.02] border-t-2 border-blue-500/30">
+                <td className="py-10 px-8">
+                  <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Entry Price</div>
+                  <div className="text-lg font-bold text-white">Monthly Cost</div>
+                </td>
+                <td className="py-10 px-8 text-center bg-blue-600/10">
+                  <div className="text-3xl font-black text-white">$49</div>
+                  <div className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-1">Sovereign Plan</div>
+                </td>
+                {competitors.map((c, i) => {
+                  const yearlySavings = (c.price - 49) * 12;
+                  return (
+                    <td key={i} className="py-10 px-8 text-center group">
+                      <div className="text-xl font-bold text-gray-400">${c.price}</div>
+                      {yearlySavings > 0 && (
+                        <div className="mt-2 inline-block px-2 py-1 rounded bg-green-500/10 border border-green-500/20 text-[9px] font-black text-green-500 uppercase tracking-tighter">
+                          Save ${yearlySavings.toLocaleString()}/yr
+                        </div>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
             </tbody>
           </table>
         </div>
