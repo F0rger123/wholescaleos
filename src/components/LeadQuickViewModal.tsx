@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { 
   X, Activity, Target, ExternalLink, 
   Phone, Mail, MapPin
 } from 'lucide-react';
 import { Lead, generateNextAction, calculateDealScore, getScoreColor, STATUS_LABELS } from '../store/useStore';
 import { formatDistanceToNow } from 'date-fns';
+import { Modal } from './Modal';
 
 interface LeadQuickViewModalProps {
   lead: Lead;
@@ -13,30 +14,23 @@ interface LeadQuickViewModalProps {
 }
 
 export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, onClose, onOpenFull }) => {
-  useEffect(() => {
-    document.body.classList.add('modal-open');
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, []);
-
   const score = calculateDealScore(lead);
   const scoreBadge = getScoreColor(score);
   const nextAction = generateNextAction(lead);
   
   const recentActivity = [...lead.timeline]
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 3);
+    .slice(0, 4);
 
   return (
-    <div 
-      className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300"
-      onClick={onClose}
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      zIndex={10000}
+      maxWidth="max-w-2xl"
+      showClose={false} // Custom header
     >
-      <div 
-        className="relative w-full max-w-[90%] sm:max-w-[80%] md:max-w-2xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="flex flex-col h-full">
         {/* Header */}
         <div className="p-6 border-b border-[var(--t-border)] flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -71,7 +65,7 @@ export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, on
           </button>
         </div>
 
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+        <div className="p-6 space-y-6 overflow-y-auto">
           {/* Contact Quick Info */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-[var(--t-surface-dim)] p-3 rounded-2xl border border-[var(--t-border-subtle)]">
@@ -128,7 +122,7 @@ export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, on
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 bg-[var(--t-surface-dim)] border-t border-[var(--t-border)] flex gap-3">
+        <div className="p-6 bg-[var(--t-surface-dim)] border-t border-[var(--t-border)] flex gap-3 mt-auto shrink-0">
           <button 
             onClick={onOpenFull}
             className="flex-1 py-3 px-4 bg-[var(--t-surface-hover)] text-white font-bold rounded-2xl flex items-center justify-center gap-2 hover:bg-[var(--t-surface-active)] transition-all border border-[var(--t-border)]"
@@ -140,6 +134,7 @@ export const LeadQuickViewModal: React.FC<LeadQuickViewModalProps> = ({ lead, on
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
+
