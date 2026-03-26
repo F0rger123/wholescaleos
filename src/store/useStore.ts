@@ -7,18 +7,18 @@ import { themes } from '../styles/themes';
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost';
-export type LeadSource = 
-  | 'bandit-signs' 
-  | 'personal-relations' 
-  | 'pay-per-lead' 
-  | 'doorknocking' 
-  | 'referral' 
-  | 'website' 
-  | 'social-media' 
-  | 'open-house' 
-  | 'fsbo' 
-  | 'cold-call' 
-  | 'email-campaign' 
+export type LeadSource =
+  | 'bandit-signs'
+  | 'personal-relations'
+  | 'pay-per-lead'
+  | 'doorknocking'
+  | 'referral'
+  | 'website'
+  | 'social-media'
+  | 'open-house'
+  | 'fsbo'
+  | 'cold-call'
+  | 'email-campaign'
   | 'other';
 export type PropertyType = 'single-family' | 'multi-family' | 'commercial' | 'land' | 'condo';
 export type TimelineType = 'call' | 'email' | 'note' | 'status-change' | 'meeting' | 'task';
@@ -137,6 +137,9 @@ export interface Lead {
   status: LeadStatus;
   source: LeadSource;
   propertyAddress: string;
+  city?: string;
+  state?: string;
+  zip?: string;
   propertyType: string; // Changed to string for more flexibility
   estimatedValue: number;
   bedrooms: number;
@@ -149,6 +152,7 @@ export interface Lead {
   assignedTo: string;
   createdAt: string;
   updatedAt: string;
+  lastContact?: string;
   probability: number;
   engagementLevel: number;
   timelineUrgency: number;
@@ -221,6 +225,7 @@ export interface UserProfile {
   acceptLeads?: boolean;
   website?: string;
   aiCustomInstructions?: string;
+  settings?: Record<string, any>;
 }
 
 export interface Task {
@@ -556,25 +561,25 @@ export function calculateDealScore(lead: Lead): number {
   // Value component: Logarithmic scaling for property value (more sensitive to lower values, capped at $1.5M)
   const valueCap = 1500000;
   const valueScore = Math.min(Math.log10(Math.max(1, lead.estimatedValue)) / Math.log10(valueCap), 1) * 100;
-  
+
   // Probability component: Direct from lead data
   const probScore = lead.probability || 40;
-  
+
   // Engagement component: (Level 1-5)
   const engageScore = ((lead.engagementLevel || 3) - 1) * 25;
-  
+
   // Urgency component: (Level 1-5)
   const urgencyScore = ((lead.timelineUrgency || 3) - 1) * 25;
-  
+
   // Competition component: (Level 1-5, inverted as lower competition is better)
   const competitionScore = (5 - (lead.competitionLevel || 3)) * 25;
 
   // Weighted Average
   const raw = (
-    valueScore * 0.35 + 
-    probScore * 0.25 + 
-    engageScore * 0.15 + 
-    urgencyScore * 0.15 + 
+    valueScore * 0.35 +
+    probScore * 0.25 +
+    engageScore * 0.15 +
+    urgencyScore * 0.15 +
     competitionScore * 0.10
   );
 
@@ -582,40 +587,40 @@ export function calculateDealScore(lead: Lead): number {
 }
 
 export function getScoreColor(score: number) {
-  if (score >= 80) return { 
-    bg: 'rgba(22, 163, 74, 0.15)', 
-    text: '#16A34A', 
-    ring: 'box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.4)', 
-    bar: '#16A34A', 
-    label: 'Elite' 
+  if (score >= 80) return {
+    bg: 'rgba(22, 163, 74, 0.15)',
+    text: '#16A34A',
+    ring: 'box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.4)',
+    bar: '#16A34A',
+    label: 'Elite'
   };
-  if (score >= 60) return { 
-    bg: 'rgba(132, 204, 22, 0.15)', 
-    text: '#84CC16', 
-    ring: 'box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.4)', 
-    bar: '#84CC16', 
-    label: 'High' 
+  if (score >= 60) return {
+    bg: 'rgba(132, 204, 22, 0.15)',
+    text: '#84CC16',
+    ring: 'box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.4)',
+    bar: '#84CC16',
+    label: 'High'
   };
-  if (score >= 40) return { 
-    bg: 'rgba(245, 158, 11, 0.15)', 
-    text: '#F59E0B', 
-    ring: 'box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4)', 
-    bar: '#F59E0B', 
-    label: 'Warn' 
+  if (score >= 40) return {
+    bg: 'rgba(245, 158, 11, 0.15)',
+    text: '#F59E0B',
+    ring: 'box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4)',
+    bar: '#F59E0B',
+    label: 'Warn'
   };
-  if (score >= 20) return { 
-    bg: 'rgba(234, 88, 12, 0.15)', 
-    text: '#EA580C', 
-    ring: 'box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.4)', 
-    bar: '#EA580C', 
-    label: 'Cold' 
+  if (score >= 20) return {
+    bg: 'rgba(234, 88, 12, 0.15)',
+    text: '#EA580C',
+    ring: 'box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.4)',
+    bar: '#EA580C',
+    label: 'Cold'
   };
-  return { 
-    bg: 'rgba(153, 27, 27, 0.15)', 
-    text: '#991B1B', 
-    ring: 'box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.4)', 
-    bar: '#991B1B', 
-    label: 'Dead' 
+  return {
+    bg: 'rgba(153, 27, 27, 0.15)',
+    text: '#991B1B',
+    ring: 'box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.4)',
+    bar: '#991B1B',
+    label: 'Dead'
   };
 }
 
@@ -797,20 +802,20 @@ export function parsePastedData(text: string): ParsedPasteResult {
     .trim();
 
   const lines = cleanText.split('\n').filter(l => l.trim().length > 0);
-  
+
   if (lines.length === 0) {
     return { rows: [], headers: [], columns: [], delimiter: ',', rowCount: 0 };
   }
 
   // Try to detect the delimiter
   let delimiter = detectDelimiterSmart(lines);
-  
+
   // Parse rows based on delimiter
   const allRows: string[][] = [];
-  
+
   for (const line of lines) {
     let cells: string[] = [];
-    
+
     if (delimiter === 'smart') {
       // Smart parsing for unstructured text
       cells = parseUnstructuredText(line);
@@ -824,7 +829,7 @@ export function parsePastedData(text: string): ParsedPasteResult {
       // Simple delimiter splitting (tab, pipe, semicolon)
       cells = line.split(delimiter).map(c => c.trim());
     }
-    
+
     // If we got only one cell but there are clear multiple fields in the line,
     // try to split by common patterns
     if (cells.length === 1 && cells[0] === line && (line.includes(',') || line.includes('\t') || line.includes('|'))) {
@@ -838,12 +843,12 @@ export function parsePastedData(text: string): ParsedPasteResult {
         }
       }
     }
-    
+
     // If still only one cell, try natural language parsing
     if (cells.length === 1) {
       cells = parseNaturalLanguage(line);
     }
-    
+
     allRows.push(cells);
   }
 
@@ -885,10 +890,10 @@ export function parsePastedData(text: string): ParsedPasteResult {
 // Smart delimiter detection
 function detectDelimiterSmart(lines: string[]): string {
   if (lines.length === 0) return ',';
-  
+
   // Check first few lines
   const sampleLines = lines.slice(0, Math.min(5, lines.length));
-  
+
   // Common delimiters to check
   const delimiters = [
     { char: '\t', name: 'tab', regex: /\t/g },
@@ -897,18 +902,18 @@ function detectDelimiterSmart(lines: string[]): string {
     { char: ';', name: 'semicolon', regex: /;/g },
     { char: ':', name: 'colon', regex: /:/g }
   ];
-  
+
   const scores: Record<string, number> = {};
-  
+
   for (const delim of delimiters) {
     let totalCount = 0;
     let consistentCount = true;
     let prevCount: number | null = null;
-    
+
     for (const line of sampleLines) {
       const count = (line.match(delim.regex) || []).length;
       totalCount += count;
-      
+
       if (prevCount !== null && count !== prevCount && count > 0) {
         consistentCount = false;
       }
@@ -916,30 +921,30 @@ function detectDelimiterSmart(lines: string[]): string {
         prevCount = count;
       }
     }
-    
+
     // Score based on count and consistency
     if (totalCount > 0) {
       // Higher score for consistent counts across lines
       scores[delim.char] = totalCount * (consistentCount ? 3 : 1);
     }
   }
-  
+
   // Find best delimiter
   let bestDelim = ',';
   let bestScore = 0;
-  
+
   for (const [delim, score] of Object.entries(scores)) {
     if (score > bestScore) {
       bestScore = score;
       bestDelim = delim;
     }
   }
-  
+
   // If we found a good delimiter, use it
   if (bestScore > 2) {
     return bestDelim;
   }
-  
+
   // Check for multiple spaces as delimiter
   let spaceLines = 0;
   for (const line of sampleLines) {
@@ -950,7 +955,7 @@ function detectDelimiterSmart(lines: string[]): string {
   if (spaceLines >= sampleLines.length / 2) {
     return 'spaces';
   }
-  
+
   return 'smart';
 }
 
@@ -959,10 +964,10 @@ function parseCSVLine(line: string): string[] {
   const cells: string[] = [];
   let current = '';
   let inQuotes = false;
-  
+
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    
+
     if (ch === '"') {
       if (inQuotes && line[i + 1] === '"') {
         // Escaped quote
@@ -978,7 +983,7 @@ function parseCSVLine(line: string): string[] {
       current += ch;
     }
   }
-  
+
   cells.push(current.trim());
   return cells;
 }
@@ -987,9 +992,9 @@ function parseCSVLine(line: string): string[] {
 function parseUnstructuredText(line: string): string[] {
   const trimmed = line.trim();
   if (!trimmed) return [];
-  
+
   // Try to detect common patterns in order of specificity
-  
+
   // Pattern 1: Email with name and phone
   // Example: "John Smith <john@email.com> (555) 123-4567"
   const emailNamePattern = /^([^<]+)<([^>]+)>\s*(.*)$/;
@@ -998,31 +1003,31 @@ function parseUnstructuredText(line: string): string[] {
     const parts = [emailMatch[1].trim(), emailMatch[2].trim(), emailMatch[3].trim()].filter(p => p);
     if (parts.length > 1) return parts;
   }
-  
+
   // Pattern 2: Comma-separated with optional quotes
   if (trimmed.includes(',')) {
     const parts = trimmed.split(',').map(p => p.trim()).filter(p => p);
     if (parts.length > 1) return parts;
   }
-  
+
   // Pattern 3: Tab-separated
   if (trimmed.includes('\t')) {
     const parts = trimmed.split('\t').map(p => p.trim()).filter(p => p);
     if (parts.length > 1) return parts;
   }
-  
+
   // Pattern 4: Pipe-separated
   if (trimmed.includes('|')) {
     const parts = trimmed.split('|').map(p => p.trim()).filter(p => p);
     if (parts.length > 1) return parts;
   }
-  
+
   // Pattern 5: Multiple spaces as delimiter
   if (/\s{2,}/.test(trimmed)) {
     const parts = trimmed.split(/\s{2,}/).map(p => p.trim()).filter(p => p);
     if (parts.length > 1) return parts;
   }
-  
+
   // Pattern 6: Natural language with key information
   return parseNaturalLanguage(trimmed);
 }
@@ -1030,7 +1035,7 @@ function parseUnstructuredText(line: string): string[] {
 // Parse natural language text to extract fields
 function parseNaturalLanguage(text: string): string[] {
   const fields: string[] = [];
-  
+
   // Try to extract email
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
   const emailMatch = text.match(emailRegex);
@@ -1038,7 +1043,7 @@ function parseNaturalLanguage(text: string): string[] {
     fields.push(emailMatch[0]);
     text = text.replace(emailMatch[0], '').trim();
   }
-  
+
   // Try to extract phone number (various formats)
   const phoneRegex = /(\+?1?\s*\(?[0-9]{3}\)?[\s.-]?[0-9]{3}[\s.-]?[0-9]{4})/;
   const phoneMatch = text.match(phoneRegex);
@@ -1046,7 +1051,7 @@ function parseNaturalLanguage(text: string): string[] {
     fields.push(phoneMatch[1]);
     text = text.replace(phoneMatch[1], '').trim();
   }
-  
+
   // Try to extract dollar amount
   const moneyRegex = /\$?\s*([\d,]+(?:\.\d{2})?)\s*(?:k|K|thousand)?/;
   const moneyMatch = text.match(moneyRegex);
@@ -1058,7 +1063,7 @@ function parseNaturalLanguage(text: string): string[] {
     fields.push(`$${value}`);
     text = text.replace(moneyMatch[0], '').trim();
   }
-  
+
   // Try to extract address (number + street name + city/state)
   const addressRegex = /\d+\s+[A-Za-z\s,]+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Drive|Dr|Road|Rd|Lane|Ln|Court|Ct|Way|Circle|Cir|Parkway|Pkwy|Highway|Hwy)/i;
   const addressMatch = text.match(addressRegex);
@@ -1066,7 +1071,7 @@ function parseNaturalLanguage(text: string): string[] {
     fields.push(addressMatch[0].trim());
     text = text.replace(addressMatch[0], '').trim();
   }
-  
+
   // Try to extract name (usually at beginning)
   const nameRegex = /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})/;
   const nameMatch = text.match(nameRegex);
@@ -1074,12 +1079,12 @@ function parseNaturalLanguage(text: string): string[] {
     fields.unshift(nameMatch[1]); // Put name first
     text = text.replace(nameMatch[1], '').trim();
   }
-  
+
   // If we have multiple fields, return them
   if (fields.length > 0) {
     return fields;
   }
-  
+
   // If all else fails, return the whole line
   return [text];
 }
@@ -1087,19 +1092,19 @@ function parseNaturalLanguage(text: string): string[] {
 // Smart header detection
 function detectHeaderSmart(rows: string[][]): boolean {
   if (rows.length < 2) return false;
-  
+
   const firstRow = rows[0];
   const secondRow = rows[1];
-  
+
   let headerScore = 0;
   let dataScore = 0;
-  
+
   for (let i = 0; i < firstRow.length; i++) {
     const header = firstRow[i]?.trim() || '';
     const data = secondRow[i]?.trim() || '';
-    
+
     if (!header && !data) continue;
-    
+
     // Headers are usually:
     // - Short (under 30 chars)
     // - Don't contain numbers
@@ -1117,7 +1122,7 @@ function detectHeaderSmart(rows: string[][]): boolean {
         headerScore += 2;
       }
     }
-    
+
     // Data rows often contain:
     // - Numbers, emails, phones
     // - Longer text
@@ -1129,46 +1134,46 @@ function detectHeaderSmart(rows: string[][]): boolean {
       if (data.length > 30) dataScore += 1;
     }
   }
-  
+
   return headerScore > dataScore;
 }
 
 // Detect column types from data
 function detectColumnsFromData(dataRows: string[][], headers: string[]): ParsedColumn[] {
   if (dataRows.length === 0) return [];
-  
+
   const colCount = Math.max(...dataRows.map(r => r.length), headers.length);
   const columns: ParsedColumn[] = [];
-  
+
   for (let col = 0; col < colCount; col++) {
     const values = dataRows.map(r => r[col] || '').filter(v => v.trim().length > 0);
     const { type, confidence } = detectFieldType(values);
     const samples = values.slice(0, 3);
-    
+
     // Use header if available and it looks reasonable
     let name = headers[col] || `Column ${col + 1}`;
-    
+
     // Clean up header names
     if (name) {
       name = name
         .replace(/[_\-]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-      
+
       // Capitalize words
-      name = name.split(' ').map(word => 
+      name = name.split(' ').map(word =>
         word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
       ).join(' ');
     }
-    
-    columns.push({ 
-      name, 
-      detectedType: type, 
-      confidence, 
-      samples 
+
+    columns.push({
+      name,
+      detectedType: type,
+      confidence,
+      samples
     });
   }
-  
+
   return columns;
 }
 
@@ -1190,7 +1195,7 @@ function detectFieldType(values: string[]): { type: ParsedColumn['detectedType']
     number: 0,
     text: 0
   };
-  
+
   // Enhanced regex patterns
   const patterns = {
     email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
@@ -1229,13 +1234,13 @@ function detectFieldType(values: string[]): { type: ParsedColumn['detectedType']
           continue;
         }
       }
-      
+
       // Check if it looks like an address even without keywords
       if (/^\d+\s+[a-zA-Z]/.test(trimmed)) {
         typeMatches.address++;
         continue;
       }
-      
+
       typeMatches.text++;
     }
   }
@@ -1254,7 +1259,7 @@ function detectFieldType(values: string[]): { type: ParsedColumn['detectedType']
   }
 
   // Calculate confidence
-  const confidence = totalScored > 0 
+  const confidence = totalScored > 0
     ? Math.round((bestCount / totalScored) * 100)
     : 0;
 
@@ -1374,8 +1379,9 @@ interface AppState {
   logout: () => void;
   forgotPassword: (email: string) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
+  fetchProfile: (userId: string) => Promise<void>;
+  loadLeads: () => Promise<void>;
   clearAuthError: () => void;
-
   // Sync
   teamId: string | null;
   dataLoaded: boolean;
@@ -1385,11 +1391,11 @@ interface AppState {
 
   // Leads
   leads: Lead[];
-  addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'statusHistory'>) => void;
-  updateLead: (id: string, updates: Partial<Lead>) => void;
-  deleteLead: (id: string) => void;
+  addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'statusHistory'>) => Promise<{ success: boolean; id?: string; error?: any }>;
+  updateLead: (id: string, updates: Partial<Lead>) => Promise<{ success: boolean; error?: any }>;
+  deleteLead: (id: string) => Promise<{ success: boolean; error?: any }>;
   addTimelineEntry: (leadId: string, entry: Omit<TimelineEntry, 'id'>) => void;
-  updateLeadStatus: (leadId: string, newStatus: LeadStatus, changedBy: string) => void;
+  updateLeadStatus: (leadId: string, newStatus: LeadStatus, changedBy: string) => Promise<{ success: boolean; error?: any }>;
 
   // Team
   team: TeamMember[];
@@ -1514,6 +1520,7 @@ interface AppState {
   lastLoginDate: string;
   longestStreak: number;
   memberStreaks: Record<string, { login: number; task: number }>;
+  loginStreakHistory: string[];
   incrementLoginStreak: () => void;
 
   // Lead Photos
@@ -1526,7 +1533,7 @@ interface AppState {
   setSMSMessages: (messages: SMSMessage[]) => void;
   addSMSMessage: (message: SMSMessage) => void;
   markSMSAsRead: (phoneNumber: string) => void;
-  
+
   // Floating AI Widget
   showFloatingAIWidget: boolean;
   setShowFloatingAIWidget: (v: boolean) => void;
@@ -1538,7 +1545,7 @@ interface AppState {
   // AI Usage Tracking
   aiUsage: Record<string, AIUsage>;
   incrementAiUsage: (model: string) => void;
-  setAiUsage: (model: string, used: number, limit?: number) => void;
+  setAiUsage: (_model: string, _used: number, _limit?: number) => void;
 
   // AI Threads
   aiThreads: AIThread[];
@@ -1608,7 +1615,7 @@ interface AppState {
 
   // Data & Backups
   lastAutoSave: string | null;
-  backups: Array<{id: string, timestamp: string, name: string, data: any}>;
+  backups: Array<{ id: string, timestamp: string, name: string, data: any }>;
   saveStatus: 'idle' | 'saving' | 'success' | 'error';
   manualSave: () => Promise<void>;
   createBackup: (name?: string) => void;
@@ -1618,13 +1625,18 @@ interface AppState {
 }
 
 export const useStore = create<AppState>((set, get) => ({
-  // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // —— Auth ——————————————————————————————————————————————————
   isAuthenticated: false,
   currentUser: null,
-  smsMessages: [],
   authLoading: false,
   authError: null,
   showFloatingAIWidget: false,
+  lastLoginDate: new Date().toISOString(),
+  loginStreak: 0,
+  taskStreak: 0,
+  longestStreak: 0,
+  memberStreaks: {},
+  loginStreakHistory: [],
   activeLeadModalId: null,
   saveStatus: 'idle',
   lastAutoSave: typeof window !== 'undefined' ? localStorage.getItem('wholescale-last-autosave') : null,
@@ -1634,9 +1646,242 @@ export const useStore = create<AppState>((set, get) => ({
         const saved = localStorage.getItem('wholescale-backups');
         if (saved) return JSON.parse(saved);
       }
-    } catch (e) {}
+    } catch (e) { }
     return [];
   })(),
+
+  // —— SMS State —————————————————————————————————————————————
+  smsMessages: [],
+  contacts: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('sms-contacts');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) { }
+    return [];
+  })(),
+  smsAutoReplyEnabled: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-enabled') === 'true' : false,
+  smsAutoReplyMessage: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-message') || 'Thanks for your message! I will get back to you soon.' : 'Thanks for your message! I will get back to you soon.',
+
+  // —— AI State ——————————————————————————————————————————————
+  aiName: 'Aria',
+  aiModel: 'gpt-4o',
+  aiPersonality: 'Professional, efficient, and proactive real estate assistant.',
+  aiUsage: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('ai-usage-map');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) { }
+    return {};
+  })(),
+  aiThreads: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('ai-threads');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) { }
+    return [];
+  })(),
+  currentAiThreadId: typeof window !== 'undefined' ? localStorage.getItem('current-ai-thread-id') : null,
+  aiMessages: (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('ai-messages-map');
+        if (saved) return JSON.parse(saved);
+      }
+    } catch (e) { }
+    return {};
+  })(),
+
+  // —— UI & Settings State ———————————————————————————————————
+  notificationSettings: defaultNotificationSettings,
+  shortcutsEnabled: typeof window !== 'undefined' ? localStorage.getItem('wholescale-shortcuts-enabled') !== 'false' : true,
+  quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes') || '' : '',
+  showQuickNotes: false,
+  cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
+
+  login: async (email, password) => {
+    set({ authLoading: true, authError: null });
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+      } else {
+        // Demo login fallback
+        console.log('Using demo login fallback (Supabase not configured)');
+        set({ isAuthenticated: true, currentUser: defaultUser });
+      }
+    } catch (err: any) {
+      set({ authError: err.message });
+    } finally {
+      set({ authLoading: false });
+    }
+  },
+
+  signup: async (name, email, password) => {
+    set({ authLoading: true, authError: null });
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: name } }
+        });
+        if (error) throw error;
+      } else {
+        set({ authError: 'Signup is only available with Supabase configured.' });
+      }
+    } catch (err: any) {
+      set({ authError: err.message });
+    } finally {
+      set({ authLoading: false });
+    }
+  },
+
+  logout: async () => {
+    if (isSupabaseConfigured && supabase) await supabase.auth.signOut();
+    set({
+      isAuthenticated: false, currentUser: null, leads: [], team: [], tasks: [],
+      channels: [], messages: {}, buyers: [], coverageAreas: [], notifications: [],
+      callRecordings: [], smsMessages: [], unreadCounts: { sms: 0 },
+      chatSearchQuery: '', currentChannelId: null, dataLoaded: false, teamId: null
+    });
+  },
+
+  forgotPassword: async (email) => {
+    set({ authLoading: true, authError: null });
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      set({ authError: err.message });
+    } finally {
+      set({ authLoading: false });
+    }
+  },
+
+  updateProfile: async (updates: any) => {
+    const { currentUser } = get();
+    if (!currentUser) return;
+    const newUser = { ...currentUser, ...updates };
+    if (updates.name) {
+      newUser.avatar = updates.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    set({ currentUser: newUser });
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: profile } = await supabase.from('profiles').select('settings').eq('id', currentUser.id).maybeSingle();
+        const currentSettings = profile?.settings || {};
+        
+        await supabase.from('profiles').update({
+          full_name: newUser.name,
+          phone: newUser.phone,
+          avatar_url: newUser.avatar,
+          settings: {
+            ...currentSettings,
+            bio: newUser.bio,
+            specialties: newUser.specialties,
+            license_number: newUser.licenseNumber,
+            years_experience: newUser.yearsExperience,
+            languages: newUser.languages,
+            social_links: newUser.socialLinks,
+            service_areas: newUser.serviceAreas,
+            testimonials: newUser.testimonials,
+            is_public: newUser.isPublic,
+            public_contact_email: newUser.publicContactEmail,
+            public_contact_phone: newUser.publicContactPhone,
+            accept_leads: newUser.acceptLeads,
+            website: newUser.website,
+            ai_personality: newUser.aiCustomInstructions,
+          },
+          updated_at: new Date().toISOString()
+        }).eq('id', currentUser.id);
+      } catch (err) {
+        console.error('DEBUG: Failed to sync profile to Supabase:', err);
+      }
+    }
+  },
+
+  fetchProfile: async (userId: string) => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      console.log('DEBUG: Fetching profile for user:', userId);
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (profile) {
+        set((s) => ({ 
+          currentUser: s.currentUser ? {
+            ...s.currentUser,
+            id: profile.id,
+            email: profile.email || s.currentUser.email,
+            name: profile.full_name || s.currentUser.name,
+            avatar: profile.avatar_url || s.currentUser.avatar,
+            teamId: profile.team_id || (s.currentUser as any).teamId,
+          } : {
+            id: profile.id,
+            email: profile.email || '',
+            name: profile.full_name || '',
+            avatar: profile.avatar_url || '',
+            teamId: profile.team_id || null,
+            phone: profile.phone || '',
+            teamRole: profile.team_role || 'member',
+            emailVerified: profile.email_verified || false,
+            createdAt: profile.created_at || new Date().toISOString(),
+            settings: profile.settings || {},
+          },
+          teamId: profile.team_id || null
+        }));
+        console.log('DEBUG: Profile fetched. teamId:', profile.team_id);
+      }
+    } catch (err) {
+      console.error('DEBUG: Failed to fetch profile:', err);
+    }
+  },
+
+  loadLeads: async () => {
+    let { currentUser, teamId } = get();
+    if (!currentUser && isSupabaseConfigured && supabase) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await get().fetchProfile(session.user.id);
+        teamId = get().teamId;
+      }
+    }
+    
+    if (!teamId || !isSupabaseConfigured || !supabase) {
+      console.log('DEBUG: loadLeads skipped. teamId:', teamId, 'isSupabaseConfigured:', isSupabaseConfigured);
+      set({ dataLoaded: true });
+      return;
+    }
+
+    try {
+      set({ dataLoaded: false });
+      console.log('DEBUG: loadLeads starting for team:', teamId);
+      const [leads, tasks] = await Promise.all([
+        leadsService.fetchAll(teamId),
+        tasksService.fetchAll(teamId)
+      ]);
+      set({ leads, tasks, dataLoaded: true });
+      console.log('DEBUG: loadLeads successful:', { leads: leads.length, tasks: tasks.length });
+    } catch (error) {
+      console.error('DEBUG: loadLeads failed:', error);
+      set({ dataLoaded: true });
+    }
+  },
+
+  clearAuthError: () => set({ authError: null }),
 
   // History State
   history: [],
@@ -1645,13 +1890,8 @@ export const useStore = create<AppState>((set, get) => ({
   // History Actions
   saveToHistory: () => {
     const { history, ...currentSnapshot } = get();
-    // Exclude functional members and future from snapshot to keep it serializable/clean
-    const { 
-      saveToHistory, undo, redo, clearHistory, future,
-      // Add any other non-serializable or large state items to exclude if needed
-      ...serializableState 
-    } = currentSnapshot;
-    
+    const { saveToHistory, undo, redo, clearHistory, future, ...serializableState } = currentSnapshot;
+
     set((s) => ({
       history: [...s.history.slice(-49), JSON.parse(JSON.stringify(serializableState))],
       future: []
@@ -1661,13 +1901,9 @@ export const useStore = create<AppState>((set, get) => ({
   undo: () => {
     const { history } = get();
     if (history.length === 0) return;
-
     const prevState = history[history.length - 1];
     const newHistory = history.slice(0, -1);
-
-    // Capture current state to future before moving back
     const { history: _h, future, saveToHistory, undo, redo, clearHistory, ...current } = get();
-    
     set({
       ...prevState,
       history: newHistory,
@@ -1678,13 +1914,9 @@ export const useStore = create<AppState>((set, get) => ({
   redo: () => {
     const { future } = get();
     if (future.length === 0) return;
-
     const nextState = future[0];
     const newFuture = future.slice(1);
-
-    // Capture current state to history before moving forward
     const { history, future: _f, saveToHistory, undo, redo, clearHistory, ...current } = get();
-
     set({
       ...nextState,
       history: [...history.slice(-49), JSON.parse(JSON.stringify(current))],
@@ -1696,19 +1928,12 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Data & Backups Actions
   manualSave: async () => {
-    set({ saveStatus: 'saving' });
     try {
-      // In a real app, this would trigger a full Supabase sync
-      // For now, we'll simulate a save and update the timestamp
       const now = new Date().toISOString();
       if (typeof window !== 'undefined') {
         localStorage.setItem('wholescale-last-autosave', now);
       }
-      
-      // If Supabase is configured, we could force a sync here
-      // But most actions already sync individually. This button ensures everything is "up to date".
-      
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network
+      await new Promise(resolve => setTimeout(resolve, 800));
       set({ saveStatus: 'success', lastAutoSave: now });
       setTimeout(() => set({ saveStatus: 'idle' }), 3000);
     } catch (error) {
@@ -1718,9 +1943,9 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   createBackup: (name) => {
-    const { 
-      leads, team, tasks, buyers, coverageAreas, 
-      calculatorScenarios, channels, messages, 
+    const {
+      leads, team, tasks, buyers, coverageAreas,
+      calculatorScenarios, channels, messages,
       notificationSettings, smsMessages, contacts,
       quickNotes, aiName, aiModel, aiPersonality,
       currentTheme, customColors
@@ -1731,8 +1956,7 @@ export const useStore = create<AppState>((set, get) => ({
       calculatorScenarios, channels, messages,
       notificationSettings, smsMessages, contacts,
       quickNotes, aiName, aiModel, aiPersonality,
-      currentTheme, customColors,
-      version: '1.0.0'
+      currentTheme, customColors, version: '1.0.0'
     };
 
     const newBackup = {
@@ -1742,350 +1966,97 @@ export const useStore = create<AppState>((set, get) => ({
       data: backupData
     };
 
-    set((s) => {
-      const nextBackups = [newBackup, ...s.backups].slice(0, 10); // Keep last 10
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('wholescale-backups', JSON.stringify(nextBackups));
-      }
+    set((s: any) => {
+      const nextBackups = [newBackup, ...s.backups].slice(0, 10);
+      if (typeof window !== 'undefined') localStorage.setItem('wholescale-backups', JSON.stringify(nextBackups));
       return { backups: nextBackups };
     });
   },
 
   revertToBackup: (id) => {
-    const backup = get().backups.find(b => b.id === id);
-    if (!backup) return;
-
-    if (!confirm(`Are you sure you want to revert to "${backup.name}"? All current unsaved data will be replaced.`)) {
-      return;
+    const { backups } = get();
+    const backup = backups.find(b => b.id === id);
+    if (backup) {
+      set({ ...backup.data });
     }
-
-    const { data } = backup;
-    set({
-      leads: data.leads || [],
-      team: data.team || [],
-      tasks: data.tasks || [],
-      buyers: data.buyers || [],
-      coverageAreas: data.coverageAreas || [],
-      calculatorScenarios: data.calculatorScenarios || [],
-      channels: data.channels || [],
-      messages: data.messages || {},
-      notificationSettings: data.notificationSettings || defaultNotificationSettings,
-      smsMessages: data.smsMessages || [],
-      contacts: data.contacts || [],
-      quickNotes: data.quickNotes || '',
-      aiName: data.aiName || 'OS Bot',
-      aiModel: data.aiModel || 'gemini-2.5-flash-lite',
-      aiPersonality: data.aiPersonality || '',
-      currentTheme: data.currentTheme || 'dark',
-      customColors: data.customColors || {}
-    });
-
-    // Also trigger a manual save to persist the reverted state
-    get().manualSave();
   },
 
   deleteBackup: (id) => {
-    set((s) => {
-      const nextBackups = s.backups.filter(b => b.id !== id);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('wholescale-backups', JSON.stringify(nextBackups));
-      }
-      return { backups: nextBackups };
+    set((s: any) => {
+      const next = s.backups.filter((b: any) => b.id !== id);
+      if (typeof window !== 'undefined') localStorage.setItem('wholescale-backups', JSON.stringify(next));
+      return { backups: next };
     });
   },
 
   exportData: () => {
-    const { 
-      leads, team, tasks, buyers, coverageAreas, 
-      calculatorScenarios, channels, messages, 
-      smsMessages, contacts 
-    } = get();
-
-    const exportData = {
+    const {
       leads, team, tasks, buyers, coverageAreas,
       calculatorScenarios, channels, messages,
-      smsMessages, contacts,
+      notificationSettings, smsMessages, contacts,
+      quickNotes, aiName, aiModel, aiPersonality,
+      currentTheme, customColors
+    } = get();
+
+    const data = {
+      leads, team, tasks, buyers, coverageAreas,
+      calculatorScenarios, channels, messages,
+      notificationSettings, smsMessages, contacts,
+      quickNotes, aiName, aiModel, aiPersonality,
+      currentTheme, customColors,
       exportedAt: new Date().toISOString(),
-      app: 'WholeScale OS'
+      version: '1.0.0'
     };
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `wholescale-os-export-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `wholescale-data-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   },
-
-  setActiveLeadModalId: (id) => set({ activeLeadModalId: id }),
-  aiName: typeof window !== 'undefined' ? localStorage.getItem('user_ai_name') || 'OS Bot' : 'OS Bot',
-  setAiName: (name) => {
-    set({ aiName: name });
-    if (typeof window !== 'undefined') localStorage.setItem('user_ai_name', name);
-  },
-  aiModel: typeof window !== 'undefined' ? localStorage.getItem('user_ai_model') || 'gemini-2.5-flash-lite' : 'gemini-2.5-flash-lite',
-  setAiModel: (model) => {
-    set({ aiModel: model });
-    if (typeof window !== 'undefined') localStorage.setItem('user_ai_model', model);
-  },
-  aiPersonality: typeof window !== 'undefined' ? localStorage.getItem('user_ai_personality') || '' : '',
-  setAiPersonality: (personality) => {
-    set({ aiPersonality: personality });
-    if (typeof window !== 'undefined') localStorage.setItem('user_ai_personality', personality);
-  },
-  shortcutsEnabled: (typeof window !== 'undefined' && localStorage.getItem('wholescale-shortcuts-enabled') !== 'false'),
-  aiUsage: (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('ai_usage_map');
-        if (saved) return JSON.parse(saved);
-      }
-    } catch (e) {}
-    return {};
-  })(),
-  aiThreads: (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('ai_threads');
-        if (saved) return JSON.parse(saved);
-      }
-    } catch (e) {}
-    return [];
-  })(),
-  currentAiThreadId: typeof window !== 'undefined' ? localStorage.getItem('current_ai_thread_id') : null,
-  aiMessages: (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('ai_messages_map');
-        if (saved) return JSON.parse(saved);
-      }
-    } catch (e) {}
-    return {};
-  })(),
-
-  notificationSettings: (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('wholescale-notification-settings');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          return {
-            emailNotifications: true, smsNotifications: true, newLead: true, 
-            taskDue: true, smsReceived: true, appointmentReminder: true, 
-            systemUpdates: true, dndEnabled: false,
-            ...parsed
-          };
-        }
-      }
-    } catch (e) {}
-    return defaultNotificationSettings;
-  })(),
-
-  updateNotificationSettings: (updates) => {
-    set((s) => {
-      const next = { ...s.notificationSettings, ...updates };
-      if (typeof window !== 'undefined') localStorage.setItem('wholescale-notification-settings', JSON.stringify(next));
-      return { notificationSettings: next };
-    });
-  },
-
-  smsAutoReplyEnabled: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-enabled') === 'true' : false,
-  smsAutoReplyMessage: typeof window !== 'undefined' ? localStorage.getItem('sms-auto-reply-message') || "I'm with a client right now but will get back to you soon!" : "I'm with a client right now but will get back to you soon!",
-
-  contacts: (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('sms_contacts');
-        if (saved) return JSON.parse(saved);
-      }
-    } catch (e) {}
-    return [];
-  })(),
-
-  quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks_quick_notes') || '' : '',
-  showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('show_quick_notes') === 'true' : false,
-
-  cursorSettings: (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('wholescale-cursor-settings');
-        if (saved) return { ...{ type: 'glow', color: 'var(--t-primary)', size: 40, enabled: true, intensity: 50 }, ...JSON.parse(saved) };
-      }
-    } catch (e) {}
-    return { type: 'glow', color: 'var(--t-primary)', size: 40, enabled: true, intensity: 50 };
-  })(),
-
-  setCursorSettings: (settings) => {
-    set((state) => {
-      const next = { ...state.cursorSettings, ...settings };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('wholescale-cursor-settings', JSON.stringify(next));
-      }
-      return { cursorSettings: next };
-    });
-  },
-
-  setShowQuickNotes: (v: boolean) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('show_quick_notes', v.toString());
-    }
-    set({ showQuickNotes: v });
-  },
-
-  login: (email, _password) =>
-    set(() => {
-      if (!email.includes('@')) return { authError: 'Invalid email address' };
-      return {
-        isAuthenticated: true,
-        currentUser: { ...defaultUser, email },
-        authLoading: false,
-        authError: null,
-      };
-    }),
-
-  signup: (name, email, _password) =>
-    set(() => {
-      if (!email.includes('@')) return { authError: 'Invalid email address' };
-      if (name.length < 2) return { authError: 'Name must be at least 2 characters' };
-      const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-      return {
-        isAuthenticated: true,
-        currentUser: {
-          ...defaultUser, id: uuidv4(), name, email, avatar: initials,
-          emailVerified: false, createdAt: new Date().toISOString(),
-        },
-        authError: null,
-      };
-    }),
-
-  logout: () => set({
-    isAuthenticated: false,
-    currentUser: null,
-    // Reset all data on logout so next login loads fresh from Supabase
-    leads: [],
-    team: [],
-    tasks: [],
-    channels: [],
-    messages: {},
-    buyers: [],
-    coverageAreas: [],
-    notifications: [],
-    callRecordings: [],
-    smsMessages: [],
-    unreadCounts: { sms: 0 },
-    chatSearchQuery: '',
-    currentChannelId: null,
-    dataLoaded: false,
-    teamId: null,
-  }),
-  forgotPassword: () => set({ authError: null }),
-  updateProfile: async (updates) => {
-    const { currentUser } = get();
-    if (!currentUser) return;
-
-    const newUser = { ...currentUser, ...updates };
-    if (updates.name) {
-      newUser.avatar = updates.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-
-    set({ currentUser: newUser });
-
-    // Persist to Supabase if configured
-    if (isSupabaseConfigured && supabase) {
-      try {
-        // Fetch current settings to merge
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('settings')
-          .eq('id', currentUser.id)
-          .maybeSingle();
-
-        const currentSettings = profile?.settings || {};
-
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            full_name: newUser.name,
-            phone: newUser.phone,
-            avatar_url: newUser.avatarUrl,
-            settings: {
-              ...currentSettings,
-              ...(newUser.bio && { bio: newUser.bio }),
-              ...(newUser.specialties && { specialties: newUser.specialties }),
-              ...(newUser.licenseNumber && { license_number: newUser.licenseNumber }),
-              ...(newUser.yearsExperience && { years_experience: newUser.yearsExperience }),
-              ...(newUser.languages && { languages: newUser.languages }),
-              ...(newUser.socialLinks && { social_links: newUser.socialLinks }),
-              ...(newUser.serviceAreas && { service_areas: newUser.serviceAreas }),
-              ...(newUser.testimonials && { testimonials: newUser.testimonials }),
-              ...(newUser.isPublic !== undefined && { is_public: newUser.isPublic }),
-              ...(newUser.publicContactEmail !== undefined && { public_contact_email: newUser.publicContactEmail }),
-              ...(newUser.publicContactPhone !== undefined && { public_contact_phone: newUser.publicContactPhone }),
-              ...(newUser.acceptLeads !== undefined && { accept_leads: newUser.acceptLeads }),
-              ...(newUser.website && { website: newUser.website }),
-              ...(newUser.aiCustomInstructions && { ai_personality: newUser.aiCustomInstructions }),
-              ...(newUser.avatarUrl && { avatar_url: newUser.avatarUrl }),
-              updated_at: new Date().toISOString()
-            }
-          })
-          .eq('id', currentUser.id);
-        
-        if (error) throw error;
-      } catch (err) {
-        console.error('Failed to sync profile change to Supabase:', err);
-      }
-    }
-  },
-  clearAuthError: () => set({ authError: null }),
 
   setSMSAutoReplyEnabled: (v: boolean) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sms-auto-reply-enabled', v.toString());
-    }
+    if (typeof window !== 'undefined') localStorage.setItem('sms-auto-reply-enabled', v.toString());
     set({ smsAutoReplyEnabled: v });
   },
 
   setSMSAutoReplyMessage: (msg: string) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sms-auto-reply-message', msg);
-    }
+    if (typeof window !== 'undefined') localStorage.setItem('sms-auto-reply-message', msg);
     set({ smsAutoReplyMessage: msg });
   },
 
-  // â”€â”€ Sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // —— Sync ——————————————————————————————————————————————————
   teamId: null,
   dataLoaded: false,
-  setTeamId: (id) => set({ teamId: id }),
-  setDataLoaded: (loaded) => set({ dataLoaded: loaded }),
-  setBulkData: (data) => set(data as Partial<AppState>),
+  setTeamId: (id: string | null) => set({ teamId: id }),
+  setDataLoaded: (loaded: boolean) => set({ dataLoaded: loaded }),
+  setBulkData: (data: any) => set(data as Partial<AppState>),
 
   // Search
   searchResults: { leads: [], tasks: [], sms: [] },
-  performSearch: (query) => {
+  performSearch: (query: string) => {
     const q = query.toLowerCase().trim();
     if (!q) {
       set({ searchResults: { leads: [], tasks: [], sms: [] } });
       return;
     }
-
     const { leads, tasks, smsMessages } = get();
-    
-    set({ 
+    set({
       searchResults: {
-        leads: leads.filter(l => 
+        leads: leads.filter(l =>
           (l.name && l.name.toLowerCase().includes(q)) ||
           (l.email && l.email.toLowerCase().includes(q)) ||
           (l.phone && l.phone.includes(q)) ||
           (l.propertyAddress && l.propertyAddress.toLowerCase().includes(q))
         ),
-        tasks: tasks.filter(t => 
+        tasks: tasks.filter(t =>
           (t.title && t.title.toLowerCase().includes(q)) ||
           (t.description && t.description.toLowerCase().includes(q))
         ),
-        sms: smsMessages.filter(m => 
+        sms: smsMessages.filter(m =>
           (m.content && m.content.toLowerCase().includes(q)) ||
           (m.phone_number && m.phone_number.includes(q))
         )
@@ -2093,13 +2064,13 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  // â”€â”€ Leads (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   leads: [],
 
-  addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'statusHistory'> & { id?: string, timeline?: TimelineEntry[], statusHistory?: StatusHistoryEntry[] }) => {
+  addLead: async (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'statusHistory'>) => {
+    console.log('DEBUG: addLead starting for:', lead.name);
     get().saveToHistory();
     const now = new Date().toISOString();
-    const newId = lead.id || uuidv4();
+    const newId = uuidv4();
     const newLead: Lead = {
       ...lead,
       id: newId,
@@ -2109,49 +2080,77 @@ export const useStore = create<AppState>((set, get) => ({
       bathrooms: lead.bathrooms || 0,
       sqft: lead.sqft || 0,
       source: lead.source || 'other',
-      documents: lead.documents || [],
-      timeline: lead.timeline || [{ id: uuidv4(), type: 'note' as TimelineType, content: 'Lead created.', timestamp: now, user: 'System' }],
-      statusHistory: lead.statusHistory || [{ fromStatus: null, toStatus: lead.status, timestamp: now, changedBy: 'System' }],
+      documents: (lead as any).documents || [],
+      timeline: [{ id: uuidv4(), type: 'note', content: 'Lead created.', timestamp: now, user: 'System' }],
+      statusHistory: [{ fromStatus: null, toStatus: lead.status, timestamp: now, changedBy: 'System' }],
     };
+    
     set((s) => ({ leads: [...s.leads, newLead] }));
+    
     const { teamId } = get();
+    console.log('DEBUG: addLead checking teamId:', teamId, 'isSupabaseConfigured:', isSupabaseConfigured);
     if (teamId && isSupabaseConfigured && supabase) {
-      leadsService.create({
-        id: newId, team_id: teamId, name: newLead.name, email: newLead.email, phone: newLead.phone,
-        address: newLead.propertyAddress, property_type: newLead.propertyType, property_value: newLead.estimatedValue,
-        bedrooms: newLead.bedrooms, bathrooms: newLead.bathrooms, sqft: newLead.sqft,
-        offer_amount: newLead.offerAmount, status: newLead.status, source: newLead.source, notes: newLead.notes,
-        lat: newLead.lat, lng: newLead.lng, assigned_to: newLead.assignedTo,
-        probability: newLead.probability, engagement_level: newLead.engagementLevel,
-        timeline_urgency: newLead.timelineUrgency, competition_level: newLead.competitionLevel,
-        import_source: newLead.importSource || null, photos: newLead.photos || [],
-        carrier: newLead.carrier || null
-      }).catch(() => {});
+      try {
+        console.log('DEBUG: addLead calling leadsService.create for lead:', newId);
+        await leadsService.create({
+          id: newId,
+          team_id: teamId,
+          name: newLead.name,
+          email: newLead.email,
+          phone: newLead.phone,
+          address: newLead.propertyAddress,
+          city: newLead.city,
+          state: newLead.state,
+          zip: newLead.zip,
+          property_type: newLead.propertyType,
+          property_value: newLead.estimatedValue,
+          bedrooms: newLead.bedrooms,
+          bathrooms: newLead.bathrooms,
+          sqft: newLead.sqft,
+          offer_amount: newLead.offerAmount,
+          status: newLead.status,
+          source: newLead.source,
+          notes: newLead.notes,
+          lat: newLead.lat,
+          lng: newLead.lng,
+          assigned_to: newLead.assignedTo,
+          probability: newLead.probability,
+          engagement_level: newLead.engagementLevel,
+          timeline_urgency: newLead.timelineUrgency,
+          competition_level: newLead.competitionLevel,
+          photos: newLead.photos,
+          carrier: newLead.carrier,
+          share_password: newLead.sharePassword,
+          share_enabled: newLead.shareEnabled,
+          documents: newLead.documents,
+        });
+        console.log('✅ Lead synced to Supabase:', newId);
+        return { success: true, id: newId };
+      } catch (error) {
+        console.error('❌ Failed to sync lead to Supabase:', error);
+        return { success: false, error };
+      }
     }
-
-    // Trigger Notification
-    const { notificationSettings, addNotification } = get();
-    if (notificationSettings.newLead) {
-      addNotification({
-        type: 'lead-assigned',
-        title: 'New Lead Added',
-        message: `${newLead.name} has been added to your pipeline.`,
-        link: '/leads'
-      });
-    }
+    return { success: true, id: newId };
   },
 
-  updateLead: (id, updates: Partial<Lead>) => {
+  updateLead: async (id: string, updates: Partial<Lead>) => {
     get().saveToHistory();
+    const now = new Date().toISOString();
+    
     set((s) => ({
-      leads: s.leads.map((l) => l.id === id ? { ...l, ...updates, updatedAt: new Date().toISOString() } : l),
+      leads: s.leads.map((l) => (l.id === id ? { ...l, ...updates, updatedAt: now } : l)),
     }));
-    if (isSupabaseConfigured) {
-      const dbUpdates: Record<string, any> = {};
+
+    if (isSupabaseConfigured && supabase) {
+      const dbUpdates: any = { updated_at: now };
       if (updates.name !== undefined) dbUpdates.name = updates.name;
       if (updates.email !== undefined) dbUpdates.email = updates.email;
       if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
       if (updates.propertyAddress !== undefined) dbUpdates.address = updates.propertyAddress;
+      if (updates.city !== undefined) dbUpdates.city = updates.city;
+      if (updates.state !== undefined) dbUpdates.state = updates.state;
+      if (updates.zip !== undefined) dbUpdates.zip = updates.zip;
       if (updates.propertyType !== undefined) dbUpdates.property_type = updates.propertyType;
       if (updates.estimatedValue !== undefined) dbUpdates.property_value = updates.estimatedValue;
       if (updates.bedrooms !== undefined) dbUpdates.bedrooms = updates.bedrooms;
@@ -2174,73 +2173,118 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.shareEnabled !== undefined) dbUpdates.share_enabled = updates.shareEnabled;
       if (updates.documents !== undefined) dbUpdates.documents = updates.documents;
       
-      if (Object.keys(dbUpdates).length > 0) {
-        leadsService.update(id, dbUpdates).catch(() => {});
+      try {
+        await leadsService.update(id, dbUpdates);
+        console.log('✅ Lead updated in Supabase:', id);
+        return { success: true };
+      } catch (error) {
+        console.error('❌ Failed to update lead in Supabase:', error);
+        return { success: false, error };
       }
     }
+    return { success: true };
   },
 
-  deleteLead: (id) => {
+  deleteLead: async (id: string) => {
     get().saveToHistory();
     set((s) => ({ leads: s.leads.filter((l) => l.id !== id) }));
-    if (isSupabaseConfigured && supabase) leadsService.remove(id).catch(() => {});
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await leadsService.remove(id);
+        console.log('✅ Lead deleted from Supabase:', id);
+        return { success: true };
+      } catch (error) {
+        console.error('❌ Failed to delete lead from Supabase:', error);
+        return { success: false, error };
+      }
+    }
+    return { success: true };
   },
 
-  addTimelineEntry: (leadId, entry) =>
+  addTimelineEntry: async (leadId: string, entry: Omit<TimelineEntry, 'id'>) => {
+    const now = new Date().toISOString();
+    const newEntry = { ...entry, id: uuidv4(), timestamp: now };
+    
     set((s) => ({
       leads: s.leads.map((l) =>
         l.id === leadId
-          ? { ...l, timeline: [...l.timeline, { ...entry, id: uuidv4() }], updatedAt: new Date().toISOString() }
+          ? { ...l, timeline: [...l.timeline, newEntry], updatedAt: now }
           : l
       ),
-    })),
+    }));
 
-  updateLeadStatus: (leadId, newStatus, changedBy) =>
-    set((s) => {
-      const now = new Date().toISOString();
-      const updatedLeads = s.leads.map((l) => {
-        if (l.id !== leadId || l.status === newStatus) return l;
-        const oldStatus = l.status;
-        return {
-          ...l,
-          status: newStatus,
-          updatedAt: now,
-          statusHistory: [...l.statusHistory, { 
-            fromStatus: oldStatus, 
-            toStatus: newStatus, 
-            timestamp: now, 
-            changedBy 
-          }],
-          timeline: [...l.timeline, {
-            id: uuidv4(),
-            type: 'status-change' as TimelineType,
-            content: `Status changed from ${STATUS_LABELS[oldStatus]} to ${STATUS_LABELS[newStatus]}`,
-            timestamp: now,
-            user: changedBy,
-            metadata: { from: oldStatus, to: newStatus },
-          }],
-        };
-      });
-
-      if (isSupabaseConfigured && supabase) {
-        leadsService.update(leadId, { 
-          status: newStatus,
-          updated_at: now
-        }).catch((error) => {
-          console.error('âŒ Failed to save status change to Supabase:', error);
-        });
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await leadsService.addTimeline(leadId, newEntry as any);
+        return { success: true };
+      } catch (error) {
+        console.error('❌ Failed to add timeline entry:', error);
+        return { success: false, error };
       }
+    }
+    return { success: true };
+  },
 
-      return { leads: updatedLeads };
-    }),
+  updateLeadStatus: async (leadId: string, newStatus: LeadStatus, changedBy: string) => {
+    const now = new Date().toISOString();
+    const { leads } = get();
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead || lead.status === newStatus) return { success: true };
 
-  // â”€â”€ Team (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const oldStatus = lead.status;
+    const statusChangeEntry: TimelineEntry = {
+      id: uuidv4(),
+      type: 'status-change',
+      content: `Status changed from ${STATUS_LABELS[oldStatus]} to ${STATUS_LABELS[newStatus]}`,
+      timestamp: now,
+      user: changedBy,
+      metadata: { from: oldStatus, to: newStatus },
+    };
+
+    const statusHistoryEntry = { 
+      fromStatus: oldStatus, 
+      toStatus: newStatus, 
+      timestamp: now, 
+      changedBy 
+    };
+
+    set((s) => ({
+      leads: s.leads.map((l) =>
+        l.id === leadId
+          ? { 
+              ...l, 
+              status: newStatus, 
+              updatedAt: now,
+              statusHistory: [...l.statusHistory, statusHistoryEntry],
+              timeline: [...l.timeline, statusChangeEntry]
+            }
+          : l
+      ),
+    }));
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await Promise.all([
+          leadsService.update(leadId, { status: newStatus, updated_at: now }),
+          leadsService.addStatusHistory(leadId, oldStatus, newStatus, changedBy),
+          leadsService.addTimeline(leadId, statusChangeEntry as any)
+        ]);
+        return { success: true };
+      } catch (error) {
+        console.error('❌ Failed to sync status change:', error);
+        return { success: false, error };
+      }
+    }
+    return { success: true };
+  },
+
+  // —— Team ——————————————————————————————————————————————————
   team: [],
   teamConfig: defaultTeamConfig,
 
-  updateMemberStatus: (id, status) => {
-    set((s) => ({
-      team: s.team.map((m) => m.id === id ? {
+  updateMemberStatus: (id: string, status: PresenceStatus) => {
+    set((s: any) => ({
+      team: s.team.map((m: any) => m.id === id ? {
         ...m, presenceStatus: status,
         lastSeen: status === 'offline' ? new Date().toISOString() : m.lastSeen,
       } : m),
@@ -2251,25 +2295,25 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  setCustomStatus: (id, msg) =>
-    set((s) => ({ team: s.team.map((m) => m.id === id ? { ...m, customStatus: msg } : m) })),
+  setCustomStatus: (id: string, msg: string) =>
+    set((s: any) => ({ team: s.team.map((m: any) => m.id === id ? { ...m, customStatus: msg } : m) })),
 
-  updateMemberRole: (id, role) => {
-    set((s) => ({ team: s.team.map((m) => m.id === id ? { ...m, teamRole: role } : m) }));
+  updateMemberRole: (id: string, role: TeamRole) => {
+    set((s: any) => ({ team: s.team.map((m: any) => m.id === id ? { ...m, teamRole: role } : m) }));
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
       teamService.updateRole(teamId, id, role).catch(() => {});
     }
   },
 
-  addTeamMember: (member) => {
+  addTeamMember: (member: Omit<TeamMember, 'id'>) => {
     get().saveToHistory();
-    set((s) => ({ team: [...s.team, { ...member, id: uuidv4() }] }));
+    set((s: any) => ({ team: [...s.team, { ...member, id: uuidv4() }] }));
   },
 
-  removeTeamMember: (id) => {
+  removeTeamMember: (id: string) => {
     get().saveToHistory();
-    set((s) => ({ team: s.team.filter((m) => m.id !== id) }));
+    set((s: any) => ({ team: s.team.filter((m: any) => m.id !== id) }));
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
       teamService.removeMember(teamId, id).catch(() => {});
@@ -2278,7 +2322,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   regenerateInviteCode: () => {
     const newCode = generateInviteCode();
-    set((s) => ({ teamConfig: { ...s.teamConfig, inviteCode: newCode } }));
+    set((s: any) => ({ teamConfig: { ...s.teamConfig, inviteCode: newCode } }));
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
       supabase
@@ -2291,8 +2335,8 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  updateTeamConfig: (updates) => {
-    set((s) => ({ teamConfig: { ...s.teamConfig, ...updates } }));
+  updateTeamConfig: (updates: Partial<TeamConfig>) => {
+    set((s: any) => ({ teamConfig: { ...s.teamConfig, ...updates } }));
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
       const dbUpdates: Record<string, unknown> = {};
@@ -2310,14 +2354,14 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  // â”€â”€ Tasks (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // —— Tasks ——————————————————————————————————————————————————
   tasks: [],
 
-  addTask: (task) => {
+  addTask: (task: Omit<Task, 'id' | 'createdAt' | 'completedAt'>) => {
     get().saveToHistory();
     const newId = uuidv4();
     const now = new Date().toISOString();
-    set((s) => ({ tasks: [...s.tasks, { ...task, id: newId, createdAt: now, completedAt: null }] }));
+    set((s: any) => ({ tasks: [...s.tasks, { ...task, id: newId, createdAt: now, completedAt: null }] }));
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
       tasksService.create({
@@ -2340,9 +2384,9 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  updateTask: (id, updates) => {
+  updateTask: (id: string, updates: Partial<Task>) => {
     get().saveToHistory();
-    set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, ...updates } : t) }));
+    set((s: any) => ({ tasks: s.tasks.map((t: any) => t.id === id ? { ...t, ...updates } : t) }));
     if (isSupabaseConfigured && supabase) {
       const dbUp: Record<string, unknown> = {};
       if (updates.title !== undefined) dbUp.title = updates.title;
@@ -2354,20 +2398,20 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  deleteTask: (id) => {
+  deleteTask: (id: string) => {
     get().saveToHistory();
-    set((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+    set((s: any) => ({ tasks: s.tasks.filter((t: any) => t.id !== id) }));
     if (isSupabaseConfigured && supabase) tasksService.remove(id).catch(() => {});
   },
 
-  completeTask: (id) => {
+  completeTask: (id: string) => {
     get().saveToHistory();
     const now = new Date().toISOString();
-    set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, status: 'done' as TaskStatus, completedAt: now } : t) }));
+    set((s: any) => ({ tasks: s.tasks.map((t: any) => t.id === id ? { ...t, status: 'done' as TaskStatus, completedAt: now } : t) }));
     if (isSupabaseConfigured && supabase) tasksService.complete(id).catch(() => {});
   },
 
-  // â”€â”€ Calculator Scenarios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // —— Calculator Scenarios ——————————————————————————————————————————————————
   calculatorScenarios: (() => {
     try {
       if (typeof window !== 'undefined') {
@@ -2379,16 +2423,17 @@ export const useStore = create<AppState>((set, get) => ({
     }
   })(),
 
-  addCalculatorScenario: (scenario) => {
+  addCalculatorScenario: (scenario: any) => {
     const now = new Date().toISOString();
+    const newId = uuidv4();
     const newScenario = {
       ...scenario,
-      id: uuidv4(),
+      id: newId,
       date: now,
       lastModified: now,
     };
-    
-    set((state) => {
+
+    set((state: any) => {
       const updated = [newScenario, ...state.calculatorScenarios];
       if (typeof window !== 'undefined') {
         localStorage.setItem('wholescale-calculator-scenarios', JSON.stringify(updated));
@@ -2401,20 +2446,20 @@ export const useStore = create<AppState>((set, get) => ({
       if (lead) {
         get().addTimelineEntry(scenario.leadId, {
           type: 'note',
-          content: `ðŸ“Š Added calculator scenario: ${scenario.name || scenario.type}`,
+          content: `📊 Added calculator scenario: ${scenario.name || scenario.type}`,
           timestamp: now,
           user: 'System',
-          metadata: { scenarioId: newScenario.id, scenarioType: scenario.type }
+          metadata: { scenarioId: newId, scenarioType: scenario.type }
         });
       }
     }
 
-    return newScenario.id;
+    return newId;
   },
 
-  updateCalculatorScenario: (id, updates) => {
-    set((state) => {
-      const updated = state.calculatorScenarios.map(s =>
+  updateCalculatorScenario: (id: string, updates: any) => {
+    set((state: any) => {
+      const updated = state.calculatorScenarios.map((s: any) =>
         s.id === id ? { ...s, ...updates, lastModified: new Date().toISOString() } : s
       );
       if (typeof window !== 'undefined') {
@@ -2424,9 +2469,9 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  deleteCalculatorScenario: (id) => {
-    set((state) => {
-      const updated = state.calculatorScenarios.filter(s => s.id !== id);
+  deleteCalculatorScenario: (id: string) => {
+    set((state: any) => {
+      const updated = state.calculatorScenarios.filter((s: any) => s.id !== id);
       if (typeof window !== 'undefined') {
         localStorage.setItem('wholescale-calculator-scenarios', JSON.stringify(updated));
       }
@@ -2434,1108 +2479,991 @@ export const useStore = create<AppState>((set, get) => ({
     });
   },
 
-  getScenariosByLead: (leadId) => {
-    return get().calculatorScenarios.filter(s => s.leadId === leadId);
+  getScenariosByLead: (leadId: string) => {
+    return get().calculatorScenarios.filter((s: any) => s.leadId === leadId);
   },
 
-  // â”€â”€ UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // —— UI ——————————————————————————————————————————————————
   sidebarOpen: true,
-  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  toggleSidebar: () => set((s: any) => ({ sidebarOpen: !s.sidebarOpen })),
 
-  // â”€â”€ Map (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  buyers: [],
-  coverageAreas: [],
-  buyerTemplates: [],
-  pendingDrawMode: false,
+                                                    // â”€â”€ Map (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                                                    buyers: [],
+                                                      coverageAreas: [],
+                                                        buyerTemplates: [],
+                                                          pendingDrawMode: false,
 
-  mapFilters: {
-    showLeads: true, showBuyers: true, showCoverageAreas: true, showDrivingRoute: false,
-    clusterMarkers: false,
-    leadStatusFilters: { 'new': true, 'contacted': true, 'qualified': true, 'negotiating': true, 'closed-won': true, 'closed-lost': true },
-  },
+                                                            mapFilters: {
+      showLeads: true, showBuyers: true, showCoverageAreas: true, showDrivingRoute: false,
+        clusterMarkers: false,
+          leadStatusFilters: { 'new': true, 'contacted': true, 'qualified': true, 'negotiating': true, 'closed-won': true, 'closed-lost': true },
+    },
 
-  mapSettings: { defaultLat: 30.2672, defaultLng: -97.7431, defaultZoom: 6, clusterRadius: 80 },
+    mapSettings: { defaultLat: 30.2672, defaultLng: -97.7431, defaultZoom: 6, clusterRadius: 80 },
 
-  addBuyer: (buyer) => {
-    const newId = uuidv4();
-    set((s) => ({ buyers: [...s.buyers, { ...buyer, id: newId, createdAt: new Date().toISOString() }] }));
-    const { teamId } = get();
-    if (teamId && isSupabaseConfigured && supabase) {
-      mapService.createBuyer({
-        id: newId, team_id: teamId, name: buyer.name, email: buyer.email, phone: buyer.phone,
-        lat: buyer.lat, lng: buyer.lng, budget_min: buyer.budgetMin, budget_max: buyer.budgetMax,
-        active: buyer.active, deal_score: buyer.dealScore, notes: buyer.notes, criteria: buyer.criteria,
-      }).catch(() => {});
-    }
-  },
-  updateBuyer: (id, updates) => {
-    set((s) => ({ buyers: s.buyers.map((b) => b.id === id ? { ...b, ...updates } : b) }));
-    if (isSupabaseConfigured && supabase) {
-      const db: Record<string, unknown> = {};
-      if (updates.name !== undefined) db.name = updates.name;
-      if (updates.email !== undefined) db.email = updates.email;
-      if (updates.phone !== undefined) db.phone = updates.phone;
-      if (updates.lat !== undefined) db.lat = updates.lat;
-      if (updates.lng !== undefined) db.lng = updates.lng;
-      if (updates.budgetMin !== undefined) db.budget_min = updates.budgetMin;
-      if (updates.budgetMax !== undefined) db.budget_max = updates.budgetMax;
-      if (updates.active !== undefined) db.active = updates.active;
-      if (updates.dealScore !== undefined) db.deal_score = updates.dealScore;
-      if (updates.criteria !== undefined) db.criteria = updates.criteria;
-      if (updates.notes !== undefined) db.notes = updates.notes;
-      if (Object.keys(db).length > 0) mapService.updateBuyer(id, db).catch(() => {});
-    }
-  },
-  deleteBuyer: (id) => {
-    set((s) => ({ buyers: s.buyers.filter((b) => b.id !== id) }));
-    if (isSupabaseConfigured && supabase) mapService.deleteBuyer(id).catch(() => {});
-  },
-  addCoverageArea: (area) => {
-    const newId = uuidv4();
-    set((s) => ({ coverageAreas: [...s.coverageAreas, { ...area, id: newId, createdAt: new Date().toISOString() }] }));
-    const { teamId } = get();
-    if (teamId && isSupabaseConfigured && supabase) {
-      mapService.createCoverageArea({
-        id: newId, team_id: teamId, name: area.name, coordinates: JSON.stringify(area.coordinates),
-        color: area.color, opacity: area.opacity, notes: area.notes,
-      }).catch(() => {});
-    }
-  },
-  updateCoverageArea: (id, updates) => set((s) => ({ coverageAreas: s.coverageAreas.map((a) => a.id === id ? { ...a, ...updates } : a) })),
-  deleteCoverageArea: (id) => {
-    set((s) => ({ coverageAreas: s.coverageAreas.filter((a) => a.id !== id) }));
-    if (isSupabaseConfigured && supabase) mapService.deleteCoverageArea(id).catch(() => {});
-  },
-  toggleMapFilter: (key) => set((s) => ({ mapFilters: { ...s.mapFilters, [key]: !s.mapFilters[key] } })),
-  toggleLeadStatusFilter: (status) => set((s) => ({ mapFilters: { ...s.mapFilters, leadStatusFilters: { ...s.mapFilters.leadStatusFilters, [status]: !s.mapFilters.leadStatusFilters[status] } } })),
-  addBuyerTemplate: (template) => set((s) => ({ buyerTemplates: [...s.buyerTemplates, { ...template, id: uuidv4() }] })),
-  deleteBuyerTemplate: (id) => set((s) => ({ buyerTemplates: s.buyerTemplates.filter((t) => t.id !== id) })),
-  updateMapSettings: (settings) => set((s) => ({ mapSettings: { ...s.mapSettings, ...settings } })),
-  setPendingDrawMode: (v) => set({ pendingDrawMode: v }),
-
-  // â”€â”€ Chat (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  channels: [],
-  messages: {},
-  currentChannelId: null,
-  typingUsers: {},
-  chatSearchQuery: '',
-  unreadCounts: { sms: 0 },
-
-  setCurrentChannel: (channelId) => set({ currentChannelId: channelId }),
-
-  sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
-    const user = get().currentUser;
-    if (!user) {
-      console.log('âŒ No user, cannot send message');
-      return;
-    }
-    const now = new Date().toISOString();
-    const newId = uuidv4();
-    const msg: ChatMessage = {
-      id: newId, channelId, senderId: user.id,
-      senderName: user.name, senderAvatar: user.avatar,
-      content, timestamp: now, type,
-      mentions, reactions: [], replyToId,
-      attachments, edited: false, readBy: [user.id], deleted: false,
-    };
-    
-    console.log('âœ… Sending message locally:', { id: newId, channelId, content, user: user.name });
-    
-    // Update UI immediately
-    set((s) => {
-      const channelMsgs = [...(s.messages[channelId] || []), msg];
-      return {
-        messages: { ...s.messages, [channelId]: channelMsgs },
-        channels: s.channels.map(ch => ch.id === channelId ? { ...ch, lastMessageAt: now } : ch),
-      };
-    });
-    
-    if (isSupabaseConfigured && supabase) {
-      console.log('ðŸ“¤ Saving message to Supabase...');
-      chatService.sendMessage({
-        id: newId, 
-        channel_id: channelId, 
-        user_id: user.id, 
-        sender_name: user.name,
-        sender_avatar: user.avatar,
-        content, 
-        type, 
-        mentions, 
-        reply_to_id: replyToId, 
-        attachments: attachments.length ? attachments : [],
-      })
-      .then((result) => {
-        console.log('âœ… Message saved to Supabase successfully:', result);
-      })
-      .catch((error) => {
-        console.error('âŒ Failed to save message to Supabase:', error);
-      });
-    } else {
-      console.log('âš ï¸ Supabase not configured, message only saved locally');
-    }
-  },
-
-  editMessage: (channelId, messageId, newContent) => {
-    set((s) => {
-      const msgs = s.messages[channelId] || [];
-      return {
-        messages: {
-          ...s.messages,
-          [channelId]: msgs.map(m => m.id === messageId ? { ...m, content: newContent, edited: true } : m),
-        },
-      };
-    });
-    if (isSupabaseConfigured && supabase) {
-      chatService.editMessage(messageId, newContent).catch(() => {});
-    }
-  },
-
-  deleteMessage: (channelId, messageId) => {
-    set((s) => {
-      const msgs = s.messages[channelId] || [];
-      return {
-        messages: {
-          ...s.messages,
-          [channelId]: msgs.map(m => m.id === messageId ? { ...m, deleted: true, content: 'This message was deleted' } : m),
-        },
-      };
-    });
-    if (isSupabaseConfigured && supabase) {
-      chatService.deleteMessage(messageId).catch(() => {});
-    }
-  },
-
-  addReaction: (channelId, messageId, emoji, userId) =>
-    set((s) => {
-      const msgs = s.messages[channelId] || [];
-      return {
-        messages: {
-          ...s.messages,
-          [channelId]: msgs.map(m => {
-            if (m.id !== messageId) return m;
-            const existing = m.reactions.find(r => r.emoji === emoji);
-            if (existing) {
-              if (existing.users.includes(userId)) return m;
-              return {
-                ...m,
-                reactions: m.reactions.map(r => r.emoji === emoji ? { ...r, users: [...r.users, userId] } : r),
-              };
-            }
-            return { ...m, reactions: [...m.reactions, { emoji, users: [userId] }] };
-          }),
-        },
-      };
-    }),
-
-  removeReaction: (channelId, messageId, emoji, userId) =>
-    set((s) => {
-      const msgs = s.messages[channelId] || [];
-      return {
-        messages: {
-          ...s.messages,
-          [channelId]: msgs.map(m => {
-            if (m.id !== messageId) return m;
-            return {
-              ...m,
-              reactions: m.reactions
-                .map(r => r.emoji === emoji ? { ...r, users: r.users.filter(u => u !== userId) } : r)
-                .filter(r => r.users.length > 0),
-            };
-          }),
-        },
-      };
-    }),
-
-  // Enhanced createChannel with detailed logging
-  createChannel: (name, type, members, description = '') => {
-    const id = uuidv4();
-    const user = get().currentUser;
-    const now = new Date().toISOString();
-    
-    console.log('ðŸŽ¯ Creating channel:', { id, name, type, members, description, userId: user?.id });
-    
-    const newChannel = {
-      id,
-      name,
-      type,
-      members,
-      description,
-      avatar: type === 'group' ? 'ðŸ’¬' : name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-      createdAt: now,
-      createdBy: user?.id || '',
-      lastMessageAt: now,
-      pinnedMessageIds: [],
-    };
-    
-    // Update UI immediately
-    set((s) => {
-      console.log('ðŸ“ Updating local state with new channel');
-      return {
-        channels: [...s.channels, newChannel],
-        messages: { ...s.messages, [id]: [] },
-        unreadCounts: { ...s.unreadCounts, [id]: 0 },
-      };
-    });
-
-    // Save to Supabase
-    if (isSupabaseConfigured && supabase && user) {
-      console.log('ðŸ’¾ Attempting to save channel to Supabase...');
-      
-      supabase
-        .from('channels')
-        .insert([{
-          id,
-          name,
-          type,
-          members,
-          description,
-          avatar: newChannel.avatar,
-          created_by: user.id,
-          last_message_at: now,
-          created_at: now,
-        }])
-        .then(({ data, error }) => {
-          if (error) {
-            console.error('âŒ Failed to save channel to Supabase:', error);
-          } else {
-            console.log('âœ… Channel saved to Supabase successfully:', data);
-            
-            // Also add channel members
-            if (members && members.length > 0 && supabase) {
-              console.log('ðŸ‘¥ Adding channel members:', members);
-              supabase
-                .from('channel_members')
-                .insert(members.map(userId => ({
-                  channel_id: id,
-                  user_id: userId,
-                }))
-                )
-                .then(({ data: memberData, error: memberError }) => {
-                  if (memberError) {
-                    console.error('âŒ Failed to save channel members:', memberError);
-                  } else {
-                    console.log('âœ… Channel members saved successfully:', memberData);
-                  }
-                });
-            }
-          }
-        });
-    } else {
-      console.log('âš ï¸ Supabase not configured or user not logged in');
-    }
-
-    return id;
-  },
-
-deleteChannel: (channelId) => {
-  const user = get().currentUser;
-  const channel = get().channels.find(ch => ch.id === channelId);
-  
-  console.log('ðŸ—‘ï¸ Attempting to delete channel:', { channelId, user: user?.id, isCreator: user?.id === channel?.createdBy });
-
-  // Check if user is creator (only creators should delete)
-  if (channel && channel.createdBy !== user?.id) {
-    console.error('âŒ Only the creator can delete this channel');
-    return;
-  }
-
-  // Update local state immediately (optimistic update)
-  set((s) => {
-    const newMsgs = { ...s.messages };
-    delete newMsgs[channelId];
-    const newUnread = { ...s.unreadCounts };
-    delete newUnread[channelId];
-    
-    const newChannels = s.channels.filter(ch => ch.id !== channelId);
-    const newCurrentId = s.currentChannelId === channelId ? (newChannels[0]?.id || null) : s.currentChannelId;
-    
-    console.log('ðŸ“ Updated local state - channel removed');
-    
-    return {
-      channels: newChannels,
-      messages: newMsgs,
-      unreadCounts: newUnread,
-      currentChannelId: newCurrentId,
-    };
-  });
-
-  // Delete from Supabase
-  if (isSupabaseConfigured && supabase) {
-    console.log('ðŸ’¾ Sending delete to Supabase...');
-    
-    supabase
-      .from('channels')
-      .delete()
-      .eq('id', channelId)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('âŒ Failed to delete channel from Supabase:', error);
-          
-          // Revert the local deletion if Supabase fails
-          set((s) => {
-            const originalChannel = get().channels.find(ch => ch.id === channelId);
-            if (!originalChannel) return {};
-            
-            console.log('ðŸ”„ Reverting local deletion');
-            
-            return {
-              channels: [...s.channels, originalChannel],
-              currentChannelId: s.currentChannelId === null ? originalChannel.id : s.currentChannelId,
-            };
-          });
-          
-          alert('Failed to delete channel. Please try again.');
-        } else {
-          console.log('âœ… Channel deleted successfully from Supabase:', data);
-        }
-      });
-  }
-},
-
-  // NEW: Update channel name/description
-  updateChannel: (channelId, updates) => {
-    // Update local state
-    set((s) => ({
-      channels: s.channels.map(ch => 
-        ch.id === channelId ? { ...ch, ...updates } : ch
-      ),
-    }));
-
-    // Update Supabase
-    if (isSupabaseConfigured && supabase) {
-      supabase
-        .from('channels')
-        .update({
-          name: updates.name,
-          description: updates.description,
-        })
-        .eq('id', channelId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('âŒ Failed to update channel:', error);
-          } else {
-            console.log('âœ… Channel updated successfully');
-          }
-        });
-    }
-  },
-
-  // NEW: Add member to channel
-  addChannelMember: (channelId, userId) => {
-    const channel = get().channels.find(ch => ch.id === channelId);
-    if (!channel) return;
-
-    // Don't add if already a member
-    if (channel.members.includes(userId)) return;
-
-    // Update local state
-    set((s) => ({
-      channels: s.channels.map(ch =>
-        ch.id === channelId
-          ? { ...ch, members: [...ch.members, userId] }
-          : ch
-      ),
-    }));
-
-    // Add to Supabase
-    if (isSupabaseConfigured && supabase) {
-      supabase
-        .from('channel_members')
-        .insert([{
-          channel_id: channelId,
-          user_id: userId,
-        }])
-        .then(({ error }) => {
-          if (error) {
-            console.error('âŒ Failed to add channel member:', error);
-          } else {
-            console.log('âœ… Channel member added successfully');
-          }
-        });
-    }
-  },
-
-  // NEW: Remove member from channel
-  removeChannelMember: (channelId, userId) => {
-    const channel = get().channels.find(ch => ch.id === channelId);
-    if (!channel) return;
-
-    // Don't remove the creator
-    if (channel.createdBy === userId) {
-      console.warn('Cannot remove channel creator');
-      return;
-    }
-
-    // Update local state
-    set((s) => ({
-      channels: s.channels.map(ch =>
-        ch.id === channelId
-          ? { ...ch, members: ch.members.filter(id => id !== userId) }
-          : ch
-      ),
-    }));
-
-    // Remove from Supabase
-    if (isSupabaseConfigured && supabase) {
-      supabase
-        .from('channel_members')
-        .delete()
-        .eq('channel_id', channelId)
-        .eq('user_id', userId)
-        .then(({ error }) => {
-          if (error) {
-            console.error('âŒ Failed to remove channel member:', error);
-          } else {
-            console.log('âœ… Channel member removed successfully');
-          }
-        });
-    }
-  },
-
-  // NEW: Leave channel (for members)
-  leaveChannel: (channelId) => {
-    const user = get().currentUser;
-    const channel = get().channels.find(ch => ch.id === channelId);
-    if (!user || !channel) return;
-
-    // Don't allow creator to leave (they must delete or transfer ownership)
-    if (channel.createdBy === user.id) {
-      console.warn('Creator cannot leave channel. Delete it instead.');
-      return;
-    }
-
-    // Update local state
-    set((s) => ({
-      channels: s.channels.filter(ch => ch.id !== channelId),
-      currentChannelId: s.currentChannelId === channelId ? (s.channels[0]?.id || null) : s.currentChannelId,
-    }));
-
-    // Remove from Supabase
-    if (isSupabaseConfigured && supabase) {
-      supabase
-        .from('channel_members')
-        .delete()
-        .eq('channel_id', channelId)
-        .eq('user_id', user.id)
-        .then(({ error }) => {
-          if (error) {
-            console.error('âŒ Failed to leave channel:', error);
-          } else {
-            console.log('âœ… Left channel successfully');
-          }
-        });
-    }
-  },
-
-  markChannelRead: (channelId) =>
-    set((s) => {
-      const userId = s.currentUser?.id;
-      if (!userId) return {};
-      const msgs = s.messages[channelId] || [];
-      return {
-        messages: {
-          ...s.messages,
-          [channelId]: msgs.map(m => m.readBy.includes(userId) ? m : { ...m, readBy: [...m.readBy, userId] }),
-        },
-        unreadCounts: { ...s.unreadCounts, [channelId]: 0 },
-      };
-    }),
-
-  setTypingUser: (channelId, userId) =>
-    set((s) => {
-      const current = s.typingUsers[channelId] || [];
-      if (current.includes(userId)) return {};
-      return { typingUsers: { ...s.typingUsers, [channelId]: [...current, userId] } };
-    }),
-
-  clearTypingUser: (channelId, userId) =>
-    set((s) => {
-      const current = s.typingUsers[channelId] || [];
-      return { typingUsers: { ...s.typingUsers, [channelId]: current.filter(u => u !== userId) } };
-    }),
-
-  setChatSearchQuery: (query) => set({ chatSearchQuery: query }),
-
-  searchMessages: (query) => {
-    const { messages } = get();
-    if (!query.trim()) return [];
-    const lower = query.toLowerCase();
-    const results: ChatMessage[] = [];
-    for (const channelMsgs of Object.values(messages)) {
-      for (const msg of channelMsgs) {
-        if (!msg.deleted && msg.content.toLowerCase().includes(lower)) {
-          results.push(msg);
-        }
+    addBuyer: (buyer) => {
+      const newId = uuidv4();
+      set((s) => ({ buyers: [...s.buyers, { ...buyer, id: newId, createdAt: new Date().toISOString() }] }));
+      const { teamId } = get();
+      if (teamId && isSupabaseConfigured && supabase) {
+        mapService.createBuyer({
+          id: newId, team_id: teamId, name: buyer.name, email: buyer.email, phone: buyer.phone,
+          lat: buyer.lat, lng: buyer.lng, budget_min: buyer.budgetMin, budget_max: buyer.budgetMax,
+          active: buyer.active, deal_score: buyer.dealScore, notes: buyer.notes, criteria: buyer.criteria,
+        }).catch(() => { });
       }
-    }
-    return results.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  },
+    },
+      updateBuyer: (id, updates) => {
+        set((s) => ({ buyers: s.buyers.map((b) => b.id === id ? { ...b, ...updates } : b) }));
+        if (isSupabaseConfigured && supabase) {
+          const db: Record<string, unknown> = {};
+          if (updates.name !== undefined) db.name = updates.name;
+          if (updates.email !== undefined) db.email = updates.email;
+          if (updates.phone !== undefined) db.phone = updates.phone;
+          if (updates.lat !== undefined) db.lat = updates.lat;
+          if (updates.lng !== undefined) db.lng = updates.lng;
+          if (updates.budgetMin !== undefined) db.budget_min = updates.budgetMin;
+          if (updates.budgetMax !== undefined) db.budget_max = updates.budgetMax;
+          if (updates.active !== undefined) db.active = updates.active;
+          if (updates.dealScore !== undefined) db.deal_score = updates.dealScore;
+          if (updates.criteria !== undefined) db.criteria = updates.criteria;
+          if (updates.notes !== undefined) db.notes = updates.notes;
+          if (Object.keys(db).length > 0) mapService.updateBuyer(id, db).catch(() => { });
+        }
+      },
+        deleteBuyer: (id) => {
+          set((s) => ({ buyers: s.buyers.filter((b) => b.id !== id) }));
+          if (isSupabaseConfigured && supabase) mapService.deleteBuyer(id).catch(() => { });
+        },
+          addCoverageArea: (area) => {
+            const newId = uuidv4();
+            set((s) => ({ coverageAreas: [...s.coverageAreas, { ...area, id: newId, createdAt: new Date().toISOString() }] }));
+            const { teamId } = get();
+            if (teamId && isSupabaseConfigured && supabase) {
+              mapService.createCoverageArea({
+                id: newId, team_id: teamId, name: area.name, coordinates: JSON.stringify(area.coordinates),
+                color: area.color, opacity: area.opacity, notes: area.notes,
+              }).catch(() => { });
+            }
+          },
+            updateCoverageArea: (id, updates) => set((s) => ({ coverageAreas: s.coverageAreas.map((a) => a.id === id ? { ...a, ...updates } : a) })),
+              deleteCoverageArea: (id) => {
+                set((s) => ({ coverageAreas: s.coverageAreas.filter((a) => a.id !== id) }));
+                if (isSupabaseConfigured && supabase) mapService.deleteCoverageArea(id).catch(() => { });
+              },
+                toggleMapFilter: (key) => set((s) => ({ mapFilters: { ...s.mapFilters, [key]: !s.mapFilters[key] } })),
+                  toggleLeadStatusFilter: (status) => set((s) => ({ mapFilters: { ...s.mapFilters, leadStatusFilters: { ...s.mapFilters.leadStatusFilters, [status]: !s.mapFilters.leadStatusFilters[status] } } })),
+                    addBuyerTemplate: (template) => set((s) => ({ buyerTemplates: [...s.buyerTemplates, { ...template, id: uuidv4() }] })),
+                      deleteBuyerTemplate: (id) => set((s) => ({ buyerTemplates: s.buyerTemplates.filter((t) => t.id !== id) })),
+                        updateMapSettings: (settings) => set((s) => ({ mapSettings: { ...s.mapSettings, ...settings } })),
+                          setPendingDrawMode: (v) => set({ pendingDrawMode: v }),
 
-  getTotalUnread: () => {
-    const { unreadCounts } = get();
-    return Object.values(unreadCounts).reduce((sum, c) => sum + c, 0);
-  },
+                            // â”€â”€ Chat (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                            channels: [],
+                              messages: { },
+    currentChannelId: null,
+      typingUsers: { },
+    chatSearchQuery: '',
+      unreadCounts: { sms: 0 },
 
-  // â”€â”€ AI (empty â€” no mock recordings) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  callRecordings: [],
+    setCurrentChannel: (channelId) => set({ currentChannelId: channelId }),
 
-  addCallRecording: (leadId, duration) =>
-    set((s) => {
-      const recording: CallRecording = {
-        id: uuidv4(),
-        leadId,
-        timestamp: new Date().toISOString(),
-        duration,
-        audioUrl: `#recording-${Date.now()}`,
-        transcription: null,
-        analyzed: false,
-      };
-      const now = new Date().toISOString();
-      return {
-        callRecordings: [...s.callRecordings, recording],
-        leads: s.leads.map(l =>
-          l.id === leadId
-            ? {
-                ...l,
-                updatedAt: now,
-                timeline: [...l.timeline, {
-                  id: uuidv4(),
-                  type: 'call' as TimelineType,
-                  content: `Voice recording captured (${Math.floor(duration / 60)}m ${duration % 60}s). Awaiting AI analysis...`,
-                  timestamp: now,
-                  user: 'You',
-                  metadata: { recordingId: recording.id, hasTranscript: 'false' },
-                }],
-              }
-            : l
-        ),
-      };
-    }),
+      sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
+        const user = get().currentUser;
+        if (!user) {
+          console.log('âŒ No user, cannot send message');
+          return;
+        }
+        const now = new Date().toISOString();
+        const newId = uuidv4();
+        const msg: ChatMessage = {
+          id: newId, channelId, senderId: user.id,
+          senderName: user.name, senderAvatar: user.avatar,
+          content, timestamp: now, type,
+          mentions, reactions: [], replyToId,
+          attachments, edited: false, readBy: [user.id], deleted: false,
+        };
 
-  analyzeRecording: (recordingId) =>
-    set((s) => {
-      const recording = s.callRecordings.find(r => r.id === recordingId);
-      if (!recording || recording.analyzed) return {};
-      const transcription = mockAnalyzeCall(recording.duration);
-      const now = new Date().toISOString();
-      return {
-        callRecordings: s.callRecordings.map(r =>
-          r.id === recordingId ? { ...r, transcription, analyzed: true } : r
-        ),
-        leads: s.leads.map(l =>
-          l.id === recording.leadId
-            ? {
-                ...l,
-                updatedAt: now,
-                timeline: l.timeline.map(t =>
-                  t.metadata?.recordingId === recordingId
-                    ? {
-                        ...t,
-                        content: `ðŸ“ž Call recorded & analyzed â€” ${transcription.summary.slice(0, 100)}...`,
-                        metadata: { ...t.metadata, recordingId, hasTranscript: 'true' },
-                      }
-                    : t
-                ),
-              }
-            : l
-        ),
-      };
-    }),
+        console.log('âœ… Sending message locally:', { id: newId, channelId, content, user: user.name });
 
-  // â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  currentTheme: (typeof window !== 'undefined' && localStorage.getItem('wholescale-theme')) || 'dark',
-  setTheme: (theme) => {
-    set({ currentTheme: theme });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wholescale-theme', theme);
-      
-      // Apply theme colors to DOM
-      const themeData = themes[theme];
-      if (themeData) {
-        const root = document.documentElement;
-        const customColors = get().customColors;
-        
-        // Apply base theme colors
-        Object.entries(themeData.colors).forEach(([key, value]) => {
-          const cssVar = `--t-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-          // Override with custom colors if they exist
-          if (customColors[key]) {
-            root.style.setProperty(cssVar, customColors[key]);
-          } else {
-            root.style.setProperty(cssVar, value as string);
-          }
+        // Update UI immediately
+        set((s) => {
+          const channelMsgs = [...(s.messages[channelId] || []), msg];
+          return {
+            messages: { ...s.messages, [channelId]: channelMsgs },
+            channels: s.channels.map(ch => ch.id === channelId ? { ...ch, lastMessageAt: now } : ch),
+          };
         });
-      }
-    }
-    if (supabase && isSupabaseConfigured) {
-      supabase.auth.getUser().then(({ data }) => {
-        if (data?.user && supabase) {
-          supabase
-            .from('profiles')
-            .select('settings')
-            .eq('id', data.user.id)
-            .single()
-            .then(({ data: profile }) => {
-              if (profile && supabase) {
-                const existing = (profile.settings as Record<string, unknown>) || {};
-                supabase
-                  .from('profiles')
-                  .update({ settings: { ...existing, theme } })
-                  .eq('id', data.user.id)
-                  .then(({ error }) => {
-                    if (error) console.error('Failed to save theme:', error);
-                    console.log('âœ… Theme saved to Supabase:', theme);
-                  });
-              }
+
+        if (isSupabaseConfigured && supabase) {
+          console.log('ðŸ“¤ Saving message to Supabase...');
+          chatService.sendMessage({
+            id: newId,
+            channel_id: channelId,
+            user_id: user.id,
+            sender_name: user.name,
+            sender_avatar: user.avatar,
+            content,
+            type,
+            mentions,
+            reply_to_id: replyToId,
+            attachments: attachments.length ? attachments : [],
+          })
+            .then((result) => {
+              console.log('âœ… Message saved to Supabase successfully:', result);
+            })
+            .catch((error) => {
+              console.error('âŒ Failed to save message to Supabase:', error);
             });
-        }
-      });
-    }
-  },
-
-  // NEW: Custom Theme Colors
-  customColors: (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        return JSON.parse(localStorage.getItem('wholescale-custom-colors') || '{}');
-      }
-      return {};
-    } catch {
-      return {};
-    }
-  })(),
-
-  setCustomColor: (property, color) => {
-    set((state) => {
-      const newColors = { ...state.customColors, [property]: color };
-      
-      // Save to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('wholescale-custom-colors', JSON.stringify(newColors));
-      }
-      
-      // Apply to DOM immediately
-      const root = document.documentElement;
-      const cssVar = `--t-${property.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-      root.style.setProperty(cssVar, color);
-      
-      // Save to Supabase if user is logged in
-      const { currentUser } = get();
-      if (supabase && isSupabaseConfigured && currentUser) {
-        supabase
-          .from('profiles')
-          .select('settings')
-          .eq('id', currentUser.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile && supabase) {
-              const existing = (profile.settings as Record<string, unknown>) || {};
-              const customSettings = (existing.customColors as Record<string, string>) || {};
-              supabase
-                .from('profiles')
-                .update({ 
-                  settings: { 
-                    ...existing, 
-                    customColors: { ...customSettings, [property]: color } 
-                  } 
-                })
-                .eq('id', currentUser.id)
-                .then(({ error }) => {
-                  if (error) console.error('Failed to save custom color:', error);
-                });
-            }
-          });
-      }
-      
-      return { customColors: newColors };
-    });
-  },
-
-  resetCustomColors: () => {
-    set((state) => {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('wholescale-custom-colors');
-      }
-      
-      // Reset to theme defaults
-      const themeData = themes[state.currentTheme];
-      if (themeData && typeof window !== 'undefined') {
-        const root = document.documentElement;
-        Object.entries(themeData.colors).forEach(([key, value]) => {
-          const cssVar = `--t-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-          root.style.setProperty(cssVar, value as string);
-        });
-      }
-      
-      // Save to Supabase
-      const { currentUser } = get();
-      if (supabase && isSupabaseConfigured && currentUser) {
-        supabase
-          .from('profiles')
-          .select('settings')
-          .eq('id', currentUser.id)
-          .single()
-          .then(({ data: profile }) => {
-            if (profile && supabase) {
-              const existing = (profile.settings as Record<string, unknown>) || {};
-              supabase
-                .from('profiles')
-                .update({ 
-                  settings: { ...existing, customColors: {} } 
-                })
-                .eq('id', currentUser.id)
-                .then(({ error }) => {
-                  if (error) console.error('Failed to reset custom colors:', error);
-                });
-            }
-          });
-      }
-      
-      return { customColors: {} };
-    });
-  },
-
-  getCurrentColors: () => {
-    const state = get();
-    const themeColors = themes[state.currentTheme]?.colors || themes.dark.colors;
-    return { ...themeColors, ...state.customColors };
-  },
-
-  // â”€â”€ Notifications (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  notifications: [],
-
-  addNotification: (notif) => {
-    const { notificationSettings, notifications } = get();
-    
-    // Check DND
-    if (notificationSettings.dndEnabled) return;
-
-    // Deduplication logic: Don't add if identical title/message is in the last 10 seconds
-    const tenSecondsAgo = Date.now() - 10000;
-    const isDuplicate = notifications.some(n => 
-      n.title === notif.title && 
-      n.message === notif.message && 
-      new Date(n.timestamp).getTime() > tenSecondsAgo
-    );
-
-    if (isDuplicate) return;
-
-    const newId = uuidv4();
-    set((s) => ({
-      notifications: [
-        { ...notif, id: newId, timestamp: new Date().toISOString(), read: false },
-        ...s.notifications,
-      ],
-    }));
-    const { currentUser } = get();
-    if (isSupabaseConfigured && supabase && currentUser) {
-      notificationsService.create({ id: newId, user_id: currentUser.id, type: notif.type, title: notif.title, message: notif.message }).catch(() => {});
-    }
-  },
-
-  markNotificationRead: (id) => {
-    set((s) => ({ notifications: s.notifications.map(n => n.id === id ? { ...n, read: true } : n) }));
-    if (isSupabaseConfigured && supabase) notificationsService.markRead(id).catch(() => {});
-  },
-
-  markAllNotificationsRead: () => {
-    set((s) => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) }));
-    const { currentUser } = get();
-    if (isSupabaseConfigured && supabase && currentUser) notificationsService.markAllRead(currentUser.id).catch(() => {});
-  },
-
-  clearAllNotifications: () => {
-    set({ notifications: [] });
-    const { currentUser } = get();
-    if (isSupabaseConfigured && supabase && currentUser) notificationsService.clearAll(currentUser.id).catch(() => {});
-  },
-
-  deleteNotification: (id: string) => {
-    set((s) => ({ notifications: s.notifications.filter(n => n.id !== id) }));
-    if (isSupabaseConfigured && supabase) notificationsService.remove(id).catch(() => {});
-  },
-
-  // â”€â”€ Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  importTemplates: [],
-  importHistory: [],
-
-  duplicateSettings: {
-    enabled: true,
-    matchFields: ['email', 'phone', 'address'],
-    action: 'skip' as const,
-  },
-
-  addImportTemplate: (template) =>
-    set((s) => ({
-      importTemplates: [...s.importTemplates, { ...template, id: uuidv4(), createdAt: new Date().toISOString() }],
-    })),
-
-  deleteImportTemplate: (id) =>
-    set((s) => ({ importTemplates: s.importTemplates.filter((t) => t.id !== id) })),
-
-  addImportHistory: (entry) =>
-    set((s) => ({
-      importHistory: [
-        { ...entry, id: uuidv4(), timestamp: new Date().toISOString() },
-        ...s.importHistory,
-      ],
-    })),
-
-  updateDuplicateSettings: (settings) =>
-    set((s) => ({ duplicateSettings: { ...s.duplicateSettings, ...settings } })),
-
-  getMockSheetData: () => {
-    return MOCK_SHEET_DATA[0];
-  },
-
-  getMockScrapedProperty: (_url: string) => {
-    const idx = Math.floor(Math.random() * MOCK_SCRAPED_PROPERTIES.length);
-    return MOCK_SCRAPED_PROPERTIES[idx];
-  },
-
-  getMockPdfExtraction: () => {
-    return MOCK_PDF_EXTRACTIONS;
-  },
-
-  importLeadsFromData: (data) => {
-    const state = get();
-    const now = new Date().toISOString();
-    let imported = 0;
-
-    const newLeads: Lead[] = [];
-    for (const d of data) {
-      if (!d.name?.trim() && !d.address?.trim()) continue;
-
-      if (state.duplicateSettings.enabled) {
-        const isDuplicate = state.leads.some((l) => {
-          return (
-            (state.duplicateSettings.matchFields.includes('email') && d.email && l.email === d.email) ||
-            (state.duplicateSettings.matchFields.includes('phone') && d.phone && l.phone === d.phone) ||
-            (state.duplicateSettings.matchFields.includes('address') && d.address && l.propertyAddress === d.address)
-          );
-        });
-        if (isDuplicate && state.duplicateSettings.action === 'skip') continue;
-      }
-
-      const leadObj: Lead = {
-        id: uuidv4(),
-        name: d.name || 'Unknown',
-        email: d.email || '',
-        phone: d.phone || '',
-        status: 'new',
-        source: (d.source as LeadSource) || 'other',
-        propertyAddress: d.address || '',
-        propertyType: d.propertyType || 'single-family',
-        estimatedValue: d.value || 0,
-        bedrooms: (d as any).bedrooms || 0,
-        bathrooms: (d as any).bathrooms || 0,
-        sqft: (d as any).sqft || 0,
-        offerAmount: 0,
-        lat: 30.2672,
-        lng: -97.7431,
-        notes: d.notes || '',
-        assignedTo: '',
-        createdAt: now,
-        updatedAt: now,
-        probability: 40,
-        engagementLevel: 2,
-        timelineUrgency: 3,
-        competitionLevel: 3,
-        importSource: (d as any).importSource || 'import',
-        photos: (d as any).photos || [],
-        documents: [],
-        timeline: [{
-          id: uuidv4(), type: 'note' as TimelineType,
-          content: `Imported via bulk import.${d.notes ? ` Notes: ${d.notes}` : ''}`,
-          timestamp: now, user: 'System',
-        }],
-        statusHistory: [{ fromStatus: null, toStatus: 'new', timestamp: now, changedBy: 'Import' }],
-      };
-      newLeads.push(leadObj);
-      imported++;
-    }
-
-    set((s) => ({ leads: [...s.leads, ...newLeads] }));
-
-    if (supabase && isSupabaseConfigured && get().teamId) {
-      const teamId = get().teamId;
-      const rows = newLeads.map(lead => ({
-        id: lead.id,
-        team_id: teamId,
-        name: lead.name,
-        email: lead.email,
-        phone: lead.phone,
-        address: lead.propertyAddress,
-        property_type: lead.propertyType,
-        property_value: lead.estimatedValue,
-        bedrooms: lead.bedrooms,
-        bathrooms: lead.bathrooms,
-        sqft: lead.sqft,
-        offer_amount: lead.offerAmount,
-        status: lead.status,
-        source: lead.source,
-        notes: lead.notes,
-        lat: lead.lat,
-        lng: lead.lng,
-        assigned_to: lead.assignedTo || null,
-        probability: lead.probability,
-        engagement_level: lead.engagementLevel,
-        timeline_urgency: lead.timelineUrgency,
-        competition_level: lead.competitionLevel,
-        import_source: lead.importSource || 'import',
-        photos: lead.photos || [],
-        created_at: lead.createdAt,
-        updated_at: lead.updatedAt,
-      }));
-
-      supabase.from('leads').insert(rows).then(({ error }) => {
-        if (error) {
-          console.error('âŒ Failed to save imported leads to Supabase:', error);
         } else {
-          console.log(`âœ… ${rows.length} imported leads saved to Supabase`);
+          console.log('âš ï¸ Supabase not configured, message only saved locally');
         }
-      });
-    }
+      },
 
-    return imported;
+        editMessage: (channelId, messageId, newContent) => {
+          set((s) => {
+            const msgs = s.messages[channelId] || [];
+            return {
+              messages: {
+                ...s.messages,
+                [channelId]: msgs.map(m => m.id === messageId ? { ...m, content: newContent, edited: true } : m),
+              },
+            };
+          });
+          if (isSupabaseConfigured && supabase) {
+            chatService.editMessage(messageId, newContent).catch(() => { });
+          }
+        },
+
+          deleteMessage: (channelId, messageId) => {
+            set((s) => {
+              const msgs = s.messages[channelId] || [];
+              return {
+                messages: {
+                  ...s.messages,
+                  [channelId]: msgs.map(m => m.id === messageId ? { ...m, deleted: true, content: 'This message was deleted' } : m),
+                },
+              };
+            });
+            if (isSupabaseConfigured && supabase) {
+              chatService.deleteMessage(messageId).catch(() => { });
+            }
+          },
+
+            addReaction: (channelId, messageId, emoji, userId) =>
+              set((s) => {
+                const msgs = s.messages[channelId] || [];
+                return {
+                  messages: {
+                    ...s.messages,
+                    [channelId]: msgs.map(m => {
+                      if (m.id !== messageId) return m;
+                      const existing = m.reactions.find(r => r.emoji === emoji);
+                      if (existing) {
+                        if (existing.users.includes(userId)) return m;
+                        return {
+                          ...m,
+                          reactions: m.reactions.map(r => r.emoji === emoji ? { ...r, users: [...r.users, userId] } : r),
+                        };
+                      }
+                      return { ...m, reactions: [...m.reactions, { emoji, users: [userId] }] };
+                    }),
+                  },
+                };
+              }),
+
+              removeReaction: (channelId, messageId, emoji, userId) =>
+                set((s) => {
+                  const msgs = s.messages[channelId] || [];
+                  return {
+                    messages: {
+                      ...s.messages,
+                      [channelId]: msgs.map(m => {
+                        if (m.id !== messageId) return m;
+                        return {
+                          ...m,
+                          reactions: m.reactions
+                            .map(r => r.emoji === emoji ? { ...r, users: r.users.filter(u => u !== userId) } : r)
+                            .filter(r => r.users.length > 0),
+                        };
+                      }),
+                    },
+                  };
+                }),
+
+                // Enhanced createChannel with detailed logging
+                createChannel: (name, type, members, description = '') => {
+                  const id = uuidv4();
+                  const user = get().currentUser;
+                  const now = new Date().toISOString();
+
+                  console.log('ðŸŽ¯ Creating channel:', { id, name, type, members, description, userId: user?.id });
+
+                  const newChannel = {
+                    id,
+                    name,
+                    type,
+                    members,
+                    description,
+                    avatar: type === 'group' ? 'ðŸ’¬' : name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+                    createdAt: now,
+                    createdBy: user?.id || '',
+                    lastMessageAt: now,
+                    pinnedMessageIds: [],
+                  };
+
+                  // Update UI immediately
+                  set((s) => {
+                    console.log('ðŸ“ Updating local state with new channel');
+                    return {
+                      channels: [...s.channels, newChannel],
+                      messages: { ...s.messages, [id]: [] },
+                      unreadCounts: { ...s.unreadCounts, [id]: 0 },
+                    };
+                  });
+
+                  // Save to Supabase
+                  if (isSupabaseConfigured && supabase && user) {
+                    console.log('ðŸ’¾ Attempting to save channel to Supabase...');
+
+                    supabase
+                      .from('channels')
+                      .insert([{
+                        id,
+                        name,
+                        type,
+                        members,
+                        description,
+                        avatar: newChannel.avatar,
+                        created_by: user.id,
+                        last_message_at: now,
+                        created_at: now,
+                      }])
+                      .then(({ data, error }) => {
+                        if (error) {
+                          console.error('âŒ Failed to save channel to Supabase:', error);
+                        } else {
+                          console.log('âœ… Channel saved to Supabase successfully:', data);
+
+                          // Also add channel members
+                          if (members && members.length > 0 && supabase) {
+                            console.log('ðŸ‘¥ Adding channel members:', members);
+                            supabase
+                              .from('channel_members')
+                              .insert(members.map(userId => ({
+                                channel_id: id,
+                                user_id: userId,
+                              }))
+                              )
+                              .then(({ data: memberData, error: memberError }) => {
+                                if (memberError) {
+                                  console.error('âŒ Failed to save channel members:', memberError);
+                                } else {
+                                  console.log('âœ… Channel members saved successfully:', memberData);
+                                }
+                              });
+                          }
+                        }
+                      });
+                  } else {
+                    console.log('âš ï¸ Supabase not configured or user not logged in');
+                  }
+
+                  return id;
+                },
+
+                  deleteChannel: (channelId) => {
+                    const user = get().currentUser;
+                    const channel = get().channels.find(ch => ch.id === channelId);
+
+                    console.log('ðŸ—‘ï¸ Attempting to delete channel:', { channelId, user: user?.id, isCreator: user?.id === channel?.createdBy });
+
+                    // Check if user is creator (only creators should delete)
+                    if (channel && channel.createdBy !== user?.id) {
+                      console.error('âŒ Only the creator can delete this channel');
+                      return;
+                    }
+
+                    // Update local state immediately (optimistic update)
+                    set((s) => {
+                      const newMsgs = { ...s.messages };
+                      delete newMsgs[channelId];
+                      const newUnread = { ...s.unreadCounts };
+                      delete newUnread[channelId];
+
+                      const newChannels = s.channels.filter(ch => ch.id !== channelId);
+                      const newCurrentId = s.currentChannelId === channelId ? (newChannels[0]?.id || null) : s.currentChannelId;
+
+                      console.log('ðŸ“ Updated local state - channel removed');
+
+                      return {
+                        channels: newChannels,
+                        messages: newMsgs,
+                        unreadCounts: newUnread,
+                        currentChannelId: newCurrentId,
+                      };
+                    });
+
+                    // Delete from Supabase
+                    if (isSupabaseConfigured && supabase) {
+                      console.log('ðŸ’¾ Sending delete to Supabase...');
+
+                      supabase
+                        .from('channels')
+                        .delete()
+                        .eq('id', channelId)
+                        .then(({ data, error }) => {
+                          if (error) {
+                            console.error('âŒ Failed to delete channel from Supabase:', error);
+
+                            // Revert the local deletion if Supabase fails
+                            set((s) => {
+                              const originalChannel = get().channels.find(ch => ch.id === channelId);
+                              if (!originalChannel) return {};
+
+                              console.log('ðŸ”„ Reverting local deletion');
+
+                              return {
+                                channels: [...s.channels, originalChannel],
+                                currentChannelId: s.currentChannelId === null ? originalChannel.id : s.currentChannelId,
+                              };
+                            });
+
+                            alert('Failed to delete channel. Please try again.');
+                          } else {
+                            console.log('âœ… Channel deleted successfully from Supabase:', data);
+                          }
+                        });
+                    }
+                  },
+
+                    // NEW: Update channel name/description
+                    updateChannel: (channelId, updates) => {
+                      // Update local state
+                      set((s) => ({
+                        channels: s.channels.map(ch =>
+                          ch.id === channelId ? { ...ch, ...updates } : ch
+                        ),
+                      }));
+
+                      // Update Supabase
+                      if (isSupabaseConfigured && supabase) {
+                        supabase
+                          .from('channels')
+                          .update({
+                            name: updates.name,
+                            description: updates.description,
+                          })
+                          .eq('id', channelId)
+                          .then(({ error }) => {
+                            if (error) {
+                              console.error('âŒ Failed to update channel:', error);
+                            } else {
+                              console.log('âœ… Channel updated successfully');
+                            }
+                          });
+                      }
+                    },
+
+                      // NEW: Add member to channel
+                      addChannelMember: (channelId, userId) => {
+                        const channel = get().channels.find(ch => ch.id === channelId);
+                        if (!channel) return;
+
+                        // Don't add if already a member
+                        if (channel.members.includes(userId)) return;
+
+                        // Update local state
+                        set((s) => ({
+                          channels: s.channels.map(ch =>
+                            ch.id === channelId
+                              ? { ...ch, members: [...ch.members, userId] }
+                              : ch
+                          ),
+                        }));
+
+                        // Add to Supabase
+                        if (isSupabaseConfigured && supabase) {
+                          supabase
+                            .from('channel_members')
+                            .insert([{
+                              channel_id: channelId,
+                              user_id: userId,
+                            }])
+                            .then(({ error }) => {
+                              if (error) {
+                                console.error('âŒ Failed to add channel member:', error);
+                              } else {
+                                console.log('âœ… Channel member added successfully');
+                              }
+                            });
+                        }
+                      },
+
+                        // NEW: Remove member from channel
+                        removeChannelMember: (channelId, userId) => {
+                          const channel = get().channels.find(ch => ch.id === channelId);
+                          if (!channel) return;
+
+                          // Don't remove the creator
+                          if (channel.createdBy === userId) {
+                            console.warn('Cannot remove channel creator');
+                            return;
+                          }
+
+                          // Update local state
+                          set((s) => ({
+                            channels: s.channels.map(ch =>
+                              ch.id === channelId
+                                ? { ...ch, members: ch.members.filter(id => id !== userId) }
+                                : ch
+                            ),
+                          }));
+
+                          // Remove from Supabase
+                          if (isSupabaseConfigured && supabase) {
+                            supabase
+                              .from('channel_members')
+                              .delete()
+                              .eq('channel_id', channelId)
+                              .eq('user_id', userId)
+                              .then(({ error }) => {
+                                if (error) {
+                                  console.error('âŒ Failed to remove channel member:', error);
+                                } else {
+                                  console.log('âœ… Channel member removed successfully');
+                                }
+                              });
+                          }
+                        },
+
+                          // NEW: Leave channel (for members)
+                          leaveChannel: (channelId) => {
+                            const user = get().currentUser;
+                            const channel = get().channels.find(ch => ch.id === channelId);
+                            if (!user || !channel) return;
+
+                            // Don't allow creator to leave (they must delete or transfer ownership)
+                            if (channel.createdBy === user.id) {
+                              console.warn('Creator cannot leave channel. Delete it instead.');
+                              return;
+                            }
+
+                            // Update local state
+                            set((s) => ({
+                              channels: s.channels.filter(ch => ch.id !== channelId),
+                              currentChannelId: s.currentChannelId === channelId ? (s.channels[0]?.id || null) : s.currentChannelId,
+                            }));
+
+                            // Remove from Supabase
+                            if (isSupabaseConfigured && supabase) {
+                              supabase
+                                .from('channel_members')
+                                .delete()
+                                .eq('channel_id', channelId)
+                                .eq('user_id', user.id)
+                                .then(({ error }) => {
+                                  if (error) {
+                                    console.error('âŒ Failed to leave channel:', error);
+                                  } else {
+                                    console.log('âœ… Left channel successfully');
+                                  }
+                                });
+                            }
+                          },
+
+                            markChannelRead: (channelId) =>
+                              set((s) => {
+                                const userId = s.currentUser?.id;
+                                if (!userId) return {};
+                                const msgs = s.messages[channelId] || [];
+                                return {
+                                  messages: {
+                                    ...s.messages,
+                                    [channelId]: msgs.map(m => m.readBy.includes(userId) ? m : { ...m, readBy: [...m.readBy, userId] }),
+                                  },
+                                  unreadCounts: { ...s.unreadCounts, [channelId]: 0 },
+                                };
+                              }),
+
+                              setTypingUser: (channelId, userId) =>
+                                set((s) => {
+                                  const current = s.typingUsers[channelId] || [];
+                                  if (current.includes(userId)) return {};
+                                  return { typingUsers: { ...s.typingUsers, [channelId]: [...current, userId] } };
+                                }),
+
+                                clearTypingUser: (channelId, userId) =>
+                                  set((s) => {
+                                    const current = s.typingUsers[channelId] || [];
+                                    return { typingUsers: { ...s.typingUsers, [channelId]: current.filter(u => u !== userId) } };
+                                  }),
+
+                                  setChatSearchQuery: (query) => set({ chatSearchQuery: query }),
+
+                                    searchMessages: (query) => {
+                                      const { messages } = get();
+                                      if (!query.trim()) return [];
+                                      const lower = query.toLowerCase();
+                                      const results: ChatMessage[] = [];
+                                      for (const channelMsgs of Object.values(messages)) {
+                                        for (const msg of channelMsgs) {
+                                          if (!msg.deleted && msg.content.toLowerCase().includes(lower)) {
+                                            results.push(msg);
+                                          }
+                                        }
+                                      }
+                                      return results.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+                                    },
+
+                                      getTotalUnread: () => {
+                                        const { unreadCounts } = get();
+                                        return Object.values(unreadCounts).reduce((sum, c) => sum + c, 0);
+                                      },
+
+                                        // â”€â”€ AI (empty â€” no mock recordings) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                                        callRecordings: [],
+
+                                          addCallRecording: (leadId, duration) =>
+                                            set((s) => {
+                                              const recording: CallRecording = {
+                                                id: uuidv4(),
+                                                leadId,
+                                                timestamp: new Date().toISOString(),
+                                                duration,
+                                                audioUrl: `#recording-${Date.now()}`,
+                                                transcription: null,
+                                                analyzed: false,
+                                              };
+                                              const now = new Date().toISOString();
+                                              return {
+                                                callRecordings: [...s.callRecordings, recording],
+                                                leads: s.leads.map(l =>
+                                                  l.id === leadId
+                                                    ? {
+                                                      ...l,
+                                                      updatedAt: now,
+                                                      timeline: [...l.timeline, {
+                                                        id: uuidv4(),
+                                                        type: 'call' as TimelineType,
+                                                        content: `Voice recording captured (${Math.floor(duration / 60)}m ${duration % 60}s). Awaiting AI analysis...`,
+                                                        timestamp: now,
+                                                        user: 'You',
+                                                        metadata: { recordingId: recording.id, hasTranscript: 'false' },
+                                                      }],
+                                                    }
+                                                    : l
+                                                ),
+                                              };
+                                            }),
+
+                                            analyzeRecording: (recordingId) =>
+                                              set((s) => {
+                                                const recording = s.callRecordings.find(r => r.id === recordingId);
+                                                if (!recording || recording.analyzed) return {};
+                                                const transcription = mockAnalyzeCall(recording.duration);
+                                                const now = new Date().toISOString();
+                                                return {
+                                                  callRecordings: s.callRecordings.map(r =>
+                                                    r.id === recordingId ? { ...r, transcription, analyzed: true } : r
+                                                  ),
+                                                  leads: s.leads.map(l =>
+                                                    l.id === recording.leadId
+                                                      ? {
+                                                        ...l,
+                                                        updatedAt: now,
+                                                        timeline: l.timeline.map(t =>
+                                                          t.metadata?.recordingId === recordingId
+                                                            ? {
+                                                              ...t,
+                                                              content: `ðŸ“ž Call recorded & analyzed â€” ${transcription.summary.slice(0, 100)}...`,
+                                                              metadata: { ...t.metadata, recordingId, hasTranscript: 'true' },
+                                                            }
+                                                            : t
+                                                        ),
+                                                      }
+                                                      : l
+                                                  ),
+                                                };
+                                              }),
+
+                                              // â”€â”€ Theme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                                              currentTheme: (typeof window !== 'undefined' && localStorage.getItem('wholescale-theme')) || 'dark',
+                                                setTheme: (theme) => {
+                                                  set({ currentTheme: theme });
+                                                  if (typeof window !== 'undefined') {
+                                                    localStorage.setItem('wholescale-theme', theme);
+
+                                                    // Apply theme colors to DOM
+                                                    const themeData = themes[theme];
+                                                    if (themeData) {
+                                                      const root = document.documentElement;
+                                                      const customColors = get().customColors;
+
+                                                      // Apply base theme colors
+                                                      Object.entries(themeData.colors).forEach(([key, value]) => {
+                                                        const cssVar = `--t-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+                                                        // Override with custom colors if they exist
+                                                        if (customColors[key]) {
+                                                          root.style.setProperty(cssVar, customColors[key]);
+                                                        } else {
+                                                          root.style.setProperty(cssVar, value as string);
+                                                        }
+                                                      });
+                                                    }
+                                                  }
+                                                  if (supabase && isSupabaseConfigured) {
+                                                    supabase.auth.getUser().then(({ data }) => {
+                                                      if (data?.user && supabase) {
+                                                        supabase
+                                                          .from('profiles')
+                                                          .select('settings')
+                                                          .eq('id', data.user.id)
+                                                          .single()
+                                                          .then(({ data: profile }) => {
+                                                            if (profile && supabase) {
+                                                              const existing = (profile.settings as Record<string, unknown>) || {};
+                                                              supabase
+                                                                .from('profiles')
+                                                                .update({ settings: { ...existing, theme } })
+                                                                .eq('id', data.user.id)
+                                                                .then(({ error }) => {
+                                                                  if (error) console.error('Failed to save theme:', error);
+                                                                  console.log('âœ… Theme saved to Supabase:', theme);
+                                                                });
+                                                            }
+                                                          });
+                                                      }
+                                                    });
+                                                  }
+                                                },
+
+                                                  // NEW: Custom Theme Colors
+                                                  customColors: (() => {
+                                                    try {
+                                                      if (typeof window !== 'undefined') {
+                                                        return JSON.parse(localStorage.getItem('wholescale-custom-colors') || '{}');
+                                                      }
+                                                      return {};
+                                                    } catch {
+                                                      return {};
+                                                    }
+                                                  })(),
+
+                                                    setCustomColor: (property, color) => {
+                                                      set((state) => {
+                                                        const newColors = { ...state.customColors, [property]: color };
+
+                                                        // Save to localStorage
+                                                        if (typeof window !== 'undefined') {
+                                                          localStorage.setItem('wholescale-custom-colors', JSON.stringify(newColors));
+                                                        }
+
+                                                        // Apply to DOM immediately
+                                                        const root = document.documentElement;
+                                                        const cssVar = `--t-${property.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+                                                        root.style.setProperty(cssVar, color);
+
+                                                        // Save to Supabase if user is logged in
+                                                        const { currentUser } = get();
+                                                        if (supabase && isSupabaseConfigured && currentUser) {
+                                                          supabase
+                                                            .from('profiles')
+                                                            .select('settings')
+                                                            .eq('id', currentUser.id)
+                                                            .single()
+                                                            .then(({ data: profile }) => {
+                                                              if (profile && supabase) {
+                                                                const existing = (profile.settings as Record<string, unknown>) || {};
+                                                                const customSettings = (existing.customColors as Record<string, string>) || {};
+                                                                supabase
+                                                                  .from('profiles')
+                                                                  .update({
+                                                                    settings: {
+                                                                      ...existing,
+                                                                      customColors: { ...customSettings, [property]: color }
+                                                                    }
+                                                                  })
+                                                                  .eq('id', currentUser.id)
+                                                                  .then(({ error }) => {
+                                                                    if (error) console.error('Failed to save custom color:', error);
+                                                                  });
+                                                              }
+                                                            });
+                                                        }
+
+                                                        return { customColors: newColors };
+                                                      });
+                                                    },
+
+                                                      resetCustomColors: () => {
+                                                        set((state) => {
+                                                          if (typeof window !== 'undefined') {
+                                                            localStorage.removeItem('wholescale-custom-colors');
+                                                          }
+
+                                                          // Reset to theme defaults
+                                                          const themeData = themes[state.currentTheme];
+                                                          if (themeData && typeof window !== 'undefined') {
+                                                            const root = document.documentElement;
+                                                            Object.entries(themeData.colors).forEach(([key, value]) => {
+                                                              const cssVar = `--t-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+                                                              root.style.setProperty(cssVar, value as string);
+                                                            });
+                                                          }
+
+                                                          // Save to Supabase
+                                                          const { currentUser } = get();
+                                                          if (supabase && isSupabaseConfigured && currentUser) {
+                                                            supabase
+                                                              .from('profiles')
+                                                              .select('settings')
+                                                              .eq('id', currentUser.id)
+                                                              .single()
+                                                              .then(({ data: profile }) => {
+                                                                if (profile && supabase) {
+                                                                  const existing = (profile.settings as Record<string, unknown>) || {};
+                                                                  supabase
+                                                                    .from('profiles')
+                                                                    .update({
+                                                                      settings: { ...existing, customColors: {} }
+                                                                    })
+                                                                    .eq('id', currentUser.id)
+                                                                    .then(({ error }) => {
+                                                                      if (error) console.error('Failed to reset custom colors:', error);
+                                                                    });
+                                                                }
+                                                              });
+                                                          }
+
+                                                          return { customColors: {} };
+                                                        });
+                                                      },
+
+                                                        getCurrentColors: () => {
+                                                          const state = get();
+                                                          const themeColors = themes[state.currentTheme]?.colors || themes.dark.colors;
+                                                          return { ...themeColors, ...state.customColors };
+                                                        },
+
+                                                          // â”€â”€ Notifications (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                                                          notifications: [],
+
+                                                            addNotification: (notif) => {
+                                                              const { notificationSettings, notifications } = get();
+
+                                                              // Check DND
+                                                              if (notificationSettings.dndEnabled) return;
+
+                                                              // Deduplication logic: Don't add if identical title/message is in the last 10 seconds
+                                                              const tenSecondsAgo = Date.now() - 10000;
+                                                              const isDuplicate = notifications.some(n =>
+                                                                n.title === notif.title &&
+                                                                n.message === notif.message &&
+                                                                new Date(n.timestamp).getTime() > tenSecondsAgo
+                                                              );
+
+                                                              if (isDuplicate) return;
+
+                                                              const newId = uuidv4();
+                                                              set((s) => ({
+                                                                notifications: [
+                                                                  { ...notif, id: newId, timestamp: new Date().toISOString(), read: false },
+                                                                  ...s.notifications,
+                                                                ],
+                                                              }));
+                                                              const { currentUser } = get();
+                                                              if (isSupabaseConfigured && supabase && currentUser) {
+                                                                notificationsService.create({ id: newId, user_id: currentUser.id, type: notif.type, title: notif.title, message: notif.message }).catch(() => { });
+                                                              }
+                                                            },
+
+                                                              markNotificationRead: (id) => {
+                                                                set((s) => ({ notifications: s.notifications.map(n => n.id === id ? { ...n, read: true } : n) }));
+                                                                if (isSupabaseConfigured && supabase) notificationsService.markRead(id).catch(() => { });
+                                                              },
+
+                                                                markAllNotificationsRead: () => {
+                                                                  set((s) => ({ notifications: s.notifications.map(n => ({ ...n, read: true })) }));
+                                                                  const { currentUser } = get();
+                                                                  if (isSupabaseConfigured && supabase && currentUser) notificationsService.markAllRead(currentUser.id).catch(() => { });
+                                                                },
+
+                                                                  clearAllNotifications: () => {
+                                                                    set({ notifications: [] });
+                                                                    const { currentUser } = get();
+                                                                    if (isSupabaseConfigured && supabase && currentUser) notificationsService.clearAll(currentUser.id).catch(() => { });
+                                                                  },
+
+                                                                    deleteNotification: (id: string) => {
+                                                                      set((s) => ({ notifications: s.notifications.filter(n => n.id !== id) }));
+                                                                      if (isSupabaseConfigured && supabase) notificationsService.remove(id).catch(() => { });
+                                                                    },
+
+                                                                      // â”€â”€ Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                                                                      importTemplates: [],
+                                                                        importHistory: [],
+
+                                                                          duplicateSettings: {
+      enabled: true,
+        matchFields: ['email', 'phone', 'address'],
+          action: 'skip' as const,
   },
 
-  // â”€â”€ Streaks (start at 0) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  loginStreak: 0,
-  taskStreak: 0,
-  lastLoginDate: new Date().toISOString(),
-  longestStreak: 0,
-  memberStreaks: {
-    '1': { login: 5, task: 12 },
-    '2': { login: 3, task: 8 },
-    '3': { login: 0, task: 0 },
-    '4': { login: 12, task: 45 },
-    '5': { login: 1, task: 2 },
-  },
+    addImportTemplate: (template) =>
+      set((s) => ({
+        importTemplates: [...s.importTemplates, { ...template, id: uuidv4(), createdAt: new Date().toISOString() }],
+      })),
 
-  incrementLoginStreak: () =>
-    set((s) => {
-      const today = new Date().toDateString();
-      const lastLogin = new Date(s.lastLoginDate).toDateString();
-      if (today === lastLogin) return {};
-      const yesterday = new Date(Date.now() - 86400000).toDateString();
-      const newStreak = lastLogin === yesterday ? s.loginStreak + 1 : 1;
-      return {
-        loginStreak: newStreak,
-        lastLoginDate: new Date().toISOString(),
-        longestStreak: Math.max(s.longestStreak, newStreak),
-      };
-    }),
+      deleteImportTemplate: (id) =>
+        set((s) => ({ importTemplates: s.importTemplates.filter((t) => t.id !== id) })),
 
-  // â”€â”€ Lead Photos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  addLeadPhoto: (leadId, photoId) =>
-    set((s) => ({
-      leads: s.leads.map(l =>
-        l.id === leadId
-          ? { ...l, photos: [...(l.photos || []), photoId], updatedAt: new Date().toISOString() }
-          : l
-      ),
-    })),
+        addImportHistory: (entry) =>
+          set((s) => ({
+            importHistory: [
+              { ...entry, id: uuidv4(), timestamp: new Date().toISOString() },
+              ...s.importHistory,
+            ],
+          })),
 
-  removeLeadPhoto: (leadId, photoId) =>
-    set((s) => ({
-      leads: s.leads.map(l =>
-        l.id === leadId
-          ? { ...l, photos: (l.photos || []).filter(p => p !== photoId), updatedAt: new Date().toISOString() }
-          : l
-      ),
-    })),
+          updateDuplicateSettings: (settings) =>
+            set((s) => ({ duplicateSettings: { ...s.duplicateSettings, ...settings } })),
 
-  reorderLeadPhotos: (leadId, photos) =>
-    set((s) => ({
-      leads: s.leads.map(l =>
-        l.id === leadId ? { ...l, photos, updatedAt: new Date().toISOString() } : l
-      ),
-    })),
+            getMockSheetData: () => {
+              return MOCK_SHEET_DATA[0];
+            },
 
-  // â”€â”€ SMS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  setSMSMessages: (messages) => {
-    const unreadCount = messages.filter(m => !m.is_read && m.direction === 'inbound').length;
-    set((state: any) => ({ 
-      smsMessages: messages,
-      unreadCounts: { ...state.unreadCounts, sms: unreadCount }
-    }));
-  },
+              getMockScrapedProperty: (_url: string) => {
+                const idx = Math.floor(Math.random() * MOCK_SCRAPED_PROPERTIES.length);
+                return MOCK_SCRAPED_PROPERTIES[idx];
+              },
 
-  addSMSMessage: (message) => {
-    set((state: any) => {
-      const exists = state.smsMessages.some((m: any) => m.id === message.id || (m.gmail_message_id && m.gmail_message_id === message.gmail_message_id));
-      if (exists) return state;
+                getMockPdfExtraction: () => {
+                  return MOCK_PDF_EXTRACTIONS;
+                },
 
-      const newMessages = [message, ...state.smsMessages];
-      const unreadCount = newMessages.filter((m: any) => !m.is_read && m.direction === 'inbound').length;
-      return {
-        smsMessages: newMessages,
-        unreadCounts: { ...state.unreadCounts, sms: unreadCount }
-      };
-    });
-  },
+                  importLeadsFromData: (data) => {
+                    const state = get();
+                    const now = new Date().toISOString();
+                    let imported = 0;
 
-  markSMSAsRead: (phone) => {
-    set((state: any) => {
-      const nextMessages = state.smsMessages.map((m: any) => 
-        m.phone_number === phone && m.direction === 'inbound' ? { ...m, is_read: true } : m
-      );
-      const unreadCount = nextMessages.filter((m: any) => !m.is_read && m.direction === 'inbound').length;
-      return {
-        smsMessages: nextMessages,
-        unreadCounts: { ...state.unreadCounts, sms: unreadCount }
-      };
-    });
-  },
+                    const newLeads: Lead[] = [];
+                    for (const d of data) {
+                      if (!d.name?.trim() && !d.address?.trim()) continue;
 
+                      if (state.duplicateSettings.enabled) {
+                        const isDuplicate = state.leads.some((l) => {
+                          return (
+                            (state.duplicateSettings.matchFields.includes('email') && d.email && l.email === d.email) ||
+                            (state.duplicateSettings.matchFields.includes('phone') && d.phone && l.phone === d.phone) ||
+                            (state.duplicateSettings.matchFields.includes('address') && d.address && l.propertyAddress === d.address)
+                          );
+                        });
+                        if (isDuplicate && state.duplicateSettings.action === 'skip') continue;
+                      }
+
+                      const leadObj: Lead = {
+                        id: uuidv4(),
+                        name: d.name || 'Unknown',
+                        email: d.email || '',
+                        phone: d.phone || '',
+                        status: 'new',
+                        source: (d.source as LeadSource) || 'other',
+                        propertyAddress: d.address || '',
+                        propertyType: d.propertyType || 'single-family',
+                        estimatedValue: d.value || 0,
+                        bedrooms: (d as any).bedrooms || 0,
+                        bathrooms: (d as any).bathrooms || 0,
+                        sqft: (d as any).sqft || 0,
+                        offerAmount: 0,
+                        lat: 30.2672,
+                        lng: -97.7431,
+                        notes: d.notes || '',
+                        assignedTo: '',
+                        createdAt: now,
+                        updatedAt: now,
+                        probability: 40,
+                        engagementLevel: 2,
+                        timelineUrgency: 3,
+                        competitionLevel: 3,
+                        importSource: (d as any).importSource || 'import',
+                        photos: (d as any).photos || [],
+                        documents: [],
+                        timeline: [{
+                          id: uuidv4(), type: 'note' as TimelineType,
+                          content: `Imported via bulk import.${d.notes ? ` Notes: ${d.notes}` : ''}`,
+                          timestamp: now, user: 'System',
+                        }],
+                        statusHistory: [{ fromStatus: null, toStatus: 'new', timestamp: now, changedBy: 'Import' }],
+                      };
+                      newLeads.push(leadObj);
+                      imported++;
+                    }
+
+                    set((s) => ({ leads: [...s.leads, ...newLeads] }));
+
+                    if (supabase && isSupabaseConfigured && get().teamId) {
+                      const teamId = get().teamId;
+                      const rows = newLeads.map(lead => ({
+                        id: lead.id,
+                        team_id: teamId,
+                        name: lead.name,
+                        email: lead.email,
+                        phone: lead.phone,
+                        address: lead.propertyAddress,
+                        property_type: lead.propertyType,
+                        property_value: lead.estimatedValue,
+                        bedrooms: lead.bedrooms,
+                        bathrooms: lead.bathrooms,
+                        sqft: lead.sqft,
+                        offer_amount: lead.offerAmount,
+                        status: lead.status,
+                        source: lead.source,
+                        notes: lead.notes,
+                        lat: lead.lat,
+                        lng: lead.lng,
+                        assigned_to: lead.assignedTo || null,
+                        probability: lead.probability,
+                        engagement_level: lead.engagementLevel,
+                        timeline_urgency: lead.timelineUrgency,
+                        competition_level: lead.competitionLevel,
+                        import_source: lead.importSource || 'import',
+                        photos: lead.photos || [],
+                        created_at: lead.createdAt,
+                        updated_at: lead.updatedAt,
+                      }));
+
+                      supabase.from('leads').insert(rows).then(({ error }) => {
+                        if (error) {
+                          console.error('âŒ Failed to save imported leads to Supabase:', error);
+                        } else {
+                          console.log(`âœ… ${rows.length} imported leads saved to Supabase`);
+                        }
+                      });
+                    }
+
+                    return imported;
+                  },
+
+  incrementLoginStreak: () => set((s: any) => ({ loginStreak: (s.loginStreak || 0) + 1 })),
+  addLeadPhoto: (leadId, photo) => set((s: any) => ({
+    leads: s.leads.map((l: any) => l.id === leadId ? { ...l, photos: [...(l.photos || []), photo] } : l)
+  })),
+  removeLeadPhoto: (leadId, photoUrl) => set((s: any) => ({
+    leads: s.leads.map((l: any) => l.id === leadId ? { ...l, photos: (l.photos || []).filter((p: any) => p !== photoUrl) } : l)
+  })),
+  reorderLeadPhotos: (leadId, photos) => set((s: any) => ({
+    leads: s.leads.map((l: any) => l.id === leadId ? { ...l, photos } : l)
+  })),
+  setSMSMessages: (msgs) => set({ smsMessages: msgs }),
+  addSMSMessage: (msg) => set((s: any) => ({ smsMessages: [...s.smsMessages, msg] })),
+  markSMSAsRead: (id) => set((s: any) => ({
+    smsMessages: s.smsMessages.map((m: any) => m.id === id ? { ...m, read: true } : m)
+  })),
   setShowFloatingAIWidget: (v) => set({ showFloatingAIWidget: v }),
-
-  setShortcutsEnabled: (v) => {
-    set({ shortcutsEnabled: v });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wholescale-shortcuts-enabled', v ? 'true' : 'false');
-    }
-  },
-
-  incrementAiUsage: (model) => {
-    set((s) => {
-      const today = new Date().toISOString().split('T')[0];
-      const current = s.aiUsage[model] || { used: 0, limit: model.includes('pro') ? 10 : 20, lastReset: today };
-      
-      const updated = {
-        ...current,
-        used: current.lastReset === today ? current.used + 1 : 1,
-        lastReset: today
-      };
-      
-      const newUsage = { ...s.aiUsage, [model]: updated };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_usage_map', JSON.stringify(newUsage));
-      }
-      return { aiUsage: newUsage };
-    });
-  },
-
-  setAiUsage: (model, used, limit) => {
-    set((s) => {
-      const today = new Date().toISOString().split('T')[0];
-      const current = s.aiUsage[model] || { used: 0, limit: model.includes('pro') ? 10 : 20, lastReset: today };
-      
-      const updated = {
-        ...current,
-        used,
-        limit: limit || current.limit,
-        lastReset: today
-      };
-      
-      const newUsage = { ...s.aiUsage, [model]: updated };
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_usage_map', JSON.stringify(newUsage));
-      }
-      return { aiUsage: newUsage };
-    });
-  },
+  setShortcutsEnabled: (v) => set({ shortcutsEnabled: v }),
+  incrementAiUsage: () => {},
+  setAiUsage: (_model, _used, _limit) => {},
 
   createAiThread: (title) => {
     const id = uuidv4();
@@ -3548,11 +3476,11 @@ deleteChannel: (channelId) => {
     set((s) => {
       const updatedThreads = [newThread, ...s.aiThreads];
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
-        localStorage.setItem('current_ai_thread_id', id);
+        localStorage.setItem('ai-threads', JSON.stringify(updatedThreads));
+        localStorage.setItem('current-ai-thread-id', id);
       }
-      return { 
-        aiThreads: updatedThreads, 
+      return {
+        aiThreads: updatedThreads,
         currentAiThreadId: id,
         aiMessages: { ...s.aiMessages, [id]: [] }
       };
@@ -3565,21 +3493,21 @@ deleteChannel: (channelId) => {
       const updatedThreads = s.aiThreads.filter(t => t.id !== id);
       const newMessages = { ...s.aiMessages };
       delete newMessages[id];
-      
+
       let newCurrentId = s.currentAiThreadId;
       if (s.currentAiThreadId === id) {
         newCurrentId = updatedThreads.length > 0 ? updatedThreads[0].id : null;
       }
 
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
-        if (newCurrentId) localStorage.setItem('current_ai_thread_id', newCurrentId);
-        else localStorage.removeItem('current_ai_thread_id');
-        localStorage.setItem('ai_messages_map', JSON.stringify(newMessages));
+        localStorage.setItem('ai-threads', JSON.stringify(updatedThreads));
+        if (newCurrentId) localStorage.setItem('current-ai-thread-id', newCurrentId);
+        else localStorage.removeItem('current-ai-thread-id');
+        localStorage.setItem('ai-messages-map', JSON.stringify(newMessages));
       }
 
-      return { 
-        aiThreads: updatedThreads, 
+      return {
+        aiThreads: updatedThreads,
         currentAiThreadId: newCurrentId,
         aiMessages: newMessages
       };
@@ -3589,7 +3517,7 @@ deleteChannel: (channelId) => {
   setCurrentAiThread: (id) => {
     set({ currentAiThreadId: id });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('current_ai_thread_id', id);
+      localStorage.setItem('current-ai-thread-id', id);
     }
   },
 
@@ -3597,7 +3525,7 @@ deleteChannel: (channelId) => {
     set((s) => {
       const updatedThreads = s.aiThreads.map(t => t.id === id ? { ...t, title } : t);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+        localStorage.setItem('ai-threads', JSON.stringify(updatedThreads));
       }
       return { aiThreads: updatedThreads };
     });
@@ -3611,7 +3539,7 @@ deleteChannel: (channelId) => {
           return new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime();
         });
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+        localStorage.setItem('ai-threads', JSON.stringify(updatedThreads));
       }
       return { aiThreads: updatedThreads };
     });
@@ -3622,9 +3550,8 @@ deleteChannel: (channelId) => {
       const threadMessages = s.aiMessages[threadId] || [];
       const updatedMessages = [...threadMessages, message];
       const newMessagesMap = { ...s.aiMessages, [threadId]: updatedMessages };
-      
-      // Update lastMessageAt for the thread and sort by pinned then date
-      const updatedThreads = s.aiThreads.map((t: AIThread) => 
+
+      const updatedThreads = s.aiThreads.map((t: AIThread) =>
         t.id === threadId ? { ...t, lastMessageAt: new Date().toISOString() } : t
       ).sort((a: AIThread, b: AIThread) => {
         if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
@@ -3632,8 +3559,8 @@ deleteChannel: (channelId) => {
       });
 
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_messages_map', JSON.stringify(newMessagesMap));
-        localStorage.setItem('ai_threads', JSON.stringify(updatedThreads));
+        localStorage.setItem('ai-messages-map', JSON.stringify(newMessagesMap));
+        localStorage.setItem('ai-threads', JSON.stringify(updatedThreads));
       }
 
       return { aiMessages: newMessagesMap, aiThreads: updatedThreads };
@@ -3644,7 +3571,7 @@ deleteChannel: (channelId) => {
     set((s) => {
       const newMessagesMap = { ...s.aiMessages, [threadId]: [] };
       if (typeof window !== 'undefined') {
-        localStorage.setItem('ai_messages_map', JSON.stringify(newMessagesMap));
+        localStorage.setItem('ai-messages-map', JSON.stringify(newMessagesMap));
       }
       return { aiMessages: newMessagesMap };
     });
@@ -3659,7 +3586,7 @@ deleteChannel: (channelId) => {
     set((state: AppState) => {
       const next = [...state.contacts, newContact];
       if (typeof window !== 'undefined') {
-        localStorage.setItem('sms_contacts', JSON.stringify(next));
+        localStorage.setItem('sms-contacts', JSON.stringify(next));
       }
       return { contacts: next };
     });
@@ -3669,7 +3596,7 @@ deleteChannel: (channelId) => {
     set((state: AppState) => {
       const next = state.contacts.filter((c) => c.id !== id);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('sms_contacts', JSON.stringify(next));
+        localStorage.setItem('sms-contacts', JSON.stringify(next));
       }
       return { contacts: next };
     });
@@ -3681,7 +3608,7 @@ deleteChannel: (channelId) => {
         c.id === id ? { ...c, ...updates } : c
       );
       if (typeof window !== 'undefined') {
-        localStorage.setItem('sms_contacts', JSON.stringify(next));
+        localStorage.setItem('sms-contacts', JSON.stringify(next));
       }
       return { contacts: next };
     });
@@ -3690,25 +3617,30 @@ deleteChannel: (channelId) => {
   setQuickNotes: (v: string) => {
     set({ quickNotes: v });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('tasks_quick_notes', v);
+      localStorage.setItem('tasks-quick-notes', v);
     }
-    
-    // Sync to Supabase profile settings
     const { currentUser } = get();
     if (currentUser?.id && isSupabaseConfigured && supabase) {
       supabase.from('profiles')
-        .select('settings')
+        .update({ settings: { quick_notes: v } })
         .eq('id', currentUser.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          const settings = data?.settings || {};
-          if (isSupabaseConfigured && supabase) {
-            supabase.from('profiles')
-              .update({ settings: { ...settings, quick_notes: v } })
-              .eq('id', currentUser.id)
-              .then();
-          }
-        });
+        .then();
     }
+  },
+
+  setActiveLeadModalId: (id: string | null) => set({ activeLeadModalId: id }),
+
+  setShowQuickNotes: (v: boolean) => set({ showQuickNotes: v }),
+
+  updateNotificationSettings: (updates: Partial<NotificationSettings>) => {
+    set((s) => ({ notificationSettings: { ...s.notificationSettings, ...updates } }));
+  },
+
+  setAiName: (name: string) => set({ aiName: name }),
+  setAiModel: (model: string) => set({ aiModel: model }),
+  setAiPersonality: (personality: string) => set({ aiPersonality: personality }),
+
+  setCursorSettings: (settings: Partial<CursorSettings>) => {
+    set((s: any) => ({ cursorSettings: { ...s.cursorSettings, ...settings } }));
   },
 }));

@@ -87,7 +87,7 @@ function LoadingScreen() {
 
 export function App() {
   const [checking, setChecking] = useState(true);
-  const { login, updateProfile, incrementLoginStreak } = useStore();
+  const { login, updateProfile, incrementLoginStreak, loadLeads } = useStore();
 
   // On mount: check for existing Supabase session
   useEffect(() => {
@@ -117,6 +117,7 @@ export function App() {
                 .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
             });
             incrementLoginStreak();
+            loadLeads();
           }
         } catch {
           // Session check failed — stay logged out
@@ -143,6 +144,7 @@ export function App() {
                 .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
             });
             store.incrementLoginStreak();
+            store.loadLeads();
           }
         }
       });
