@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource } from '../store/useStore';
+import { useStore, calculateDealScore, getScoreColor, STATUS_LABELS, type LeadSource, type Lead } from '../store/useStore';
 import { 
   Users, 
   Target, 
@@ -14,10 +14,12 @@ import {
   PieChart,
   BarChart3,
   Activity,
-  ExternalLink
+  ExternalLink,
+  Eye
 } from 'lucide-react';
 import { StreakBadge } from '../components/StreakBadge';
 import { TeamLeaderboard } from '../components/TeamLeaderboard';
+import { LeadQuickViewModal } from '../components/LeadQuickViewModal';
 import { useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer,
@@ -155,6 +157,7 @@ export default function Dashboard() {
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area' | 'pie'>(
     (localStorage.getItem('dashboard-chart-type') as any) || 'line'
   );
+  const [selectedQuickViewLead, setSelectedQuickViewLead] = useState<Lead | null>(null);
 
   const filteredLeads = leads.filter(l => {
     if (timeframe === 'all') return true;
@@ -658,6 +661,13 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-1">
                     <button 
+                      onClick={() => setSelectedQuickViewLead(lead)}
+                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
+                      title="Quick View"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    <button 
                       onClick={() => handleOpenLead(lead.id)}
                       className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
                       title="Open Lead"
@@ -703,6 +713,13 @@ export default function Dashboard() {
                     <p className="text-xs text-[var(--t-text-secondary)] truncate">{lead.propertyAddress}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    <button 
+                      onClick={() => setSelectedQuickViewLead(lead)}
+                      className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
+                      title="Quick View"
+                    >
+                      <Eye size={14} />
+                    </button>
                     <button 
                       onClick={() => handleOpenLead(lead.id)}
                       className="p-1.5 rounded-lg bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
@@ -752,6 +769,16 @@ export default function Dashboard() {
       </div>
 
 
+      {selectedQuickViewLead && (
+        <LeadQuickViewModal 
+          lead={selectedQuickViewLead}
+          onClose={() => setSelectedQuickViewLead(null)}
+          onOpenFull={() => {
+            handleOpenLead(selectedQuickViewLead.id);
+            setSelectedQuickViewLead(null);
+          }}
+        />
+      )}
     </div>
   );
 }
