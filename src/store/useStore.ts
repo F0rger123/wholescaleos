@@ -1382,6 +1382,7 @@ interface AppState {
   fetchProfile: (userId: string) => Promise<void>;
   loadLeads: () => Promise<void>;
   clearAuthError: () => void;
+  setAuthenticated: (isAuthenticated: boolean) => void;
   // Sync
   teamId: string | null;
   dataLoaded: boolean;
@@ -1882,6 +1883,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   clearAuthError: () => set({ authError: null }),
+  setAuthenticated: (isAuthenticated: boolean) => set({ isAuthenticated }),
 
   // History State
   history: [],
