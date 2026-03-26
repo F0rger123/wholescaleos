@@ -7,6 +7,7 @@ import {
   Phone, FileText, UserPlus, LogOut, Edit, Settings,
 } from 'lucide-react';
 import { useStore, QUICK_REACTIONS, PRESENCE_COLORS, type ChatMessage, type ChatAttachment, type ChatChannel } from '../store/useStore';
+import { AISuggestionBox } from '../components/AISuggestionBox';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { uploadFile, generateUniqueFileName } from '../lib/storage';
@@ -1398,10 +1399,7 @@ function MessageInput({
     if (!file) return;
 
     const fileName = generateUniqueFileName(file.name);
-    const bucket = file.type.startsWith('image/') ? 'chat-attachments' : 'chat-attachments'; // Simplified for now
-    
     // Optimistically add to UI with a loading state or just wait for upload
-    const tempId = uuidv4();
     try {
       const { url, error } = await uploadFile('chat-attachments', fileName, file);
       if (error) throw error;
@@ -1848,6 +1846,10 @@ export default function Chat() {
           <div className="flex flex-1 min-h-0">
             <div className="flex-1 flex flex-col min-w-0">
               <div ref={containerRef} className="flex-1 overflow-y-auto py-4">
+                {/* AI Suggestions */}
+                <div className="px-6 mb-4">
+                  <AISuggestionBox />
+                </div>
                 {/* Loading indicator */}
                 {loadingMessages && (
                   <div className="flex justify-center py-8">

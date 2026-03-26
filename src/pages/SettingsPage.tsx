@@ -1265,7 +1265,7 @@ function EmailTab() {
    ============================================================ */
 function BackupTab() {
   const { 
-    leads, tasks, team, buyers, coverageAreas,
+    leads, tasks, buyers, coverageAreas,
     lastAutoSave, backups, manualSave, saveStatus,
     createBackup, revertToBackup, deleteBackup, exportData
   } = useStore();
