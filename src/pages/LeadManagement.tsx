@@ -6,6 +6,7 @@ import {
   calculateDealScore, 
   getScoreColor,
   generateNextAction,
+  type Lead,
   type LeadStatus
 } from '../store/useStore';
 import { 
@@ -27,7 +28,12 @@ import {
   CheckCircle2,
   ChevronRight,
   Globe,
-  Loader2
+  Loader2,
+  User, // Added
+  Edit2, // Added
+  Home, // Added
+  DollarSign, // Added
+  TrendingUp // Added
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -37,6 +43,8 @@ export default function LeadManagement() {
   const { leads, updateLead, deleteLead, addTimelineEntry } = useStore();
   const [activeTab, setActiveTab] = useState('overview');
   const [noteText, setNoteText] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedLead, setEditedLead] = useState<Partial<Lead>>({});
 
   const lead = leads.find(l => l.id === id);
 
@@ -54,6 +62,29 @@ export default function LeadManagement() {
       </div>
     );
   }
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // Save changes
+      if (id) { // Ensure id is not undefined
+        updateLead(id, editedLead);
+        addTimelineEntry(id, {
+          type: 'note',
+          content: 'Lead details updated.',
+          timestamp: new Date().toISOString(),
+          user: 'You'
+        });
+      }
+      setIsEditing(false);
+    } else {
+      setEditedLead(lead);
+      setIsEditing(true);
+    }
+  };
+
+  const handleInputChange = (field: keyof Lead, value: any) => {
+    setEditedLead((prev: Partial<Lead>) => ({ ...prev, [field]: value }));
+  };
 
   const score = calculateDealScore(lead);
   const scoreColors = getScoreColor(score);
@@ -96,9 +127,10 @@ export default function LeadManagement() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => navigate('/dashboard')}
-              className="p-2 rounded-xl bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
+              className="group flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] hover:text-white transition-all border border-[var(--t-border)]"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={18} />
+              <span className="text-sm font-bold hidden sm:inline">Back to Dashboard</span>
             </button>
             <div>
               <div className="flex items-center gap-2 mb-0.5">
@@ -176,21 +208,152 @@ export default function LeadManagement() {
                   </div>
                 </div>
 
-                {/* Property & Deal Details */}
+                {/* Editable Lead Details */}
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <User size={20} className="text-[var(--t-primary)]" />
+                      Lead Information
+                    </h2>
+                    <button 
+                      onClick={handleEditToggle}
+                      className={`px-4 py-2 rounded-xl font-bold text-sm transition-all flex items-center gap-2 ${
+                        isEditing 
+                          ? 'bg-green-500 text-white hover:bg-green-600 shadow-lg shadow-green-500/20' 
+                          : 'bg-[var(--t-surface-hover)] text-white hover:bg-[var(--t-surface-active)] border border-[var(--t-border)]'
+                      }`}
+                    >
+                      {isEditing ? (
+                        <><Save size={16} /> Save Changes</>
+                      ) : (
+                        <><Edit2 size={16} /> Edit Details</>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Contact Info Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] uppercase tracking-widest font-black text-[var(--t-text-muted)] mb-2">Contact Details</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <User size={10} /> Full Name
+                          </p>
+                          {isEditing ? (
+                            <input 
+                              type="text"
+                              value={editedLead.name || ''}
+                              onChange={(e) => handleInputChange('name', e.target.value)}
+                              className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
+                            />
+                          ) : (
+                            <p className="text-sm font-semibold text-white">{lead.name}</p>
+                          )}
+                        </div>
+                        <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <Phone size={10} /> Phone Number
+                          </p>
+                          {isEditing ? (
+                            <input 
+                              type="text"
+                              value={editedLead.phone || ''}
+                              onChange={(e) => handleInputChange('phone', e.target.value)}
+                              className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
+                            />
+                          ) : (
+                            <p className="text-sm font-semibold text-white">{lead.phone || 'N/A'}</p>
+                          )}
+                        </div>
+                        <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <Mail size={10} /> Email Address
+                          </p>
+                          {isEditing ? (
+                            <input 
+                              type="email"
+                              value={editedLead.email || ''}
+                              onChange={(e) => handleInputChange('email', e.target.value)}
+                              className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
+                            />
+                          ) : (
+                            <p className="text-sm font-semibold text-white">{lead.email || 'N/A'}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Property Info Section */}
+                    <div className="space-y-4">
+                      <h3 className="text-[10px] uppercase tracking-widest font-black text-[var(--t-text-muted)] mb-2">Property Details</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <Home size={10} /> Property Type
+                          </p>
+                          {isEditing ? (
+                            <select 
+                              value={editedLead.propertyType || ''}
+                              onChange={(e) => handleInputChange('propertyType', e.target.value)}
+                              className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
+                            >
+                              <option value="Single Family">Single Family</option>
+                              <option value="Multi Family">Multi Family</option>
+                              <option value="Condo">Condo</option>
+                              <option value="Land">Land</option>
+                              <option value="Commercial">Commercial</option>
+                            </select>
+                          ) : (
+                            <p className="text-sm font-semibold text-white">{lead.propertyType}</p>
+                          )}
+                        </div>
+                        <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <DollarSign size={10} /> Property Value
+                          </p>
+                          {isEditing ? (
+                            <input 
+                              type="number" // Changed to number for estimatedValue
+                              value={editedLead.estimatedValue || ''}
+                              onChange={(e) => handleInputChange('estimatedValue', parseFloat(e.target.value))} // Parse to float
+                              className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
+                            />
+                          ) : (
+                            <p className="text-sm font-semibold text-white">${lead.estimatedValue.toLocaleString()}</p>
+                          )}
+                        </div>
+                        <div className="bg-[var(--t-surface)] p-4 rounded-2xl border border-[var(--t-border)]">
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mb-1 flex items-center gap-1">
+                            <TrendingUp size={10} /> Lead Status
+                          </p>
+                          {isEditing ? (
+                            <select 
+                              value={editedLead.status || ''}
+                              onChange={(e) => handleInputChange('status', e.target.value as LeadStatus)} // Cast to LeadStatus
+                              className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
+                            >
+                              {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                                <option key={key} value={key}>{label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <p className="text-sm font-semibold text-white">{STATUS_LABELS[lead.status as keyof typeof STATUS_LABELS]}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Property & Deal Details (Original, now only showing non-editable parts or derived values) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--t-text-muted)] border-b border-[var(--t-border)] pb-2 flex items-center gap-2">
                       <Building2 size={16} /> Property Details
                     </h3>
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-[var(--t-text-muted)]">Property Type</span>
-                        <span className="text-sm font-bold text-white capitalize">{lead.propertyType}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-[var(--t-text-muted)]">Estimated Value</span>
-                        <span className="text-sm font-bold text-white">${lead.estimatedValue.toLocaleString()}</span>
-                      </div>
+                      {/* Property Type and Estimated Value are now editable above, keeping Offer Amount and Potential Margin here */}
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-[var(--t-text-muted)]">Offer Amount</span>
                         <span className="text-sm font-bold text-[var(--t-success)]">${lead.offerAmount.toLocaleString()}</span>
