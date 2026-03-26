@@ -102,7 +102,7 @@ async function generateAutoReply(_incomingMessage: string, _senderPhone: string)
       const { data } = await supabase.from('agent_preferences').select('sms_auto_reply_message').eq('user_id', userId).maybeSingle();
       if (data?.sms_auto_reply_message) fallback = data.sms_auto_reply_message;
     } else {
-      const localMsg = localStorage.getItem('user_sms_auto_reply_message');
+      const localMsg = localStorage.getItem('sms-auto-reply-message');
       if (localMsg) fallback = localMsg;
     }
   } catch (err) {
@@ -375,7 +375,7 @@ export async function pollSMSMessages() {
           const { data } = await supabase.from('agent_preferences').select('sms_auto_reply_enabled').eq('user_id', userId).maybeSingle();
           isAutoReplyEnabled = !!data?.sms_auto_reply_enabled;
         } else {
-          isAutoReplyEnabled = localStorage.getItem('user_sms_auto_reply') === 'true';
+          isAutoReplyEnabled = localStorage.getItem('sms-auto-reply-enabled') === 'true';
         }
       } catch (err) {}
 
@@ -396,7 +396,7 @@ export async function pollSMSMessages() {
             isAutoReplyEnabled = !!prefs?.sms_auto_reply_enabled;
           } else {
             userPhoneNumber = localStorage.getItem('user_sms_phone') || '';
-            isAutoReplyEnabled = localStorage.getItem('user_sms_auto_reply') === 'true';
+            isAutoReplyEnabled = localStorage.getItem('sms-auto-reply-enabled') === 'true';
           }
           // Normalize both numbers
           const normUser = userPhoneNumber.replace(/\D/g, '');
@@ -405,9 +405,12 @@ export async function pollSMSMessages() {
           const normSender = phoneNumber.replace(/\D/g, '');
           const cleanSender = normSender.length === 11 && normSender.startsWith('1') ? normSender.substring(1) : normSender;
 
-          // HARD BLOCK: NEVER auto-reply to the user's own number or if master toggle is off
-          if (!isAutoReplyEnabled || (cleanUser && cleanSender === cleanUser)) {
-            console.log(`[SMS Auto-Reply] Blocked. Enabled: ${isAutoReplyEnabled}, Self-Reply: ${cleanSender === cleanUser}`);
+          // HARD BLOCK: NEVER auto-reply to the user's own number, specific blocker number, or if master toggle is off
+          const hardBlockNumbers = ['2236670555'];
+          const isHardBlocked = hardBlockNumbers.includes(cleanSender);
+
+          if (!isAutoReplyEnabled || (cleanUser && cleanSender === cleanUser) || isHardBlocked) {
+            console.log(`[SMS Auto-Reply] Blocked. Enabled: ${isAutoReplyEnabled}, Self-Reply: ${cleanSender === cleanUser}, Hard-Blocked: ${isHardBlocked}`);
             isAutoReplyEnabled = false;
           }
         } catch (err) {

@@ -18,6 +18,7 @@ import { BarChart3, TrendingUp, Layers } from 'lucide-react';
 
 type ChartType = 'bar' | 'line' | 'area';
 type ChartTimeRange = '7d' | '30d' | '90d' | '1y';
+type MetricType = 'leads' | 'deals' | 'revenue' | 'conversion';
 
 const COLORS: Record<string, string> = {
   new: 'var(--t-info)',
@@ -32,6 +33,7 @@ export function PipelineChart() {
   const { leads } = useStore();
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [timeRange, setTimeRange] = useState<ChartTimeRange>('30d');
+  const [metric, setMetric] = useState<MetricType>('leads');
 
   const filteredLeads = useMemo(() => {
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
@@ -41,18 +43,35 @@ export function PipelineChart() {
   }, [leads, timeRange]);
 
   const data = useMemo(() => {
-    const counts: Record<string, number> = {
-      new: 0, contacted: 0, qualified: 0, negotiating: 0, 'closed-won': 0, 'closed-lost': 0,
-    };
+    const statuses = ['new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost'];
+    const counts: Record<string, number> = {};
+    statuses.forEach(s => counts[s] = 0);
+
     filteredLeads.forEach(l => {
-      if (counts[l.status] !== undefined) counts[l.status]++;
+      if (counts[l.status] !== undefined) {
+        if (metric === 'revenue') {
+          counts[l.status] += (l.estimatedValue || 0);
+        } else if (metric === 'deals') {
+          if (['qualified', 'negotiating', 'closed-won'].includes(l.status)) {
+            counts[l.status]++;
+          }
+        } else if (metric === 'conversion') {
+          // This is a bit tricky for conversion rate per status, 
+          // usually it's % of previous status. 
+          // For now let's just show count and update tooltip.
+          counts[l.status]++;
+        } else {
+          counts[l.status]++;
+        }
+      }
     });
-    return Object.entries(counts).map(([key, value]) => ({
+
+    return statuses.map(key => ({
       name: STATUS_LABELS[key as keyof typeof STATUS_LABELS] || key,
-      value,
+      value: counts[key],
       key
     }));
-  }, [filteredLeads]);
+  }, [filteredLeads, metric]);
 
   // Conversion rate
   const conversionRate = useMemo(() => {
@@ -64,11 +83,20 @@ export function PipelineChart() {
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const val = payload[0].value;
+      let displayVal = val.toLocaleString();
+      if (metric === 'revenue') displayVal = `$${val.toLocaleString()}`;
+      else if (metric === 'conversion') {
+        const total = filteredLeads.length;
+        const percent = total > 0 ? Math.round((val / total) * 100) : 0;
+        displayVal = `${val} (${percent}%)`;
+      }
+
       return (
         <div className="bg-[var(--t-surface)] border border-[var(--t-border)] p-3 rounded-xl shadow-xl backdrop-blur-md">
           <p className="text-xs font-black text-white uppercase tracking-widest mb-1">{label}</p>
           <p className="text-sm font-bold text-[var(--t-primary)]">
-            {payload[0].value} {payload[0].value === 1 ? 'Lead' : 'Leads'}
+            {displayVal} {metric === 'revenue' ? '' : val === 1 ? (metric === 'leads' ? 'Lead' : 'Deal') : (metric === 'leads' ? 'Leads' : 'Deals')}
           </p>
         </div>
       );
@@ -147,6 +175,22 @@ export function PipelineChart() {
     <div>
       {/* Controls */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div className="flex bg-[var(--t-surface-dim)] rounded-lg p-0.5 border border-[var(--t-border-subtle)] overflow-x-auto no-scrollbar">
+          {(['leads', 'deals', 'revenue', 'conversion'] as MetricType[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMetric(m)}
+              className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap ${
+                metric === m
+                  ? 'bg-[var(--t-primary)] text-white shadow-lg'
+                  : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
+              }`}
+            >
+              {m.charAt(0).toUpperCase() + m.slice(1)}
+            </button>
+          ))}
+        </div>
+
         <div className="flex bg-[var(--t-surface-dim)] rounded-lg p-0.5 border border-[var(--t-border-subtle)]">
           {chartTypeButtons.map(({ type, icon: Icon, label }) => (
             <button

@@ -2120,14 +2120,36 @@ export const useStore = create<AppState>((set, get) => ({
     document.body.removeChild(link);
   },
 
-  setSMSAutoReplyEnabled: (v: boolean) => {
+  setSMSAutoReplyEnabled: async (v: boolean) => {
     if (typeof window !== 'undefined') localStorage.setItem('sms-auto-reply-enabled', v.toString());
     set({ smsAutoReplyEnabled: v });
+    
+    // Sync to Supabase
+    const { currentUser } = get();
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('agent_preferences').update({ sms_auto_reply_enabled: v }).eq('user_id', currentUser.id);
+        console.log('✅ SMS Auto-Reply Preference synced to Supabase:', v);
+      } catch (err) {
+        console.error('❌ Failed to sync SMS Auto-Reply preference:', err);
+      }
+    }
   },
 
-  setSMSAutoReplyMessage: (msg: string) => {
+  setSMSAutoReplyMessage: async (msg: string) => {
     if (typeof window !== 'undefined') localStorage.setItem('sms-auto-reply-message', msg);
     set({ smsAutoReplyMessage: msg });
+    
+    // Sync to Supabase
+    const { currentUser } = get();
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('agent_preferences').update({ sms_auto_reply_message: msg }).eq('user_id', currentUser.id);
+        console.log('✅ SMS Auto-Reply Message synced to Supabase');
+      } catch (err) {
+        console.error('❌ Failed to sync SMS Auto-Reply message:', err);
+      }
+    }
   },
 
   // —— Sync ——————————————————————————————————————————————————
@@ -2175,7 +2197,9 @@ export const useStore = create<AppState>((set, get) => ({
   leads: [],
 
   addLead: async (lead: Omit<Lead, 'id' | 'createdAt' | 'updatedAt' | 'timeline' | 'statusHistory'>) => {
-    console.log('DEBUG: addLead starting for:', lead.name);
+    const { teamId, currentUser } = get();
+    console.log('DEBUG: addLead starting for:', lead.name, '| teamId:', teamId, '| userId:', currentUser?.id);
+    
     get().saveToHistory();
     const now = new Date().toISOString();
     const newId = uuidv4();
@@ -2195,14 +2219,13 @@ export const useStore = create<AppState>((set, get) => ({
     
     set((s) => ({ leads: [...s.leads, newLead] }));
     
-    const { teamId } = get();
-    console.log('DEBUG: addLead checking teamId:', teamId, 'isSupabaseConfigured:', isSupabaseConfigured);
     if (teamId && isSupabaseConfigured && supabase) {
       try {
         console.log('DEBUG: addLead calling leadsService.create for lead:', newId);
-        await leadsService.create({
+        const result = await leadsService.create({
           id: newId,
           team_id: teamId,
+          created_by: currentUser?.id,
           name: newLead.name,
           email: newLead.email,
           phone: newLead.phone,
@@ -2232,17 +2255,20 @@ export const useStore = create<AppState>((set, get) => ({
           share_enabled: newLead.shareEnabled,
           documents: newLead.documents,
         });
-        console.log('✅ Lead synced to Supabase:', newId);
+        console.log('✅ Lead synced to Supabase:', newId, 'Result:', result);
         return { success: true, id: newId };
       } catch (error) {
         console.error('❌ Failed to sync lead to Supabase:', error);
         return { success: false, error };
       }
+    } else {
+      console.warn('⚠️ addLead skipped Supabase sync. teamId:', teamId, 'isSupabaseConfigured:', isSupabaseConfigured);
     }
     return { success: true, id: newId };
   },
 
   updateLead: async (id: string, updates: Partial<Lead>) => {
+    console.log('DEBUG: updateLead starting for:', id, 'updates:', Object.keys(updates));
     get().saveToHistory();
     const now = new Date().toISOString();
     
@@ -2282,8 +2308,8 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.documents !== undefined) dbUpdates.documents = updates.documents;
       
       try {
-        await leadsService.update(id, dbUpdates);
-        console.log('✅ Lead updated in Supabase:', id);
+        const result = await leadsService.update(id, dbUpdates);
+        console.log('✅ Lead updated in Supabase:', id, 'Result:', result);
         return { success: true };
       } catch (error) {
         console.error('❌ Failed to update lead in Supabase:', error);
@@ -2294,6 +2320,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteLead: async (id: string) => {
+    console.log('DEBUG: deleteLead starting for:', id);
     get().saveToHistory();
     set((s) => ({ leads: s.leads.filter((l) => l.id !== id) }));
     if (isSupabaseConfigured && supabase) {
