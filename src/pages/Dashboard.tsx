@@ -734,14 +734,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Single global LeadHoverCard — rendered once at page root to prevent duplicates */}
       {hoveredLead && hoverPos && (() => {
         const cardWidth = 320;
-        const cardHeight = 380; // Estimated height
-        const margin = 12;
+        const cardHeight = 360; 
+        const margin = 16;
         
         let left = hoverPos.x + margin;
-        let top = hoverPos.y - 20; // Align slightly above the text
+        // Center vertically relative to the element
+        let top = hoverPos.y + (hoverPos.height / 2) - (cardHeight / 2);
         let arrowPos = 'left';
 
         // Flip to left side if not enough space on the right
@@ -750,22 +750,29 @@ export default function Dashboard() {
           arrowPos = 'right';
         }
 
-        // Vertical boundary clamping
+        // Viewport clamping
         if (top + cardHeight > window.innerHeight - margin) {
           top = window.innerHeight - cardHeight - margin;
         }
-        if (top < margin) top = margin;
+        if (top < margin) {
+          top = margin;
+        }
 
-        // Calculate arrow vertical position relative to the target element
-        // hoverPos.y is the top of the element. top is the top of the card.
-        const arrowTop = Math.max(20, Math.min(cardHeight - 20, hoverPos.y - top + (hoverPos.height / 2) - 6));
+        // Ensure the card doesn't overlap the element if flipped
+        if (arrowPos === 'right' && left + cardWidth > hoverPos.x - hoverPos.width) {
+             left = Math.max(margin, hoverPos.x - hoverPos.width - cardWidth - margin);
+        }
+
+        // Calculate arrow vertical position relative to the target element center
+        const elementCenterY = hoverPos.y + (hoverPos.height / 2);
+        const arrowTop = Math.max(20, Math.min(cardHeight - 20, elementCenterY - top - 6));
 
         return (
           <div
             className="fixed z-[9999] shadow-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
             style={{ 
-              left, 
-              top,
+              left: `${left}px`, 
+              top: `${top}px`,
               '--card-arrow-display': 'block',
               '--card-arrow-left': arrowPos === 'left' ? '-6px' : 'auto',
               '--card-arrow-right': arrowPos === 'right' ? '-6px' : 'auto',

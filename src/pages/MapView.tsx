@@ -455,80 +455,95 @@ export default function MapView() {
 
         {/* ── Filter Modal ── */}
         {filterOpen && !isDrawing && (
-          <div className="absolute inset-0 z-[1001] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]">
-            <div className="border rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in duration-200"
+          <div className="absolute inset-0 z-[1001] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <div className="border rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
               style={{
                 backgroundColor: 'var(--t-surface)',
                 borderColor: 'var(--t-border)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
               }}
             >
-              <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--t-border)' }}>
-                <span className="text-sm font-bold uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Map Layers & Filters</span>
-                <button onClick={() => setFilterOpen(false)} className="p-2 hover:bg-white/5 rounded-lg transition-colors" style={{ color: 'var(--t-text-muted)' }}>
-                  <X size={18} />
+              <div className="p-5 border-b flex items-center justify-between bg-[var(--t-surface-dim)]" style={{ borderColor: 'var(--t-border)' }}>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-[var(--t-text)]">Map Filters</h3>
+                  <p className="text-[10px] text-[var(--t-text-muted)] mt-0.5">Customize your map view</p>
+                </div>
+                <button 
+                  onClick={() => setFilterOpen(false)} 
+                  className="p-2 hover:bg-white/5 rounded-xl transition-all group active:scale-90" 
+                  style={{ color: 'var(--t-text-muted)' }}
+                >
+                  <X size={20} className="group-hover:rotate-90 transition-transform" />
                 </button>
               </div>
-              <div className="p-4 space-y-2">
+              
+              <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {/* Layer toggles */}
                 {([
-                  { key: 'showLeads' as const, label: 'Lead Properties', icon: MapPin, count: filteredLeads.length },
+                  { key: 'showLeads' as const, label: 'Properties', icon: MapPin, count: filteredLeads.length },
                   { key: 'showBuyers' as const, label: 'Buyers', icon: Users, count: filteredBuyers.length },
-                  { key: 'showCoverageAreas' as const, label: 'Coverage Areas', icon: Layers, count: filteredAreas.length },
-                  { key: 'showDrivingRoute' as const, label: 'Driving Route', icon: Navigation, count: 0 },
+                  { key: 'showCoverageAreas' as const, label: 'Zones', icon: Layers, count: filteredAreas.length },
+                  { key: 'showDrivingRoute' as const, label: 'Routes', icon: Navigation, count: 0 },
                 ]).map(({ key, label, icon: Icon, count }) => (
                   <button
                     key={key}
                     onClick={() => toggleMapFilter(key)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
-                      key === 'showDrivingRoute' ? 'opacity-40 cursor-not-allowed' : 'active:scale-95'
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-xs font-bold transition-all border ${
+                      key === 'showDrivingRoute' ? 'opacity-40 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'
                     }`}
                     style={
                       mapFilters[key]
-                        ? { backgroundColor: 'var(--t-primary-dim)', color: 'var(--t-primary-text)', border: '1px solid var(--t-primary-dim)' }
-                        : { color: 'var(--t-text-muted)', border: '1px solid var(--t-border)' }
+                        ? { backgroundColor: 'var(--t-primary-dim)', color: 'var(--t-primary-text)', borderColor: 'var(--t-primary)' }
+                        : { backgroundColor: 'var(--t-bg)', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }
                     }
                     disabled={key === 'showDrivingRoute'}
                   >
                     <span className="flex items-center gap-3">
-                      <Icon size={16} />
+                      <div className={`p-1.5 rounded-lg ${mapFilters[key] ? 'bg-[var(--t-primary)] text-white' : 'bg-[var(--t-surface)]'}`}>
+                        <Icon size={14} />
+                      </div>
                       {label}
                     </span>
-                    <span className="text-[10px] opacity-70 px-2 py-0.5 rounded-full bg-black/20">{key === 'showDrivingRoute' ? 'Soon' : count}</span>
+                    <span className="text-[10px] font-black opacity-60 px-2 py-0.5 rounded-full bg-black/20">
+                      {key === 'showDrivingRoute' ? 'Soon' : count}
+                    </span>
                   </button>
                 ))}
-              </div>
 
-              {/* Lead status sub-filters */}
-              {mapFilters.showLeads && (
-                <div className="px-4 pb-6 space-y-3">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 border-t pt-4" style={{ borderColor: 'var(--t-border)' }}>Filter by Status</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(Object.keys(LEAD_COLORS) as LeadStatus[]).map((status) => (
-                      <button
-                        key={status}
-                        onClick={() => toggleLeadStatusFilter(status)}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-bold transition-all border"
-                        style={
-                          mapFilters.leadStatusFilters[status]
-                            ? { backgroundColor: 'var(--t-surface)', color: 'var(--t-text)', borderColor: LEAD_COLORS[status] }
-                            : { backgroundColor: 'transparent', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }
-                        }
-                      >
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: LEAD_COLORS[status], opacity: mapFilters.leadStatusFilters[status] ? 1 : 0.3 }} />
-                        {STATUS_LABELS[status]}
-                      </button>
-                    ))}
+                {/* Lead status sub-filters */}
+                {mapFilters.showLeads && (
+                  <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3 ml-1">Status Filter</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(Object.keys(LEAD_COLORS) as LeadStatus[]).map((status) => (
+                        <button
+                          key={status}
+                          onClick={() => toggleLeadStatusFilter(status)}
+                          className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold transition-all border group"
+                          style={
+                            mapFilters.leadStatusFilters[status]
+                              ? { backgroundColor: 'var(--t-bg)', color: 'var(--t-text)', borderColor: LEAD_COLORS[status] }
+                              : { backgroundColor: 'transparent', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }
+                          }
+                        >
+                          <span className={`w-2 h-2 rounded-full shrink-0 group-hover:scale-125 transition-transform`} 
+                                style={{ background: LEAD_COLORS[status], opacity: mapFilters.leadStatusFilters[status] ? 1 : 0.3, boxShadow: mapFilters.leadStatusFilters[status] ? `0 0 8px ${LEAD_COLORS[status]}88` : 'none' }} />
+                          {STATUS_LABELS[status]}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
               
-              <div className="p-4 bg-black/10 border-t" style={{ borderColor: 'var(--t-border)' }}>
+              <div className="p-5 bg-[var(--t-surface-dim)] border-t flex flex-col gap-2" style={{ borderColor: 'var(--t-border)' }}>
                  <button 
                   onClick={() => setFilterOpen(false)}
-                  className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-500 shadow-lg shadow-blue-600/20 transition-all"
+                  className="w-full py-3.5 rounded-2xl bg-blue-600 text-white font-black text-xs uppercase tracking-widest hover:bg-blue-500 shadow-xl shadow-blue-600/30 hover:shadow-blue-600/40 transition-all active:scale-95"
                  >
                    Apply Filters
                  </button>
+                 <p className="text-[9px] text-center text-gray-500 font-medium">Auto-saves your preferences</p>
               </div>
             </div>
           </div>
@@ -561,49 +576,6 @@ export default function MapView() {
           </div>
         )}
 
-        {/* ── Ungeocoded Leads Banner ── */}
-        {ungeocodedLeads.length > 0 && (
-          <div className="absolute bottom-16 right-3 z-[999] rounded-xl px-3 py-2 text-xs max-w-[250px] shadow-lg"
-            style={{
-              backgroundColor: 'var(--t-warning-dim)',
-              border: '1px solid var(--t-warning)',
-              color: 'var(--t-warning)',
-              backdropFilter: 'blur(4px)',
-            }}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <MapPinOff size={12} />
-              <span className="font-semibold">{ungeocodedLeads.length} leads not on map</span>
-            </div>
-            <button
-              onClick={async () => {
-                if (geocodingLeadId) return;
-                for (const lead of ungeocodedLeads) {
-                  setGeocodingLeadId(lead.id);
-                  try {
-                    const result = await geocodeAddress(lead.propertyAddress);
-                    if (result) {
-                      useStore.getState().updateLead(lead.id, { lat: result.lat, lng: result.lng });
-                    }
-                  } catch { /* skip */ }
-                }
-                setGeocodingLeadId(null);
-              }}
-              disabled={!!geocodingLeadId}
-              className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-medium transition-colors disabled:opacity-50"
-              style={{
-                backgroundColor: 'var(--t-warning-dim)',
-                color: 'var(--t-warning)',
-              }}
-            >
-              {geocodingLeadId ? (
-                <><Loader2 size={10} className="animate-spin" /> Geocoding...</>
-              ) : (
-                <><Navigation size={10} /> Geocode All Now</>
-              )}
-            </button>
-          </div>
-        )}
 
         {/* ── Legend ── */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[1000] rounded-xl px-4 py-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px]"
@@ -766,44 +738,80 @@ export default function MapView() {
           ))}
         </MapContainer>
 
-        {/* ── Reset View Button ── */}
-        <button
-          onClick={() => {
-            setFlyTarget({ lat: center[0], lng: center[1], zoom: mapSettings.defaultZoom });
-            closeDetail();
-          }}
-          className="absolute bottom-14 right-3 z-[1000] rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all shadow-lg"
-          style={{
-            backgroundColor: 'var(--t-surface)',
-            border: '1px solid var(--t-border)',
-            color: 'var(--t-text-muted)',
-            backdropFilter: 'blur(4px)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--t-border-light)';
-            e.currentTarget.style.color = 'var(--t-text)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'var(--t-border)';
-            e.currentTarget.style.color = 'var(--t-text-muted)';
-          }}
-          title="Reset map to default view"
-        >
-          <Navigation size={14} /> Reset View
-        </button>
+        {/* ── Map Controls (Bottom Right) ── */}
+        <div className="absolute bottom-12 right-3 z-[1000] flex items-center gap-2">
+          {/* Reset View */}
+          <button
+            onClick={() => {
+              setFlyTarget({ lat: center[0], lng: center[1], zoom: mapSettings.defaultZoom });
+              closeDetail();
+            }}
+            className="rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all shadow-lg"
+            style={{
+              backgroundColor: 'var(--t-surface)',
+              border: '1px solid var(--t-border)',
+              color: 'var(--t-text-muted)',
+              backdropFilter: 'blur(4px)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--t-border-light)';
+              e.currentTarget.style.color = 'var(--t-text)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--t-border)';
+              e.currentTarget.style.color = 'var(--t-text-muted)';
+            }}
+            title="Reset map to default view"
+          >
+            <Navigation size={14} /> Reset View
+          </button>
 
-        {/* ── Stats Badge ── */}
-        <div className="absolute top-3 right-3 z-[999] rounded-lg px-3 py-1.5 text-[10px]"
-          style={{
-            backgroundColor: 'var(--t-surface)',
-            border: '1px solid var(--t-border)',
-            color: 'var(--t-text-muted)',
-            display: selectedLead || selectedBuyer || selectedArea ? 'none' : 'block',
-            opacity: 0.8,
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          {totalVisible} markers visible
+          {/* Ungeocoded Leads Button */}
+          {ungeocodedLeads.length > 0 && (
+            <button
+              onClick={async () => {
+                if (geocodingLeadId) return;
+                for (const lead of ungeocodedLeads) {
+                  setGeocodingLeadId(lead.id);
+                  try {
+                    const result = await geocodeAddress(lead.propertyAddress);
+                    if (result) {
+                      useStore.getState().updateLead(lead.id, { lat: result.lat, lng: result.lng });
+                    }
+                  } catch { /* skip */ }
+                }
+                setGeocodingLeadId(null);
+              }}
+              disabled={!!geocodingLeadId}
+              className="rounded-xl px-3 py-2 text-xs flex items-center gap-2 transition-all shadow-lg font-medium whitespace-nowrap"
+              style={{
+                backgroundColor: 'var(--t-warning-dim)',
+                border: '1px solid var(--t-warning)',
+                color: 'var(--t-warning)',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              {geocodingLeadId ? (
+                <><Loader2 size={12} className="animate-spin" /> Geocoding...</>
+              ) : (
+                <><MapPinOff size={14} /> {ungeocodedLeads.length} leads not on map</>
+              )}
+            </button>
+          )}
+
+          {/* Stats Badge */}
+          <div className="rounded-xl px-3 py-2 text-xs font-medium shadow-lg whitespace-nowrap"
+            style={{
+              backgroundColor: 'var(--t-surface)',
+              border: '1px solid var(--t-border)',
+              color: 'var(--t-text-muted)',
+              display: selectedLead || selectedBuyer || selectedArea ? 'none' : 'block',
+              opacity: 0.9,
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            {totalVisible} markers visible
+          </div>
         </div>
       </div>
     </div>
