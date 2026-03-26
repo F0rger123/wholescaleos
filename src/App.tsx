@@ -108,7 +108,7 @@ export function App() {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
             const user = session.user;
-            login(user.email || '', '');
+            useStore.getState().setAuthenticated(true);
             updateProfile({
               id: user.id,
               email: user.email || '',
@@ -135,7 +135,7 @@ export function App() {
           const user = session.user;
           const store = useStore.getState();
           if (!store.isAuthenticated) {
-            store.login(user.email || '', '');
+            store.setAuthenticated(true);
             store.updateProfile({
               id: user.id,
               email: user.email || '',

@@ -93,9 +93,11 @@ export default function TeamSelection() {
 
   const selectTeam = (teamId: string) => {
     localStorage.setItem('wholescale-preferred-team', teamId);
+    // Update store state immediately
+    useStore.getState().setTeamId(teamId);
     // Reset dataLoaded so SupabaseSync re-fetches
     useStore.setState({ dataLoaded: false });
-    navigate('/', { replace: true });
+    navigate('/dashboard', { replace: true });
   };
 
   const handleJoinTeam = async () => {
