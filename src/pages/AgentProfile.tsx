@@ -407,7 +407,7 @@ END:VCARD`;
             <div className="flex items-center gap-2 font-black text-xl italic tracking-tighter">
                WHOLESCALE<span className="text-blue-600">OS</span>
             </div>
-            <p className="text-xs text-gray-500">© 2024 Wholesale Real Estate OS. All rights reserved.</p>
+            <p className="text-xs text-gray-500">© 2026 Wholesale Real Estate OS. All rights reserved.</p>
             <button 
               onClick={() => navigate('/')}
               className="text-xs font-bold text-gray-400 hover:text-white flex items-center gap-2 transition-all underline decoration-blue-500/50 underline-offset-4"

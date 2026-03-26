@@ -263,7 +263,7 @@ export default function EmailConfirmed() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[var(--t-text-muted)] mt-8">
-          © 2024 WholeScale OS. All rights reserved.
+          © 2026 WholeScale OS. All rights reserved.
         </p>
       </div>
     </div>

@@ -42,7 +42,6 @@ import Contact from './pages/marketing/Contact';
 import LeadShare from './pages/marketing/LeadShare';
 import LeadShareEditor from './pages/LeadShareEditor';
 import CRMCompare from './pages/marketing/CRMCompare';
-import Roadmap from './pages/marketing/Roadmap';
 import Integrations from './pages/marketing/Integrations';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -178,7 +177,6 @@ export function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/compare" element={<CRMCompare />} />
         </Route>
@@ -199,13 +197,15 @@ export function App() {
         {/* Google OAuth callback */}
         <Route path="/auth/callback" element={<AuthCallback />} />
 
+        {/* Full-page lead management — no sidebar */}
+        <Route path="/leads/:id/manage" element={<ProtectedRoute><SupabaseSync><LeadManagement /></SupabaseSync></ProtectedRoute>} />
+
         {/* Protected routes */}
         <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/billing" element={<BillingProfile />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/:id" element={<Leads />} />
-          <Route path="/leads/:id/manage" element={<LeadManagement />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/team" element={<Team />} />
           <Route path="/tasks" element={<Tasks />} />
