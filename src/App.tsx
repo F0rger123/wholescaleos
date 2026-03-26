@@ -179,6 +179,7 @@ export function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/integrations" element={<Integrations />} />
+          <Route path="/compare" element={<CRMCompare />} />
         </Route>
 
         <Route path="/share/:id" element={<LeadShare />} />

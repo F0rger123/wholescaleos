@@ -1202,7 +1202,7 @@ export default function Leads() {
                              <span className="text-sm font-bold">Edit Share Page</span>
                            </button>
                            <button 
-                             onClick={() => openEdit(lead)}
+                             onClick={() => navigate(`/leads/${lead.id}/share-edit`)}
                              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border transition-all hover:bg-[var(--t-surface-subtle)] active:scale-95 group"
                              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
                            >

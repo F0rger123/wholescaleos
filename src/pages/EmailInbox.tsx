@@ -10,7 +10,7 @@ import {
   listThreads, getThread, sendEmail, EmailThread, 
   starThread, unstarThread, trashThread 
 } from '../lib/email';
-import { analyzeSMSConversation } from '../lib/sms-analysis-service';
+import { analyzeConversation } from '../lib/ai-reply-service';
 
 export default function EmailInbox() {
   const [threads, setThreads] = useState<any[]>([]);
@@ -70,7 +70,7 @@ export default function EmailInbox() {
         role: m.from.email.includes(currentUser?.email || 'me') ? 'assistant' : 'user' as 'assistant' | 'user',
         content: m.snippet
       }));
-      const analysis = await analyzeSMSConversation(messages);
+      const analysis = await analyzeConversation(messages, 'email');
       if (analysis?.suggestedReplies && analysis.suggestedReplies.length > 0) {
         setAiSuggestions(analysis.suggestedReplies);
         // Pre-fill with the first suggestion if the reply box is empty

@@ -737,26 +737,32 @@ export default function Dashboard() {
       {/* Single global LeadHoverCard — rendered once at page root to prevent duplicates */}
       {hoveredLead && hoverPos && (() => {
         const cardWidth = 320;
-        const cardHeight = 400; // Approximate
-        let left = hoverPos.x + 12;
-        let top = hoverPos.y - 12;
+        const cardHeight = 380; // Estimated height
+        const margin = 12;
+        
+        let left = hoverPos.x + margin;
+        let top = hoverPos.y - 20; // Align slightly above the text
         let arrowPos = 'left';
 
         // Flip to left side if not enough space on the right
-        if (left + cardWidth > window.innerWidth) {
-          left = hoverPos.x - hoverPos.width - cardWidth - 12;
+        if (left + cardWidth > window.innerWidth - margin) {
+          left = hoverPos.x - hoverPos.width - cardWidth - margin;
           arrowPos = 'right';
         }
 
         // Vertical boundary clamping
-        if (top + cardHeight > window.innerHeight) {
-          top = window.innerHeight - cardHeight - 12;
+        if (top + cardHeight > window.innerHeight - margin) {
+          top = window.innerHeight - cardHeight - margin;
         }
-        if (top < 12) top = 12;
+        if (top < margin) top = margin;
+
+        // Calculate arrow vertical position relative to the target element
+        // hoverPos.y is the top of the element. top is the top of the card.
+        const arrowTop = Math.max(20, Math.min(cardHeight - 20, hoverPos.y - top + (hoverPos.height / 2) - 6));
 
         return (
           <div
-            className="fixed z-[9999] shadow-2xl pointer-events-auto"
+            className="fixed z-[9999] shadow-2xl pointer-events-auto animate-in fade-in zoom-in-95 duration-200"
             style={{ 
               left, 
               top,
@@ -764,9 +770,9 @@ export default function Dashboard() {
               '--card-arrow-left': arrowPos === 'left' ? '-6px' : 'auto',
               '--card-arrow-right': arrowPos === 'right' ? '-6px' : 'auto',
               '--card-arrow-rotate': arrowPos === 'left' ? '-45deg' : '135deg',
-              '--card-arrow-top': arrowPos === 'left' ? '32px' : '32px', // Can refine this
+              '--card-arrow-top': `${arrowTop}px`,
             } as any}
-            onMouseEnter={() => setHoveredLeadId(hoveredLeadId)} // Keep open while mouse is on card
+            onMouseEnter={() => setHoveredLeadId(hoveredLeadId)}
             onMouseLeave={handleLeadMouseLeave}
           >
             <LeadHoverCard lead={hoveredLead} />

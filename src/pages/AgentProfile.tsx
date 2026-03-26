@@ -77,18 +77,19 @@ export default function AgentProfile() {
             email: data.email,
             phone: data.phone,
             avatar: data.avatar,
+            avatarUrl: data.avatar_url || settings.avatarUrl,
             bio: settings.bio,
             specialties: settings.specialties || [],
-            licenseNumber: settings.license_number,
-            yearsExperience: settings.years_experience,
+            licenseNumber: settings.licenseNumber || settings.license_number,
+            yearsExperience: settings.yearsExperience || settings.years_experience,
             languages: settings.languages || [],
-            socialLinks: settings.social_links || {},
-            serviceAreas: settings.service_areas || [],
+            socialLinks: settings.socialLinks || settings.social_links || {},
+            serviceAreas: settings.serviceAreas || settings.service_areas || [],
             testimonials: settings.testimonials || [],
-            isPublic: settings.is_public !== false,
-            publicContactEmail: settings.public_contact_email !== false,
-            publicContactPhone: settings.public_contact_phone !== false,
-            acceptLeads: settings.accept_leads !== false,
+            isPublic: settings.isPublic !== false,
+            publicContactEmail: settings.publicContactEmail !== false,
+            publicContactPhone: settings.publicContactPhone !== false,
+            acceptLeads: settings.acceptLeads !== false,
             website: settings.website || ''
           });
         }
@@ -212,12 +213,16 @@ END:VCARD`;
                <div className="relative group shrink-0">
                   <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-3xl blur opacity-30 group-hover:opacity-60 transition duration-1000 group-hover:duration-200" />
                   <div className="relative w-40 h-40 md:w-56 md:h-56 rounded-3xl bg-[var(--t-surface)] overflow-hidden border-4 border-[var(--t-bg)] shadow-2xl">
-                    {agent.avatar ? (
+                    {agent.avatarUrl ? (
+                      <img src={agent.avatarUrl} alt={agent.name} className="w-full h-full object-cover" />
+                    ) : agent.avatar ? (
                       <div className="w-full h-full bg-blue-600 flex items-center justify-center text-4xl md:text-6xl font-bold text-white uppercase">
                         {agent.avatar}
                       </div>
                     ) : (
-                      <div className="w-full h-full bg-gray-600" />
+                      <div className="w-full h-full bg-blue-600 flex items-center justify-center text-4xl md:text-6xl font-bold text-white">
+                        {agent.name.charAt(0)}
+                      </div>
                     )}
                   </div>
                   <div className="absolute bottom-4 right-4 bg-green-500 w-6 h-6 rounded-full border-4 border-[var(--t-bg)] shadow-xl" />

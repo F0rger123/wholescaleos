@@ -842,16 +842,28 @@ export async function getThread(threadId: string): Promise<EmailThread | null> {
       }
 
       const fromRaw = getHeader('From');
-      const fromMatch = fromRaw.match(/^(.*?) <(.*?)>$/);
-      const from = fromMatch ? {
-        name: fromMatch[1].replace(/^"|"$/g, '').trim() || fromMatch[2],
-        email: fromMatch[2].trim()
-      } : { name: fromRaw, email: fromRaw };
+      const fromMatch = fromRaw.match(/^(.*?) <(.*?)>$/) || fromRaw.match(/^(.*?) <(.*?)>$/i);
+      
+      let name = fromRaw;
+      let email = fromRaw;
+
+      if (fromMatch) {
+        name = fromMatch[1].replace(/^"|"$/g, '').trim();
+        email = fromMatch[2].trim();
+        // If name is actually an email and empty, use email as name
+        if (!name || name.includes('@')) name = email;
+      } else if (fromRaw.includes('<') && fromRaw.includes('>')) {
+        // Fallback for weirdly formatted headers
+        const parts = fromRaw.split('<');
+        name = parts[0].replace(/^"|"$/g, '').trim();
+        email = parts[1].replace(/>/g, '').trim();
+        if (!name) name = email;
+      }
 
       return {
         id: m.id,
         threadId: m.threadId,
-        from,
+        from: { name, email },
         to: getHeader('To'),
         subject: getHeader('Subject'),
         date: getHeader('Date'),
@@ -861,7 +873,8 @@ export async function getThread(threadId: string): Promise<EmailThread | null> {
     });
 
     const firstMsg = messages[0];
-    const participants = Array.from(new Set(messages.map((m: any) => m.from))).filter(p => p !== store.currentUser?.email) as string[];
+    const participants = Array.from(new Set(messages.map((m: any) => (m.from.email || m.from.name || '') as string)))
+      .filter(p => p && String(p).toLowerCase() !== (store.currentUser?.email || '').toLowerCase()) as string[];
 
     return {
       id: data.id,
