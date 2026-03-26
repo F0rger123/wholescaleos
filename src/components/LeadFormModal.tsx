@@ -112,8 +112,9 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
     };
 
     try {
+      let result;
       if (editingLead) {
-        updateLead(editingLead.id, d);
+        result = await updateLead(editingLead.id, d);
         if (d.phone && d.phone !== editingLead.phone) {
           detectCarrier(d.phone).then(res => {
             if (res.carrier) updateLead(editingLead.id, { carrier: res.carrier });
@@ -121,15 +122,22 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
         }
       } else {
         const res = await detectCarrier(d.phone);
-        addLead({ ...d, carrier: res.carrier });
+        result = await addLead({ ...d, carrier: res.carrier });
       }
+
+      if (result && !result.success) {
+        alert(`Error saving lead: ${result.error?.message || 'Unknown error'}`);
+        setSaving(false);
+        return;
+      }
+      
+      setSaving(false); 
+      onClose();
     } catch (err) {
       console.error('Error saving lead:', err);
-      if (!editingLead) addLead(d); // Fallback if carrier detection fails
+      alert('A critical error occurred while saving the lead. Please check your connection.');
+      setSaving(false);
     }
-
-    setSaving(false); 
-    onClose();
   };
 
 

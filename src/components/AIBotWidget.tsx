@@ -11,6 +11,10 @@ import { processPrompt, hasUserApiKey, createTask, updateLeadStatusViaAI, create
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SaveLeadModal } from './SaveLeadModal';
 import { RateLimitModal } from './RateLimitModal';
+import { parseIntent } from '../lib/ai/intent-parser';
+import { actionHandlers } from '../lib/ai/action-handlers';
+import { formatTemplate } from '../lib/ai/template-engine';
+import { UserLearningManager } from '../lib/ai/user-learning';
 
 interface ChatMessage {
   id: string;
@@ -19,6 +23,7 @@ interface ChatMessage {
   timestamp: string;
   intent?: string;
   data?: any;
+  systemLog?: string;
 }
 
 export function AIBotWidget() {
@@ -326,6 +331,53 @@ export function AIBotWidget() {
         return;
       }
 
+      // ── LOCAL RULE-BASED MATCHING ──────────────────────────────────────────
+      const matched = parseIntent(userText);
+      if (matched) {
+        // Handle Confidence Disambiguation
+        if (matched.confidence > 40 && matched.confidence < 80) {
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: `I think you might want to ${matched.intent.name.replace(/_/g, ' ')}. Is that right?`,
+            timestamp: new Date().toISOString(),
+            intent: 'disambiguation',
+            data: { originalIntent: matched },
+            systemLog: "🤖 Local AI (Low Confidence)"
+          }]);
+          setLoading(false);
+          return;
+        }
+
+        const handler = (actionHandlers as any)[matched.intent.action];
+        if (handler && matched.confidence >= 80) {
+          const res = await handler(matched.params);
+          if (res.success) {
+            const prefs = UserLearningManager.getPreferences();
+            let formatted = formatTemplate(matched.intent.template, res.data);
+            
+            // Adjust based on style preference
+            if (prefs.responseStyle === 'concise') {
+              formatted = `Done: ${formatted.split(':').pop()?.trim() || formatted}`;
+            } else if (prefs.responseStyle === 'friendly') {
+              formatted = `Sure thing! ${formatted}`;
+            }
+
+            setMessages(prev => [...prev, {
+              id: (Date.now() + 1).toString(),
+              role: 'ai',
+              content: formatted,
+              timestamp: new Date().toISOString(),
+              intent: matched.intent.name,
+              data: res.data,
+              systemLog: "🤖 Local AI"
+            }]);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       // ── Normal AI processing ──────────────────────────────────────────────
       const response = await processPrompt(userText, { 
         page: location.pathname,
@@ -339,7 +391,8 @@ export function AIBotWidget() {
           role: 'ai',
           content: response.response,
           timestamp: new Date().toISOString(),
-          intent: 'rate_limit'
+          intent: 'rate_limit',
+          systemLog: "✨ Gemini AI"
         }]);
         setLoading(false);
         return;
@@ -375,7 +428,8 @@ export function AIBotWidget() {
             content: response.response,
             timestamp: new Date().toISOString(),
             intent: response.intent,
-            data: d
+            data: d,
+            systemLog: "✨ Gemini AI"
           }]);
         } else {
           // Missing info — start SMS session to collect it conversationally
@@ -393,7 +447,8 @@ export function AIBotWidget() {
             role: 'ai',
             content: response.response,
             timestamp: new Date().toISOString(),
-            intent: 'ask_question'
+            intent: 'ask_question',
+            systemLog: "✨ Gemini AI"
           }]);
         }
 
@@ -408,7 +463,8 @@ export function AIBotWidget() {
           content: response.response,
           timestamp: new Date().toISOString(),
           intent: 'ask_save_contact',
-          data: response.data
+          data: response.data,
+          systemLog: "✨ Gemini AI"
         }]);
       } else {
         setMessages(prev => [...prev, {
@@ -417,7 +473,8 @@ export function AIBotWidget() {
           content: response.response,
           timestamp: new Date().toISOString(),
           intent: response.intent,
-          data: response.data
+          data: response.data,
+          systemLog: "✨ Gemini AI"
         }]);
 
         if (response.intent === 'navigate' && response.data?.path) {
@@ -636,7 +693,45 @@ export function AIBotWidget() {
                     color: msg.role === 'user' ? 'var(--t-on-primary)' : 'var(--t-text)'
                   }}>
                     {msg.content}
+                    
+                    {msg.intent === 'disambiguation' && msg.data?.originalIntent && (
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          onClick={() => {
+                            const matched = msg.data.originalIntent;
+                            handleExecuteAction(matched.intent.action, matched.params);
+                            // Mark as resolved
+                            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, intent: 'resolved' } : m));
+                          }}
+                          className="px-2 py-1 bg-[var(--t-primary)] text-white rounded text-[10px] font-bold"
+                        >
+                          Yes, do it
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMessages(prev => [...prev, {
+                              id: Date.now().toString(),
+                              role: 'ai',
+                              content: "No problem! How can I help then?",
+                              timestamp: new Date().toISOString()
+                            }]);
+                            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, intent: 'resolved' } : m));
+                          }}
+                          className="px-2 py-1 bg-[var(--t-surface-hover)] text-[var(--t-text)] border border-[var(--t-border)] rounded text-[10px]"
+                        >
+                          No
+                        </button>
+                      </div>
+                    )}
                   </div>
+                  {msg.role === 'ai' && msg.systemLog && (
+                    <div className="flex gap-2 items-center mt-1 px-1">
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border" 
+                        style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }}>
+                        {msg.systemLog}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

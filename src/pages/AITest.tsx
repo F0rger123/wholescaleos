@@ -17,6 +17,9 @@ import {
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { RateLimitModal } from '../components/RateLimitModal';
+import { parseIntent } from '../lib/ai/intent-parser';
+import { actionHandlers } from '../lib/ai/action-handlers';
+import { formatTemplate } from '../lib/ai/template-engine';
 
 interface AIBotMessage {
   id: string;
@@ -252,6 +255,28 @@ export default function AITest() {
     abortControllerRef.current = controller;
 
     try {
+      // 1. Try Local Rule-Based AI first (No Credits)
+      const matched = parseIntent(text.trim());
+      if (matched) {
+        const handler = (actionHandlers as any)[matched.intent.action];
+        if (handler) {
+          const res = await handler(matched.params);
+          if (res.success) {
+            const formatted = formatTemplate(matched.intent.template, res.data);
+            pushMessage({ 
+              role: 'ai', 
+              content: formatted, 
+              intent: matched.intent.name,
+              data: res.data,
+              systemLog: "🤖 Local AI"
+            });
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Fallback to Gemini AI
       const response = await processPrompt(text.trim(), {
         threadId: currentAiThreadId,
         history: messages.map(m => ({ role: m.role, content: m.content })),
@@ -278,7 +303,7 @@ export default function AITest() {
           role: 'ai', 
           content: clean, 
           intent: response.intent, 
-          systemLog: debug ? JSON.stringify(response.data, null, 2) : undefined 
+          systemLog: "✨ Gemini AI" 
         });
 
         if (response.intent === 'confirm_action' && response.data) {

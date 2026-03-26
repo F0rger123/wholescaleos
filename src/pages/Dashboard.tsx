@@ -20,6 +20,7 @@ import {
 import { StreakBadge } from '../components/StreakBadge';
 import { TeamLeaderboard } from '../components/TeamLeaderboard';
 import { LeadQuickViewModal } from '../components/LeadQuickViewModal';
+import { AIDashboardSummary } from '../components/AIDashboardSummary';
 import { useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer,
@@ -318,6 +319,9 @@ export default function Dashboard() {
           {taskStreak > 0 && <StreakBadge streak={taskStreak} type="task" size="md" />}
         </div>
       </div>
+
+      {/* AI Summary Widget */}
+      <AIDashboardSummary />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
