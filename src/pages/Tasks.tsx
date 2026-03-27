@@ -563,7 +563,7 @@ export default function Tasks() {
                     )}
                     <div className="flex items-center justify-between">
                       <span className="inline-flex items-center gap-1 text-[11px]" style={{ color: 'var(--t-text-muted)' }}>
-                        <User size={11} /> {getMemberName(task.assignedTo).split(' ')[0]}
+                        <User size={11} /> {(getMemberName(task.assignedTo) || 'Unassigned').split(' ')[0]}
                       </span>
                       <span className={`inline-flex items-center gap-1 text-[11px] ${getDueColor(task)}`}>
                         <Clock size={11} /> {getDueLabel(task.dueDate)}

@@ -385,11 +385,12 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
     login(user.email || form.email, form.password);
     const store = useStore.getState();
+    const avatar = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
     store.updateProfile({
       id: user.id,
       email: user.email || form.email,
       name: displayName,
-      avatar: displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+      avatar,
     });
     sendWelcomeEmail(user.email || form.email, displayName).catch(() => {});
     

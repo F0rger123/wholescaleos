@@ -93,31 +93,57 @@ export const leadsService = {
 
   async create(lead: Record<string, unknown>) {
     if (!supabase) return null;
-    const { data } = await supabase.from('leads').insert(lead).select().single();
+    const { data, error } = await supabase.from('leads').insert(lead).select().single();
+    if (error) {
+      console.error('❌ Supabase leadsService.create error:', error);
+      throw error;
+    }
     return data;
   },
 
   async update(id: string, updates: Record<string, unknown>) {
     if (!supabase) return;
-    await supabase
+    const { error } = await supabase
       .from('leads')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id);
+    if (error) {
+      console.error('❌ Supabase leadsService.update error:', error);
+      throw error;
+    }
   },
 
   async remove(id: string) {
     if (!supabase) return;
-    await supabase.from('leads').delete().eq('id', id);
+    const { error } = await supabase.from('leads').delete().eq('id', id);
+    if (error) {
+      console.error('❌ Supabase leadsService.remove error:', error);
+      throw error;
+    }
   },
 
   async addTimeline(leadId: string, entry: Record<string, unknown>) {
     if (!supabase) return;
-    await supabase.from('timeline_entries').insert({ lead_id: leadId, ...entry });
+    const { error } = await supabase.from('timeline_entries').insert({ lead_id: leadId, ...entry });
+    if (error) {
+      console.error('❌ Supabase leadsService.addTimeline error:', error);
+      throw error;
+    }
   },
 
   async addStatusHistory(leadId: string, fromStatus: string | null, toStatus: string, changedBy: string) {
     if (!supabase) return;
-    await supabase.from('status_history').insert({ lead_id: leadId, from_status: fromStatus, to_status: toStatus, changed_by: changedBy });
+    const { error } = await supabase.from('status_history').insert({
+      lead_id: leadId,
+      from_status: fromStatus,
+      to_status: toStatus,
+      changed_by: changedBy,
+      timestamp: new Date().toISOString()
+    });
+    if (error) {
+      console.error('❌ Supabase leadsService.addStatusHistory error:', error);
+      throw error;
+    }
   },
 
   subscribe(teamId: string, callback: (payload: Record<string, unknown>) => void) {
@@ -140,23 +166,39 @@ export const tasksService = {
 
   async create(task: Record<string, unknown>) {
     if (!supabase) return null;
-    const { data } = await supabase.from('tasks').insert(task).select().single();
+    const { data, error } = await supabase.from('tasks').insert(task).select().single();
+    if (error) {
+      console.error('❌ Supabase tasksService.create error:', error);
+      throw error;
+    }
     return data;
   },
 
   async update(id: string, updates: Record<string, unknown>) {
     if (!supabase) return;
-    await supabase.from('tasks').update(updates).eq('id', id);
+    const { error } = await supabase.from('tasks').update(updates).eq('id', id);
+    if (error) {
+      console.error('❌ Supabase tasksService.update error:', error);
+      throw error;
+    }
   },
 
   async remove(id: string) {
     if (!supabase) return;
-    await supabase.from('tasks').delete().eq('id', id);
+    const { error } = await supabase.from('tasks').delete().eq('id', id);
+    if (error) {
+      console.error('❌ Supabase tasksService.remove error:', error);
+      throw error;
+    }
   },
 
   async complete(id: string) {
     if (!supabase) return;
-    await supabase.from('tasks').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', id);
+    const { error } = await supabase.from('tasks').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', id);
+    if (error) {
+      console.error('❌ Supabase tasksService.complete error:', error);
+      throw error;
+    }
   },
 };
 
