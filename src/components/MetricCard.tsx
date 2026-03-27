@@ -52,7 +52,7 @@ export function MetricCard({
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-[var(--t-text-secondary)] font-medium">{title}</p>
-          <div className="text-3xl font-black text-white mt-1 italic tracking-tighter">
+          <div className="text-3xl font-black mt-1 italic tracking-tighter" style={{ color: 'var(--t-text)' }}>
             {animated ? (
               <AnimatedCounter value={value} formatter={formatter} />
             ) : (

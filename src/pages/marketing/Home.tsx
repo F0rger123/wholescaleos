@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
@@ -57,7 +57,7 @@ export default function Home() {
   const [adminHours, setAdminHours] = useState(20);
   const [leadsPerMonth, setLeadsPerMonth] = useState(100);
   const [dealValue, setDealValue] = useState(15000);
-  const [timeframe, setTimeframe] = useState(90);
+  const [timeframe] = useState(90);
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('area');
 
   const calculateTimeSaved = () => {
@@ -127,11 +127,11 @@ export default function Home() {
               The Sovereign Operating System for high-volume real estate teams. 
               Own your data. Automate your triage. Build your legacy.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:flex-1 md:flex-none">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-72">
                 <Link
                   to="/pricing"
-                  className="w-full px-10 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift"
+                  className="w-full h-20 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift text-white"
                 >
                   Get Started Free <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -140,7 +140,7 @@ export default function Home() {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full sm:flex-1 md:flex-none md:w-64 px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-black transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle shadow-xl"
+                className="w-full sm:w-72 h-20 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-black transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle shadow-xl text-white"
               >
                 <PlayCircle size={20} /> Watch Demo
               </motion.button>

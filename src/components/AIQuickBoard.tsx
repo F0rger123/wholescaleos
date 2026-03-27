@@ -89,20 +89,20 @@ export function AIQuickBoard() {
         <div className="flex flex-col md:flex-row gap-8">
           {/* Main Briefing Section */}
           <div className="flex-1 space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[var(--t-primary)] to-[var(--t-secondary)] p-[1px] shadow-lg shadow-[var(--t-primary)]/20">
-                <div className="w-full h-full rounded-2xl bg-[var(--t-surface)] flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-[var(--t-primary)]" />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[var(--t-primary)] to-[var(--t-secondary)] p-[1px] shadow-lg shadow-[var(--t-primary)]/20">
+                  <div className="w-full h-full rounded-2xl bg-[var(--t-surface)] flex items-center justify-center">
+                    <Bot className="w-6 h-6 text-[var(--t-primary)]" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-black text-xl tracking-tight" style={{ color: 'var(--t-text)' }}>AI QuickBoard</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 rounded-full bg-[var(--t-success)] animate-pulse" />
+                    <p className="text-[var(--t-text-muted)] text-[10px] uppercase tracking-widest font-bold">System Online · {aiName}</p>
+                  </div>
                 </div>
               </div>
-              <div>
-                <h3 className="text-white font-black text-xl tracking-tight">AI QuickBoard</h3>
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2 w-2 rounded-full bg-[var(--t-success)] animate-pulse" />
-                  <p className="text-[var(--t-text-muted)] text-[10px] uppercase tracking-widest font-bold">System Online · {aiName}</p>
-                </div>
-              </div>
-            </div>
 
             <div className="relative">
               <p className="text-[var(--t-text)] leading-relaxed text-lg font-medium min-h-[80px]">
@@ -114,17 +114,17 @@ export function AIQuickBoard() {
             <div className="flex flex-wrap gap-4 pt-4 border-t border-[var(--t-border)]/50">
               <div className="flex items-center gap-2 px-4 py-2 bg-[var(--t-surface-subtle)]/50 rounded-2xl border border-[var(--t-border-subtle)]">
                 <CheckCircle2 className="w-4 h-4 text-[var(--t-success)]" />
-                <span className="text-sm text-white font-bold">{agenda.stats.completedToday}</span>
+                <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{agenda.stats.completedToday}</span>
                 <span className="text-xs text-[var(--t-text-muted)]">Completed</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-[var(--t-surface-subtle)]/50 rounded-2xl border border-[var(--t-border-subtle)]">
                 <Users className="w-4 h-4 text-[var(--t-info)]" />
-                <span className="text-sm text-white font-bold">{agenda.stats.incomingToday}</span>
+                <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{agenda.stats.incomingToday}</span>
                 <span className="text-xs text-[var(--t-text-muted)]">New Leads</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-[var(--t-surface-subtle)]/50 rounded-2xl border border-[var(--t-border-subtle)]">
                 <Zap className="w-4 h-4 text-[var(--t-warning)]" />
-                <span className="text-sm text-white font-bold">{(leads || []).length}</span>
+                <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{(leads || []).length}</span>
                 <span className="text-xs text-[var(--t-text-muted)]">In Pipeline</span>
               </div>
             </div>
@@ -147,7 +147,7 @@ export function AIQuickBoard() {
                   <div key={task.id} className="p-3 rounded-2xl bg-[var(--t-surface)]/40 border border-[var(--t-border-subtle)] hover:border-[var(--t-primary)]/30 transition-colors cursor-pointer group/item"
                     onClick={() => navigate('/tasks')}
                   >
-                    <p className="text-xs text-white font-medium truncate">{task.title}</p>
+                    <p className="text-xs font-medium truncate" style={{ color: 'var(--t-text)' }}>{task.title}</p>
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-[10px] text-[var(--t-text-muted)]">Due today</span>
                       <ArrowRight className="w-3 h-3 text-[var(--t-text-muted)] group-hover/item:translate-x-1 transition-transform" />
@@ -171,7 +171,7 @@ export function AIQuickBoard() {
                   <div key={lead.id} className="p-3 rounded-2xl bg-[var(--t-surface)]/40 border border-[var(--t-border-subtle)] hover:border-[var(--t-primary)]/30 transition-colors cursor-pointer group/item"
                     onClick={() => navigate(`/leads/${lead.id}/manage`)}
                   >
-                    <p className="text-xs text-white font-medium truncate">{lead.name}</p>
+                    <p className="text-xs font-medium truncate" style={{ color: 'var(--t-text)' }}>{lead.name}</p>
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-[10px] text-[var(--t-warning)] font-bold">Score: {calculateDealScore(lead)}</span>
                       <ArrowRight className="w-3 h-3 text-[var(--t-text-muted)] group-hover/item:translate-x-1 transition-transform" />

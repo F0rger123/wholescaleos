@@ -28,12 +28,13 @@ export function UserMenu() {
         className="flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-300 hover-lift astral-glass border border-white/10 group"
       >
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white italic bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-600/20 group-hover:scale-110 transition-transform"
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black italic shadow-lg shadow-indigo-600/20 group-hover:scale-110 transition-transform"
+          style={{ background: 'var(--t-gradient)', color: 'var(--t-on-primary)' }}
         >
           {getInitials()}
         </div>
         <div className="text-left hidden sm:block">
-          <p className="text-[10px] font-black uppercase text-white tracking-widest leading-none mb-1 italic">{currentUser.name.split(' ')[0]}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 italic" style={{ color: 'var(--t-text)' }}>{currentUser.name.split(' ')[0]}</p>
           <p className="text-[9px] font-bold uppercase tracking-widest text-[#6d758c] leading-none">System Operator</p>
         </div>
         <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} text-[#6d758c]`} />
@@ -50,7 +51,7 @@ export function UserMenu() {
           >
             {/* User info */}
             <div className="p-5 border-b border-white/5 mb-1">
-              <p className="text-xs font-black uppercase tracking-widest text-white italic">
+              <p className="text-xs font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>
                 {currentUser.name}
               </p>
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#6d758c] mt-1">

@@ -577,7 +577,7 @@ export function AIBotWidget() {
           >
             <Key className="w-6 h-6" style={{ color: 'var(--t-primary)' }} />
           </div>
-          <h3 className="text-white font-bold mb-2">Setup Required</h3>
+          <h3 className="font-bold mb-2" style={{ color: 'var(--t-text)' }}>Setup Required</h3>
           <p className="text-[var(--t-text-muted)] mb-4">Please configure your AI API key to use the floating assistant.</p>
           <button 
             onClick={() => navigate('/settings/ai')} 
@@ -623,9 +623,9 @@ export function AIBotWidget() {
               <div className="w-6 h-6 rounded-lg flex items-center justify-center"
                 style={{ background: 'var(--t-primary)' }}
               >
-                <Bot className="w-4 h-4 text-white" />
+                <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </div>
-              <span className="text-sm font-bold text-white">{aiName}</span>
+              <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{aiName}</span>
               <div className="flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-pulse" />
               </div>
@@ -682,7 +682,7 @@ export function AIBotWidget() {
               <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" 
                   style={{ background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-secondary)' }}>
-                  {msg.role === 'user' ? <User className="w-3 h-3 text-white" /> : <Bot className="w-3 h-3 text-white" />}
+                  {msg.role === 'user' ? <User className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} /> : <Bot className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} />}
                 </div>
                 <div className={`max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
                   <div className={`px-3 py-2 rounded-xl text-xs leading-relaxed ${
@@ -703,7 +703,8 @@ export function AIBotWidget() {
                             // Mark as resolved
                             setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, intent: 'resolved' } : m));
                           }}
-                          className="px-2 py-1 bg-[var(--t-primary)] text-white rounded text-[10px] font-bold"
+                          className="px-2 py-1 rounded text-[10px] font-bold"
+                          style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
                         >
                           Yes, do it
                         </button>
@@ -740,7 +741,7 @@ export function AIBotWidget() {
                 <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
                   style={{ background: 'var(--t-secondary)' }}
                 >
-                  <Bot className="w-3 h-3 text-white" />
+                  <Bot className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} />
                 </div>
                 <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl rounded-tl-none px-3 py-2 flex items-center gap-1">
                   <div className="w-1.5 h-1.5 bg-[var(--t-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -782,8 +783,8 @@ export function AIBotWidget() {
             </div>
             <button
               disabled={loading || !prompt.trim()}
-              className="p-2 text-white rounded-lg disabled:opacity-50 transition-colors"
-              style={{ background: 'var(--t-primary)' }}
+              className="p-2 rounded-lg disabled:opacity-50 transition-colors"
+              style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
             >
               <Send size={16} />
             </button>
