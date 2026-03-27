@@ -107,17 +107,20 @@ export function App() {
 
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            const user = session.user;
+            const userId = session.user.id;
+            console.log('DEBUG: Session found for user:', userId, '. Initializing store...');
+            
+            // Set authenticated first so ProtectedRoute allows us through
             useStore.getState().setAuthenticated(true);
-            updateProfile({
-              id: user.id,
-              email: user.email || '',
-              name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              avatar: (user.user_metadata?.full_name || user.email?.split('@')[0] || 'U')
-                .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-            });
-            incrementLoginStreak();
-            loadLeads();
+            
+            // fetchProfile will get the full user data AND the correct teamId
+            await useStore.getState().fetchProfile(userId);
+            
+            // incrementLoginStreak is internal to the store
+            useStore.getState().incrementLoginStreak();
+            
+            // Finally load leads using the teamId from fetchProfile
+            await useStore.getState().loadLeads();
           }
         } catch {
           // Session check failed — stay logged out
@@ -132,19 +135,16 @@ export function App() {
         if (event === 'SIGNED_OUT' || !session) {
           useStore.getState().logout();
         } else if (event === 'SIGNED_IN' && session?.user) {
-          const user = session.user;
+          const userId = session.user.id;
           const store = useStore.getState();
           if (!store.isAuthenticated) {
+            console.log('DEBUG: SIGNED_IN event for user:', userId, '. Initializing profile and leads...');
             store.setAuthenticated(true);
-            store.updateProfile({
-              id: user.id,
-              email: user.email || '',
-              name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-              avatar: (user.user_metadata?.full_name || user.email?.split('@')[0] || 'U')
-                .split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-            });
+            
+            // Use fetchProfile for full data consistency
+            await store.fetchProfile(userId);
             store.incrementLoginStreak();
-            store.loadLeads();
+            await store.loadLeads();
           }
         }
       });
