@@ -124,7 +124,8 @@ export async function batchGeocode(
 const DEFAULT_LAT = 30.2672;
 const DEFAULT_LNG = -97.7431;
 
-export function isDefaultCoordinates(lat: number, lng: number): boolean {
+export function isDefaultCoordinates(lat: number | null | undefined, lng: number | null | undefined): boolean {
+  if (lat === null || lat === undefined || lng === null || lng === undefined) return true;
   // Check if it's exactly the default or very close (imported leads with random offsets)
   return (
     (Math.abs(lat - DEFAULT_LAT) < 0.001 && Math.abs(lng - DEFAULT_LNG) < 0.001) ||

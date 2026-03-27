@@ -79,9 +79,9 @@ export default function Tasks() {
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(t =>
-        t.title.toLowerCase().includes(s) ||
-        t.description.toLowerCase().includes(s) ||
-        getMemberName(t.assignedTo).toLowerCase().includes(s)
+        (t.title || '').toLowerCase().includes(s) ||
+        (t.description || '').toLowerCase().includes(s) ||
+        (getMemberName(t.assignedTo) || '').toLowerCase().includes(s)
       );
     }
     if (filterStatus !== 'all') result = result.filter(t => t.status === filterStatus);
@@ -176,6 +176,7 @@ export default function Tasks() {
 
   const getDueColor = (t: Task) => {
     if (t.status === 'done' || t.status === 'cancelled') return 'var(--t-text-muted)';
+    if (!t.dueDate) return 'var(--t-text-muted)';
     const d = parseISO(t.dueDate);
     if (isPast(d)) return 'var(--t-error)';
     if (isToday(d)) return 'var(--t-warning)';

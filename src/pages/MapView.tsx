@@ -175,19 +175,19 @@ export default function MapView() {
   const filteredLeads = useMemo(() => {
     if (!mapFilters.showLeads) return [];
     return leads.filter((l) =>
-      mapFilters.leadStatusFilters[l.status] && !isDefaultCoordinates(l.lat, l.lng)
+      l && l.status && mapFilters.leadStatusFilters[l.status] && !isDefaultCoordinates(l.lat, l.lng)
     );
   }, [leads, mapFilters.showLeads, mapFilters.leadStatusFilters]);
 
   // Count un-geocoded leads
   const ungeocodedLeads = useMemo(() =>
-    leads.filter(l => isDefaultCoordinates(l.lat, l.lng) && l.propertyAddress && isGeocodableAddress(l.propertyAddress)),
+    leads.filter(l => !l || isDefaultCoordinates(l.lat, l.lng) && l.propertyAddress && isGeocodableAddress(l.propertyAddress)),
     [leads]
   );
 
   const filteredBuyers = useMemo(() => {
     if (!mapFilters.showBuyers) return [];
-    return buyers;
+    return buyers.filter(b => b && b.lat !== null && b.lng !== null && !isDefaultCoordinates(b.lat, b.lng));
   }, [buyers, mapFilters.showBuyers]);
 
   const filteredAreas = useMemo(() => {
@@ -540,8 +540,10 @@ export default function MapView() {
                   closeDetail();
                   setSelectedArea(area);
                   // Fly to polygon center
-                  const avgLat = area.coordinates.reduce((s, c) => s + c[0], 0) / area.coordinates.length;
-                  const avgLng = area.coordinates.reduce((s, c) => s + c[1], 0) / area.coordinates.length;
+                  const coords = area.coordinates || [];
+                  if (coords.length === 0) return;
+                  const avgLat = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+                  const avgLng = coords.reduce((s, c) => s + c[1], 0) / coords.length;
                   setFlyTarget({ lat: avgLat, lng: avgLng });
                 },
               }}
@@ -897,7 +899,7 @@ function BuyerDetail({ buyer }: { buyer: Buyer }) {
       <div className="rounded-lg p-2.5" style={{ backgroundColor: 'var(--t-surface)' }}>
         <p className="text-[9px] uppercase mb-1" style={{ color: 'var(--t-text-muted)' }}>Budget Range</p>
         <p className="font-semibold text-sm" style={{ color: 'var(--t-text)' }}>
-          ${(buyer.budgetMin / 1000).toFixed(0)}k – ${(buyer.budgetMax / 1000).toFixed(0)}k
+          ${((buyer.budgetMin || 0) / 1000).toFixed(0)}k – ${((buyer.budgetMax || 0) / 1000).toFixed(0)}k
         </p>
       </div>
       <div className="rounded-lg p-2.5 space-y-1" style={{ backgroundColor: 'var(--t-surface)' }}>
@@ -919,7 +921,7 @@ function BuyerDetail({ buyer }: { buyer: Buyer }) {
           <span className={`text-[10px] font-bold ${sc.text}`}>{buyer.dealScore}/100</span>
         </div>
         <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--t-surface)' }}>
-          <div className={`h-full rounded-full ${sc.bar}`} style={{ width: `${buyer.dealScore}%` }} />
+          <div className={`h-full rounded-full ${sc.bar}`} style={{ width: `${buyer.dealScore || 0}%` }} />
         </div>
       </div>
       {buyer.notes && <p className="text-[11px] pt-2 border-t" style={{ color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }}>{buyer.notes}</p>}
