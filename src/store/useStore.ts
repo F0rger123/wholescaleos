@@ -3375,22 +3375,35 @@ export const useStore = create<AppState>((set, get) => ({
                                                   if (typeof window !== 'undefined') {
                                                     localStorage.setItem('wholescale-theme', theme);
 
-                                                    // Apply theme colors to DOM
+                                                    // Apply theme to DOM
                                                     const themeData = themes[theme];
                                                     if (themeData) {
                                                       const root = document.documentElement;
                                                       const customColors = get().customColors;
 
-                                                      // Apply base theme colors
+                                                      // Set data-theme attribute
+                                                      root.setAttribute('data-theme', theme);
+
+                                                      // Helper to convert camelCase to kebab-case
+                                                      const toKebab = (str: string) => str.replace(/([A-Z])/g, '-$1').toLowerCase();
+
+                                                      // Apply theme colors
                                                       Object.entries(themeData.colors).forEach(([key, value]) => {
-                                                        const cssVar = `--t-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-                                                        // Override with custom colors if they exist
+                                                        const cssVar = `--t-${toKebab(key)}`;
                                                         if (customColors[key]) {
                                                           root.style.setProperty(cssVar, customColors[key]);
                                                         } else {
                                                           root.style.setProperty(cssVar, value as string);
                                                         }
                                                       });
+
+                                                      // Apply theme effects
+                                                      if (themeData.effects) {
+                                                        Object.entries(themeData.effects).forEach(([key, value]) => {
+                                                          const cssVar = `--t-${toKebab(key)}`;
+                                                          if (value) root.style.setProperty(cssVar, value as string);
+                                                        });
+                                                      }
                                                     }
                                                   }
                                                   if (supabase && isSupabaseConfigured) {
