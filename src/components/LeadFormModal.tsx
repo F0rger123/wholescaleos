@@ -327,7 +327,7 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
                 type="button"
                 onClick={handleRecommendOffer}
                 disabled={!formData.estimatedValue}
-                className="px-4 py-2 bg-[var(--t-success)] text-white text-xs font-bold rounded-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+                className="px-4 py-2 bg-[var(--t-success)] text-[var(--t-background)] text-xs font-black rounded-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shadow-sm"
               >
                 Auto-Calculate
               </button>

@@ -124,7 +124,7 @@ export function AIQuickBoard() {
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-[var(--t-surface-subtle)]/50 rounded-2xl border border-[var(--t-border-subtle)]">
                 <Zap className="w-4 h-4 text-[var(--t-warning)]" />
-                <span className="text-sm text-white font-bold">{leads.length}</span>
+                <span className="text-sm text-white font-bold">{(leads || []).length}</span>
                 <span className="text-xs text-[var(--t-text-muted)]">In Pipeline</span>
               </div>
             </div>
