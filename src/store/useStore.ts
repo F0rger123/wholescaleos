@@ -2049,17 +2049,36 @@ export const useStore = create<AppState>((set, get) => ({
 
   // Data & Backups Actions
   manualSave: async () => {
+    const { saveStatus, teamId, loadLeads } = get();
+    if (saveStatus === 'saving') return;
+
+    set({ saveStatus: 'saving' });
+    console.log('🔄 manualSave: Starting full sync...');
+    
     try {
+      // 1. Simulate a short delay for UI feedback
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // 2. Trigger fresh load from Supabase to ensure UI is in sync
+      if (teamId && isSupabaseConfigured) {
+        await loadLeads();
+        console.log('✅ manualSave: Sync complete');
+      } else {
+        console.warn('⚠️ manualSave: Skipped DB sync (Supabase not configured or no teamId)');
+      }
+
       const now = new Date().toISOString();
       if (typeof window !== 'undefined') {
         localStorage.setItem('wholescale-last-autosave', now);
       }
-      await new Promise(resolve => setTimeout(resolve, 800));
       set({ saveStatus: 'success', lastAutoSave: now });
+      
+      // Reset status after a few seconds
       setTimeout(() => set({ saveStatus: 'idle' }), 3000);
     } catch (error) {
+      console.error('❌ manualSave failed:', error);
       set({ saveStatus: 'error' });
-      setTimeout(() => set({ saveStatus: 'idle' }), 3000);
+      setTimeout(() => set({ saveStatus: 'idle' }), 5000);
     }
   },
 
@@ -2292,7 +2311,7 @@ export const useStore = create<AppState>((set, get) => ({
             id: initialTimeline.id,
             type: initialTimeline.type,
             content: initialTimeline.content,
-            user: initialTimeline.user,
+            user: initialTimeline.user, // Service now handles mapping this to user_name or user_id
             timestamp: initialTimeline.timestamp
           });
           console.log('✅ Initial timeline entry synced to Supabase');
