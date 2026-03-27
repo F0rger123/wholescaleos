@@ -59,6 +59,22 @@ function applyTheme(themeId: string) {
     root.style.setProperty('--t-backdrop-blur', theme.effects.backdropBlur);
   }
 
+  if (theme.effects.accentGradient) {
+    root.style.setProperty('--t-accent-gradient', theme.effects.accentGradient);
+  } else {
+    root.style.setProperty('--t-accent-gradient', theme.effects.gradient);
+  }
+
+  if (theme.effects.hoverGlow) {
+    root.style.setProperty('--t-hover-glow', theme.effects.hoverGlow);
+  } else {
+    root.style.setProperty('--t-hover-glow', 'none');
+  }
+
+  if (theme.effects.hoverScale) {
+    root.style.setProperty('--t-hover-scale', theme.effects.hoverScale);
+  }
+
   // Also set convenience variables for common properties
   root.style.setProperty('--t-bg', customColors.background || theme.colors.background);
   root.style.setProperty('--t-on-primary', customColors.onPrimary || theme.colors.onPrimary || '#ffffff');

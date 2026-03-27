@@ -8,7 +8,6 @@ interface MetricCardProps {
   change: string;
   changeType: 'up' | 'down';
   icon: LucideIcon;
-  color: string;
   animated?: boolean;
   formatter?: (val: number) => string;
   onClick?: () => void;
@@ -43,12 +42,12 @@ function AnimatedCounter({ value, formatter }: { value: number; formatter?: (val
 }
 
 export function MetricCard({
-  title, value, change, changeType, icon: Icon, color, animated, formatter, onClick,
+  title, value, change, changeType, icon: Icon, animated, formatter, onClick,
 }: MetricCardProps) {
   return (
     <div 
       onClick={onClick}
-      className={`astral-glass rounded-2xl p-6 hover-lift hover-glow transition-all duration-500 border border-indigo-500/10 ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}`}
+      className={`astral-glass rounded-2xl p-6 hover-lift hover-glow transition-all duration-500 border border-[var(--t-border-subtle)] ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}`}
     >
       <div className="flex items-start justify-between">
         <div>
@@ -61,7 +60,11 @@ export function MetricCard({
             )}
           </div>
         </div>
-        <div className={`p-2.5 rounded-xl ${color}`}>
+        <div className={`p-2.5 rounded-xl`} style={{ 
+          background: 'var(--t-accent-gradient)',
+          color: 'var(--t-on-accent, #ffffff)',
+          opacity: 0.9
+        }}>
           <Icon size={20} />
         </div>
       </div>

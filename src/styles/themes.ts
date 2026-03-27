@@ -69,6 +69,8 @@ export interface ThemeEffects {
   shimmer?: boolean;
   floatingAnimation?: boolean;
   glassIntensity?: 'light' | 'medium' | 'heavy';
+  accentGradient?: string;
+  hoverGlow?: string;
 }
 
 export interface Theme {
@@ -277,8 +279,8 @@ export const themes: Record<string, Theme> = {
       animation: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
       glowShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.5)',
       gradient: 'linear-gradient(135deg, #60a5fa, #a78bfa)',
-      backdropBlur: 'blur(24px)',
-      hoverScale: '1.02',
+      backdropBlur: 'blur(40px)',
+      hoverScale: '1.05',
       glassIntensity: 'heavy',
       floatingAnimation: true,
     },
@@ -635,13 +637,13 @@ export const themes: Record<string, Theme> = {
       primaryText: '#ffffff',
       secondary: '#e0e0e0',
       accent: '#f0f0f0',
-      background: '#0f0f0f',
-      surface: '#1a1a1a',
-      surfaceHover: '#252525',
-      surfaceActive: '#303030',
+      background: '#000000',
+      surface: '#080808',
+      surfaceHover: '#111111',
+      surfaceActive: '#181818',
       text: '#ffffff',
-      textSecondary: '#dddddd',
-      textMuted: '#aaaaaa',
+      textSecondary: '#9ca3af',
+      textMuted: '#6b7280',
       border: '#ffffff',
       borderLight: 'rgba(255, 255, 255, 0.2)',
       onPrimary: '#000000',
@@ -669,19 +671,21 @@ export const themes: Record<string, Theme> = {
       inputFocus: '#ffffff',
       mapTile: 'dark',
       avatarFrom: '#ffffff',
-      avatarTo: '#cccccc',
-      glow: '0 0 20px rgba(255, 255, 255, 0.5), 0 0 40px rgba(255, 255, 255, 0.2)',
+      avatarTo: '#888888',
+      glow: '0 0 30px rgba(255, 255, 255, 0.4)',
     },
     effects: {
-      borderRadius: '1rem',
-      cardRadius: '1.25rem',
-      animation: 'all 0.3s ease',
-      glowShadow: '0 0 30px rgba(255, 255, 255, 0.2)',
-      gradient: 'linear-gradient(135deg, #ffffff, #cccccc)',
+      borderRadius: '1.25rem',
+      cardRadius: '1.5rem',
+      animation: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
+      glowShadow: '0 0 40px rgba(0, 0, 0, 0.8)',
+      gradient: 'linear-gradient(135deg, #ffffff, #888888)',
+      accentGradient: 'linear-gradient(135deg, #a855f7, #3b82f6, #06b6d4)',
       hoverScale: '1.02',
+      hoverGlow: '0 0 20px rgba(255, 255, 255, 0.2)',
       pulseIntensity: 'subtle',
-      cardGlow: '0 0 20px rgba(255, 255, 255, 0.3)',
-      textGlow: '0 0 8px rgba(255, 255, 255, 0.5)',
+      cardGlow: '0 0 30px rgba(255, 255, 255, 0.15)',
+      textGlow: '0 0 10px rgba(255, 255, 255, 0.3)',
       floatingAnimation: true,
     },
     preview: {

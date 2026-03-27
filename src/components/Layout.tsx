@@ -306,15 +306,15 @@ export function Layout() {
   }, [currentUser?.id]);
 
   return (
-    <div className="flex h-full bg-[#060e20]" style={{ color: '#dee5ff' }}>
+    <div className="flex h-full bg-[var(--t-bg)] text-[var(--t-text)] theme-transition">
       {/* Sidebar */}
       <aside
-        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-white/5 relative z-50`}
+        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-50`}
       >
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-4 px-6 py-8 border-b border-white/5 hover:bg-white/5 transition-all group overflow-hidden"
+          className="flex items-center gap-4 px-6 py-8 border-b border-[var(--t-sidebar-border)] hover:bg-[var(--t-sidebar-hover)] transition-all group overflow-hidden"
         >
           <div
             className="flex items-center justify-center w-12 h-12 rounded-[1.25rem] text-white shrink-0 group-hover:scale-110 transition-transform bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-600/30"
@@ -587,7 +587,7 @@ export function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header
-          className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-white/5 animate-astral-nav"
+          className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-[var(--t-sidebar-border)] animate-astral-nav"
           style={{
             zIndex: 50,
           }}

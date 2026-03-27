@@ -209,9 +209,55 @@
 }
 
 [data-theme="glass"] .astral-glass {
-  background: rgba(255, 255, 255, 0.05); /* Deeply integrated white frost */
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1); /* Frosted white */
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+[data-theme="glass"] .astral-glass:hover {
+  backdrop-filter: blur(50px) !important;
+  -webkit-backdrop-filter: blur(50px) !important;
+  transform: scale(1.05);
+}
+
+/* ===== MOONLIGHT ===== */
+[data-theme="moon"] {
+  --t-primary: #ffffff;
+  --t-primary-dim: rgba(255, 255, 255, 0.15);
+  --t-primary-text: #ffffff;
+  --t-secondary: #9ca3af;
+  --t-accent: #ffffff;
+  --t-bg: #000000;
+  --t-background: var(--t-bg);
+  --t-surface: #080808;
+  --t-surface-hover: #111111;
+  --t-surface-active: #181818;
+  --t-text: #ffffff;
+  --t-text-secondary: #9ca3af;
+  --t-text-muted: #6b7280;
+  --t-border: rgba(255, 255, 255, 0.1);
+  --t-border-light: rgba(255, 255, 255, 0.05);
+  --t-success: #3b82f6; /* Use blue/cyan for success in Moonlight */
+  --t-warning: #a855f7; /* Use purple for warning in Moonlight */
+  --t-error: #ff4444;
+  --t-sidebar-bg: #000000;
+  --t-sidebar-border: rgba(255, 255, 255, 0.05);
+  --t-sidebar-hover: #080808;
+}
+
+[data-theme="moon"] .astral-glass {
+  background: #080808;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="moon"] .hover-glow:hover {
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.moon-accent-gradient {
+  background: var(--t-accent-gradient);
 }
 
 .astral-gradient-text {
@@ -599,13 +645,18 @@ input[type="range"]::-webkit-slider-thumb {
 body, 
 .bg-theme-surface,
 .bg-theme-bg,
+header,
+aside,
 button,
 input,
-.card {
-  transition: background-color 0.2s ease,
+.card,
+.astral-glass {
+  transition: background-color 0.3s ease,
               color 0.2s ease,
-              border-color 0.2s ease,
-              box-shadow 0.2s ease;
+              border-color 0.3s ease,
+              box-shadow 0.3s ease,
+              backdrop-filter 0.3s ease,
+              transform 0.3s ease;
 }
 
 /* Astral Page Transitions */
