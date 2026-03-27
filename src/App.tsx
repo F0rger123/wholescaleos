@@ -45,8 +45,10 @@ import CRMCompare from './pages/marketing/CRMCompare';
 import Integrations from './pages/marketing/Integrations';
 import ScrollToTop from './components/ScrollToTop';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+function ProtectedRoute({ children, checking }: { children: React.ReactNode, checking?: boolean }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  
+  if (checking) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   // If Supabase is configured but no team selected, redirect to team selection
@@ -58,8 +60,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
+function PublicRoute({ children, checking }: { children: React.ReactNode, checking?: boolean }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  if (checking) return null;
   if (isAuthenticated) {
     // If authenticated with Supabase, check if team is selected
     if (isSupabaseConfigured && !localStorage.getItem('wholescale-preferred-team')) {
@@ -170,7 +173,8 @@ export function App() {
     return () => stopSMSPolling();
   }, [isAuthenticated]);
 
-  if (checking) return null;
+  // Global checking guard removed to allow immediate landing page rendering.
+  // ProtectedRoute and PublicRoute now handle checking state internally.
 
   return (
     <BrowserRouter>
@@ -195,7 +199,7 @@ export function App() {
 
 
         {/* Public routes */}
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute checking={checking}><Login /></PublicRoute>} />
 
         {/* Email confirmation — accessible with or without auth */}
         <Route path="/email-confirmed" element={<EmailConfirmed />} />
@@ -204,7 +208,7 @@ export function App() {
         <Route path="/team-selection" element={<TeamSelection />} />
 
         {/* Protected routes wrapped in a single SupabaseSync to prevent flicker on navigation */}
-        <Route element={<ProtectedRoute><DataSyncWrapper /></ProtectedRoute>}>
+        <Route element={<ProtectedRoute checking={checking}><DataSyncWrapper /></ProtectedRoute>}>
           {/* Full-page routes (No Sidebar) */}
           <Route path="/leads/:id/manage" element={<LeadManagement />} />
           
