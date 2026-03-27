@@ -144,6 +144,12 @@ export default function Dashboard() {
 
   console.log('DEBUG: Dashboard rendering. dataLoaded:', dataLoaded, 'leads:', leads?.length, 'team:', team?.length);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const presetsRef = useRef<HTMLDivElement>(null);
+
   // Quick fix: Show loading if data is not yet available
   if (!dataLoaded || !leads || !team) {
     return (
@@ -154,11 +160,6 @@ export default function Dashboard() {
       </div>
     );
   }
-  const [isEditing, setIsEditing] = useState(false);
-  const [showPresets, setShowPresets] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const presetsRef = useRef<HTMLDivElement>(null);
 
   // Widget Registry
   const DEFAULT_LAYOUT = [

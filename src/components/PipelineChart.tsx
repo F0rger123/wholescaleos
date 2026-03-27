@@ -119,19 +119,10 @@ export function PipelineChart() {
     { range: '1y', label: '1Y' },
   ];
 
-  if (!leads || leads.length === 0) {
-    return (
-      <div className="h-[300px] w-full bg-[var(--t-surface-dim)] rounded-3xl border border-dashed border-[var(--t-border)] flex flex-col items-center justify-center p-8 text-center group">
-        <div className="w-12 h-12 rounded-full bg-[var(--t-surface)] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-          <Layers className="text-[var(--t-text-muted)] w-6 h-6" />
-        </div>
-        <p className="text-sm font-bold text-white mb-1">No Pipeline Data</p>
-        <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-widest">Leads will appear here as you add them</p>
-      </div>
-    );
-  }
-
+  // Chart render helper
   const renderChart = () => {
+    if (!leads || leads.length === 0) return null;
+
     const commonProps = {
       data,
       margin: { top: 10, right: 10, left: -20, bottom: 0 },
@@ -184,6 +175,18 @@ export function PipelineChart() {
         );
     }
   };
+
+  if (!leads || leads.length === 0) {
+    return (
+      <div className="h-[300px] w-full bg-[var(--t-surface-dim)] rounded-3xl border border-dashed border-[var(--t-border)] flex flex-col items-center justify-center p-8 text-center group">
+        <div className="w-12 h-12 rounded-full bg-[var(--t-surface)] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <Layers className="text-[var(--t-text-muted)] w-6 h-6" />
+        </div>
+        <p className="text-sm font-bold text-white mb-1">No Pipeline Data</p>
+        <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-widest">Leads will appear here as you add them</p>
+      </div>
+    );
+  }
 
   return (
     <div>
