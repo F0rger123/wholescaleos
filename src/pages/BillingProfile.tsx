@@ -119,9 +119,12 @@ function BillingTab() {
   const handleUpgrade = async () => {
     setLoading(true);
     // In a real app, this would call a Supabase Edge Function to create a Stripe Session
-    // For now, we simulate the redirect
+    // We include success_url and cancel_url to return specifically to the Billing section
+    const baseUrl = window.location.origin;
+    const checkoutUrl = `https://buy.stripe.com/test_demo_checkout?success_url=${baseUrl}/settings?tab=billing&cancel_url=${baseUrl}/dashboard/billing?tab=billing`;
+    
     setTimeout(() => {
-      window.location.href = 'https://buy.stripe.com/test_demo_checkout';
+      window.location.href = checkoutUrl;
       setLoading(false);
     }, 1500);
   };
@@ -220,7 +223,10 @@ function BillingTab() {
                 <span className="text-[9px] font-black text-blue-500 uppercase">Default</span>
              </div>
           </div>
-          <button className="w-full py-3 rounded-xl border border-dashed border-[var(--t-border)] hover:border-blue-500/50 text-xs text-gray-500 font-bold flex items-center justify-center gap-2 transition-all">
+          <button 
+            onClick={handleUpgrade}
+            className="w-full py-3 rounded-xl border border-dashed border-[var(--t-border)] hover:border-blue-500/50 text-xs text-gray-500 font-bold flex items-center justify-center gap-2 transition-all"
+          >
             <Plus size={14} /> Add New Method
           </button>
         </div>

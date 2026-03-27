@@ -18,16 +18,15 @@ export function ThemeSwitcher() {
     'Default': ['dark', 'light'],
     'Premium': ['glass', 'oled', 'midnight', 'black-marble', 'white-marble'],
     'Neon & Glow': ['neon', 'moon'],
-    'Luxury': ['platinum', 'rose-gold'],
-    'Creative': ['cyberpunk', 'winter-frost'],
+    'Luxury': ['platinum', 'cyberpunk'],
   };
 
   const getThemeIcon = (themeId: string) => {
     const icons: Record<string, string> = {
       'dark': '🌙', 'light': '☀️', 'glass': '✨', 'oled': '⬛',
       'midnight': '🌃', 'black-marble': '⚫', 'white-marble': '⚪',
-      'neon': '💚', 'moon': '🌕', 'platinum': '💎', 'rose-gold': '🌹',
-      'cyberpunk': '🌃', 'winter-frost': '❄️',
+      'neon': '🚨', 'moon': '🌕', 'platinum': '💎',
+      'cyberpunk': '🌃',
     };
     return icons[themeId] || '🎨';
   };

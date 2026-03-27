@@ -42,7 +42,7 @@ export function UserMenu() {
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[2001]"
             onClick={() => setIsOpen(false)}
           />
           <div

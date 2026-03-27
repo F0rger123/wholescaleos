@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, Menu, X, ArrowRight, Github, Twitter, 
   Linkedin, LayoutDashboard, LogOut, Settings, User, 
@@ -56,7 +57,7 @@ export const MarketingLayout: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30">
       {/* Header */}
       <header 
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 animate-astral-nav ${
+        className={`fixed top-0 left-0 right-0 z-[2000] transition-all duration-500 animate-astral-nav ${
           isScrolled ? 'py-3 bg-[#0f1930]/80 backdrop-blur-2xl border-b border-indigo-500/10 shadow-2xl' : 'py-6 bg-transparent'
         }`}
       >
@@ -70,17 +71,27 @@ export const MarketingLayout: React.FC = () => {
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.name} 
-                to={link.href}
-                className={`text-sm font-black uppercase tracking-widest astral-nav-link transition-colors hover:text-indigo-400 ${
-                  location.pathname === link.href ? 'text-indigo-400' : 'text-[#a3aac4]'
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.href;
+              return (
+                <Link 
+                  key={link.name} 
+                  to={link.href}
+                  className={`relative py-2 text-sm font-black uppercase tracking-widest transition-colors hover:text-indigo-400 ${
+                    isActive ? 'text-indigo-400' : 'text-[#a3aac4]'
+                  }`}
+                >
+                  {link.name}
+                  {isActive && (
+                    <motion.div 
+                      layoutId="nav-underline"
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
@@ -106,8 +117,8 @@ export const MarketingLayout: React.FC = () => {
 
                   {userMenuOpen && (
                     <>
-                      <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                      <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-[#0f1930]/90 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="fixed inset-0 z-[2001]" onClick={() => setUserMenuOpen(false)} />
+                      <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-[#0f1930]/90 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl p-2 z-[2002] animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-4 border-b border-white/5 mb-2">
                           <p className="text-[10px] font-black text-[#6d758c] uppercase tracking-[0.2em] mb-1">Signed in as</p>
                           <p className="text-sm font-black truncate text-white italic">{currentUser?.name}</p>
@@ -167,76 +178,98 @@ export const MarketingLayout: React.FC = () => {
         </div>
 
         {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-[#1e293b] border-b border-white/10 p-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
-            {navLinks.map((link) => (
-              <Link 
-                key={link.name} 
-                to={link.href}
-                className="block text-lg font-medium text-gray-300"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {link.name}
-              </Link>
-            ))}
-            <hr className="border-white/5" />
-            
-            {isAuthenticated ? (
-              <>
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center font-bold">
-                    {getInitials()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate">{currentUser?.name}</p>
-                    <p className="text-[10px] text-gray-500 truncate">{currentUser?.email}</p>
-                  </div>
-                </div>
-                <Link 
-                  to="/dashboard" 
-                  className="flex items-center gap-3 text-lg font-medium text-blue-400"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <LayoutDashboard size={20} /> Go to Dashboard
-                </Link>
-                <Link 
-                  to="/settings" 
-                  className="flex items-center gap-3 text-lg font-medium text-gray-300"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Settings size={20} /> Settings
-                </Link>
-                <button 
-                  onClick={async () => {
-                    await useStore.getState().logout();
-                    setMobileMenuOpen(false);
-                    navigate('/login');
-                  }}
-                  className="w-full flex items-center gap-3 text-lg font-medium text-red-400"
-                >
-                  <LogOut size={20} /> Sign Out
-                </button>
-              </>
-            ) : (
-              <>
-                <Link 
-                  to="/login" 
-                  className="block text-lg font-medium text-gray-300"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Log in
-                </Link>
-                <Link 
-                  to="/login?signup=true" 
-                  className="block w-full py-3 rounded-xl bg-blue-600 text-center font-bold"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Get Started
-                </Link>
-              </>
-            )}
-          </div>
-        )}
+        <AnimatePresence mode="wait">
+          {mobileMenuOpen && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0, y: -20 }}
+              animate={{ opacity: 1, height: 'auto', y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: "circOut" }}
+              className="md:hidden absolute top-full left-0 right-0 bg-[#0f1930] border-b border-indigo-500/10 p-6 space-y-4 overflow-hidden shadow-2xl z-[90]"
+            >
+              <div className="flex flex-col gap-4">
+                {navLinks.map((link, i) => (
+                  <motion.div
+                    key={link.name}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <Link 
+                      to={link.href}
+                      className={`block text-lg font-black uppercase tracking-widest transition-colors ${
+                        location.pathname === link.href ? 'text-indigo-400' : 'text-gray-400 hover:text-white'
+                      }`}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {link.name}
+                    </Link>
+                  </motion.div>
+                ))}
+                
+                <div className="h-px bg-white/5 my-2" />
+                
+                {isAuthenticated ? (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center font-black italic shadow-lg shadow-indigo-600/20">
+                        {getInitials()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black truncate text-white uppercase italic">{currentUser?.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate uppercase tracking-[0.2em]">{currentUser?.email}</p>
+                      </div>
+                    </div>
+                    <Link 
+                      to="/dashboard" 
+                      className="flex items-center gap-3 text-lg font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <LayoutDashboard size={20} /> Dashboard
+                    </Link>
+                    <button 
+                      onClick={async () => {
+                        await useStore.getState().logout();
+                        setMobileMenuOpen(false);
+                        navigate('/login');
+                      }}
+                      className="w-full flex items-center gap-3 text-lg font-black uppercase tracking-widest text-red-500 hover:text-red-400 transition-colors"
+                    >
+                      <LogOut size={20} /> Sign Out
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="flex flex-col gap-4"
+                  >
+                    <Link 
+                      to="/login" 
+                      className="block py-4 text-center text-lg font-black uppercase tracking-widest text-gray-400 hover:text-white transition-colors"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Log in
+                    </Link>
+                    <Link 
+                      to="/login?signup=true" 
+                      className="block w-full py-4 rounded-xl bg-indigo-600 text-center font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition-all hover:scale-[1.02]"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Get Started
+                    </Link>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Main Content */}
