@@ -606,7 +606,7 @@ export function Layout() {
         <header
           className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-[var(--t-sidebar-border)] animate-astral-nav"
           style={{
-            zIndex: 50,
+            zIndex: 2000,
           }}
         >
           <div className="flex items-center gap-4">

@@ -1,11 +1,30 @@
 import { useState } from 'react';
+import { useStore } from '../../store/useStore';
 import { Link } from 'react-router-dom';
 import { Check, ArrowRight, Zap, Shield, Users, CreditCard, Sparkles, X, Info } from 'lucide-react';
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const { currentUser } = useStore();
 
+  const handleCheckout = (planName: string) => {
+    if (planName === 'Free') {
+      window.location.href = '/login?signup=true&plan=Free';
+      return;
+    }
+
+    if (!currentUser) {
+      window.location.href = `/login?signup=true&plan=${planName}`;
+      return;
+    }
+
+    // In a real app, this would call a Supabase Edge Function to create a Stripe Session
+    // For now, we simulate with a high-fidelity checkout link that includes return parameters
+    const baseUrl = window.location.origin;
+    const checkoutUrl = `https://buy.stripe.com/test_demo_checkout?client_reference_id=${currentUser.id}&success_url=${baseUrl}/settings?tab=billing&cancel_url=${baseUrl}/pricing`;
+    window.location.href = checkoutUrl;
+  };
 
   const plans = [
     {
@@ -184,8 +203,8 @@ export default function Pricing() {
               ))}
             </ul>
 
-            <Link
-              to={plan.name === 'Agency' ? '/contact' : `/login?signup=true&plan=${plan.name}`}
+            <button
+              onClick={() => handleCheckout(plan.name)}
               className={`group flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover-glow hover-lift ${plan.popular
                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30'
                 : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
@@ -193,7 +212,7 @@ export default function Pricing() {
             >
               {plan.cta}
               <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
+            </button>
           </div>
         ))}
       </div>
@@ -276,6 +295,7 @@ export default function Pricing() {
         <PlanDetailModal 
           plan={selectedPlan} 
           billingCycle={billingCycle}
+          handleCheckout={handleCheckout}
           onClose={() => setSelectedPlan(null)} 
           calculatePrice={calculatePrice}
         />
@@ -284,7 +304,7 @@ export default function Pricing() {
   );
 }
 
-function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice }: any) {
+function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice, handleCheckout }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onClose}>
       <div className="w-full max-w-2xl bg-[#121a2d] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -309,12 +329,12 @@ function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice }: any) {
                 <span className="text-gray-500 font-bold">/ month</span>
               </div>
             </div>
-            <Link 
-              to={plan.name === 'Agency' ? '/contact' : `/login?signup=true&plan=${plan.name}`}
+            <button 
+              onClick={() => handleCheckout(plan.name)}
               className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-blue-600/20"
             >
               Initialize Plan
-            </Link>
+            </button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-10">
