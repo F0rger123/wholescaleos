@@ -7,6 +7,16 @@ import { themes } from '../styles/themes';
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost';
+
+export function isValidStatus(status: any): status is LeadStatus {
+  return typeof status === 'string' && ['new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost'].includes(status);
+}
+
+export function ensureStringStatus(status: any): LeadStatus {
+  if (isValidStatus(status)) return status;
+  return 'new';
+}
+
 export type Timeframe = '7d' | '30d' | '90d' | 'all';
 export type LeadSource =
   | 'bandit-signs'
@@ -1960,9 +1970,10 @@ export const useStore = create<AppState>((set, get) => ({
         tasksService.fetchAll(teamId)
       ]);
       
-      // Map leads to store format (ensuring new fields are present)
+      // Map leads to store format (ensuring new fields are present and status is valid)
       const mappedLeads: Lead[] = leads.map((l: any) => ({
         ...l,
+        status: ensureStringStatus(l.status),
         propertyAddress: l.address || l.propertyAddress,
         estimatedValue: l.property_value || l.estimatedValue,
         lastSoldPrice: l.last_sold_price || l.lastSoldPrice,
@@ -2203,9 +2214,11 @@ export const useStore = create<AppState>((set, get) => ({
     get().saveToHistory();
     const now = new Date().toISOString();
     const newId = uuidv4();
+    const sanitizedStatus = ensureStringStatus(lead.status);
     const newLead: Lead = {
       ...lead,
       id: newId,
+      status: sanitizedStatus,
       createdAt: now,
       updatedAt: now,
       bedrooms: lead.bedrooms || 0,
@@ -2239,7 +2252,7 @@ export const useStore = create<AppState>((set, get) => ({
           bathrooms: newLead.bathrooms,
           sqft: newLead.sqft,
           offer_amount: newLead.offerAmount,
-          status: newLead.status,
+          status: sanitizedStatus,
           source: newLead.source,
           notes: newLead.notes,
           lat: newLead.lat,
@@ -2272,8 +2285,13 @@ export const useStore = create<AppState>((set, get) => ({
     get().saveToHistory();
     const now = new Date().toISOString();
     
+    const sanitizedUpdates = { ...updates };
+    if (updates.status !== undefined) {
+      sanitizedUpdates.status = ensureStringStatus(updates.status);
+    }
+    
     set((s) => ({
-      leads: s.leads.map((l) => (l.id === id ? { ...l, ...updates, updatedAt: now } : l)),
+      leads: s.leads.map((l) => (l.id === id ? { ...l, ...sanitizedUpdates, updatedAt: now } : l)),
     }));
 
     if (isSupabaseConfigured && supabase) {
@@ -2291,7 +2309,7 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.bathrooms !== undefined) dbUpdates.bathrooms = updates.bathrooms;
       if (updates.sqft !== undefined) dbUpdates.sqft = updates.sqft;
       if (updates.offerAmount !== undefined) dbUpdates.offer_amount = updates.offerAmount;
-      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.status !== undefined) dbUpdates.status = sanitizedUpdates.status;
       if (updates.source !== undefined) dbUpdates.source = updates.source;
       if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
       if (updates.lat !== undefined) dbUpdates.lat = updates.lat;
@@ -2361,24 +2379,25 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateLeadStatus: async (leadId: string, newStatus: LeadStatus, changedBy: string) => {
+    const sanitizedStatus = ensureStringStatus(newStatus);
     const now = new Date().toISOString();
     const { leads } = get();
     const lead = leads.find(l => l.id === leadId);
-    if (!lead || lead.status === newStatus) return { success: true };
+    if (!lead || lead.status === sanitizedStatus) return { success: true };
 
     const oldStatus = lead.status;
     const statusChangeEntry: TimelineEntry = {
       id: uuidv4(),
       type: 'status-change',
-      content: `Status changed from ${STATUS_LABELS[oldStatus]} to ${STATUS_LABELS[newStatus]}`,
+      content: `Status changed from ${STATUS_LABELS[oldStatus] || oldStatus} to ${STATUS_LABELS[sanitizedStatus] || sanitizedStatus}`,
       timestamp: now,
       user: changedBy,
-      metadata: { from: oldStatus, to: newStatus },
+      metadata: { from: oldStatus, to: sanitizedStatus },
     };
 
     const statusHistoryEntry = { 
       fromStatus: oldStatus, 
-      toStatus: newStatus, 
+      toStatus: sanitizedStatus, 
       timestamp: now, 
       changedBy 
     };
@@ -2388,7 +2407,7 @@ export const useStore = create<AppState>((set, get) => ({
         l.id === leadId
           ? { 
               ...l, 
-              status: newStatus, 
+              status: sanitizedStatus, 
               updatedAt: now,
               statusHistory: [...l.statusHistory, statusHistoryEntry],
               timeline: [...l.timeline, statusChangeEntry]

@@ -49,12 +49,13 @@ export function PipelineChart() {
     statuses.forEach(s => counts[s] = 0);
 
     filteredLeads.forEach(l => {
-      if (counts[l.status] !== undefined) {
+      const status = String(l.status);
+      if (counts[status] !== undefined) {
         if (metric === 'revenue') {
-          counts[l.status] += (l.estimatedValue || 0);
+          counts[status] += (l.estimatedValue || 0);
         } else if (metric === 'deals') {
-          if (['qualified', 'negotiating', 'closed-won'].includes(l.status)) {
-            counts[l.status]++;
+          if (['qualified', 'negotiating', 'closed-won'].includes(status)) {
+            counts[status]++;
           }
         } else if (metric === 'conversion') {
           // This is a bit tricky for conversion rate per status, 
@@ -76,9 +77,9 @@ export function PipelineChart() {
 
   // Conversion rate
   const conversionRate = useMemo(() => {
-    const closed = filteredLeads.filter(l => l.status?.startsWith('closed'));
+    const closed = filteredLeads.filter(l => String(l.status).startsWith('closed'));
     if (closed.length === 0) return 0;
-    const won = closed.filter(l => l.status === 'closed-won').length;
+    const won = closed.filter(l => String(l.status) === 'closed-won').length;
     return Math.round((won / closed.length) * 100);
   }, [filteredLeads]);
 

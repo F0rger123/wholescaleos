@@ -929,13 +929,13 @@ export default function AITest() {
                     </div>
                     <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full"
                       style={{ 
-                        background: lead.status === 'new' ? 'var(--t-primary-dim)' : 
-                                   lead.status === 'closed-won' ? 'var(--t-success-dim)' : 'var(--t-surface-hover)',
-                        color: lead.status === 'new' ? 'var(--t-primary)' : 
-                               lead.status === 'closed-won' ? 'var(--t-success)' : 'var(--t-text-muted)'
+                        background: String(lead.status) === 'new' ? 'var(--t-primary-dim)' : 
+                                   String(lead.status) === 'closed-won' ? 'var(--t-success-dim)' : 'var(--t-surface-hover)',
+                        color: String(lead.status) === 'new' ? 'var(--t-primary)' : 
+                               String(lead.status) === 'closed-won' ? 'var(--t-success)' : 'var(--t-text-muted)'
                       }}
                     >
-                      {lead.status}
+                      {String(lead.status)}
                     </span>
                   </button>
                 ))

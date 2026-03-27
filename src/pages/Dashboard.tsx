@@ -424,7 +424,7 @@ export default function Dashboard() {
                               <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-xl" style={{ backgroundColor: sc.bar }}>{score}</div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold text-white truncate">{lead.name}</p>
-                                <p className="text-[10px] text-[var(--t-text-muted)] truncate">{STATUS_LABELS[lead.status] || lead.status}</p>
+                                <p className="text-[10px] text-[var(--t-text-muted)] truncate">{STATUS_LABELS[lead.status] || String(lead.status)}</p>
                               </div>
                             </div>
                           );
@@ -443,8 +443,8 @@ export default function Dashboard() {
                              <div className="flex-1 min-w-0">
                                 <p className="text-sm font-black text-white">{lead.name}</p>
                                 <div className="flex items-center gap-2 mt-0.5">
-                                  <span className={`w-2 h-2 rounded-full ${statusBarColors[lead.status] || 'bg-[var(--t-border)]'}`} />
-                                  <span className="text-[10px] text-[var(--t-text-muted)] uppercase font-bold tracking-tighter">{STATUS_LABELS[lead.status] || lead.status}</span>
+                                  <span className={`w-2 h-2 rounded-full ${statusBarColors[String(lead.status)] || 'bg-[var(--t-border)]'}`} />
+                                  <span className="text-[10px] text-[var(--t-text-muted)] uppercase font-bold tracking-tighter">{STATUS_LABELS[lead.status] || String(lead.status)}</span>
                                 </div>
                              </div>
                              <div className="text-right">

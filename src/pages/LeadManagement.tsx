@@ -108,7 +108,7 @@ export default function LeadManagement() {
     updateLead(lead.id, { status: newStatus });
     addTimelineEntry(lead.id, {
       type: 'status-change',
-      content: `Status updated to ${STATUS_LABELS[newStatus as LeadStatus]}`,
+      content: `Status updated to ${STATUS_LABELS[newStatus as LeadStatus] || String(newStatus)}`,
       timestamp: new Date().toISOString(),
       user: 'You'
     });
@@ -150,7 +150,7 @@ export default function LeadManagement() {
               <div className="flex items-center gap-2 mb-0.5">
                 <h1 className="text-xl font-bold text-white">{lead.name}</h1>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${scoreColors.bg} ${scoreColors.text}`}>
-                  {STATUS_LABELS[lead.status as LeadStatus]}
+                  {STATUS_LABELS[lead.status as LeadStatus] || String(lead.status)}
                 </span>
                 {showSaveSuccess && (
                   <span className="flex items-center gap-1 text-[10px] font-bold text-green-500 animate-in fade-in zoom-in duration-300">
@@ -369,7 +369,7 @@ export default function LeadManagement() {
                           </p>
                           {isEditing ? (
                             <select 
-                              value={editedLead.status || ''}
+                              value={String(editedLead.status || '')}
                               onChange={(e) => handleInputChange('status', e.target.value as LeadStatus)}
                               className="w-full bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--t-primary)]"
                             >
@@ -378,7 +378,7 @@ export default function LeadManagement() {
                               ))}
                             </select>
                           ) : (
-                            <p className="text-sm font-semibold text-white">{STATUS_LABELS[lead.status as keyof typeof STATUS_LABELS]}</p>
+                            <p className="text-sm font-semibold text-white">{STATUS_LABELS[lead.status as keyof typeof STATUS_LABELS] || String(lead.status)}</p>
                           )}
                         </div>
                       </div>
@@ -794,7 +794,7 @@ export default function LeadManagement() {
                     }`}>
                       {isPast ? <CheckCircle2 size={12} /> : <div className="w-1.5 h-1.5 rounded-full bg-current" />}
                     </div>
-                    <span className="text-xs font-bold capitalize">{STATUS_LABELS[status as LeadStatus]}</span>
+                    <span className="text-xs font-bold capitalize">{STATUS_LABELS[status as LeadStatus] || String(status)}</span>
                     {isCurrent && <ChevronRight size={14} className="ml-auto opacity-50" />}
                   </button>
                 );
