@@ -124,17 +124,20 @@ export default function Features() {
            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
            <div className="relative z-10 space-y-10">
              <h2 className="text-4xl md:text-7xl font-black italic text-white tracking-tighter">Stop Juggling. <br /> Start Compounding.</h2>
-             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-               <Link 
-                 to="/pricing"
-                 className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white text-blue-600 text-xl font-black hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center justify-center"
-               >
-                 Initialize Your OS
-               </Link>
-               <button className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-bold backdrop-blur-md">
-                 Book Enterprise Demo
-               </button>
-             </div>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <Link 
+                  to="/login?signup=true"
+                  className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white text-blue-600 text-xl font-black hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center justify-center hover-glow hover-lift"
+                >
+                  Initialize Your OS
+                </Link>
+                <Link
+                  to="/contact"
+                  className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-bold backdrop-blur-md hover:bg-white/20 transition-all hover-lift"
+                >
+                  Book Enterprise Demo
+                </Link>
+              </div>
            </div>
         </div>
       </section>

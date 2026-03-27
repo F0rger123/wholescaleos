@@ -1,6 +1,10 @@
 import { Target, Sparkles, Building2, Shield, Users, Zap } from 'lucide-react';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 export default function About() {
+  const whyReveal = useScrollReveal();
+  const missionReveal = useScrollReveal();
+  const valuesReveal = useScrollReveal();
   return (
     <div className="bg-[#0f172a] text-white selection:bg-blue-500/30 pb-32">
       {/* Hero Section */}
@@ -17,8 +21,8 @@ export default function About() {
       </section>
 
       {/* Why We Built This */}
-      <section className="max-w-7xl mx-auto px-6 mb-40">
-        <div className="grid md:grid-cols-2 gap-20 items-center">
+      <section className="max-w-7xl mx-auto px-6 mb-40" ref={whyReveal.elementRef}>
+        <div className={`grid md:grid-cols-2 gap-20 items-center transition-all duration-1000 ${whyReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <div className="space-y-8">
             <h2 className="text-4xl font-black italic">Why we built WholeScale OS</h2>
             <p className="text-gray-400 leading-relaxed">
@@ -39,15 +43,18 @@ export default function About() {
       </section>
 
       {/* Mission & Vision */}
-      <section className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 mb-40">
-        <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-blue-500/20 space-y-6">
+      <section className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 mb-40" ref={missionReveal.elementRef}>
+        <div className={`p-10 rounded-[3rem] bg-[#121a2d] border border-blue-500/20 space-y-6 transition-all duration-700 hover-lift ${missionReveal.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
            <div className="w-16 h-16 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500"><Target size={32} /></div>
            <h3 className="text-2xl font-black italic">Our Mission</h3>
            <p className="text-gray-400 leading-relaxed">
              Empower real estate professionals with state-of-the-art AI infrastructure to eliminate manual triage and maximize closing velocity.
            </p>
         </div>
-        <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-indigo-500/20 space-y-6">
+        <div 
+          className={`p-10 rounded-[3rem] bg-[#121a2d] border border-indigo-500/20 space-y-6 transition-all duration-700 hover-lift ${missionReveal.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}
+          style={{ transitionDelay: '200ms' }}
+        >
            <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 flex items-center justify-center text-indigo-500"><Sparkles size={32} /></div>
            <h3 className="text-2xl font-black italic">Our Vision</h3>
            <p className="text-gray-400 leading-relaxed">
@@ -57,13 +64,17 @@ export default function About() {
       </section>
 
       {/* Values */}
-      <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-12 mb-40">
+      <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-3 gap-12 mb-40" ref={valuesReveal.elementRef}>
         {[
           { icon: Zap, title: 'Extreme Speed', desc: 'Milliseconds matter. Our triage engine is built for the fastest response times in the industry.' },
           { icon: Shield, title: 'Data Sovereignty', desc: "Your data is yours. We provide the infrastructure, you provide the empire." },
           { icon: Users, title: 'Small Team, Big Impact', desc: "We're a small team of engineers and operators passionate about real estate tech." }
         ].map((value, i) => (
-          <div key={i} className="p-8 rounded-3xl bg-[#1e293b]/30 border border-white/5 text-center group hover:border-blue-500/30 transition-all">
+          <div 
+            key={i} 
+            className={`p-8 rounded-3xl bg-[#1e293b]/30 border border-white/5 text-center group hover:border-blue-500/30 transition-all hover-lift ${valuesReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+            style={{ transitionDelay: `${i * 150}ms` }}
+          >
             <div className="w-16 h-16 rounded-2xl bg-white/5 text-blue-400 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
               <value.icon size={32} />
             </div>

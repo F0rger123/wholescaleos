@@ -149,7 +149,7 @@ export const MarketingLayout: React.FC = () => {
                 </Link>
                 <Link 
                   to="/login?signup=true" 
-                  className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-black uppercase tracking-[0.2em] transition-all hover:shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 flex items-center gap-2 hover-glow"
+                  className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-black uppercase tracking-[0.2em] transition-all hover:shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 flex items-center gap-2 hover-glow hover-lift"
                 >
                   Join the Empire <ArrowRight size={16} />
                 </Link>
@@ -258,9 +258,9 @@ export const MarketingLayout: React.FC = () => {
               The all-in-one operating system for modern real estate Professionals. Automate, scale, and build your empire.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"><Twitter size={18} /></a>
-              <a href="#" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"><Linkedin size={18} /></a>
-              <a href="#" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"><Github size={18} /></a>
+              <a href="https://twitter.com/wholescaleos" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all hover:scale-110"><Twitter size={18} /></a>
+              <a href="https://linkedin.com/company/wholescaleos" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all hover:scale-110"><Linkedin size={18} /></a>
+              <a href="https://github.com/wholescaleos" target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all hover:scale-110"><Github size={18} /></a>
             </div>
           </div>
           
