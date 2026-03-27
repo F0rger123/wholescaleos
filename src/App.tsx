@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useEffect, useState } from 'react';
 import { AuthCallback } from './pages/AuthCallback';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { SupabaseSync } from './lib/supabase-sync';
 import Dashboard from './pages/Dashboard';
@@ -70,20 +70,17 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// Loading screen while checking session
-function LoadingScreen() {
+// Wrapper to share SupabaseSync across routes without remounting
+function DataSyncWrapper() {
   return (
-    <div className="min-h-screen bg-[var(--t-surface)] flex flex-col items-center justify-center gap-4">
-      <div className="w-14 h-14 rounded-xl bg-[var(--t-success)] flex items-center justify-center">
-        <Building2 size={28} className="text-white" />
-      </div>
-      <div className="flex items-center gap-2 text-[var(--t-text-muted)]">
-        <Loader2 size={16} className="animate-spin" />
-        <span className="text-sm">Loading WholeScale OS...</span>
-      </div>
-    </div>
+    <SupabaseSync>
+      <Outlet />
+    </SupabaseSync>
   );
 }
+
+// Loading screen while checking session is no longer needed in App.tsx
+// SupabaseSync will handle the branded loading experience.
 
 export function App() {
   const [checking, setChecking] = useState(true);
@@ -173,7 +170,7 @@ export function App() {
     return () => stopSMSPolling();
   }, [isAuthenticated]);
 
-  if (checking) return <LoadingScreen />;
+  if (checking) return null;
 
   return (
     <BrowserRouter>
@@ -206,33 +203,33 @@ export function App() {
         {/* Team selection — after login, before main app */}
         <Route path="/team-selection" element={<TeamSelection />} />
 
-        {/* Google OAuth callback */}
-        <Route path="/auth/callback" element={<AuthCallback />} />
-
-        {/* Full-page lead management — no sidebar */}
-        <Route path="/leads/:id/manage" element={<ProtectedRoute><SupabaseSync><LeadManagement /></SupabaseSync></ProtectedRoute>} />
-
-        {/* Protected routes */}
-        <Route element={<ProtectedRoute><SupabaseSync><Layout /></SupabaseSync></ProtectedRoute>}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/billing" element={<BillingProfile />} />
-          <Route path="/leads" element={<Leads />} />
-          <Route path="/leads/:id" element={<Leads />} />
-          <Route path="/map" element={<MapView />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/imports" element={<Imports />} />
-          <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
-          <Route path="/calculators" element={<Calculators />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/settings/ai" element={<AISettings />} />
-          <Route path="/settings/sms" element={<SMSSettings />} />
-          <Route path="/calendar" element={<Calendar />} />
-          <Route path="/ai-test" element={<AITest />} />
-          <Route path="/sms" element={<SMSInbox />} />
-          <Route path="/email" element={<EmailInbox />} />
-          <Route path="/notifications" element={<NotificationInbox />} />
+        {/* Protected routes wrapped in a single SupabaseSync to prevent flicker on navigation */}
+        <Route element={<ProtectedRoute><DataSyncWrapper /></ProtectedRoute>}>
+          {/* Full-page routes (No Sidebar) */}
+          <Route path="/leads/:id/manage" element={<LeadManagement />} />
+          
+          {/* Main App routes (With Sidebar) */}
+          <Route element={<Layout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/billing" element={<BillingProfile />} />
+            <Route path="/leads" element={<Leads />} />
+            <Route path="/leads/:id" element={<Leads />} />
+            <Route path="/map" element={<MapView />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/imports" element={<Imports />} />
+            <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
+            <Route path="/calculators" element={<Calculators />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/ai" element={<AISettings />} />
+            <Route path="/settings/sms" element={<SMSSettings />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/ai-test" element={<AITest />} />
+            <Route path="/sms" element={<SMSInbox />} />
+            <Route path="/email" element={<EmailInbox />} />
+            <Route path="/notifications" element={<NotificationInbox />} />
+          </Route>
         </Route>
 
         {/* Catch all */}

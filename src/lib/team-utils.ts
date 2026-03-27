@@ -1,7 +1,4 @@
-/**
- * Team utility functions shared across components.
- * Kept in a separate file to avoid circular dependency issues.
- */
+import { useStore } from '../store/useStore';
 
 /**
  * Switch the active team context.
@@ -10,7 +7,10 @@
  */
 export function switchToTeam(teamId: string) {
   localStorage.setItem('wholescale-preferred-team', teamId);
-  // Reset dataLoaded so SupabaseSync re-fetches for the new team
-  // Easiest/safest approach: full reload
-  window.location.reload();
+  // Update the store's teamId and reset dataLoaded.
+  // SupabaseSync's useEffect now depends on [currentUser?.id, teamId],
+  // so it will automatically re-run and fetch data for the new team without a full reload.
+  const store = useStore.getState();
+  store.setTeamId(teamId);
+  useStore.setState({ dataLoaded: false });
 }
