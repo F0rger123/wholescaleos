@@ -49,6 +49,7 @@ export function PipelineChart() {
     statuses.forEach(s => counts[s] = 0);
 
     filteredLeads.forEach(l => {
+      if (!l) return;
       const status = String(l.status);
       if (counts[status] !== undefined) {
         if (metric === 'revenue') {
@@ -77,9 +78,9 @@ export function PipelineChart() {
 
   // Conversion rate
   const conversionRate = useMemo(() => {
-    const closed = filteredLeads.filter(l => String(l.status).startsWith('closed'));
+    const closed = filteredLeads.filter(l => l && String(l.status).startsWith('closed'));
     if (closed.length === 0) return 0;
-    const won = closed.filter(l => String(l.status) === 'closed-won').length;
+    const won = closed.filter(l => l && String(l.status) === 'closed-won').length;
     return Math.round((won / closed.length) * 100);
   }, [filteredLeads]);
 

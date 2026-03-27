@@ -27,7 +27,8 @@ import { formatDistanceToNow } from 'date-fns';
 
 // ─── Money Formatter ─────────────────────────────────────────────────────────
 
-const formatMoney = (value: number): string => {
+const formatMoney = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return '$0';
   if (value >= 1_000_000_000) {
     return `$${(value / 1_000_000_000).toFixed(1)}B`;
   }
@@ -37,7 +38,7 @@ const formatMoney = (value: number): string => {
   if (value >= 1_000) {
     return `$${(value / 1_000).toFixed(1)}K`;
   }
-  return `$${value.toLocaleString()}`;
+  return `$${(value || 0).toLocaleString()}`;
 };
 
 // ─── Animated Counter ────────────────────────────────────────────────────────
@@ -48,6 +49,10 @@ function AnimatedCounter({ value, formatter, duration = 1200 }: {
   const [displayed, setDisplayed] = useState(0);
 
   useEffect(() => {
+    if (typeof value !== 'number') {
+      setDisplayed(0);
+      return;
+    }
     let start = 0;
     const step = value / (duration / 16);
     const timer = setInterval(() => {
@@ -223,7 +228,7 @@ export default function Dashboard() {
     .filter((l) => l && l.status && !l.status.startsWith('closed'))
     .reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0);
   const closedRevenue = dataToUse
-    .filter((l) => l.status === 'closed-won')
+    .filter((l) => l && l.status === 'closed-won')
     .reduce((sum, l) => sum + (l.offerAmount || 0), 0);
   const activeLeads = dataToUse.filter((l) => !l.status?.startsWith('closed')).length;
   const closedLeads = dataToUse.filter((l) => l.status?.startsWith('closed'));
@@ -238,18 +243,23 @@ export default function Dashboard() {
     return s + (margin > 0 ? margin * prob : 0);
   }, 0);
   const negotiatingValue = dataToUse
-    .filter(l => l.status === 'negotiating')
+    .filter(l => l && l.status === 'negotiating')
     .reduce((s, l) => s + (l.estimatedValue || 0), 0);
   const monthlyProjection = Math.round((closedRevenue + projectedProfit * 0.6) / 3);
 
   const sourceCounts: Record<string, number> = {};
   dataToUse.forEach(l => {
+    if (!l) return;
     const src = l.source || 'other';
     sourceCounts[src] = (sourceCounts[src] || 0) + 1;
   });
   const recentLeads = [...dataToUse]
-    .filter(l => l && l.updatedAt)
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .filter(l => l && l.name && l.updatedAt)
+    .sort((a, b) => {
+      const db = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      const da = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      return db - da;
+    })
     .slice(0, 6);
 
   const pipelineStages = [
