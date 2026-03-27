@@ -122,9 +122,28 @@ export const leadsService = {
     }
   },
 
-  async addTimeline(leadId: string, entry: Record<string, unknown>) {
+  async addTimeline(leadId: string, entry: Record<string, any>) {
     if (!supabase) return;
-    const { error } = await supabase.from('timeline_entries').insert({ lead_id: leadId, ...entry });
+    const dbEntry: any = {
+      lead_id: leadId,
+      id: entry.id,
+      type: entry.type,
+      content: entry.content,
+      metadata: entry.metadata || {},
+      created_at: entry.timestamp || new Date().toISOString()
+    };
+    
+    // Map 'user' to either user_id (if UUID) or user_name
+    if (entry.user) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(entry.user);
+      if (isUuid) {
+        dbEntry.user_id = entry.user;
+      } else {
+        dbEntry.user_name = entry.user;
+      }
+    }
+    
+    const { error } = await supabase.from('timeline_entries').insert(dbEntry);
     if (error) {
       console.error('❌ Supabase leadsService.addTimeline error:', error);
       throw error;
@@ -138,7 +157,7 @@ export const leadsService = {
       from_status: fromStatus,
       to_status: toStatus,
       changed_by: changedBy,
-      timestamp: new Date().toISOString()
+      changed_at: new Date().toISOString()
     });
     if (error) {
       console.error('❌ Supabase leadsService.addStatusHistory error:', error);
