@@ -306,46 +306,37 @@ export function Layout() {
   }, [currentUser?.id]);
 
   return (
-    <div className="flex h-full" style={{ background: 'var(--t-bg)', color: 'var(--t-text)' }}>
+    <div className="flex h-full bg-[#060e20]" style={{ color: '#dee5ff' }}>
       {/* Sidebar */}
       <aside
-        className={`${sidebarOpen ? 'w-64' : 'w-20'} flex flex-col border-r transition-[width] duration-200 ease-in-out shrink-0`}
-        style={{
-          background: 'var(--t-sidebar-bg)',
-          borderColor: 'var(--t-sidebar-border)',
-        }}
+        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-white/5 relative z-50`}
       >
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-3 px-5 py-5 border-b hover:bg-[var(--t-surface-hover)] transition-colors group"
-          style={{ borderColor: 'var(--t-sidebar-border)' }}
+          className="flex items-center gap-4 px-6 py-8 border-b border-white/5 hover:bg-white/5 transition-all group overflow-hidden"
         >
           <div
-            className="flex items-center justify-center w-10 h-10 rounded-xl text-white shrink-0 group-hover:scale-110 transition-transform"
-            style={{ background: 'var(--t-primary)' }}
+            className="flex items-center justify-center w-12 h-12 rounded-[1.25rem] text-white shrink-0 group-hover:scale-110 transition-transform bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-600/30"
           >
-            <Building2 size={22} />
+            <Building2 size={24} />
           </div>
-          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${sidebarOpen ? 'max-w-[150px] opacity-100 ml-0' : 'max-w-0 opacity-0 ml-0'}`}>
-            <h1 className="text-lg font-bold leading-tight tracking-tight whitespace-nowrap" style={{ color: 'var(--t-text)' }}>
+          <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'max-w-[150px] opacity-100 ml-0' : 'max-w-0 opacity-0 ml-0'}`}>
+            <h1 className="text-xl font-black leading-tight tracking-[-0.05em] whitespace-nowrap italic uppercase">
               WholeScale
             </h1>
-            <p
-              className="text-[10px] uppercase tracking-widest font-semibold"
-              style={{ color: 'var(--t-primary-text)' }}
-            >
-              OS
+            <p className="text-[10px] uppercase font-black tracking-[0.3em] bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+              Operating System
             </p>
           </div>
         </Link>
 
         {/* Team Switcher - Fixed with smooth scrolling dropdown */}
         <div
-          className={`mx-3 mt-3 rounded-xl border overflow-visible relative transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 border-none overflow-hidden'}`}
+          className={`mx-4 mt-6 rounded-[2rem] border overflow-visible relative transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 border-none overflow-hidden'}`}
           style={{
-            background: 'var(--t-input-bg, rgba(0,0,0,0.2))',
-            borderColor: 'var(--t-sidebar-border)',
+            background: 'rgba(255,255,255,0.03)',
+            borderColor: 'rgba(255,255,255,0.05)',
           }}
         >
           <button
@@ -359,11 +350,11 @@ export function Layout() {
               <Building2 size={13} style={{ color: 'var(--t-primary)' }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" style={{ color: 'var(--t-text)' }}>
-                {teamConfig.name || 'My Team'}
+              <p className="text-[10px] font-black uppercase tracking-widest truncate text-white italic">
+                {teamConfig.name || 'Core Network'}
               </p>
-              <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>
-                {(team || []).length} member{(team || []).length !== 1 ? 's' : ''}
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[#6d758c]">
+                {(team || []).length} Nodes Active
               </p>
             </div>
             <ChevronDown
@@ -596,11 +587,9 @@ export function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header
-          className="flex items-center justify-between px-6 py-3 border-b shrink-0 backdrop-blur-sm"
+          className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-white/5 animate-astral-nav"
           style={{
-            background: 'color-mix(in srgb, var(--t-sidebar-bg) 80%, transparent)',
-            borderColor: 'var(--t-border)',
-            zIndex: 5000,
+            zIndex: 50,
           }}
         >
           <div className="flex items-center gap-4">

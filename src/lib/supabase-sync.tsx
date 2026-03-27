@@ -206,25 +206,35 @@ function dbStatusHistoryToStore(row: Record<string, unknown>): StatusHistoryEntr
 
 function SyncLoadingScreen({ status }: { status: string }) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-6" style={{ background: 'var(--t-bg, #0f172a)' }}>
-      <div className="w-16 h-16 rounded-2xl bg-[var(--t-primary)] flex items-center justify-center shadow-xl shadow-[var(--t-primary-dim)]">
-        <Building2 size={32} className="text-white" />
-      </div>
-      <div className="text-center">
-        <h2 className="text-lg font-bold text-white mb-1">Loading WholeScale OS</h2>
-        <div className="flex items-center justify-center gap-2 text-[var(--t-text-muted)]">
-          <Loader2 size={14} className="animate-spin" />
-          <span className="text-sm">{status}</span>
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#060e20] text-[#dee5ff]">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-500/10 blur-[80px] rounded-full pointer-events-none" />
+
+      <div className="relative flex flex-col items-center">
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30 mb-8 animate-astral-hero">
+          <Building2 size={40} className="text-white" />
         </div>
-      </div>
-      <div className="flex items-center gap-4 mt-4">
-        <div className="flex items-center gap-1.5 text-xs text-[var(--t-success)]">
-          <Wifi size={12} />
-          <span>Connected</span>
+
+        <div className="text-center animate-astral-fade-up">
+          <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-2">
+            WholeScale <span className="text-indigo-400">OS</span>
+          </h2>
+          <div className="flex items-center justify-center gap-3 text-indigo-400/60 font-black uppercase tracking-[0.2em] text-[10px]">
+            <Loader2 size={12} className="animate-spin" />
+            {status}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-[var(--t-primary)]">
-          <Database size={12} />
-          <span>Syncing data</span>
+
+        <div className="flex items-center gap-4 mt-10 text-[10px] uppercase font-black tracking-widest text-[#a3aac4]">
+          <div className="flex items-center gap-1.5 text-[var(--t-success)]">
+            <Wifi size={12} />
+            Connected
+          </div>
+          <div className="w-1 h-1 rounded-full bg-white/10" />
+          <div className="flex items-center gap-1.5 text-indigo-400">
+            <Database size={12} />
+            Syncing
+          </div>
         </div>
       </div>
     </div>

@@ -1803,7 +1803,18 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   logout: async () => {
-    if (isSupabaseConfigured && supabase) await supabase.auth.signOut();
+    // Break potential infinite loops with onAuthStateChange
+    const { isAuthenticated, currentUser } = get();
+    if (!isAuthenticated && !currentUser) return;
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.error('Logout error:', err);
+      }
+    }
+    
     set({
       isAuthenticated: false, currentUser: null, leads: [], team: [], tasks: [],
       channels: [], messages: {}, buyers: [], coverageAreas: [], notifications: [],

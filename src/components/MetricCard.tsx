@@ -48,12 +48,12 @@ export function MetricCard({
   return (
     <div 
       onClick={onClick}
-      className={`bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl p-5 hover:border-[var(--t-border-strong)] transition-all theme-transition ${onClick ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''}`}
+      className={`astral-glass rounded-2xl p-6 hover-lift hover-glow transition-all duration-500 border border-indigo-500/10 ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}`}
     >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-[var(--t-text-secondary)] font-medium">{title}</p>
-          <div className="text-2xl font-bold text-[var(--t-on-surface)] mt-1">
+          <div className="text-3xl font-black text-white mt-1 italic tracking-tighter">
             {animated ? (
               <AnimatedCounter value={value} formatter={formatter} />
             ) : (
@@ -71,10 +71,10 @@ export function MetricCard({
         ) : (
           <ArrowDownRight size={14} className="text-[var(--t-error)]" />
         )}
-        <span className={`text-xs font-semibold ${changeType === 'up' ? 'text-[var(--t-success)]' : 'text-[var(--t-error)]'}`}>
+        <span className={`text-[10px] font-black uppercase tracking-widest ${changeType === 'up' ? 'text-[var(--t-success)]' : 'text-[var(--t-error)]'}`}>
           {change}
         </span>
-        <span className="text-xs text-[var(--t-text-muted)] ml-1">vs last month</span>
+        <span className="text-[10px] text-[#6d758c] font-bold uppercase tracking-widest ml-1">vs last month</span>
       </div>
     </div>
   );
