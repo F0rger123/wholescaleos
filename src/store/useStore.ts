@@ -603,31 +603,31 @@ export function calculateDealScore(lead: Lead): number {
 
 export function getScoreColor(score: number) {
   if (score >= 80) return {
-    bg: 'rgba(22, 163, 74, 0.15)',
-    text: '#16A34A',
-    ring: 'box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.4)',
-    bar: '#16A34A',
+    bg: 'rgba(21, 128, 61, 0.15)',
+    text: '#15803D',
+    ring: 'box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.4)',
+    bar: '#15803D',
     label: 'Elite'
   };
   if (score >= 60) return {
-    bg: 'rgba(132, 204, 22, 0.15)',
-    text: '#84CC16',
-    ring: 'box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.4)',
-    bar: '#84CC16',
+    bg: 'rgba(77, 124, 15, 0.15)',
+    text: '#4D7C0F',
+    ring: 'box-shadow: 0 0 0 3px rgba(77, 124, 15, 0.4)',
+    bar: '#4D7C0F',
     label: 'High'
   };
   if (score >= 40) return {
-    bg: 'rgba(245, 158, 11, 0.15)',
-    text: '#F59E0B',
-    ring: 'box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.4)',
-    bar: '#F59E0B',
+    bg: 'rgba(180, 83, 9, 0.15)',
+    text: '#B45309',
+    ring: 'box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.4)',
+    bar: '#B45309',
     label: 'Warn'
   };
   if (score >= 20) return {
-    bg: 'rgba(234, 88, 12, 0.15)',
-    text: '#EA580C',
-    ring: 'box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.4)',
-    bar: '#EA580C',
+    bg: 'rgba(194, 65, 12, 0.15)',
+    text: '#C2410C',
+    ring: 'box-shadow: 0 0 0 3px rgba(194, 65, 12, 0.4)',
+    bar: '#C2410C',
     label: 'Cold'
   };
   return {
@@ -1961,16 +1961,9 @@ export const useStore = create<AppState>((set, get) => ({
     
     // Recovery: If no teamId but we have a user, ensure profile is loaded
     if (!teamId && currentUser && isSupabaseConfigured && supabase) {
-      // Check localStorage first
-      const storedTeamId = typeof window !== 'undefined' ? localStorage.getItem('wholescale-preferred-team') : null;
-      if (storedTeamId) {
-        console.log('DEBUG: Recovered teamId from localStorage:', storedTeamId);
-        set({ teamId: storedTeamId });
-        teamId = storedTeamId;
-      } else {
-        await get().fetchProfile(currentUser.id);
-        teamId = get().teamId;
-      }
+      console.log('DEBUG: No teamId, fetching profile as source of truth...');
+      await get().fetchProfile(currentUser.id);
+      teamId = get().teamId;
     }
     
     if (!teamId || !isSupabaseConfigured || !supabase) {
@@ -1991,7 +1984,7 @@ export const useStore = create<AppState>((set, get) => ({
       ]);
       
       // Map leads to store format (ensuring new fields are present and status is valid)
-      const mappedLeads: Lead[] = leads.map((l: any) => ({
+      const mappedLeads: Lead[] = (leads || []).map((l: any) => ({
         ...l,
         status: ensureStringStatus(l.status),
         propertyAddress: l.address || l.propertyAddress,
@@ -2000,13 +1993,44 @@ export const useStore = create<AppState>((set, get) => ({
         lastSoldDate: l.last_sold_date || l.lastSoldDate,
         estimatedEquity: l.estimated_equity || l.estimatedEquity,
         recommendedOffer: l.recommended_offer || l.recommendedOffer,
-        timeline: l.timeline_entries || l.timeline || [],
-        statusHistory: l.status_history || l.statusHistory || [],
+        assignedTo: l.assigned_to || l.assignedTo,
+        propertyType: l.property_type || l.propertyType,
+        shareEnabled: l.share_enabled || l.shareEnabled,
+        sharePassword: l.share_password || l.sharePassword,
+        shareDescription: l.share_description || l.shareDescription,
+        sharePhotoUrl: l.share_photo_url || l.sharePhotoUrl,
+        sharePrice: l.share_price || l.sharePrice,
+        shareCustomMessage: l.share_custom_message || l.shareCustomMessage,
+        importSource: l.import_source || l.importSource,
+        createdAt: l.created_at || l.createdAt,
+        updatedAt: l.updated_at || l.updatedAt,
         documents: l.documents || [],
+        timeline: (l.timeline_entries || l.timeline || []).map((e: any) => ({
+          ...e,
+          timestamp: e.created_at || e.timestamp,
+          user: e.user_name || e.user || 'System'
+        })),
+        statusHistory: (l.status_history || l.statusHistory || []).map((h: any) => ({
+          ...h,
+          fromStatus: h.from_status || h.fromStatus,
+          toStatus: h.to_status || h.toStatus,
+          timestamp: h.changed_at || h.timestamp,
+          changedBy: h.changed_by || h.changedBy
+        }))
       }));
 
-      set({ leads: mappedLeads, tasks, dataLoaded: true });
-      console.log('DEBUG: loadLeads successful:', { leads: mappedLeads.length, tasks: tasks.length });
+      const mappedTasks: Task[] = (tasks || []).map((t: any) => ({
+        ...t,
+        assignedTo: t.assigned_to || t.assignedTo,
+        createdBy: t.created_by || t.createdBy,
+        dueDate: t.due_date || t.dueDate,
+        completedAt: t.completed_at || t.completedAt,
+        createdAt: t.created_at || t.createdAt,
+        leadId: t.lead_id || t.leadId,
+      }));
+
+      set({ leads: mappedLeads, tasks: mappedTasks, dataLoaded: true });
+      console.log('DEBUG: loadLeads successful:', { leads: mappedLeads.length, tasks: mappedTasks.length });
     } catch (error) {
       console.error('DEBUG: loadLeads failed:', error);
       set({ dataLoaded: true });
@@ -2311,6 +2335,10 @@ export const useStore = create<AppState>((set, get) => ({
           share_password: newLead.sharePassword,
           share_enabled: newLead.shareEnabled,
           documents: newLead.documents,
+          recommended_offer: newLead.recommendedOffer,
+          last_sold_price: newLead.lastSoldPrice,
+          last_sold_date: newLead.lastSoldDate,
+          estimated_equity: newLead.estimatedEquity,
         });
 
         if (!result) {
@@ -2404,6 +2432,10 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.sharePassword !== undefined) dbUpdates.share_password = updates.sharePassword;
       if (updates.shareEnabled !== undefined) dbUpdates.share_enabled = updates.shareEnabled;
       if (updates.documents !== undefined) dbUpdates.documents = updates.documents;
+      if (updates.recommendedOffer !== undefined) dbUpdates.recommended_offer = updates.recommendedOffer;
+      if (updates.lastSoldPrice !== undefined) dbUpdates.last_sold_price = updates.lastSoldPrice;
+      if (updates.lastSoldDate !== undefined) dbUpdates.last_sold_date = updates.lastSoldDate;
+      if (updates.estimatedEquity !== undefined) dbUpdates.estimated_equity = updates.estimatedEquity;
       
       try {
         const result = await leadsService.update(id, dbUpdates);
@@ -2423,6 +2455,10 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({ leads: s.leads.filter((l) => l.id !== id) }));
     if (isSupabaseConfigured && supabase) {
       try {
+        // Handle foreign key constraints: Unlink SMS messages first
+        console.log('DEBUG: Unlinking SMS messages for lead:', id);
+        await supabase.from('sms_messages').update({ lead_id: null }).eq('lead_id', id);
+        
         await leadsService.remove(id);
         console.log('✅ Lead deleted from Supabase:', id);
         return { success: true };

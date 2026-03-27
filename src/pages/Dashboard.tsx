@@ -150,18 +150,6 @@ export default function Dashboard() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const presetsRef = useRef<HTMLDivElement>(null);
 
-  // Quick fix: Show loading if data is not yet available
-  if (!dataLoaded || !leads || !team) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--t-bg)] p-8">
-        <div className="w-16 h-16 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin mb-6"></div>
-        <h2 className="text-2xl font-black text-white mb-2">Dashboard Loading</h2>
-        <p className="text-[var(--t-text-muted)] text-sm animate-pulse">Fetching your pipeline and team data...</p>
-      </div>
-    );
-  }
-
-  // Widget Registry
   const DEFAULT_LAYOUT = [
     'quick-board',
     'stats-grid',
@@ -194,6 +182,18 @@ export default function Dashboard() {
     if (showPresets) document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [showPresets]);
+
+  // Quick fix: Show loading if data is not yet available
+  if (!dataLoaded || !leads || !team) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--t-bg)] p-8">
+        <div className="w-16 h-16 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin mb-6"></div>
+        <h2 className="text-2xl font-black text-white mb-2">Dashboard Loading</h2>
+        <p className="text-[var(--t-text-muted)] text-sm animate-pulse">Fetching your pipeline and team data...</p>
+      </div>
+    );
+  }
+
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     setDragIndex(index);
