@@ -235,9 +235,10 @@ function SyncLoadingScreen({ status }: { status: string }) {
 
 export function SupabaseSync({ children }: { children: ReactNode }) {
   const currentUser = useStore((s) => s.currentUser);
+  const teamId = useStore((s) => s.teamId);
   const dataLoaded = useStore((s) => s.dataLoaded);
   const [syncStatus, setSyncStatus] = useState('Connecting...');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!useStore.getState().dataLoaded);
   const subscriptionsRef = useRef<Array<{ unsubscribe: () => void }>>([]);
 
   useEffect(() => {
@@ -455,7 +456,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
       }
       subscriptionsRef.current = [];
     };
-  }, [currentUser?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, teamId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Real-time subscription setup ────────────────────────────────────────────
 
