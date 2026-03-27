@@ -237,12 +237,32 @@
   --t-text-muted: #6b7280;
   --t-border: rgba(255, 255, 255, 0.1);
   --t-border-light: rgba(255, 255, 255, 0.05);
-  --t-success: #3b82f6; /* Use blue/cyan for success in Moonlight */
-  --t-warning: #a855f7; /* Use purple for warning in Moonlight */
+  --t-success: #3b82f6;
+  --t-warning: #a855f7;
   --t-error: #ff4444;
   --t-sidebar-bg: #000000;
   --t-sidebar-border: rgba(255, 255, 255, 0.05);
   --t-sidebar-hover: #080808;
+}
+
+/* ===== AURORA (NORTHERN LIGHTS) ===== */
+@keyframes aurora-flow {
+  0% { background-position: 0% 50%; opacity: 0.85; }
+  50% { background-position: 100% 50%; opacity: 1; }
+  100% { background-position: 0% 50%; opacity: 0.85; }
+}
+
+[data-theme="aurora"] {
+  background: linear-gradient(-45deg, #0a1128, #16213e, #4ade8055, #c084fc55, #f472b655);
+  background-size: 400% 400%;
+  animation: aurora-flow 18s ease-in-out infinite alternate;
+  backdrop-filter: blur(10px);
+}
+
+[data-theme="aurora"] .astral-glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(74, 222, 128, 0.2);
 }
 
 [data-theme="moon"] .astral-glass {
