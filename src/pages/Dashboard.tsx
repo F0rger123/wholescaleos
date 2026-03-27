@@ -188,11 +188,10 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [showPresets]);
 
-  // Quick fix: Show loading if data is not yet available
   if (!dataLoaded || !leads || !team) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#060e20] p-8">
-        <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(99,102,241,0.3)]"></div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--t-bg)] p-8">
+        <div className="w-20 h-20 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_30px_var(--t-primary-dim)]"></div>
         <h2 className="text-3xl font-black text-white mb-3 uppercase italic tracking-tighter">Initializing OS</h2>
         <p className="text-[#6d758c] text-sm font-black uppercase tracking-[0.2em] animate-pulse">Syncing Cloud Infrastructure...</p>
       </div>
@@ -291,7 +290,7 @@ export default function Dashboard() {
 
   return (
     <DashboardErrorBoundary>
-      <div className="space-y-8 p-6 lg:p-12 min-h-screen bg-[#060e20] text-[#dee5ff]">
+      <div className="space-y-8 p-6 lg:p-12 min-h-screen bg-[var(--t-bg)] text-[var(--t-text)]">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav">
           <div>
@@ -302,12 +301,12 @@ export default function Dashboard() {
             <div className="relative" ref={presetsRef}>
               <button
                 onClick={() => setShowPresets(!showPresets)}
-                className="p-3.5 rounded-2xl bg-[#0f1930] border border-indigo-500/20 text-[#a3aac4] hover:text-white transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-2xl hover-lift"
+                className="p-3.5 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border-subtle)] text-[var(--t-text-muted)] hover:text-[var(--t-text)] transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-2xl hover-lift"
               >
                 <LayoutGrid size={16} /> Presets <ChevronDown size={14} className={`transition-transform ${showPresets ? 'rotate-180' : ''}`} />
               </button>
               {showPresets && (
-                <div className="absolute right-0 mt-3 w-64 bg-[#0f1930]/90 border border-indigo-500/20 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-3xl">
+                <div className="absolute right-0 mt-3 w-64 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-3xl">
                   {Object.entries(PRESETS).map(([key, preset]) => (
                     <button key={key} onClick={() => { setDashboardLayout(preset.layout); setShowPresets(false); }}
                       className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-widest transition-colors text-left ${
@@ -323,13 +322,13 @@ export default function Dashboard() {
             <button
               onClick={() => setIsEditing(!isEditing)}
               className={`p-3.5 rounded-2xl border transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-2xl hover-lift ${
-                isEditing ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30' : 'bg-[#0f1930] border-indigo-500/20 text-[#a3aac4] hover:text-white'
+                isEditing ? 'bg-[var(--t-primary)] border-[var(--t-primary)] text-[var(--t-on-primary)] shadow-lg shadow-[var(--t-primary)]/30' : 'bg-[var(--t-surface)] border-[var(--t-border-subtle)] text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
               }`}
             >
               {isEditing ? <><Check size={16} /> Finalize</> : <><Settings size={16} /> Customize</>}
             </button>
             {isEditing && (
-              <button onClick={() => setDashboardLayout(DEFAULT_LAYOUT)} className="p-3.5 rounded-2xl bg-[#0f1930] border border-indigo-500/20 text-[#a3aac4] hover:text-white shadow-2xl hover-lift">
+              <button onClick={() => setDashboardLayout(DEFAULT_LAYOUT)} className="p-3.5 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border-subtle)] text-[var(--t-text-muted)] hover:text-[var(--t-text)] shadow-2xl hover-lift">
                 <RotateCcw size={16} />
               </button>
             )}
@@ -348,10 +347,10 @@ export default function Dashboard() {
                 case 'quick-board': return <AIQuickBoard />;
                 case 'stats-grid': return (
                   <div key="stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <MetricCard title="Total Pipeline" value={totalPipeline} change={`+${pipelineChange}%`} changeType="up" icon={TrendingUp} color="bg-[var(--t-primary-dim)] text-[var(--t-primary)]" animated formatter={formatMoney} />
-                    <MetricCard title="Closed Revenue" value={closedRevenue} change={`+${revenueChange}%`} changeType="up" icon={DollarSign} color="bg-[var(--t-success)]/10 text-[var(--t-success)]" animated formatter={formatMoney} />
-                    <MetricCard title="Active Leads" value={activeLeads} change="+3" changeType="up" icon={Users} color="bg-[var(--t-info)]/10 text-[var(--t-info)]" animated />
-                    <MetricCard title="Win Rate" value={winRate} change="-1.4%" changeType="down" icon={Check} color="bg-[var(--t-warning)]/10 text-[var(--t-warning)]" animated formatter={(val) => `${val}%`} />
+                    <MetricCard title="Total Pipeline" value={totalPipeline} change={`+${pipelineChange}%`} changeType="up" icon={TrendingUp} animated formatter={formatMoney} />
+                    <MetricCard title="Closed Revenue" value={closedRevenue} change={`+${revenueChange}%`} changeType="up" icon={DollarSign} animated formatter={formatMoney} />
+                    <MetricCard title="Active Leads" value={activeLeads} change="+3" changeType="up" icon={Users} animated />
+                    <MetricCard title="Win Rate" value={winRate} change="-1.4%" changeType="down" icon={Check} animated formatter={(val) => `${val}%`} />
                   </div>
                 );
                 case 'profit-projection': return (

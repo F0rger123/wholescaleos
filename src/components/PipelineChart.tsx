@@ -21,12 +21,12 @@ type ChartTimeRange = '7d' | '30d' | '90d' | '1y';
 type MetricType = 'leads' | 'deals' | 'revenue' | 'conversion';
 
 const COLORS: Record<string, string> = {
-  new: '#9fa7ff', // Indigo
-  contacted: '#be83fa', // Purple
-  qualified: '#6366f1', // Stronger Indigo
-  negotiating: '#ec4899', // Pink
-  'closed-won': '#10b981', // Success Green (keep for clarity)
-  'closed-lost': '#ef4444', // Error Red (keep for clarity)
+  new: 'var(--t-primary)',
+  contacted: 'var(--t-secondary)',
+  qualified: 'var(--t-accent)',
+  negotiating: '#ec4899', 
+  'closed-won': 'var(--t-success)',
+  'closed-lost': 'var(--t-error)',
 };
 
 export function PipelineChart() {
@@ -156,11 +156,16 @@ export function PipelineChart() {
             {gridEl}{xAxisEl}{yAxisEl}{tooltipEl}
             <defs>
               <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#9fa7ff" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#be83fa" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--t-primary)" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="var(--t-secondary)" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="accentGradient" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#a855f7" />
+                <stop offset="50%" stopColor="#3b82f6" />
+                <stop offset="100%" stopColor="#06b6d4" />
               </linearGradient>
             </defs>
-            <Area type="monotone" dataKey="value" stroke="#9fa7ff" strokeWidth={4} fill="url(#areaGradient)" animationDuration={1500} />
+            <Area type="monotone" dataKey="value" stroke="var(--t-primary)" strokeWidth={4} fill="url(#areaGradient)" animationDuration={1500} />
           </AreaChart>
         );
       default:
@@ -169,7 +174,7 @@ export function PipelineChart() {
             {gridEl}{xAxisEl}{yAxisEl}{tooltipEl}
             <Bar dataKey="value" radius={[8, 8, 0, 0]} animationDuration={1500}>
               {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[entry.key] || 'var(--t-primary)'} />
+                <Cell key={`cell-${index}`} fill={entry.key === 'closed-won' || entry.key === 'closed-lost' ? COLORS[entry.key] : `url(#accentGradient)`} />
               ))}
             </Bar>
           </BarChart>
