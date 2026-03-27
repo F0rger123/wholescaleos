@@ -19,7 +19,7 @@ export function ThemeSwitcher() {
     'Premium': ['glass', 'oled', 'midnight', 'black-marble', 'white-marble'],
     'Neon & Glow': ['neon', 'moon'],
     'Luxury': ['platinum', 'rose-gold'],
-    'Creative': ['aurora', 'cyberpunk', 'winter-frost'],
+    'Creative': ['cyberpunk', 'winter-frost'],
   };
 
   const getThemeIcon = (themeId: string) => {
@@ -27,7 +27,7 @@ export function ThemeSwitcher() {
       'dark': '🌙', 'light': '☀️', 'glass': '✨', 'oled': '⬛',
       'midnight': '🌃', 'black-marble': '⚫', 'white-marble': '⚪',
       'neon': '💚', 'moon': '🌕', 'platinum': '💎', 'rose-gold': '🌹',
-      'aurora': '✨', 'cyberpunk': '🌃', 'winter-frost': '❄️',
+      'cyberpunk': '🌃', 'winter-frost': '❄️',
     };
     return icons[themeId] || '🎨';
   };

@@ -14,8 +14,10 @@ export default function BillingProfile() {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>('billing');
-  const { currentUser } = useStore();
+  const { currentUser, applyReferralCode } = useStore();
   const [copied, setCopied] = useState(false);
+  const [refCodeInput, setRefCodeInput] = useState('');
+  const [isApplyingRef, setIsApplyingRef] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -30,13 +32,31 @@ export default function BillingProfile() {
     navigate(`/dashboard/billing?tab=${tab}`);
   };
 
-  const referralCode = `WHOLESCALE-${currentUser?.name?.split(' ')[0]?.toUpperCase() || 'AGENT'}`;
-  const referralLink = `https://wholescaleos.com/signup?ref=${referralCode}`;
+  const currentReferralCode = currentUser?.referralCode || `WHOLESCALE-${currentUser?.name?.split(' ')[0]?.toUpperCase() || 'AGENT'}`;
+  const referralLink = `https://wholescaleos.com/signup?ref=${currentReferralCode}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleApplyReferral = async () => {
+    if (!refCodeInput.trim()) return;
+    setIsApplyingRef(true);
+    try {
+      const result = await applyReferralCode(refCodeInput.trim());
+      if (result.success) {
+        alert('Referral code applied successfully!');
+        setRefCodeInput('');
+      } else {
+        alert(result.error || 'Failed to apply referral code');
+      }
+    } catch (err) {
+      alert('An error occurred while applying the referral code');
+    } finally {
+      setIsApplyingRef(false);
+    }
   };
 
   const tabs: { id: TabType; label: string; icon: any }[] = [
@@ -77,9 +97,13 @@ export default function BillingProfile() {
         {activeTab === 'analytics' && <AnalyticsTab />}
         {activeTab === 'referral' && (
           <ReferralTab 
-            code={referralCode} 
+            code={currentReferralCode} 
             onCopy={copyToClipboard} 
-            copied={copied} 
+            copied={copied}
+            refCodeInput={refCodeInput}
+            setRefCodeInput={setRefCodeInput}
+            onApply={handleApplyReferral}
+            isApplying={isApplyingRef}
           />
         )}
         {activeTab === 'profile' && <ProfileTab user={currentUser} />}
@@ -89,6 +113,19 @@ export default function BillingProfile() {
 }
 
 function BillingTab() {
+  const { currentUser } = useStore();
+  const [loading, setLoading] = useState(false);
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    // In a real app, this would call a Supabase Edge Function to create a Stripe Session
+    // For now, we simulate the redirect
+    setTimeout(() => {
+      window.location.href = 'https://buy.stripe.com/test_demo_checkout';
+      setLoading(false);
+    }, 1500);
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 reveal">
       <div className="lg:col-span-2 space-y-8">
@@ -99,14 +136,22 @@ function BillingTab() {
           </div>
           <div className="relative z-10 flex justify-between items-start">
             <div className="space-y-4">
-              <div className="px-3 py-1 rounded-full bg-white/20 border border-white/30 text-[10px] font-black uppercase tracking-widest inline-block">Current Plan</div>
+              <div className="px-3 py-1 rounded-full bg-white/20 border border-white/30 text-[10px] font-black uppercase tracking-widest inline-block">
+                {currentUser?.subscriptionStatus === 'active' ? 'Active Plan' : 'Subscription Required'}
+              </div>
               <div>
-                <h2 className="text-4xl font-black">Solo Tier</h2>
-                <p className="opacity-80 font-medium">$27/month • Billed Annually</p>
+                <h2 className="text-4xl font-black">{currentUser?.subscriptionTier || 'Free Tier'}</h2>
+                <p className="opacity-80 font-medium">
+                  {currentUser?.subscriptionTier === 'Free' ? 'Unlock full OS potential' : '$27/month • Billed Annually'}
+                </p>
               </div>
             </div>
-            <button className="px-6 py-3 rounded-xl bg-white text-blue-600 font-bold hover:bg-gray-100 transition-all text-sm">
-              Change Plan
+            <button 
+              onClick={handleUpgrade}
+              disabled={loading}
+              className="px-6 py-3 rounded-xl bg-white text-blue-600 font-bold hover:bg-gray-100 transition-all text-sm disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : (currentUser?.subscriptionTier === 'Free' ? 'Upgrade Now' : 'Change Plan')}
             </button>
           </div>
           <div className="mt-12 pt-8 border-t border-white/20 flex flex-wrap gap-8 relative z-10">
@@ -151,10 +196,12 @@ function BillingTab() {
         <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-6">
           <h3 className="text-lg font-bold">Referral Balance</h3>
           <div className="p-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-center space-y-2">
-            <div className="text-3xl font-black text-indigo-400">$14.50</div>
+            <div className="text-3xl font-black text-indigo-400 font-mono">
+              ${(currentUser?.availableEarnings || 0).toFixed(2)}
+            </div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Available to Apply</div>
           </div>
-          <button className="w-full py-4 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] hover:border-indigo-500/50 text-xs font-bold transition-all">
+          <button className="w-full py-4 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] hover:border-indigo-500/50 text-xs font-bold transition-all disabled:opacity-50" disabled={(currentUser?.availableEarnings || 0) <= 0}>
             Apply to Next Invoice
           </button>
           <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 text-orange-500 text-[10px] font-medium">
@@ -277,7 +324,24 @@ function AnalyticsTab() {
   );
 }
 
-function ReferralTab({ code, onCopy, copied }: { code: string; onCopy: () => void; copied: boolean }) {
+function ReferralTab({ 
+  code, 
+  onCopy, 
+  copied,
+  refCodeInput,
+  setRefCodeInput,
+  onApply,
+  isApplying
+}: { 
+  code: string; 
+  onCopy: () => void; 
+  copied: boolean;
+  refCodeInput: string;
+  setRefCodeInput: (v: string) => void;
+  onApply: () => void;
+  isApplying: boolean;
+}) {
+  const { currentUser } = useStore();
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 reveal">
       <div className="lg:col-span-2 space-y-8">
@@ -304,15 +368,15 @@ function ReferralTab({ code, onCopy, copied }: { code: string; onCopy: () => voi
         <div className="grid md:grid-cols-3 gap-6">
            <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
               <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Earned</div>
-              <div className="text-3xl font-black font-mono">$1,240</div>
+              <div className="text-3xl font-black font-mono">${(currentUser?.totalEarnings || 0).toFixed(2)}</div>
            </div>
            <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
-              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Active Referrals</div>
-              <div className="text-3xl font-black font-mono">14</div>
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Available Credit</div>
+              <div className="text-3xl font-black font-mono">${(currentUser?.availableEarnings || 14.50).toFixed(2)}</div>
            </div>
            <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
               <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending Payouts</div>
-              <div className="text-3xl font-black font-mono text-orange-400">$45.00</div>
+              <div className="text-3xl font-black font-mono text-orange-400">$0.00</div>
            </div>
         </div>
 
@@ -346,6 +410,38 @@ function ReferralTab({ code, onCopy, copied }: { code: string; onCopy: () => voi
       </div>
 
       <div className="space-y-8">
+          <div className="p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] space-y-8">
+            <div className="space-y-2">
+               <h3 className="text-xl font-bold italic">Enter Referral Code</h3>
+               <p className="text-xs text-gray-400">Were you referred by someone? Enter their code here to get 1 month of Pro free.</p>
+            </div>
+            
+            <div className="space-y-4">
+               <div className="space-y-2">
+                  <input 
+                    type="text" 
+                    placeholder="Enter code (e.g. WHOLESCALE-ADAM)" 
+                    value={refCodeInput}
+                    disabled={!!currentUser?.referredBy}
+                    onChange={(e) => setRefCodeInput(e.target.value.toUpperCase())}
+                    className="w-full px-5 py-4 rounded-xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-sm text-white focus:border-blue-500 outline-none transition-all disabled:opacity-50" 
+                  />
+                  {currentUser?.referredBy && (
+                    <p className="text-[10px] text-green-500 font-bold ml-1 flex items-center gap-1">
+                      <Check size={12} /> Referral code active
+                    </p>
+                  )}
+               </div>
+               <button 
+                onClick={onApply}
+                disabled={isApplying || !!currentUser?.referredBy || !refCodeInput.trim()}
+                className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs transition-all disabled:opacity-50 shadow-lg shadow-blue-600/20"
+               >
+                  {isApplying ? <Loader2 size={16} className="animate-spin mx-auto" /> : 'Apply Code'}
+               </button>
+            </div>
+         </div>
+
          <div className="p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] space-y-8">
             <div className="space-y-2">
                <h3 className="text-xl font-bold italic">Withdraw Rewards</h3>

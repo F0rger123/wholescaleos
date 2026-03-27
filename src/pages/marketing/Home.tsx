@@ -10,6 +10,35 @@ import {
   PlayCircle, BarChart3, Award, Trophy
 } from 'lucide-react';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
+import { useEffect, useRef } from 'react';
+
+function StatCounter({ value, duration = 2000, suffix = '' }: { value: string | number, duration?: number, suffix?: string }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const numericValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
+  const startTime = useRef<number | null>(null);
+
+  useEffect(() => {
+    let animationFrameId: number;
+    
+    const animate = (timestamp: number) => {
+      if (!startTime.current) startTime.current = timestamp;
+      const progress = Math.min((timestamp - startTime.current) / duration, 1);
+      
+      // Easing function (easeOutExpo)
+      const easedProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setDisplayValue(Math.floor(easedProgress * numericValue));
+      
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [numericValue, duration]);
+
+  return <>{displayValue.toLocaleString()}{suffix}</>;
+}
 
 export default function Home() {
   const [adminHours, setAdminHours] = useState(20);
@@ -22,6 +51,8 @@ export default function Home() {
   const calculatorReveal = useScrollReveal();
   const leaderboardReveal = useScrollReveal();
   const featuresReveal = useScrollReveal();
+  const ctaReveal = useScrollReveal();
+  const testimonialsReveal = useScrollReveal();
 
   const calculateTimeSaved = () => {
     const savedPerWeek = adminHours * 0.2;
@@ -78,18 +109,20 @@ export default function Home() {
               The Sovereign Operating System for high-volume real estate teams. 
               Own your data. Automate your triage. Build your legacy.
             </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
               <Link
                 to="/login?signup=true"
-                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift"
+                className="w-full sm:flex-1 md:flex-none md:w-64 px-10 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift"
               >
                 Get Started Free <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
               <button 
                 onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-bold transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle"
+                className="w-full sm:flex-1 md:flex-none md:w-64 px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-black transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle hover:scale-105 active:scale-95"
               >
                 <PlayCircle size={20} /> Watch Demo
               </button>
+            </div>
           </div>
 
           {/* Hero Visual - Premium CSS Mockup */}
@@ -178,7 +211,9 @@ export default function Home() {
             <div className={`grid grid-cols-2 gap-4 transition-all duration-1000 ${benefitsReveal.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-20'}`}>
               <div className="space-y-4 pt-12">
                 <div className="aspect-square rounded-[2rem] bg-indigo-600 p-8 flex flex-col justify-end shadow-[0_20px_40px_rgba(99,102,241,0.2)] hover-lift">
-                  <div className="text-4xl font-black mb-2 italic">90%</div>
+                  <div className="text-4xl font-black mb-2 italic">
+                    {benefitsReveal.isVisible ? <StatCounter value={90} suffix="%" /> : '0%'}
+                  </div>
                   <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Manual Triage Reduced</div>
                 </div>
                 <div className="aspect-square rounded-[2rem] bg-[#0f1930] border border-white/5 hover-lift" />
@@ -186,7 +221,9 @@ export default function Home() {
               <div className="space-y-4">
                  <div className="aspect-square rounded-[2rem] bg-[#0f1930] border border-white/5 hover-lift" />
                  <div className="aspect-square rounded-[2rem] bg-purple-600 p-8 flex flex-col justify-end shadow-[0_20px_40px_rgba(168,85,247,0.2)] hover-lift">
-                  <div className="text-4xl font-black mb-2 italic">2.5x</div>
+                  <div className="text-4xl font-black mb-2 italic">
+                    {benefitsReveal.isVisible ? <StatCounter value={2.5} suffix="x" /> : '0x'}
+                  </div>
                   <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Conversion Rate Increase</div>
                 </div>
               </div>
@@ -463,33 +500,41 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-32 bg-[#060e20]">
+      <section className="py-32 bg-[#060e20]" ref={testimonialsReveal.elementRef}>
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20">
+          <div className={`text-center mb-20 transition-all duration-1000 ${testimonialsReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <h2 className="text-4xl md:text-6xl font-black italic mb-6">Trusted by Empire Builders.</h2>
             <p className="text-[#6d758c] text-lg font-medium">Join the next generation of real estate operations.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover:scale-105 transition-all astral-glass font-medium leading-relaxed hover-lift">
-               "WholeScale OS is why we're closing 3x more deals. The AI triage is like having a second brain that never sleeps."
-            </div>
-            <div className="p-10 rounded-[2.5rem] bg-indigo-600 italic text-white shadow-2xl shadow-indigo-600/30 hover:scale-105 transition-all font-black leading-relaxed scale-105 relative z-10 border border-indigo-400/30 hover-lift hover-glow">
-               "The absolute best ROI of any tool I've used in 10 years. Our team communications are finally centralized."
-            </div>
-            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover:scale-105 transition-all astral-glass font-medium leading-relaxed hover-lift">
-               "The sovereign data approach is what real estate needed. My data, my rules, and incredible speed."
-            </div>
+            {[
+              { text: '"WholeScale OS is why we\'re closing 3x more deals. The AI triage is like having a second brain that never sleeps."', highlight: false },
+              { text: '"The absolute best ROI of any tool I\'ve used in 10 years. Our team communications are finally centralized."', highlight: true },
+              { text: '"The sovereign data approach is what real estate needed. My data, my rules, and incredible speed."', highlight: false }
+            ].map((t, i) => (
+              <div 
+                key={i} 
+                className={`p-10 rounded-[2.5rem] italic transition-all duration-700 hover-lift ${
+                  t.highlight 
+                    ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-600/30 font-black scale-105 relative z-10 border border-indigo-400/30 hover-glow' 
+                    : 'bg-white/5 border border-white/5 text-[#a3aac4] astral-glass font-medium'
+                } ${testimonialsReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                style={{ transitionDelay: `${i * 150}ms` }}
+              >
+                {t.text}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-40 relative overflow-hidden">
+      <section className="py-40 relative overflow-hidden" ref={ctaReveal.elementRef}>
         <div className="absolute inset-0 bg-indigo-600" />
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-800 to-indigo-900 opacity-90" />
         <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_20%_30%,#fff_0%,transparent_50%)]" />
         
-        <div className="max-w-4xl mx-auto px-6 text-center relative z-10 animate-astral-hero">
+        <div className={`max-w-4xl mx-auto px-6 text-center relative z-10 transition-all duration-1000 ${ctaReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <h2 className="text-6xl md:text-8xl font-black mb-12 text-white tracking-tighter italic leading-[0.9]">Ready to <br />Own the Market?</h2>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <Link to="/login?signup=true" className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white text-indigo-600 text-xl font-black shadow-[0_20px_60px_rgba(0,0,0,0.3)] hover:scale-105 transition-all hover-glow">

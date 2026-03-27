@@ -241,6 +241,13 @@ export interface UserProfile {
   website?: string;
   aiCustomInstructions?: string;
   settings?: Record<string, any>;
+  stripeCustomerId?: string;
+  subscriptionTier?: string;
+  subscriptionStatus?: string;
+  referralCode?: string;
+  referredBy?: string;
+  totalEarnings?: number;
+  availableEarnings?: number;
 }
 
 export interface Task {
@@ -1401,6 +1408,8 @@ interface AppState {
   loadLeads: () => Promise<void>;
   clearAuthError: () => void;
   setAuthenticated: (isAuthenticated: boolean) => void;
+  fetchSubscription: (userId: string) => Promise<void>;
+  applyReferralCode: (code: string) => Promise<{ success: boolean; error?: string }>;
   // Sync
   teamId: string | null;
   dataLoaded: boolean;
@@ -1946,6 +1955,13 @@ export const useStore = create<AppState>((set, get) => ({
             emailVerified: profile.email_verified || false,
             createdAt: profile.created_at || new Date().toISOString(),
             settings: profile.settings || {},
+            stripeCustomerId: profile.stripe_customer_id,
+            subscriptionTier: profile.subscription_tier || 'Free',
+            subscriptionStatus: profile.subscription_status || 'active',
+            referralCode: profile.referral_code,
+            referredBy: profile.referred_by,
+            totalEarnings: profile.total_earnings || 0,
+            availableEarnings: profile.available_earnings || 0,
           },
           teamId: teamId
         }));
@@ -2050,6 +2066,78 @@ export const useStore = create<AppState>((set, get) => ({
 
   clearAuthError: () => set({ authError: null }),
   setAuthenticated: (isAuthenticated: boolean) => set({ isAuthenticated }),
+
+  fetchSubscription: async (userId: string) => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_tier, subscription_status, stripe_customer_id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        set((s) => ({
+          currentUser: s.currentUser ? {
+            ...s.currentUser,
+            subscriptionTier: data.subscription_tier,
+            subscriptionStatus: data.subscription_status,
+            stripeCustomerId: data.stripe_customer_id
+          } : null
+        }));
+      }
+    } catch (err) {
+      console.error('DEBUG: Failed to fetch subscription:', err);
+    }
+  },
+
+  applyReferralCode: async (code: string) => {
+    if (!isSupabaseConfigured || !supabase) return { success: false, error: 'Supabase not configured' };
+    const { currentUser } = get();
+    if (!currentUser) return { success: false, error: 'User not logged in' };
+
+    try {
+      // 1. Find the user with this referral code
+      const { data: referrer, error: referrerError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('referral_code', code)
+        .maybeSingle();
+
+      if (referrerError || !referrer) {
+        return { success: false, error: 'Invalid referral code' };
+      }
+
+      if (referrer.id === currentUser.id) {
+        return { success: false, error: 'You cannot use your own referral code' };
+      }
+
+      // 2. Update current user's referred_by
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ referred_by: referrer.id })
+        .eq('id', currentUser.id);
+
+      if (updateError) throw updateError;
+
+      // 3. Track in referrals table if it exists
+      await supabase.from('referrals').insert({
+        referrer_id: referrer.id,
+        referred_id: currentUser.id,
+        status: 'pending'
+      });
+
+      set((s) => ({
+        currentUser: s.currentUser ? { ...s.currentUser, referredBy: referrer.id } : null
+      }));
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('DEBUG: Failed to apply referral code:', err);
+      return { success: false, error: err.message };
+    }
+  },
 
   // History State
   history: [],

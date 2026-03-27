@@ -9,11 +9,12 @@ import {
   Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
   Users, UserMinus, Plus, Keyboard,
   HardDrive, Send, Sparkles, ExternalLink, QrCode, Award, 
-  Linkedin, Facebook, Instagram, Twitter, Share2
+  Linkedin, Facebook, Instagram, Twitter, Share2, CreditCard
 } from 'lucide-react';
 import AISettings from './AISettings';
 import SMSSettings from './SMSSettings';
 import ShortcutSettings from './ShortcutSettings';
+import BillingProfile from './BillingProfile';
 import { FileUploader } from '../components/FileUploader';
 import { GoogleCalendarService } from '../lib/google-calendar';
 
@@ -28,6 +29,7 @@ const TABS = [
   { id: 'ai', label: 'AI Assistant', icon: Sparkles },
   { id: 'sms', label: 'SMS Messaging', icon: Smartphone },
   { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
+  { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
   { id: 'backup', label: 'Backup', icon: HardDrive },
   { id: 'data', label: 'Data', icon: Database },
 ];
@@ -85,6 +87,7 @@ export default function SettingsPage() {
           {activeTab === 'ai' && <AISettings hideHeader />}
           {activeTab === 'sms' && <SMSSettings />}
           {activeTab === 'shortcuts' && <ShortcutSettings />}
+          {activeTab === 'billing' && <BillingProfile />}
           {activeTab === 'backup' && <BackupTab />}
           {activeTab === 'data' && <DataTab />}
         </div>

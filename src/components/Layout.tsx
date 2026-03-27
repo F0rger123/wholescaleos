@@ -14,7 +14,8 @@ import {
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
-  Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck
+  Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
+  Sparkles, ArrowRight
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -542,6 +543,22 @@ export function Layout() {
               </div>
             );
           })}
+
+          {/* Upgrade CTA */}
+          {sidebarOpen && (
+            <div className="mt-8 px-4 py-6 rounded-[2rem] bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border border-indigo-500/20 relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer shadow-lg"
+                 onClick={() => navigate('/settings')}>
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
+                <Sparkles size={40} className="text-indigo-400" />
+              </div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2">Pro Feature Pack</p>
+              <h4 className="text-sm font-black italic text-white uppercase mb-3">Upgrade to Pro</h4>
+              <p className="text-[9px] text-[#6d758c] font-bold mb-4 leading-tight">Unlock AI triage, unlimited nodes & elite analytics.</p>
+              <div className="flex items-center gap-2 text-indigo-400 font-bold text-[10px] uppercase tracking-widest group-hover:gap-3 transition-all">
+                Learn More <ArrowRight size={12} />
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Online Team Members */}
