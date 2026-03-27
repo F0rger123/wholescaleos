@@ -651,7 +651,7 @@ export default function Leads() {
                   </div>
                   <p className="text-xs text-[var(--t-text-muted)] truncate mb-3">{lead.propertyAddress || 'No Address'}</p>
                   <div className="flex gap-2 mb-3">
-                    <span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>{STATUS_LABELS[lead.status] || lead.status}</span>
+                    <span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[String(lead.status)] || STATUS_BADGE['new']}`}>{STATUS_LABELS[lead.status] || String(lead.status)}</span>
                     {(() => { const sb = scoreBadge(ds); return <span className={`px-2 py-0.5 text-[10px] rounded-full border ${sb.className}`} style={sb.style}>⚡ {ds}</span>; })()}
                   </div>
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-[var(--t-border)]">
@@ -685,7 +685,7 @@ export default function Leads() {
                           <input type="checkbox" checked={selectedLeads.has(lead.id)} onChange={() => toggleSelectLead(lead.id)} className="w-4 h-4 rounded" style={{ accentColor: 'var(--t-primary)' }} />
                         </td>
                         <td className="p-3 font-medium text-white">{lead.name || 'Unnamed'}</td>
-                        <td className="p-3"><span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>{STATUS_LABELS[lead.status] || lead.status}</span></td>
+                        <td className="p-3"><span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[String(lead.status)] || STATUS_BADGE['new']}`}>{STATUS_LABELS[lead.status] || String(lead.status)}</span></td>
                         <td className="p-3 text-[var(--t-text-muted)]">⚡ {ds}</td>
                         <td className="p-3 text-[var(--t-text-muted)] truncate max-w-[200px]">{lead.propertyAddress || 'No Address'}</td>
                         <td className="p-3 font-medium text-white text-right">{fmt$(lead.estimatedValue || 0)}</td>
@@ -705,7 +705,7 @@ export default function Leads() {
                     <h4 className="font-bold text-white text-sm">{lead.name || 'Unnamed'}</h4>
                     <p className="text-xs text-[var(--t-text-muted)] truncate my-1">{lead.propertyAddress || 'No Address'}</p>
                     <div className="flex items-center justify-between mt-2">
-                      <span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[lead.status] || ''}`}>{STATUS_LABELS[lead.status] || lead.status}</span>
+                      <span className={`px-2 py-0.5 text-[10px] rounded-full border ${STATUS_BADGE[String(lead.status)] || ''}`}>{STATUS_LABELS[lead.status] || String(lead.status)}</span>
                       <span className="text-xs font-bold text-white">{fmt$(lead.estimatedValue || 0)}</span>
                     </div>
                   </div>
@@ -768,8 +768,8 @@ export default function Leads() {
                           {lead.name || 'Unnamed'}
                         </span>
                       </div>
-                      <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[lead.status] || STATUS_BADGE['new']}`}>
-                        {STATUS_LABELS[lead.status] || lead.status}
+                      <span className={`px-2 py-0.5 text-xs rounded-full border ${STATUS_BADGE[String(lead.status)] || STATUS_BADGE['new']}`}>
+                        {STATUS_LABELS[lead.status] || String(lead.status)}
                       </span>
                       {(() => {
                         const sb = scoreBadge(ds);

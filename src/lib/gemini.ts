@@ -22,9 +22,10 @@ export async function listAvailableModels(apiKey: string) {
 }
 
 export async function generateLeadInsight(lead: Lead): Promise<string> {
-  const isHot = lead.status === 'negotiating' || lead.status === 'qualified';
-  const statusNote = lead.status === 'new' ? 'Fast follow-up recommended.' :
-                     lead.status === 'contacted' ? 'Keep momentum with a touchpoint.' :
+  const status = String(lead.status);
+  const isHot = status === 'negotiating' || status === 'qualified';
+  const statusNote = status === 'new' ? 'Fast follow-up recommended.' :
+                     status === 'contacted' ? 'Keep momentum with a touchpoint.' :
                      isHot ? 'Active deal - prioritize this lead.' : 'Monitor for future opportunities.';
   const valNote = lead.estimatedValue > 250000 ? ` High-value target ($${lead.estimatedValue.toLocaleString()}).` : '';
   
@@ -34,7 +35,10 @@ export async function generateLeadInsight(lead: Lead): Promise<string> {
 export async function generatePageInsights(_page: string): Promise<string[]> {
   const store = useStore.getState();
   const leadsCount = store.leads?.length || 0;
-  const hotLeads = store.leads?.filter(l => l.status === 'negotiating' || l.status === 'qualified').length || 0;
+  const hotLeads = store.leads?.filter(l => {
+    const s = String(l.status);
+    return s === 'negotiating' || s === 'qualified';
+  }).length || 0;
   const tasksDue = store.tasks?.filter(t => t.status === 'todo').length || 0;
   
   const insights = [];
@@ -133,15 +137,16 @@ export function updateLeadStatusViaAI(leadId: string, newStatus: LeadStatus): { 
     return { success: false, message: `Lead with ID ${leadId} not found.` };
   }
   
-  if (lead.status === newStatus) {
-    return { success: true, message: `Lead is already marked as ${STATUS_LABELS[newStatus] || newStatus}.` };
+  if (String(lead.status) === String(newStatus)) {
+    return { success: true, message: `Lead is already marked as ${STATUS_LABELS[newStatus] || String(newStatus)}.` };
   }
   
-  const allowedNextSteps = STATUS_FLOW[lead.status] || [];
+  const currentStatus = String(lead.status) as LeadStatus;
+  const allowedNextSteps = STATUS_FLOW[currentStatus] || [];
   if (!allowedNextSteps.includes(newStatus)) {
     return { 
       success: false, 
-      message: `Invalid status transition. Cannot move from '${STATUS_LABELS[lead.status]}' to '${STATUS_LABELS[newStatus]}'. Allowed next steps: ${allowedNextSteps.map(s => STATUS_LABELS[s]).join(', ')}` 
+      message: `Invalid status transition. Cannot move from '${STATUS_LABELS[currentStatus] || currentStatus}' to '${STATUS_LABELS[newStatus] || String(newStatus)}'. Allowed next steps: ${allowedNextSteps.map(s => STATUS_LABELS[s]).join(', ')}` 
     };
   }
   
@@ -430,7 +435,10 @@ export async function processPrompt(prompt: string, context: Record<string, any>
           } else if (matchedRule.action === 'navigate_sms') {
             matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening SMS Inbox.', data: { path: '/sms' } });
           } else if (matchedRule.action === 'show_hot_leads') {
-            const hl = store.leads?.filter((l:any) => l.status === 'negotiating' || l.status === 'qualified') || [];
+            const hl = store.leads?.filter((l:any) => {
+              const s = String(l.status);
+              return s === 'negotiating' || s === 'qualified';
+            }) || [];
             matchedActions.push({ intent: 'general_response', response: `[⚡ Local Rules] You have ${hl.length} hot leads ready for engagement.` });
           } else if (matchedRule.action === 'create_task') {
             // Only use local task creation for VERY simple prompts
