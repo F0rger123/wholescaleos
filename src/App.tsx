@@ -141,10 +141,17 @@ export function App() {
             console.log('DEBUG: SIGNED_IN event for user:', userId, '. Initializing profile and leads...');
             store.setAuthenticated(true);
             
-            // Use fetchProfile for full data consistency
-            await store.fetchProfile(userId);
-            store.incrementLoginStreak();
-            await store.loadLeads();
+            // Wrap in async IIFE since the callback itself is not async
+            (async () => {
+              try {
+                // Use fetchProfile for full data consistency
+                await store.fetchProfile(userId);
+                store.incrementLoginStreak();
+                await store.loadLeads();
+              } catch (err) {
+                console.error('DEBUG: Auth change initialization failed:', err);
+              }
+            })();
           }
         }
       });
