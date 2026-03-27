@@ -186,7 +186,7 @@ export default function Pricing() {
 
             <Link
               to={plan.name === 'Agency' ? '/contact' : `/login?signup=true&plan=${plan.name}`}
-              className={`group flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${plan.popular
+              className={`group flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover-glow hover-lift ${plan.popular
                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30'
                 : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
                 }`}

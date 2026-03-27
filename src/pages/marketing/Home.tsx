@@ -78,17 +78,18 @@ export default function Home() {
               The Sovereign Operating System for high-volume real estate teams. 
               Own your data. Automate your triage. Build your legacy.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
               <Link
                 to="/login?signup=true"
-                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow"
+                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift"
               >
                 Get Started Free <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-bold transition-all flex items-center justify-center gap-3 hover-lift">
+              <button 
+                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-bold transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle"
+              >
                 <PlayCircle size={20} /> Watch Demo
               </button>
-            </div>
           </div>
 
           {/* Hero Visual - Premium CSS Mockup */}
@@ -430,7 +431,7 @@ export default function Home() {
       </section>
 
       {/* Feature Showcase Grid */}
-      <section className="py-32 bg-[#060e20]" ref={featuresReveal.elementRef}>
+      <section id="features" className="py-32 bg-[#060e20]" ref={featuresReveal.elementRef}>
         <div className="max-w-7xl mx-auto px-6">
           <div className={`text-center mb-24 transition-all duration-1000 ${featuresReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <h2 className="text-4xl md:text-7xl font-black mb-6 leading-tight">Built for <br /><span className="astral-gradient-text tracking-[-0.05em] px-2 italic">Scale.</span></h2>
@@ -464,18 +465,18 @@ export default function Home() {
       {/* Testimonials */}
       <section className="py-32 bg-[#060e20]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20 stagger-astral">
+          <div className="text-center mb-20">
             <h2 className="text-4xl md:text-6xl font-black italic mb-6">Trusted by Empire Builders.</h2>
             <p className="text-[#6d758c] text-lg font-medium">Join the next generation of real estate operations.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8 stagger-astral">
-            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover-lift astral-glass font-medium leading-relaxed">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover:scale-105 transition-all astral-glass font-medium leading-relaxed hover-lift">
                "WholeScale OS is why we're closing 3x more deals. The AI triage is like having a second brain that never sleeps."
             </div>
-            <div className="p-10 rounded-[2.5rem] bg-indigo-600 italic text-white shadow-2xl shadow-indigo-600/30 hover-lift font-black leading-relaxed scale-105 relative z-10 border border-indigo-400/30">
+            <div className="p-10 rounded-[2.5rem] bg-indigo-600 italic text-white shadow-2xl shadow-indigo-600/30 hover:scale-105 transition-all font-black leading-relaxed scale-105 relative z-10 border border-indigo-400/30 hover-lift hover-glow">
                "The absolute best ROI of any tool I've used in 10 years. Our team communications are finally centralized."
             </div>
-            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover-lift astral-glass font-medium leading-relaxed">
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover:scale-105 transition-all astral-glass font-medium leading-relaxed hover-lift">
                "The sovereign data approach is what real estate needed. My data, my rules, and incredible speed."
             </div>
           </div>
