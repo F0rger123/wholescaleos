@@ -1831,7 +1831,8 @@ export const useStore = create<AppState>((set, get) => ({
     if (!currentUser) return;
     const newUser = { ...currentUser, ...updates };
     if (updates.name) {
-      newUser.avatar = updates.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+      const nameForAvatar = updates.name || newUser.name || 'User';
+      newUser.avatar = nameForAvatar.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
     }
     set({ currentUser: newUser });
 
@@ -1884,13 +1885,17 @@ export const useStore = create<AppState>((set, get) => ({
         // Recovery: If profile doesn't have team_id, check team_members table
         let teamId = profile.team_id || null;
         if (!teamId && isSupabaseConfigured && supabase) {
-          const { data: membership } = await supabase
+          const { data: membership, error: memberError } = await supabase
             .from('team_members')
             .select('team_id')
             .eq('user_id', userId)
-            .maybeSingle();
-          if (membership) {
-            teamId = membership.team_id;
+            .order('last_seen', { ascending: false })
+            .limit(1);
+          
+          if (memberError) {
+            console.error('DEBUG: Error fetching team membership:', memberError);
+          } else if (membership && membership.length > 0) {
+            teamId = membership[0].team_id;
           }
         }
 
@@ -2237,7 +2242,9 @@ export const useStore = create<AppState>((set, get) => ({
     
     if (teamId && isSupabaseConfigured && supabase) {
       try {
-        console.log('DEBUG: addLead calling leadsService.create for lead:', newId);
+        console.log('DEBUG: addLead attempting to sync lead to Supabase:', newId);
+        
+        // 1. Create the lead
         const result = await leadsService.create({
           id: newId,
           team_id: teamId,
@@ -2271,11 +2278,47 @@ export const useStore = create<AppState>((set, get) => ({
           share_enabled: newLead.shareEnabled,
           documents: newLead.documents,
         });
-        console.log('✅ Lead synced to Supabase:', newId, 'Result:', result);
+
+        if (!result) {
+          console.error('❌ addLead: Supabase created lead but returned no data.');
+        } else {
+          console.log('✅ Lead record created in Supabase:', newId);
+        }
+
+        // 2. Sync initial Timeline entry
+        try {
+          const initialTimeline = newLead.timeline[0];
+          await leadsService.addTimeline(newId, {
+            id: initialTimeline.id,
+            type: initialTimeline.type,
+            content: initialTimeline.content,
+            user: initialTimeline.user,
+            timestamp: initialTimeline.timestamp
+          });
+          console.log('✅ Initial timeline entry synced to Supabase');
+        } catch (timelineErr) {
+          console.error('⚠️ Failed to sync initial timeline entry:', timelineErr);
+        }
+
+        // 3. Sync initial Status History entry
+        try {
+          const initialHistory = newLead.statusHistory[0];
+          await leadsService.addStatusHistory(
+            newId, 
+            initialHistory.fromStatus, 
+            initialHistory.toStatus, 
+            initialHistory.changedBy
+          );
+          console.log('✅ Initial status history synced to Supabase');
+        } catch (historyErr) {
+          console.error('⚠️ Failed to sync initial status history:', historyErr);
+        }
+
         return { success: true, id: newId };
-      } catch (error) {
-        console.error('❌ Failed to sync lead to Supabase:', error);
-        return { success: false, error };
+      } catch (error: any) {
+        console.error('❌ Critical failure syncing lead to Supabase:', error);
+        // We already added it locally, but we should let the caller know it failed to sync
+        return { success: false, error: error.message || 'Supabase sync failed' };
       }
     } else {
       console.warn('⚠️ addLead skipped Supabase sync. teamId:', teamId, 'isSupabaseConfigured:', isSupabaseConfigured);
@@ -2862,7 +2905,7 @@ export const useStore = create<AppState>((set, get) => ({
                     type,
                     members,
                     description,
-                    avatar: type === 'group' ? 'ðŸ’¬' : name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+                    avatar: type === 'group' ? '💬' : (name || 'Ch').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
                     createdAt: now,
                     createdBy: user?.id || '',
                     lastMessageAt: now,

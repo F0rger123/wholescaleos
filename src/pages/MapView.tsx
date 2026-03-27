@@ -904,15 +904,24 @@ function BuyerDetail({ buyer }: { buyer: Buyer }) {
       </div>
       <div className="rounded-lg p-2.5 space-y-1" style={{ backgroundColor: 'var(--t-surface)' }}>
         <p className="text-[9px] uppercase" style={{ color: 'var(--t-text-muted)' }}>Criteria</p>
-        <p className="text-[11px] flex items-center gap-1" style={{ color: 'var(--t-text)' }}><Home size={10} style={{ color: 'var(--t-primary)' }} />{buyer.criteria.propertyTypes.join(', ')}</p>
-        {(buyer.criteria.bedroomsMin > 0 || buyer.criteria.bathroomsMin > 0) && (
-          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>{buyer.criteria.bedroomsMin}+ bed · {buyer.criteria.bathroomsMin}+ bath</p>
+        <p className="text-[11px] flex items-center gap-1" style={{ color: 'var(--t-text)' }}>
+          <Home size={10} style={{ color: 'var(--t-primary)' }} />
+          {(buyer.criteria?.propertyTypes || []).join(', ') || 'Any Type'}
+        </p>
+        {( (buyer.criteria?.bedroomsMin || 0) > 0 || (buyer.criteria?.bathroomsMin || 0) > 0) && (
+          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>
+            {buyer.criteria?.bedroomsMin || 0}+ bed · {buyer.criteria?.bathroomsMin || 0}+ bath
+          </p>
         )}
-        {buyer.criteria.sqftMax > 0 && (
-          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>{(buyer.criteria.sqftMin || 0).toLocaleString()} – {(buyer.criteria.sqftMax || 0).toLocaleString()} sqft</p>
+        {(buyer.criteria?.sqftMax || 0) > 0 && (
+          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>
+            {(buyer.criteria?.sqftMin || 0).toLocaleString()} – {(buyer.criteria?.sqftMax || 0).toLocaleString()} sqft
+          </p>
         )}
-        {buyer.criteria.locationPreferences.length > 0 && (
-          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>{buyer.criteria.locationPreferences.join(', ')}</p>
+        {(buyer.criteria?.locationPreferences || []).length > 0 && (
+          <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>
+            {(buyer.criteria?.locationPreferences || []).join(', ')}
+          </p>
         )}
       </div>
       <div>

@@ -112,7 +112,7 @@ export default function Team() {
 
   const handleAddMember = () => {
     if (!newMember.name.trim() || !newMember.email.trim()) return;
-    const initials = newMember.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    const initials = (newMember.name || 'Member').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     addTeamMember({
       name: newMember.name.trim(),
       role: newMember.role || 'Team Member',

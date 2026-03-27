@@ -52,11 +52,12 @@ export default function EmailConfirmed() {
             const name = data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User';
             setUserName(name);
             login(data.user.email || '', '');
+            const avatar = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
             updateProfile({
               id: data.user.id,
               email: data.user.email || '',
               name,
-              avatar: name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+              avatar,
             });
             incrementLoginStreak();
             setState(type === 'recovery' ? 'success' : 'success');

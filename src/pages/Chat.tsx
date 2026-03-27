@@ -381,7 +381,8 @@ function MessageBubble({
       const newParts: (string | React.ReactElement)[] = [];
       for (const part of parts) {
         if (typeof part !== 'string') { newParts.push(part); continue; }
-        const mention = `@${member.name.split(' ')[0]}`;
+        const firstName = member.name?.split(' ')[0] || 'Member';
+        const mention = `@${firstName}`;
         const idx = part.indexOf(mention);
         if (idx === -1) { newParts.push(part); continue; }
         newParts.push(part.slice(0, idx));
@@ -1196,7 +1197,7 @@ function ChatSidebar({
                 </div>
                 {last && (
                   <p className={`text-xs truncate mt-0.5 ${unread > 0 ? 'text-[var(--t-text-muted)]' : 'text-[var(--t-text-muted)]'}`}>
-                    <span className="text-[var(--t-text-muted)]">{last.senderName.split(' ')[0]}:</span> {last.content.slice(0, 40)}
+                    <span className="text-[var(--t-text-muted)]">{(last.senderName || 'User').split(' ')[0]}:</span> {last.content.slice(0, 40)}
                   </p>
                 )}
               </div>
@@ -1367,7 +1368,8 @@ function MessageInput({
 
   const handleMentionSelect = (member: { id: string; name: string }) => {
     const lastAtIdx = text.lastIndexOf('@');
-    const newText = text.slice(0, lastAtIdx) + `@${member.name.split(' ')[0]} `;
+    const firstName = member.name?.split(' ')[0] || 'User';
+    const newText = text.slice(0, lastAtIdx) + `@${firstName} `;
     setText(newText);
     setShowMentions(false);
     inputRef.current?.focus();
@@ -1377,7 +1379,7 @@ function MessageInput({
     if (!text.trim() && attachments.length === 0) return;
 
     const mentionIds = team
-      .filter(m => text.includes(`@${m.name.split(' ')[0]}`))
+      .filter(m => text.includes(`@${m.name?.split(' ')[0] || ''}`))
       .map(m => m.id);
 
     sendMessage(channelId, text, 'text', mentionIds, replyToId, attachments);
@@ -1640,7 +1642,7 @@ async function loadMessagesFromSupabase(channelId: string): Promise<ChatMessage[
       channelId: msg.channel_id,
       senderId: msg.user_id,
       senderName: msg.sender_name,
-      senderAvatar: msg.sender_avatar || msg.sender_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+      senderAvatar: msg.sender_avatar || (msg.sender_name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
       content: msg.content,
       timestamp: msg.created_at,
       type: msg.type || 'text',
@@ -1744,7 +1746,7 @@ export default function Chat() {
   const currentTyping = currentChannelId ? (typingUsers[currentChannelId] || []) : [];
   const typingNames = currentTyping
     .filter(uid => uid !== currentUser?.id)
-    .map(uid => team.find(m => m.id === uid)?.name.split(' ')[0] || 'Someone');
+    .map(uid => (team.find(m => m.id === uid)?.name || 'Someone').split(' ')[0]);
 
   const messagesWithDividers: { type: 'divider' | 'message'; date?: string; message?: ChatMessage; isGrouped?: boolean }[] = [];
   let lastDate = '';
