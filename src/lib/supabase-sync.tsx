@@ -247,11 +247,13 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Already loaded — don't re-fetch
-    if (dataLoaded) {
+    // Already loaded — don't re-fetch unless user or team context is missing
+    if (dataLoaded && useStore.getState().teamId && useStore.getState().team.length > 0) {
       setLoading(false);
       return;
     }
+
+    console.log('[SupabaseSync] Initializing data sync...');
 
     let cancelled = false;
 
@@ -261,24 +263,30 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
 
         // ── Step 1: Find user's team ──────────────────────────────────
         setSyncStatus('Finding your team...');
-        const { data: teamMemberships } = await supabase!
+        console.log('[SupabaseSync] Querying memberships for user:', userId);
+        const { data: teamMemberships, error: membershipError } = await supabase!
           .from('team_members')
           .select('team_id, role, status, custom_status, last_seen, teams(*)')
           .eq('user_id', userId);
 
+        if (membershipError) {
+          console.error('[SupabaseSync] Error fetching memberships:', membershipError);
+          throw membershipError;
+        }
+
         if (cancelled) return;
 
+        console.log('[SupabaseSync] Found memberships:', teamMemberships?.length || 0);
         if (!teamMemberships || teamMemberships.length === 0) {
-          console.log('No team found — user may need team setup');
+          console.warn('[SupabaseSync] No teams found for user. Exiting sync...');
           setLoading(false);
-          // Set empty data so the app still works
           useStore.setState({ dataLoaded: true, teamId: null });
           return;
         }
 
         // If user has multiple teams, prefer the one they joined via invite code
-        // (stored in localStorage by the signup flow)
         const preferredTeamId = localStorage.getItem('wholescale-preferred-team');
+        console.log('[SupabaseSync] Preferred team from storage:', preferredTeamId);
         let membership = teamMemberships[0];
         if (preferredTeamId) {
           const preferred = teamMemberships.find(m => m.team_id === preferredTeamId);
@@ -292,6 +300,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
         const teamId = membership.team_id;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const teamData = (membership as any).teams as Record<string, unknown>;
+        console.log('[SupabaseSync] Initializing with teamId:', teamId, 'Name:', teamData?.name);
 
         // Update team config
         useStore.setState({
@@ -304,6 +313,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
             createdBy: (teamData?.owner_id as string) || userId,
           },
         });
+        console.log('[SupabaseSync] teamConfig updated in store');
 
         // ── Step 2: Fetch all data in parallel ────────────────────────
         setSyncStatus('Loading leads...');
