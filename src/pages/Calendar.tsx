@@ -44,7 +44,7 @@ function Calendar() {
   
   // Get leads from store
   const leads: Lead[] = useStore((state: any) => {
-    return state.leads || [];
+    return Array.isArray(state.leads) ? state.leads : [];
   });
   
   // Categories Management
@@ -475,12 +475,14 @@ function Calendar() {
 
   const editEvent = (event: CalendarEvent) => {
     setEditingEvent(event);
+    const startParts = (event.start || '').split('T');
+    const endParts = (event.end || '').split('T');
     setFormData({
       title: event.title,
-      startDate: event.start.split('T')[0],
-      startTime: event.start.split('T')[1]?.slice(0, 5) || '09:00',
-      endDate: event.end.split('T')[0],
-      endTime: event.end.split('T')[1]?.slice(0, 5) || '10:00',
+      startDate: startParts[0] || new Date().toISOString().split('T')[0],
+      startTime: startParts[1]?.slice(0, 5) || '09:00',
+      endDate: endParts[0] || new Date().toISOString().split('T')[0],
+      endTime: endParts[1]?.slice(0, 5) || '10:00',
       description: event.description,
       categoryId: event.categoryId || categories[0]?.id || '',
       leadId: event.leadId || ''

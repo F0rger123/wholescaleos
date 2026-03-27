@@ -652,7 +652,10 @@ export function isPointInPolygon(point: [number, number], polygon: [number, numb
 }
 
 export function getLeadsInArea(leads: Lead[], area: CoverageArea): Lead[] {
-  return leads.filter(l => isPointInPolygon([l.lat, l.lng], area.coordinates));
+  return leads.filter(l => {
+    if (l.lat == null || l.lng == null) return false;
+    return isPointInPolygon([l.lat, l.lng], area.coordinates);
+  });
 }
 
 // â”€â”€â”€ AI Utility Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
