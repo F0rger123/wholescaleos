@@ -1882,26 +1882,38 @@ export const useStore = create<AppState>((set, get) => ({
       
       if (error) throw error;
       if (profile) {
-        // Recovery: If profile doesn't have team_id, check team_members table
+        // Recovery logic:
+        // 1. Check if profile has a preferred team
         let teamId = profile.team_id || null;
-        if (!teamId && isSupabaseConfigured && supabase) {
-          const { data: membership, error: memberError } = await supabase
+        
+        // 2. Prioritize localStorage if available (user's last choice)
+        const preferredId = typeof window !== 'undefined' ? localStorage.getItem('wholescale-preferred-team') : null;
+        
+        if (isSupabaseConfigured && supabase) {
+          // Verify membership if we have a preferredId or if we need to search
+          const { data: memberships } = await supabase
             .from('team_members')
             .select('team_id')
-            .eq('user_id', userId)
-            .order('last_seen', { ascending: false })
-            .limit(1);
+            .eq('user_id', userId);
           
-          if (memberError) {
-            console.error('DEBUG: Error fetching team membership:', memberError);
-          } else if (membership && membership.length > 0) {
-            teamId = membership[0].team_id;
+          const validTeamIds = (memberships || []).map(m => m.team_id);
+          
+          if (preferredId && validTeamIds.includes(preferredId)) {
+            teamId = preferredId;
+            console.log('DEBUG: Using preferred team from localStorage:', teamId);
+          } else if (!teamId && validTeamIds.length > 0) {
+            // Find the most recently seen membership if no valid preferred team
+            const { data: recent } = await supabase
+              .from('team_members')
+              .select('team_id')
+              .eq('user_id', userId)
+              .order('last_seen', { ascending: false })
+              .limit(1);
+            if (recent && recent.length > 0) {
+              teamId = recent[0].team_id;
+              console.log('DEBUG: Using most recent team membership:', teamId);
+            }
           }
-        }
-
-        // Fallback to localStorage if still null
-        if (!teamId && typeof window !== 'undefined') {
-          teamId = localStorage.getItem('wholescale-preferred-team');
         }
 
         set((s) => ({ 
@@ -2195,6 +2207,9 @@ export const useStore = create<AppState>((set, get) => ({
   dataLoaded: false,
   setTeamId: (teamId: string | null) => {
     console.log('DEBUG: setTeamId called with:', teamId);
+    if (teamId && typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-preferred-team', teamId);
+    }
     set({ teamId });
     if (teamId) {
       get().loadLeads();
