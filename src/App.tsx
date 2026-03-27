@@ -108,7 +108,7 @@ export function App() {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
             const userId = session.user.id;
-            console.log('DEBUG: Session found for user:', userId, '. Initializing store...');
+            console.log('[App] Session found for user:', userId, '. Initializing profile...');
             
             // Set authenticated first so ProtectedRoute allows us through
             useStore.getState().setAuthenticated(true);
@@ -119,11 +119,14 @@ export function App() {
             // incrementLoginStreak is internal to the store
             useStore.getState().incrementLoginStreak();
             
-            // Finally load leads using the teamId from fetchProfile
-            await useStore.getState().loadLeads();
+            // IMPORTANT: Do NOT call loadLeads here. 
+            // SupabaseSync will handle loading all data once it mounts.
+            // Calling it here sets dataLoaded: true prematurely, which 
+            // causes SupabaseSync to skip team configuration loading.
+            console.log('[App] Profile initialized. teamId:', useStore.getState().teamId);
           }
-        } catch {
-          // Session check failed — stay logged out
+        } catch (err) {
+          console.error('[App] Session check failed:', err);
         }
       }
       setChecking(false);
@@ -132,24 +135,24 @@ export function App() {
 
     if (isSupabaseConfigured && supabase) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log('[App] Auth state change:', event, session?.user?.id);
         if (event === 'SIGNED_OUT' || !session) {
           useStore.getState().logout();
-        } else if (event === 'SIGNED_IN' && session?.user) {
+        } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           const userId = session.user.id;
           const store = useStore.getState();
-          if (!store.isAuthenticated) {
-            console.log('DEBUG: SIGNED_IN event for user:', userId, '. Initializing profile and leads...');
+          
+          if (!store.isAuthenticated || !store.teamId) {
+            console.log('[App] SIGNED_IN/INITIAL_SESSION event. Initializing profile...');
             store.setAuthenticated(true);
             
-            // Wrap in async IIFE since the callback itself is not async
             (async () => {
               try {
-                // Use fetchProfile for full data consistency
                 await store.fetchProfile(userId);
                 store.incrementLoginStreak();
-                await store.loadLeads();
+                console.log('[App] Profile fetched via auth change. teamId:', store.teamId);
               } catch (err) {
-                console.error('DEBUG: Auth change initialization failed:', err);
+                console.error('[App] Auth change initialization failed:', err);
               }
             })();
           }
