@@ -306,7 +306,7 @@ export default function Dashboard() {
                 <LayoutGrid size={16} /> Presets <ChevronDown size={14} className={`transition-transform ${showPresets ? 'rotate-180' : ''}`} />
               </button>
               {showPresets && (
-                <div className="absolute right-0 mt-3 w-64 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-3xl">
+                <div className="absolute right-0 mt-3 w-64 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl shadow-2xl z-[100] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200">
                   {Object.entries(PRESETS).map(([key, preset]) => (
                     <button key={key} onClick={() => { setDashboardLayout(preset.layout); setShowPresets(false); }}
                       className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-widest transition-colors text-left ${

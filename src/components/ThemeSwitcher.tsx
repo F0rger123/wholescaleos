@@ -17,18 +17,17 @@ export function ThemeSwitcher() {
   const themeCategories = {
     'Default': ['dark', 'light'],
     'Premium': ['glass', 'oled', 'midnight', 'black-marble', 'white-marble'],
-    'Neon & Creative': ['neon', 'moon', 'aurora', 'cyberpunk'],
-    'Luxury': ['platinum', 'rose-gold', 'charcoal'],
-    'Minimalist': ['slate', 'ivory', 'winter-frost'],
+    'Neon & Glow': ['neon', 'moon'],
+    'Luxury': ['platinum', 'rose-gold'],
+    'Creative': ['aurora', 'cyberpunk', 'winter-frost'],
   };
 
   const getThemeIcon = (themeId: string) => {
     const icons: Record<string, string> = {
       'dark': '🌙', 'light': '☀️', 'glass': '✨', 'oled': '⬛',
       'midnight': '🌃', 'black-marble': '⚫', 'white-marble': '⚪',
-      'neon': '💚', 'moon': '🌕', 'platinum': '💎', 'rose-gold': '✨',
-      'charcoal': '⚙️', 'aurora': '✨', 'cyberpunk': '🌃', 'slate': '📱',
-      'ivory': '🤍', 'winter-frost': '❄️',
+      'neon': '💚', 'moon': '🌕', 'platinum': '💎', 'rose-gold': '🌹',
+      'aurora': '✨', 'cyberpunk': '🌃', 'winter-frost': '❄️',
     };
     return icons[themeId] || '🎨';
   };

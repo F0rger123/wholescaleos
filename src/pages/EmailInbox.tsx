@@ -325,29 +325,32 @@ export default function EmailInbox() {
 
               {/* Composition Area */}
               <div className="p-4 border-t space-y-3" style={{ borderColor: 'var(--t-border)', background: 'var(--t-surface-dim)' }}>
-                {/* AI Suggestions */}
-                {aiSuggestions.length > 0 && (
-                  <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    {aiSuggestions.map((suggestion: string, i: number) => (
-                      <button
-                        key={i}
-                        onClick={() => setReplyText(suggestion)}
-                        className="px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-[11px] text-blue-400 hover:bg-blue-500/20 hover:scale-105 transition-all"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                
                 <div className="relative">
                   <textarea
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     placeholder="Type your reply..."
-                    className="w-full h-32 p-4 rounded-xl border focus:outline-none focus:ring-2 resize-none text-sm transition-all shadow-inner"
+                    className="w-full h-32 p-4 rounded-xl border focus:outline-none focus:ring-2 resize-none text-sm transition-all shadow-inner custom-scrollbar pb-12"
                     style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
                   />
+                  
+                  {/* AI Suggestions - Now contained within the composition box or below it */}
+                  {aiSuggestions.length > 0 && (
+                    <div className="absolute left-3 bottom-14 flex flex-wrap gap-2 max-h-24 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-300 pointer-events-auto pr-20">
+                      {aiSuggestions.map((suggestion: string, i: number) => (
+                        <button
+                          key={i}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReplyText(suggestion);
+                          }}
+                          className="px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/40 text-[10px] text-blue-300 hover:bg-blue-500/30 hover:scale-105 transition-all shadow-lg backdrop-blur-md"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="absolute right-3 bottom-3 flex items-center gap-2">
                     <button 
                       onClick={() => runAIAnalysis(selectedThread!)}
