@@ -18,6 +18,10 @@ function AnimatedCounter({ value, formatter }: { value: number; formatter?: (val
   const [displayed, setDisplayed] = useState(0);
 
   useEffect(() => {
+    if (typeof value !== 'number') {
+      setDisplayed(0);
+      return;
+    }
     let start = 0;
     const durationCount = 1000;
     const increment = value / (durationCount / 16);
@@ -50,7 +54,11 @@ export function MetricCard({
         <div>
           <p className="text-sm text-[var(--t-text-secondary)] font-medium">{title}</p>
           <div className="text-2xl font-bold text-[var(--t-on-surface)] mt-1">
-            {animated ? <AnimatedCounter value={value} formatter={formatter} /> : (formatter ? formatter(value) : (value || 0).toLocaleString())}
+            {animated ? (
+              <AnimatedCounter value={value} formatter={formatter} />
+            ) : (
+              formatter ? formatter(value ?? 0) : (value ?? 0).toLocaleString()
+            )}
           </div>
         </div>
         <div className={`p-2.5 rounded-xl ${color}`}>
