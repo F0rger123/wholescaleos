@@ -117,17 +117,17 @@ class DashboardErrorBoundary extends Component<{ children: ReactNode }, { hasErr
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-[var(--t-surface)] border border-[var(--t-error)]/30 rounded-3xl m-6">
-          <AlertCircle className="w-12 h-12 text-[var(--t-error)] mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Dashboard Encountered an Error</h2>
-          <p className="text-[var(--t-text-muted)] text-sm mb-6 text-center max-w-md">
-            {this.state.error?.message || "An unexpected rendering error occurred."}
+        <div className="flex flex-col items-center justify-center min-h-[400px] p-12 astral-glass border border-red-500/20 rounded-[3rem] m-6 text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mb-6 animate-pulse" />
+          <h2 className="text-2xl font-black text-white mb-3 uppercase italic tracking-tighter">System Error Detected</h2>
+          <p className="text-[#6d758c] text-sm mb-8 max-w-md font-medium">
+            {this.state.error?.message || "A critical rendering failure occurred in the dashboard core."}
           </p>
           <button 
             onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-[var(--t-primary)] text-white rounded-xl font-bold hover:scale-105 transition-transform"
+            className="px-8 py-3 bg-red-600 text-white rounded-xl font-black uppercase tracking-widest hover:bg-red-500 transition-all hover-glow"
           >
-            Reload Dashboard
+            Reboot Dashboard
           </button>
         </div>
       );
@@ -191,10 +191,10 @@ export default function Dashboard() {
   // Quick fix: Show loading if data is not yet available
   if (!dataLoaded || !leads || !team) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--t-bg)] p-8">
-        <div className="w-16 h-16 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin mb-6"></div>
-        <h2 className="text-2xl font-black text-white mb-2">Dashboard Loading</h2>
-        <p className="text-[var(--t-text-muted)] text-sm animate-pulse">Fetching your pipeline and team data...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#060e20] p-8">
+        <div className="w-20 h-20 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_30px_rgba(99,102,241,0.3)]"></div>
+        <h2 className="text-3xl font-black text-white mb-3 uppercase italic tracking-tighter">Initializing OS</h2>
+        <p className="text-[#6d758c] text-sm font-black uppercase tracking-[0.2em] animate-pulse">Syncing Cloud Infrastructure...</p>
       </div>
     );
   }
@@ -291,30 +291,30 @@ export default function Dashboard() {
 
   return (
     <DashboardErrorBoundary>
-      <div className="space-y-6 theme-transition p-6 lg:p-8 min-h-screen bg-[var(--t-bg)]">
+      <div className="space-y-8 p-6 lg:p-12 min-h-screen bg-[#060e20] text-[#dee5ff]">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
+        <div className="flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav">
           <div>
-            <h1 className="text-3xl font-black text-[var(--t-on-background)] tracking-tight">Dashboard</h1>
-            <p className="text-[var(--t-text-secondary)] text-sm font-medium opacity-80 mt-1">Real-time performance & pipeline insights.</p>
+            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter italic uppercase">Dashboard</h1>
+            <p className="text-[#6d758c] text-sm font-black uppercase tracking-[0.2em] mt-2 opacity-80 italic">Real-time Performance Metrics</p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap">
             <div className="relative" ref={presetsRef}>
               <button
                 onClick={() => setShowPresets(!showPresets)}
-                className="p-2.5 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-sm"
+                className="p-3.5 rounded-2xl bg-[#0f1930] border border-indigo-500/20 text-[#a3aac4] hover:text-white transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-2xl hover-lift"
               >
-                <LayoutGrid size={14} /> Presets <ChevronDown size={12} className={`transition-transform ${showPresets ? 'rotate-180' : ''}`} />
+                <LayoutGrid size={16} /> Presets <ChevronDown size={14} className={`transition-transform ${showPresets ? 'rotate-180' : ''}`} />
               </button>
               {showPresets && (
-                <div className="absolute right-0 mt-2 w-56 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl">
+                <div className="absolute right-0 mt-3 w-64 bg-[#0f1930]/90 border border-indigo-500/20 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-3xl">
                   {Object.entries(PRESETS).map(([key, preset]) => (
                     <button key={key} onClick={() => { setDashboardLayout(preset.layout); setShowPresets(false); }}
-                      className={`w-full flex items-center gap-3 px-5 py-4 text-xs font-bold transition-colors text-left ${
-                        JSON.stringify(currentLayout) === JSON.stringify(preset.layout) ? 'bg-[var(--t-primary-dim)] text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] hover:text-white'
+                      className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-widest transition-colors text-left ${
+                        JSON.stringify(currentLayout) === JSON.stringify(preset.layout) ? 'bg-indigo-600/20 text-indigo-400' : 'text-[#6d758c] hover:bg-white/5 hover:text-white'
                       }`}
                     >
-                      <preset.icon size={14} /> {preset.label}
+                      <preset.icon size={16} /> {preset.label}
                     </button>
                   ))}
                 </div>
@@ -322,19 +322,21 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className={`p-2.5 rounded-2xl border transition-all flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-sm ${
-                isEditing ? 'bg-[var(--t-success)]/10 border-[var(--t-success)] text-[var(--t-success)]' : 'bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white'
+              className={`p-3.5 rounded-2xl border transition-all flex items-center gap-3 text-xs font-black uppercase tracking-widest shadow-2xl hover-lift ${
+                isEditing ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30' : 'bg-[#0f1930] border-indigo-500/20 text-[#a3aac4] hover:text-white'
               }`}
             >
-              {isEditing ? <><Check size={14} /> Save Layout</> : <><Settings size={14} /> Customize</>}
+              {isEditing ? <><Check size={16} /> Finalize</> : <><Settings size={16} /> Customize</>}
             </button>
             {isEditing && (
-              <button onClick={() => setDashboardLayout(DEFAULT_LAYOUT)} className="p-2.5 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text-muted)] hover:text-white shadow-sm">
-                <RotateCcw size={14} />
+              <button onClick={() => setDashboardLayout(DEFAULT_LAYOUT)} className="p-3.5 rounded-2xl bg-[#0f1930] border border-indigo-500/20 text-[#a3aac4] hover:text-white shadow-2xl hover-lift">
+                <RotateCcw size={16} />
               </button>
             )}
-            <StreakBadge streak={loginStreak} type="login" size="md" showLabel />
-            {taskStreak > 0 && <StreakBadge streak={taskStreak} type="task" size="md" />}
+            <div className="flex items-center gap-3 h-[48px]">
+              <StreakBadge streak={loginStreak} type="login" size="md" showLabel />
+              {taskStreak > 0 && <StreakBadge streak={taskStreak} type="task" size="md" />}
+            </div>
           </div>
         </div>
 
@@ -354,65 +356,65 @@ export default function Dashboard() {
                 );
                 case 'profit-projection': return (
                   <div key="profit" className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-6 shadow-sm">
-                       <h3 className="text-sm font-black uppercase text-[var(--t-success)] tracking-widest mb-4 flex items-center gap-2">
-                        <TrendingUp size={16} /> Projected Profit
+                    <div className="astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
+                       <h3 className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-4 flex items-center gap-2 italic">
+                        <TrendingUp size={14} /> Projected Profit
                        </h3>
-                       <p className="text-4xl font-black text-white mb-2"><AnimatedCounter value={projectedProfit} formatter={formatMoney} /></p>
-                       <p className="text-xs text-[var(--t-text-muted)]">From {activeDeals.length} active deals weighted by probability</p>
+                       <p className="text-4xl font-black text-white mb-2 italic tracking-tighter"><AnimatedCounter value={projectedProfit} formatter={formatMoney} /></p>
+                       <p className="text-[10px] text-[#6d758c] font-bold uppercase tracking-widest">From {activeDeals.length} deals @ weighted probability</p>
                     </div>
-                    <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-6 shadow-sm">
-                       <h3 className="text-sm font-black uppercase text-[var(--t-info)] tracking-widest mb-4 flex items-center gap-2">
-                        <Map size={16} /> Expected Monthly
+                    <div className="astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
+                       <h3 className="text-[10px] font-black uppercase text-purple-400 tracking-[0.2em] mb-4 flex items-center gap-2 italic">
+                        <Map size={14} /> Expected Monthly
                        </h3>
-                       <p className="text-4xl font-black text-white mb-2"><AnimatedCounter value={monthlyProjection} formatter={formatMoney} /></p>
-                       <p className="text-xs text-[var(--t-text-muted)]">Based on trailing 90-day pipeline flow</p>
+                       <p className="text-4xl font-black text-white mb-2 italic tracking-tighter"><AnimatedCounter value={monthlyProjection} formatter={formatMoney} /></p>
+                       <p className="text-[10px] text-[#6d758c] font-bold uppercase tracking-widest">Trailing 90-day pipeline average</p>
                     </div>
-                    <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-6 shadow-sm">
-                       <h3 className="text-sm font-black uppercase text-[var(--t-warning)] tracking-widest mb-4 flex items-center gap-2">
-                        <DollarSign size={16} /> In Negotiation
+                    <div className="astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
+                       <h3 className="text-[10px] font-black uppercase text-pink-400 tracking-[0.2em] mb-4 flex items-center gap-2 italic">
+                        <DollarSign size={14} /> In Negotiation
                        </h3>
-                       <p className="text-4xl font-black text-white mb-2"><AnimatedCounter value={negotiatingValue} formatter={formatMoney} /></p>
-                       <p className="text-xs text-[var(--t-text-muted)]">{dataToUse.filter(l => l.status === 'negotiating').length} deals currently in final negotiation</p>
+                       <p className="text-4xl font-black text-white mb-2 italic tracking-tighter"><AnimatedCounter value={negotiatingValue} formatter={formatMoney} /></p>
+                       <p className="text-[10px] text-[#6d758c] font-bold uppercase tracking-widest">{dataToUse.filter(l => l.status === 'negotiating').length} contracts pending final signature</p>
                     </div>
                   </div>
                 );
                 case 'pipeline-trends': return (
-                  <div key="trends" className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-8 shadow-sm">
-                      <div className="flex items-center justify-between mb-8">
-                        <h2 className="text-xl font-black text-white">Pipeline Performance</h2>
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--t-primary-dim)]">
-                          <span className="w-2 h-2 rounded-full bg-[var(--t-primary)] animate-pulse" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-primary)]">Live Insights</span>
+                  <div key="trends" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 astral-glass border border-indigo-500/10 rounded-[3rem] p-10 hover-lift group">
+                      <div className="flex items-center justify-between mb-10">
+                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">Pipeline Performance</h2>
+                        <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+                          <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse shadow-[0_0_10px_rgba(159,167,255,0.8)]" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Live Infrastructure</span>
                         </div>
                       </div>
                       <PipelineChart />
-                      <div className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                      <div className="mt-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         {pipelineStages.map(stage => (
-                          <div key={stage.key} className="p-4 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border-subtle)]">
-                            <p className="text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-widest mb-2">{stage.label}</p>
+                          <div key={stage.key} className="p-5 rounded-3xl bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-all">
+                            <p className="text-[9px] font-black text-[#6d758c] uppercase tracking-[0.2em] mb-2">{stage.label}</p>
                             <div className="flex items-center justify-between">
-                              <span className="text-lg font-black text-white">{dataToUse.filter(l => l.status === stage.key).length}</span>
+                              <span className="text-2xl font-black text-white italic">{dataToUse.filter(l => l.status === stage.key).length}</span>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-8 shadow-sm flex flex-col">
-                      <h2 className="text-xl font-black text-white mb-6 flex items-center gap-2"><Map size={20} className="text-[var(--t-info)]" /> Lead Sources</h2>
-                      <div className="space-y-5 flex-1 overflow-auto">
+                    <div className="astral-glass border border-indigo-500/10 rounded-[3rem] p-10 hover-lift group flex flex-col">
+                      <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3 italic uppercase tracking-tight"><Map size={24} className="text-indigo-400" /> Lead Sources</h2>
+                      <div className="space-y-6 flex-1 overflow-auto pr-2 custom-scrollbar">
                         {Object.entries(sourceCounts).sort(([,a],[,b])=>b-a).map(([source, count]) => {
                           const sc = SOURCE_COLORS[source as LeadSource] || SOURCE_COLORS.other;
                           const pct = (count / (dataToUse.length || 1)) * 100;
                           return (
-                            <div key={source}>
-                              <div className="flex justify-between items-center mb-1.5">
-                                <span className="text-xs font-bold text-white">{sc.label}</span>
-                                <span className="text-[10px] font-bold text-[var(--t-text-muted)]">{count} ({pct.toFixed(0)}%)</span>
+                            <div key={source} className="group/item">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white group-hover/item:text-indigo-300 transition-colors italic">{sc.label}</span>
+                                <span className="text-[10px] font-black text-[#6d758c] uppercase tracking-widest">{count} units</span>
                               </div>
-                              <div className="h-1.5 w-full bg-[var(--t-surface-active)] rounded-full overflow-hidden">
-                                <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${pct}%`, backgroundColor: sc.bar }} />
+                              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden shadow-inner">
+                                <div className="h-full rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(159,167,255,0.4)]" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${sc.bar}, #be83fa)` }} />
                               </div>
                             </div>
                           );
@@ -422,59 +424,59 @@ export default function Dashboard() {
                   </div>
                 );
                 case 'leaderboard-recent': return (
-                  <div key="bottom" className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    <div className="lg:col-span-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-6">
-                      <h2 className="text-lg font-black text-white mb-6 flex items-center gap-2"><Zap size={18} className="text-[var(--t-warning)]" /> Hot Deals</h2>
-                      <div className="space-y-4">
+                  <div key="bottom" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    <div className="lg:col-span-1 astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
+                      <h2 className="text-xl font-black text-white mb-8 flex items-center gap-3 italic uppercase tracking-tight"><Zap size={20} className="text-amber-400 group-hover:scale-110 transition-transform" /> Hot Deals</h2>
+                      <div className="space-y-5">
                         {topLeads.map((lead, i) => {
                           const score = calculateDealScore(lead);
                           const sc = getScoreColor(score);
                           return (
-                            <div key={lead.id} onClick={() => navigate(`/leads/${lead.id}/manage`)} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-[var(--t-surface-hover)] transition-all cursor-pointer border border-transparent hover:border-[var(--t-border)]">
-                              <span className="w-4 text-xs font-black text-[var(--t-text-muted)]">{i+1}</span>
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-xl" style={{ backgroundColor: sc.bar }}>{score}</div>
+                            <div key={lead.id} onClick={() => navigate(`/leads/${lead.id}/manage`)} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-white/5 transition-all cursor-pointer border border-transparent hover:border-indigo-500/20 group/deal">
+                              <span className="w-5 text-[10px] font-black text-[#6d758c] uppercase">{i+1}</span>
+                              <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xs font-black text-white shadow-xl shadow-indigo-600/20 transition-transform group-hover/deal:scale-110 italic" style={{ backgroundColor: sc.bar }}>{score}</div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-white truncate">{lead.name}</p>
-                                <p className="text-[10px] text-[var(--t-text-muted)] truncate">{STATUS_LABELS[lead.status] || String(lead.status)}</p>
+                                <p className="text-sm font-black text-white truncate group-hover/deal:text-indigo-300 transition-colors uppercase italic">{lead.name}</p>
+                                <p className="text-[10px] text-[#6d758c] truncate font-black uppercase tracking-widest">{STATUS_LABELS[lead.status] || String(lead.status)}</p>
                               </div>
                             </div>
                           );
                         })}
                       </div>
                     </div>
-                    <div className="lg:col-span-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-6">
-                       <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-black text-white">Recent Activity</h2>
-                        <button onClick={() => navigate('/leads')} className="text-xs font-black text-[var(--t-primary)] uppercase tracking-widest hover:underline">View All</button>
+                    <div className="lg:col-span-2 astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
+                       <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-xl font-black text-white italic uppercase tracking-tight">Recent Activity</h2>
+                        <button onClick={() => navigate('/leads')} className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] hover:text-indigo-300 transition-colors">View All Infrastructure</button>
                        </div>
-                       <div className="space-y-3">
+                       <div className="space-y-4">
                         {recentLeads.map(lead => (
-                          <div key={lead.id} onClick={() => navigate(`/leads/${lead.id}/manage`)} className="flex items-center gap-4 p-3.5 rounded-2xl border border-[var(--t-border-subtle)] hover:border-[var(--t-primary)]/30 hover:bg-[var(--t-surface-hover)] transition-all cursor-pointer group">
-                             <div className="w-12 h-12 rounded-2xl bg-[var(--t-surface-dim)] flex items-center justify-center font-black text-[var(--t-primary)] group-hover:scale-105 transition-transform">{lead.name[0]}</div>
+                          <div key={lead.id} onClick={() => navigate(`/leads/${lead.id}/manage`)} className="flex items-center gap-5 p-4 rounded-2xl border border-white/5 hover:border-indigo-500/20 hover:bg-white/5 transition-all cursor-pointer group/activity">
+                             <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center font-black text-indigo-400 group-hover/activity:scale-105 transition-transform shadow-inner">{lead.name[0]}</div>
                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-black text-white">{lead.name}</p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className={`w-2 h-2 rounded-full ${statusBarColors[String(lead.status)] || 'bg-[var(--t-border)]'}`} />
-                                  <span className="text-[10px] text-[var(--t-text-muted)] uppercase font-bold tracking-tighter">{STATUS_LABELS[lead.status] || String(lead.status)}</span>
+                                <p className="text-sm font-black text-white uppercase italic group-hover/activity:text-indigo-300 transition-colors">{lead.name}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className={`w-2 h-2 rounded-full ${statusBarColors[String(lead.status)] || 'bg-white/10'}`} />
+                                  <span className="text-[9px] text-[#6d758c] uppercase font-black tracking-widest">{STATUS_LABELS[lead.status] || String(lead.status)}</span>
                                 </div>
                              </div>
                              <div className="text-right">
-                                <p className="text-sm font-black text-white">{formatMoney(lead.estimatedValue)}</p>
-                                <p className="text-[10px] text-[var(--t-text-muted)]">{formatDistanceToNow(new Date(lead.updatedAt))} ago</p>
+                                <p className="text-sm font-black text-white italic">{formatMoney(lead.estimatedValue)}</p>
+                                <p className="text-[9px] text-[#6d758c] font-bold uppercase tracking-widest">{formatDistanceToNow(new Date(lead.updatedAt))} ago</p>
                              </div>
                           </div>
                         ))}
                        </div>
                     </div>
-                    <div className="lg:col-span-1 space-y-6">
+                    <div className="lg:col-span-1 space-y-8">
                       <TeamLeaderboard />
-                      <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-6">
-                        <h3 className="text-sm font-black uppercase text-[var(--t-warning)] tracking-widest mb-4 flex items-center gap-2"><Flame size={16}/> Team Streaks</h3>
-                        <div className="space-y-3">
+                      <div className="astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
+                        <h3 className="text-[10px] font-black uppercase text-amber-500 tracking-[0.2em] mb-6 flex items-center gap-2 italic"><Flame size={16} className="animate-pulse" /> Team Streaks</h3>
+                        <div className="space-y-4">
                           {streakMembers.sort((a,b)=>b.loginStreak-a.loginStreak).slice(0,4).map(m => (
-                            <div key={m.id} className="flex items-center gap-3">
-                               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[var(--t-primary)] to-[var(--t-accent)] flex items-center justify-center text-[10px] font-black text-white">{m.avatar}</div>
-                               <span className="text-xs font-bold text-white flex-1 truncate">{m.name}</span>
+                            <div key={m.id} className="flex items-center gap-4 group/streak">
+                               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[10px] font-black text-white italic group-hover/streak:scale-110 transition-transform">{m.avatar}</div>
+                               <span className="text-xs font-black text-white flex-1 truncate uppercase italic">{m.name}</span>
                                <StreakBadge streak={m.loginStreak} size="sm" />
                             </div>
                           ))}

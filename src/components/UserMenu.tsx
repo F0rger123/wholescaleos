@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { LogOut, Settings, ChevronDown, User, Home, Globe, CreditCard, Users } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+
 
 export function UserMenu() {
   const { currentUser } = useStore();
@@ -25,24 +25,18 @@ export function UserMenu() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all duration-200 hover:scale-105"
-        style={{
-          backgroundColor: 'var(--t-surface)',
-          color: 'var(--t-text)',
-          border: '1px solid var(--t-border)',
-        }}
+        className="flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-300 hover-lift astral-glass border border-white/10 group"
       >
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-          style={{
-            background: `linear-gradient(135deg, var(--t-avatar-from), var(--t-avatar-to))`,
-            color: 'var(--t-on-primary)',
-          }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black text-white italic bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-600/20 group-hover:scale-110 transition-transform"
         >
           {getInitials()}
         </div>
-        <span className="text-sm font-medium hidden sm:block">{currentUser.name.split(' ')[0]}</span>
-        <ChevronDown size={16} style={{ color: 'var(--t-text-muted)' }} />
+        <div className="text-left hidden sm:block">
+          <p className="text-[10px] font-black uppercase text-white tracking-widest leading-none mb-1 italic">{currentUser.name.split(' ')[0]}</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-[#6d758c] leading-none">System Operator</p>
+        </div>
+        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} text-[#6d758c]`} />
       </button>
 
       {isOpen && (
@@ -52,19 +46,14 @@ export function UserMenu() {
             onClick={() => setIsOpen(false)}
           />
           <div
-            className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl z-[9999] border overflow-hidden"
-            style={{
-              backgroundColor: 'var(--t-surface)',
-              borderColor: 'var(--t-border)',
-              boxShadow: 'var(--t-glow-shadow)',
-            }}
+            className="absolute right-0 mt-4 w-64 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[9999] border border-white/10 overflow-hidden astral-glass backdrop-blur-3xl p-1 animate-astral-fade-up"
           >
             {/* User info */}
-            <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
-              <p className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>
+            <div className="p-5 border-b border-white/5 mb-1">
+              <p className="text-xs font-black uppercase tracking-widest text-white italic">
                 {currentUser.name}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--t-text-muted)' }}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6d758c] mt-1">
                 {currentUser.email}
               </p>
             </div>
@@ -205,9 +194,9 @@ export function UserMenu() {
 
               <button
                 onClick={async () => {
-                  if (supabase) await supabase.auth.signOut();
-                  navigate('/login');
+                  await useStore.getState().logout();
                   setIsOpen(false);
+                  navigate('/login');
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{

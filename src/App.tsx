@@ -32,6 +32,7 @@ import LeadManagement from './pages/LeadManagement';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 import { CursorEffects } from './components/CursorEffects';
 import { MarketingLayout } from './components/MarketingLayout';
+import { DeepSpaceLoader } from './components/DeepSpaceLoader';
 import Home from './pages/marketing/Home';
 import Features from './pages/marketing/Features';
 import Pricing from './pages/marketing/Pricing';
@@ -137,7 +138,11 @@ export function App() {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         console.log('[App] Auth state change:', event, session?.user?.id);
         if (event === 'SIGNED_OUT' || !session) {
-          useStore.getState().logout();
+          const store = useStore.getState();
+          if (store.isAuthenticated || store.currentUser) {
+            console.log('[App] SIGNED_OUT event. Clearing store...');
+            store.logout();
+          }
         } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           const userId = session.user.id;
           const store = useStore.getState();
@@ -173,8 +178,9 @@ export function App() {
     return () => stopSMSPolling();
   }, [isAuthenticated]);
 
-  // Global checking guard removed to allow immediate landing page rendering.
-  // ProtectedRoute and PublicRoute now handle checking state internally.
+  if (checking) {
+    return <DeepSpaceLoader />;
+  }
 
   return (
     <BrowserRouter>

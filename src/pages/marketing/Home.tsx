@@ -9,6 +9,7 @@ import {
   LayoutDashboard, Map, Sparkles, TrendingUp, Clock, 
   PlayCircle, BarChart3, Award, Trophy
 } from 'lucide-react';
+import { useScrollReveal } from '../../hooks/useScrollReveal';
 
 export default function Home() {
   const [adminHours, setAdminHours] = useState(20);
@@ -16,6 +17,11 @@ export default function Home() {
   const [dealValue, setDealValue] = useState(15000);
   const [timeframe, setTimeframe] = useState(90);
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('area');
+
+  const benefitsReveal = useScrollReveal();
+  const calculatorReveal = useScrollReveal();
+  const leaderboardReveal = useScrollReveal();
+  const featuresReveal = useScrollReveal();
 
   const calculateTimeSaved = () => {
     const savedPerWeek = adminHours * 0.2;
@@ -52,44 +58,44 @@ export default function Home() {
   }, [leadsPerMonth, dealValue, timeframe]);
 
   return (
-    <div className="flex flex-col bg-[#0f172a] text-white selection:bg-blue-500/30">
+    <div className="flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30">
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] bg-gradient-to-b from-blue-600/10 to-transparent pointer-events-none" />
-        <div className="absolute top-[10%] left-[10%] w-72 h-72 bg-blue-500/20 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute top-[20%] right-[10%] w-96 h-96 bg-indigo-500/20 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
+        <div className="absolute top-[10%] left-[10%] w-72 h-72 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-[20%] right-[10%] w-96 h-96 bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
 
-        <div className="max-w-7xl mx-auto px-6 relative">
+        <div className="max-w-7xl mx-auto px-6 relative animate-astral-hero">
           <div className="text-center max-w-4xl mx-auto mb-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8 animate-pulse">
-              <Sparkles size={12} /> Elite Real Estate Infrastructure
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
+              <Sparkles size={12} className="animate-pulse" /> Elite Real Estate Infrastructure
             </div>
             <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
-              Scale Your <span className="text-blue-500">Empire</span> <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">On Autopilot.</span>
+              Scale Your <span className="astral-gradient-text">Empire</span> <br />
+              <span className="astral-gradient-text">On Autopilot.</span>
             </h1>
-            <p className="text-xl text-gray-400 mb-12 leading-relaxed max-w-2xl mx-auto font-medium">
+            <p className="text-xl text-[#a3aac4] mb-12 leading-relaxed max-w-2xl mx-auto font-medium">
               The Sovereign Operating System for high-volume real estate teams. 
               Own your data. Automate your triage. Build your legacy.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
               <Link
                 to="/login?signup=true"
-                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-lg font-black transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(37,99,235,0.3)] group"
+                className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow"
               >
                 Get Started Free <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-bold transition-all flex items-center justify-center gap-3">
+              <button className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-bold transition-all flex items-center justify-center gap-3 hover-lift">
                 <PlayCircle size={20} /> Watch Demo
               </button>
             </div>
           </div>
 
           {/* Hero Visual - Premium CSS Mockup */}
-          <div className="relative max-w-6xl mx-auto">
-            <div className="absolute inset-0 bg-blue-500/20 blur-[120px] opacity-20" />
-            <div className="relative rounded-[2.5rem] border border-white/10 bg-[#121a2d]/80 backdrop-blur-3xl p-3 shadow-[0_40px_100px_rgba(0,0,0,0.5)] overflow-hidden">
-              <div className="bg-[#0f172a] rounded-[2rem] border border-white/5 aspect-[16/9] flex overflow-hidden">
+          <div className="relative max-w-6xl mx-auto mt-24">
+            <div className="absolute inset-0 bg-indigo-500/10 blur-[120px] opacity-20" />
+            <div className="relative rounded-[2.5rem] border border-white/10 bg-[#0f1930]/60 backdrop-blur-3xl p-3 shadow-[0_40px_100px_rgba(0,0,0,0.6)] overflow-hidden hover-lift">
+              <div className="bg-[#060e20] rounded-[2rem] border border-white/5 aspect-[16/9] flex overflow-hidden">
                 {/* Mock Sidebar */}
                 <div className="w-20 border-r border-white/5 flex flex-col items-center py-6 gap-6">
                   <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-500"><LayoutDashboard size={20} /></div>
@@ -138,13 +144,13 @@ export default function Home() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-32 bg-[#0b1120] relative">
+      <section className="py-32 bg-[#060e20] relative" ref={benefitsReveal.elementRef}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-24 items-center">
-            <div>
-              <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight">
+            <div className={`transition-all duration-1000 ${benefitsReveal.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-20'}`}>
+              <h2 className="text-4xl md:text-6xl font-black mb-12 leading-tight">
                 Designed for the <br /> 
-                <span className="text-blue-500">1% of Closers.</span>
+                <span className="astral-gradient-text leading-[1.2]">1% of Closers.</span>
               </h2>
               <div className="space-y-8">
                 {[
@@ -152,31 +158,35 @@ export default function Home() {
                   { icon: Shield, title: 'Absolute Privacy', desc: 'Your data is encrypted and sovereign. No more platform fees for data you created.' },
                   { icon: TrendingUp, title: 'Compound Growth', desc: 'Automate the busy work and focus 100% of your energy on high-leverage deal negotiations.' }
                 ].map((benefit, i) => (
-                  <div key={i} className="flex gap-6 group">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 shrink-0 group-hover:scale-110 transition-transform">
+                  <div 
+                    key={i} 
+                    className={`flex gap-6 group hover-lift p-4 rounded-2xl transition-all duration-700 ${benefitsReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                    style={{ transitionDelay: `${i * 150}ms` }}
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0 group-hover:scale-110 transition-transform">
                       <benefit.icon size={28} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold mb-2">{benefit.title}</h3>
-                      <p className="text-gray-500 leading-relaxed">{benefit.desc}</p>
+                      <h3 className="text-xl font-bold mb-2 group-hover:text-indigo-300 transition-colors">{benefit.title}</h3>
+                      <p className="text-[#6d758c] leading-relaxed group-hover:text-[#a3aac4] transition-colors">{benefit.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid grid-cols-2 gap-4 transition-all duration-1000 ${benefitsReveal.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-20'}`}>
               <div className="space-y-4 pt-12">
-                <div className="aspect-square rounded-3xl bg-blue-600 p-8 flex flex-col justify-end">
-                  <div className="text-4xl font-black mb-2">90%</div>
-                  <div className="text-xs font-bold uppercase tracking-widest opacity-80">Manual Triage Reduced</div>
+                <div className="aspect-square rounded-[2rem] bg-indigo-600 p-8 flex flex-col justify-end shadow-[0_20px_40px_rgba(99,102,241,0.2)] hover-lift">
+                  <div className="text-4xl font-black mb-2 italic">90%</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Manual Triage Reduced</div>
                 </div>
-                <div className="aspect-square rounded-3xl bg-[#1e293b] border border-white/5" />
+                <div className="aspect-square rounded-[2rem] bg-[#0f1930] border border-white/5 hover-lift" />
               </div>
               <div className="space-y-4">
-                 <div className="aspect-square rounded-3xl bg-[#1e293b] border border-white/5" />
-                 <div className="aspect-square rounded-3xl bg-indigo-600 p-8 flex flex-col justify-end">
-                  <div className="text-4xl font-black mb-2">2.5x</div>
-                  <div className="text-xs font-bold uppercase tracking-widest opacity-80">Conversion Rate Increase</div>
+                 <div className="aspect-square rounded-[2rem] bg-[#0f1930] border border-white/5 hover-lift" />
+                 <div className="aspect-square rounded-[2rem] bg-purple-600 p-8 flex flex-col justify-end shadow-[0_20px_40px_rgba(168,85,247,0.2)] hover-lift">
+                  <div className="text-4xl font-black mb-2 italic">2.5x</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Conversion Rate Increase</div>
                 </div>
               </div>
             </div>
@@ -185,15 +195,15 @@ export default function Home() {
       </section>
 
       {/* Leverage Calculators */}
-      <section className="py-32 bg-[#0b1120]/50">
+      <section className="py-32 bg-[#060e20]" ref={calculatorReveal.elementRef}>
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-black mb-4">Calculate Your Leverage</h2>
-            <p className="text-gray-400">See how much time and revenue you're leaving on the table.</p>
+          <div className={`text-center mb-16 transition-all duration-1000 ${calculatorReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+            <h2 className="text-4xl md:text-6xl font-black mb-6">Calculate Your Leverage</h2>
+            <p className="text-[#6d758c] text-lg max-w-xl mx-auto font-medium">See how much time and revenue you're leaving on the table.</p>
           </div>
-          <div className="grid md:grid-cols-2 gap-12">
+          <div className={`grid md:grid-cols-2 gap-12 transition-all duration-1000 ${calculatorReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-20'}`}>
             {/* Time Saved Calculator */}
-            <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-blue-500/20 shadow-2xl space-y-10 reveal">
+            <div className="p-10 rounded-[3rem] bg-[#0f1930]/40 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl space-y-10 hover-lift">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500"><Clock size={24} /></div>
                 <h3 className="text-2xl font-black italic">Time Refined</h3>
@@ -228,7 +238,7 @@ export default function Home() {
             </div>
 
             {/* Lead Retention Calculator */}
-            <div className="p-10 rounded-[3rem] bg-[#121a2d] border border-indigo-500/20 shadow-2xl space-y-10 reveal delayed-1 relative overflow-hidden">
+            <div className="p-10 rounded-[3rem] bg-[#0f1930]/40 backdrop-blur-3xl border border-purple-500/20 shadow-2xl space-y-10 hover-lift relative overflow-hidden">
               <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                  <TrendingUp size={120} className="text-indigo-500" />
               </div>
@@ -310,8 +320,8 @@ export default function Home() {
                            <AreaChart data={chartData}>
                               <defs>
                                 <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                                  <stop offset="5%" stopColor="#9fa7ff" stopOpacity={0.3}/>
+                                  <stop offset="95%" stopColor="#be83fa" stopOpacity={0}/>
                                 </linearGradient>
                               </defs>
                               <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
@@ -321,7 +331,7 @@ export default function Home() {
                                 contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
                                 itemStyle={{ color: '#fff' }}
                               />
-                              <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                              <Area type="monotone" dataKey="revenue" stroke="#9fa7ff" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                            </AreaChart>
                          ) : chartType === 'bar' ? (
                            <BarChart data={chartData}>
@@ -331,7 +341,7 @@ export default function Home() {
                               <Tooltip 
                                 contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
                               />
-                              <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="revenue" fill="#9fa7ff" radius={[4, 4, 0, 0]} />
                            </BarChart>
                          ) : (
                            <LineChart data={chartData}>
@@ -341,7 +351,7 @@ export default function Home() {
                               <Tooltip 
                                 contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '10px' }}
                               />
-                              <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} dot={false} />
+                              <Line type="monotone" dataKey="revenue" stroke="#be83fa" strokeWidth={3} dot={false} />
                            </LineChart>
                          )}
                       </ResponsiveContainer>
@@ -354,30 +364,30 @@ export default function Home() {
       </section>
 
       {/* Referral Leaderboard */}
-      <section className="py-32 relative overflow-hidden">
+      <section className="py-32 relative overflow-hidden" ref={leaderboardReveal.elementRef}>
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 blur-[150px] rounded-full" />
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
-            <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]">Affiliate Program</div>
-              <h2 className="text-5xl md:text-7xl font-black italic leading-[0.9]">Earn 10% <br /><span className="text-blue-500">Recurring.</span></h2>
-              <p className="text-xl text-gray-400 leading-relaxed font-medium max-w-lg">
+            <div className={`space-y-8 transition-all duration-1000 ${leaderboardReveal.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-20'}`}>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] animate-astral-nav">Affiliate Program</div>
+              <h2 className="text-5xl md:text-7xl font-black italic leading-[0.9]">Earn 10% <br /><span className="astral-gradient-text">Recurring.</span></h2>
+              <p className="text-xl text-[#a3aac4] leading-relaxed font-medium max-w-lg">
                 Refer other agents and builders to the OS. Earn a 10% lifetime commission on every subscription, plus exclusive perks.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                 <Link to="/login?signup=true" className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black transition-all shadow-xl shadow-blue-600/20 text-center">
+                 <Link to="/login?signup=true" className="px-10 py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black transition-all shadow-xl shadow-indigo-600/20 text-center hover-glow hover-lift">
                     Get Your Referral Link
                  </Link>
               </div>
             </div>
 
-            <div className="p-2 rounded-[3.5rem] bg-gradient-to-br from-blue-500/20 to-transparent border border-white/10 backdrop-blur-3xl">
-              <div className="bg-[#0f172a]/80 rounded-[3rem] p-8 space-y-8">
+            <div className={`p-2 rounded-[3.5rem] bg-gradient-to-br from-indigo-500/20 to-transparent border border-white/10 backdrop-blur-3xl hover-lift transition-all duration-1000 ${leaderboardReveal.isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-20'}`}>
+              <div className="bg-[#0f1930]/80 rounded-[3rem] p-8 space-y-8">
                 <div className="flex items-center justify-between">
-                   <h3 className="text-xl font-bold italic flex items-center gap-2">
-                     <Trophy size={20} className="text-yellow-500" /> Top Referrers
+                   <h3 className="text-xl font-black italic flex items-center gap-2 uppercase tracking-tight">
+                     <Trophy size={20} className="text-yellow-500 animate-pulse" /> Top Referrers
                    </h3>
-                   <span className="text-[10px] font-black uppercase text-gray-500 tracking-widest">This Month</span>
+                   <span className="text-[10px] font-black uppercase text-[#6d758c] tracking-[0.2em]">This Month</span>
                 </div>
                 
                 <div className="space-y-4">
@@ -388,28 +398,28 @@ export default function Home() {
                      { name: 'Sarah Chen', referrals: 24, reward: 'Rising Star' },
                      { name: 'Luke Holloway', referrals: 19, reward: 'Growth Agent' }
                    ].map((user, i) => (
-                     <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-blue-500/30 transition-all group">
+                     <div key={i} className="flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-indigo-500/30 transition-all group hover:bg-white/10 cursor-pointer">
                         <div className="flex items-center gap-4">
-                           <div className="w-8 h-8 rounded-lg bg-blue-600/10 flex items-center justify-center text-xs font-black text-blue-500">{i + 1}</div>
+                           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-xs font-black text-indigo-400 border border-indigo-500/10">{i + 1}</div>
                            <div>
-                              <div className="text-sm font-bold group-hover:text-blue-400 transition-colors">{user.name}</div>
-                              <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{user.reward}</div>
+                              <div className="text-sm font-black group-hover:text-indigo-300 transition-colors uppercase italic">{user.name}</div>
+                              <div className="text-[9px] font-black text-[#5b21b6] uppercase tracking-[0.2em]">{user.reward}</div>
                            </div>
                         </div>
                         <div className="text-right">
-                           <div className="text-sm font-black text-white">{user.referrals}</div>
-                           <div className="text-[9px] font-bold text-gray-500 uppercase">Referrals</div>
+                           <div className="text-lg font-black text-white">{user.referrals}</div>
+                           <div className="text-[9px] font-black text-[#6d758c] uppercase tracking-widest">Referrals</div>
                         </div>
                      </div>
                    ))}
                 </div>
                 
                 <div className="pt-8 border-t border-white/5">
-                   <div className="flex items-center gap-4 p-4 rounded-2xl bg-blue-600 shadow-xl shadow-blue-600/20">
-                      <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white"><Award size={24} /></div>
+                   <div className="flex items-center gap-4 p-5 rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-600/20 hover:scale-[1.02] transition-transform cursor-pointer group">
+                      <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white group-hover:rotate-12 transition-transform"><Award size={24} /></div>
                       <div>
-                         <div className="text-sm font-black text-white">Join the Leaderboard</div>
-                         <p className="text-[10px] font-bold text-white/70 uppercase">Top 10 referrers get a 2024 Swag Box</p>
+                         <div className="text-sm font-black text-white uppercase italic">Join the Leaderboard</div>
+                         <p className="text-[10px] font-black text-white/70 uppercase tracking-widest">Top 10 referrers get a 2024 Swag Box</p>
                       </div>
                    </div>
                 </div>
@@ -420,11 +430,11 @@ export default function Home() {
       </section>
 
       {/* Feature Showcase Grid */}
-      <section className="py-32">
+      <section className="py-32 bg-[#060e20]" ref={featuresReveal.elementRef}>
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl md:text-6xl font-black mb-6">Built for <span className="text-blue-500">Scale.</span></h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">One platform. Every tool. Zero friction.</p>
+          <div className={`text-center mb-24 transition-all duration-1000 ${featuresReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+            <h2 className="text-4xl md:text-7xl font-black mb-6 leading-tight">Built for <br /><span className="astral-gradient-text tracking-[-0.05em] px-2 italic">Scale.</span></h2>
+            <p className="text-[#a3aac4] max-w-xl mx-auto text-lg font-medium">One platform. Every tool. Zero friction.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-10">
             {[
@@ -435,12 +445,16 @@ export default function Home() {
               { title: 'Custom Agent Profiles', desc: 'Generate high-converting public landing pages with QR codes in seconds.', icon: Users },
               { title: 'Secure Sovereign Data', desc: 'Absolute ownership of your data with enterprise-grade encryption.', icon: Shield }
             ].map((f, i) => (
-              <div key={i} className="group p-10 rounded-[2.5rem] bg-[#121a2d] border border-white/5 hover:border-blue-500/30 transition-all hover:-translate-y-2">
-                <div className="w-14 h-14 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-400 mb-8 font-black group-hover:scale-110 transition-transform">
-                  <f.icon size={28} />
+              <div 
+                key={i} 
+                className={`astral-glass p-10 rounded-[3rem] border border-white/5 hover:border-indigo-500/30 transition-all duration-700 hover-lift group ${featuresReveal.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                style={{ transitionDelay: `${i * 100}ms` }}
+              >
+                <div className="w-16 h-16 rounded-[1.5rem] bg-indigo-500/10 flex items-center justify-center text-indigo-400 mb-8 font-black group-hover:scale-110 transition-transform group-hover:bg-indigo-500/20 shadow-inner">
+                  <f.icon size={32} />
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{f.title}</h3>
-                <p className="text-gray-500 leading-relaxed text-sm">{f.desc}</p>
+                <h3 className="text-2xl font-black mb-4 tracking-tight group-hover:text-indigo-200 transition-colors uppercase italic">{f.title}</h3>
+                <p className="text-[#6d758c] leading-relaxed text-sm group-hover:text-[#a3aac4] transition-colors">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -448,20 +462,20 @@ export default function Home() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-32 bg-[#0b1120]">
+      <section className="py-32 bg-[#060e20]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className="text-4xl font-extrabold italic mb-4">Trusted by Empire Builders.</h2>
-            <p className="text-gray-500 text-sm">Join the next generation of real estate operations.</p>
+          <div className="text-center mb-20 stagger-astral">
+            <h2 className="text-4xl md:text-6xl font-black italic mb-6">Trusted by Empire Builders.</h2>
+            <p className="text-[#6d758c] text-lg font-medium">Join the next generation of real estate operations.</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 italic text-gray-400">
+          <div className="grid md:grid-cols-3 gap-8 stagger-astral">
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover-lift astral-glass font-medium leading-relaxed">
                "WholeScale OS is why we're closing 3x more deals. The AI triage is like having a second brain that never sleeps."
             </div>
-            <div className="p-8 rounded-3xl bg-blue-600 italic text-white shadow-2xl shadow-blue-600/20">
+            <div className="p-10 rounded-[2.5rem] bg-indigo-600 italic text-white shadow-2xl shadow-indigo-600/30 hover-lift font-black leading-relaxed scale-105 relative z-10 border border-indigo-400/30">
                "The absolute best ROI of any tool I've used in 10 years. Our team communications are finally centralized."
             </div>
-            <div className="p-8 rounded-3xl bg-white/5 border border-white/10 italic text-gray-400">
+            <div className="p-10 rounded-[2.5rem] bg-white/5 border border-white/5 italic text-[#a3aac4] hover-lift astral-glass font-medium leading-relaxed">
                "The sovereign data approach is what real estate needed. My data, my rules, and incredible speed."
             </div>
           </div>
@@ -469,19 +483,19 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-40 relative overflow-hidden bg-blue-600">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-700 to-indigo-800" />
-        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-          <h2 className="text-5xl md:text-7xl font-black mb-10 text-white tracking-tighter italic">Ready to Own the Market?</h2>
+      <section className="py-40 relative overflow-hidden">
+        <div className="absolute inset-0 bg-indigo-600" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-800 to-indigo-900 opacity-90" />
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none bg-[radial-gradient(circle_at_20%_30%,#fff_0%,transparent_50%)]" />
+        
+        <div className="max-w-4xl mx-auto px-6 text-center relative z-10 animate-astral-hero">
+          <h2 className="text-6xl md:text-8xl font-black mb-12 text-white tracking-tighter italic leading-[0.9]">Ready to <br />Own the Market?</h2>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link to="/login?signup=true" className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white text-blue-600 text-xl font-black shadow-2xl hover:scale-105 transition-all">
+            <Link to="/login?signup=true" className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white text-indigo-600 text-xl font-black shadow-[0_20px_60px_rgba(0,0,0,0.3)] hover:scale-105 transition-all hover-glow">
               Start Free Trial
             </Link>
-            <Link to="/pricing" className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-bold backdrop-blur-md">
+            <Link to="/pricing" className="w-full sm:w-auto px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-black backdrop-blur-md hover:bg-white/20 transition-all">
               View All Tiers
-            </Link>
-            <Link to="/compare" className="w-full sm:w-auto px-8 py-4 rounded-xl bg-transparent text-white/70 hover:text-white text-sm font-bold flex items-center justify-center gap-2 transition-all">
-              Compare to Others <ArrowRight size={16} />
             </Link>
           </div>
         </div>

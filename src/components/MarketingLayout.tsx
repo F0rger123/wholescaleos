@@ -6,7 +6,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { supabase } from '../lib/supabase';
+
 
 export const MarketingLayout: React.FC = () => {
   const { isAuthenticated, currentUser } = useStore();
@@ -53,19 +53,19 @@ export const MarketingLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0f172a] text-white selection:bg-blue-500/30">
+    <div className="min-h-screen flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30">
       {/* Header */}
       <header 
-        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
-          isScrolled ? 'py-3 bg-[#0f172a]/80 backdrop-blur-md border-b border-white/10 shadow-lg' : 'py-6 bg-transparent'
+        className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 animate-astral-nav ${
+          isScrolled ? 'py-3 bg-[#0f1930]/80 backdrop-blur-2xl border-b border-indigo-500/10 shadow-2xl' : 'py-6 bg-transparent'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
               <Building2 size={24} className="text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">WholeScale OS</span>
+            <span className="text-xl font-black tracking-tighter italic uppercase">WholeScale <span className="text-indigo-400">OS</span></span>
           </Link>
 
           {/* Desktop Nav */}
@@ -74,8 +74,8 @@ export const MarketingLayout: React.FC = () => {
               <Link 
                 key={link.name} 
                 to={link.href}
-                className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                  location.pathname === link.href ? 'text-blue-400' : 'text-gray-300'
+                className={`text-sm font-black uppercase tracking-widest astral-nav-link transition-colors hover:text-indigo-400 ${
+                  location.pathname === link.href ? 'text-indigo-400' : 'text-[#a3aac4]'
                 }`}
               >
                 {link.name}
@@ -88,61 +88,54 @@ export const MarketingLayout: React.FC = () => {
               <div className="flex items-center gap-6">
                 <Link 
                   to="/dashboard" 
-                  className="flex items-center gap-2 text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                  className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors"
                 >
                   <LayoutDashboard size={18} />
-                  Go to Dashboard
+                  Dashboard
                 </Link>
                 <div className="relative">
                   <button 
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex items-center gap-2 group"
                   >
-                    <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-600/20 group-hover:scale-105 transition-transform">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-sm font-black shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition-transform border border-indigo-400/20 italic">
                       {getInitials()}
                     </div>
-                    <ChevronDown size={14} className={`text-gray-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={14} className={`text-[#6d758c] transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {userMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                      <div className="absolute right-0 mt-3 w-56 rounded-2xl bg-[#1e293b] border border-white/10 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="p-3 border-b border-white/5 mb-2">
-                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Signed in as</p>
-                          <p className="text-sm font-bold truncate">{currentUser?.name}</p>
+                      <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-[#0f1930]/90 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-4 border-b border-white/5 mb-2">
+                          <p className="text-[10px] font-black text-[#6d758c] uppercase tracking-[0.2em] mb-1">Signed in as</p>
+                          <p className="text-sm font-black truncate text-white italic">{currentUser?.name}</p>
                         </div>
                         <Link 
                           to="/settings" 
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition-colors text-gray-300 hover:text-white"
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-xs font-black uppercase tracking-widest transition-colors text-[#a3aac4] hover:text-indigo-400"
                         >
-                          <User size={18} /> Profile
+                          <User size={16} /> Profile
                         </Link>
                         <Link 
                           to="/settings" 
                           onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition-colors text-gray-300 hover:text-white"
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-xs font-black uppercase tracking-widest transition-colors text-[#a3aac4] hover:text-indigo-400"
                         >
-                          <Settings size={18} /> Settings
-                        </Link>
-                        <Link 
-                          to="/dashboard" 
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-sm transition-colors text-gray-300 hover:text-white"
-                        >
-                          <LayoutDashboard size={18} /> Dashboard
+                          <Settings size={16} /> Settings
                         </Link>
                         <div className="h-px bg-white/5 my-2" />
                         <button 
                           onClick={async () => {
-                            if (supabase) await supabase.auth.signOut();
-                            navigate('/login');
+                            await useStore.getState().logout();
                             setUserMenuOpen(false);
+                            navigate('/login');
                           }}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-sm transition-colors text-red-400"
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-red-500/10 text-xs font-black uppercase tracking-widest transition-colors text-red-400"
                         >
-                          <LogOut size={18} /> Sign Out
+                          <LogOut size={16} /> Sign Out
                         </button>
                       </div>
                     </>
@@ -151,14 +144,14 @@ export const MarketingLayout: React.FC = () => {
               </div>
             ) : (
               <>
-                <Link to="/login" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+                <Link to="/login" className="text-xs font-black uppercase tracking-[0.2em] text-[#a3aac4] hover:text-white transition-colors">
                   Log in
                 </Link>
                 <Link 
                   to="/login?signup=true" 
-                  className="px-5 py-2.5 rounded-full bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition-all hover:shadow-lg hover:shadow-blue-500/20 active:scale-95 flex items-center gap-2"
+                  className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-black uppercase tracking-[0.2em] transition-all hover:shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 flex items-center gap-2 hover-glow"
                 >
-                  Get Started <ArrowRight size={16} />
+                  Join the Empire <ArrowRight size={16} />
                 </Link>
               </>
             )}
@@ -215,9 +208,9 @@ export const MarketingLayout: React.FC = () => {
                 </Link>
                 <button 
                   onClick={async () => {
-                    if (supabase) await supabase.auth.signOut();
-                    navigate('/login');
+                    await useStore.getState().logout();
                     setMobileMenuOpen(false);
+                    navigate('/login');
                   }}
                   className="w-full flex items-center gap-3 text-lg font-medium text-red-400"
                 >
@@ -252,17 +245,17 @@ export const MarketingLayout: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#0b1120] border-t border-white/5 py-20 px-6">
+      <footer className="bg-[#060e20] border-t border-indigo-500/10 py-32 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12">
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-                <Building2 size={18} className="text-white" />
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                <Building2 size={24} className="text-white" />
               </div>
-              <span className="text-lg font-bold">WholeScale</span>
+              <span className="text-xl font-black tracking-tighter italic uppercase">WholeScale <span className="text-indigo-400">OS</span></span>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed mb-6">
-              The all-in-one operating system for modern real estate professionals. Automate, scale, and close more deals.
+            <p className="text-[#6d758c] text-sm leading-relaxed mb-8 font-medium">
+              The all-in-one operating system for modern real estate Professionals. Automate, scale, and build your empire.
             </p>
             <div className="flex gap-4">
               <a href="#" className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all"><Twitter size={18} /></a>
@@ -272,11 +265,11 @@ export const MarketingLayout: React.FC = () => {
           </div>
           
           <div>
-            <h4 className="font-bold mb-6 text-sm uppercase tracking-widest text-gray-500">Platform</h4>
-            <ul className="space-y-4 text-sm text-gray-400">
-              <li><Link to="/features" className="hover:text-blue-400 transition-colors">Features</Link></li>
-              <li><Link to="/pricing" className="hover:text-blue-400 transition-colors">Pricing</Link></li>
-              <li><Link to="/integrations" className="hover:text-blue-400 transition-colors">Integrations</Link></li>
+            <h4 className="font-black mb-8 text-[10px] uppercase tracking-[0.2em] text-[#6d758c]">Platform</h4>
+            <ul className="space-y-4 text-xs font-black uppercase tracking-widest text-[#a3aac4]">
+              <li><Link to="/features" className="hover:text-indigo-400 transition-colors">Features</Link></li>
+              <li><Link to="/pricing" className="hover:text-indigo-400 transition-colors">Pricing</Link></li>
+              <li><Link to="/integrations" className="hover:text-indigo-400 transition-colors">Integrations</Link></li>
             </ul>
           </div>
 
@@ -306,29 +299,29 @@ export const MarketingLayout: React.FC = () => {
 
       {/* Cookie Consent Banner */}
       {showCookieConsent && (
-        <div className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-[400px] z-[200] p-6 rounded-[2rem] bg-[#1e293b] border border-blue-500/30 shadow-2xl animate-in slide-in-from-bottom-10 lg:slide-in-from-right-10 duration-500">
-           <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-500 shrink-0">
-                 <Settings size={24} className="animate-spin-slow" />
+        <div className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-[420px] z-[200] p-8 rounded-[2.5rem] bg-[#0f1930]/90 border border-indigo-500/20 shadow-2xl animate-in slide-in-from-bottom-10 lg:slide-in-from-right-10 duration-500 backdrop-blur-3xl hover-lift">
+           <div className="flex items-start gap-6">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0 shadow-inner">
+                 <Settings size={28} className="animate-spin-slow" />
               </div>
-              <div className="space-y-4">
+              <div className="space-y-5">
                  <div>
-                    <h4 className="font-bold text-white">Sovereign Data Controls</h4>
-                    <p className="text-xs text-gray-400 leading-relaxed mt-1">
+                    <h4 className="font-black text-white uppercase italic tracking-tight">Sovereign Data Controls</h4>
+                    <p className="text-[11px] text-[#6d758c] leading-relaxed mt-2 font-medium">
                        We use high-performance cookies to ensure the integrity of your session and provide the best OS experience.
                     </p>
                  </div>
-                 <div className="flex items-center gap-3">
+                 <div className="flex items-center gap-4">
                     <button 
                       onClick={() => {
                         localStorage.setItem('wholescale-cookie-consent', 'true');
                         setShowCookieConsent(false);
                       }}
-                      className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                      className="px-8 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-lg shadow-indigo-600/20 hover-glow"
                     >
                       Accept Protocol
                     </button>
-                    <Link to="/privacy" className="text-[10px] font-bold text-gray-500 hover:text-white transition-colors">Learn More</Link>
+                    <Link to="/privacy" className="text-[10px] font-black text-[#5b21b6] uppercase tracking-[0.2em] hover:text-white transition-colors">Learn More</Link>
                  </div>
               </div>
            </div>

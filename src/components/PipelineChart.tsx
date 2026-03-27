@@ -21,12 +21,12 @@ type ChartTimeRange = '7d' | '30d' | '90d' | '1y';
 type MetricType = 'leads' | 'deals' | 'revenue' | 'conversion';
 
 const COLORS: Record<string, string> = {
-  new: 'var(--t-info)',
-  contacted: 'var(--t-warning)',
-  qualified: 'var(--t-accent)',
-  negotiating: 'var(--t-warning)',
-  'closed-won': 'var(--t-success)',
-  'closed-lost': 'var(--t-error)',
+  new: '#9fa7ff', // Indigo
+  contacted: '#be83fa', // Purple
+  qualified: '#6366f1', // Stronger Indigo
+  negotiating: '#ec4899', // Pink
+  'closed-won': '#10b981', // Success Green (keep for clarity)
+  'closed-lost': '#ef4444', // Error Red (keep for clarity)
 };
 
 export function PipelineChart() {
@@ -96,10 +96,10 @@ export function PipelineChart() {
       }
 
       return (
-        <div className="bg-[var(--t-surface)] border border-[var(--t-border)] p-3 rounded-xl shadow-xl backdrop-blur-md">
-          <p className="text-xs font-black text-white uppercase tracking-widest mb-1">{label}</p>
-          <p className="text-sm font-bold text-[var(--t-primary)]">
-            {displayVal} {metric === 'revenue' ? '' : val === 1 ? (metric === 'leads' ? 'Lead' : 'Deal') : (metric === 'leads' ? 'Leads' : 'Deals')}
+        <div className="astral-glass border border-white/10 p-4 rounded-2xl shadow-2xl backdrop-blur-3xl">
+          <p className="text-[10px] font-black text-[#6d758c] uppercase tracking-[0.2em] mb-2">{label}</p>
+          <p className="text-xl font-black text-white italic">
+            {displayVal} <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 opacity-80">{metric === 'revenue' ? '' : val === 1 ? (metric === 'leads' ? 'Lead' : 'Deal') : (metric === 'leads' ? 'Leads' : 'Deals')}</span>
           </p>
         </div>
       );
@@ -156,11 +156,11 @@ export function PipelineChart() {
             {gridEl}{xAxisEl}{yAxisEl}{tooltipEl}
             <defs>
               <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--t-primary)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--t-primary)" stopOpacity={0} />
+                <stop offset="5%" stopColor="#9fa7ff" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#be83fa" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <Area type="monotone" dataKey="value" stroke="var(--t-primary)" strokeWidth={3} fill="url(#areaGradient)" animationDuration={1500} />
+            <Area type="monotone" dataKey="value" stroke="#9fa7ff" strokeWidth={4} fill="url(#areaGradient)" animationDuration={1500} />
           </AreaChart>
         );
       default:
@@ -179,12 +179,12 @@ export function PipelineChart() {
 
   if (!leads || leads.length === 0) {
     return (
-      <div className="h-[300px] w-full bg-[var(--t-surface-dim)] rounded-3xl border border-dashed border-[var(--t-border)] flex flex-col items-center justify-center p-8 text-center group">
-        <div className="w-12 h-12 rounded-full bg-[var(--t-surface)] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-          <Layers className="text-[var(--t-text-muted)] w-6 h-6" />
+      <div className="h-[300px] w-full astral-glass rounded-[2rem] border border-dashed border-indigo-500/20 flex flex-col items-center justify-center p-8 text-center group">
+        <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner">
+          <Layers className="text-indigo-400 w-8 h-8" />
         </div>
-        <p className="text-sm font-bold text-white mb-1">No Pipeline Data</p>
-        <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-widest">Leads will appear here as you add them</p>
+        <p className="text-lg font-black text-white mb-2 uppercase italic">No Pipeline Infrastructure</p>
+        <p className="text-[10px] text-[#6d758c] uppercase tracking-[0.2em] font-black">Lead metrics will populate here upon ingestion.</p>
       </div>
     );
   }
