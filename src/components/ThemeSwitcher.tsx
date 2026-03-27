@@ -16,7 +16,7 @@ export function ThemeSwitcher() {
 
   const themeCategories = {
     'Default': ['dark', 'light'],
-    'Premium': ['glass', 'oled', 'midnight', 'black-marble', 'white-marble'],
+    'Premium': ['glass', 'oled', 'black-marble', 'white-marble'],
     'Neon & Glow': ['neon', 'moon'],
     'Luxury': ['platinum', 'cyberpunk'],
   };
@@ -24,7 +24,7 @@ export function ThemeSwitcher() {
   const getThemeIcon = (themeId: string) => {
     const icons: Record<string, string> = {
       'dark': '🌙', 'light': '☀️', 'glass': '✨', 'oled': '⬛',
-      'midnight': '🌃', 'black-marble': '⚫', 'white-marble': '⚪',
+      'black-marble': '⚫', 'white-marble': '⚪',
       'neon': '🚨', 'moon': '🌕', 'platinum': '💎',
       'cyberpunk': '🌃',
     };

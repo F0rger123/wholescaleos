@@ -7,6 +7,7 @@ import {
   Camera, Twitter, Linkedin, Loader2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { supabase } from '../lib/supabase';
 
 type TabType = 'billing' | 'analytics' | 'referral' | 'profile';
 
@@ -118,15 +119,29 @@ function BillingTab() {
 
   const handleUpgrade = async () => {
     setLoading(true);
-    // In a real app, this would call a Supabase Edge Function to create a Stripe Session
-    // We include success_url and cancel_url to return specifically to the Billing section
-    const baseUrl = window.location.origin;
-    const checkoutUrl = `https://buy.stripe.com/test_demo_checkout?success_url=${baseUrl}/settings?tab=billing&cancel_url=${baseUrl}/dashboard/billing?tab=billing`;
-    
-    setTimeout(() => {
-      window.location.href = checkoutUrl;
+    try {
+      if (!supabase) throw new Error('Supabase not configured');
+      
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: { 
+          plan: (currentUser?.subscriptionTier === 'Free' ? 'solo' : currentUser?.subscriptionTier?.toLowerCase()) || 'solo',
+          success_url: `${window.location.origin}/settings?tab=billing`,
+          cancel_url: `${window.location.origin}/settings?tab=billing`
+        }
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Checkout failed. Please ensure Supabase Edge Functions are deployed.');
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

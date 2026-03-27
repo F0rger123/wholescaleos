@@ -351,7 +351,7 @@ export function Layout() {
               <Building2 size={13} style={{ color: 'var(--t-primary)' }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest truncate text-white italic">
+              <p className="text-[10px] font-black uppercase tracking-widest truncate italic" style={{ color: 'var(--t-text)' }}>
                 {teamConfig.name || 'Core Network'}
               </p>
               <p className="text-[9px] font-bold uppercase tracking-widest text-[#6d758c]">

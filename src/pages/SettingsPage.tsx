@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { themes } from '../styles/themes';
@@ -35,7 +36,22 @@ const TABS = [
 ];
 
 export default function SettingsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab && TABS.some(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    navigate(`/settings?tab=${tabId}`, { replace: true });
+  };
 
   return (
     <div className="p-6 max-w-6xl mx-auto" style={{ backgroundColor: 'var(--t-bg)' }}>
@@ -51,7 +67,7 @@ export default function SettingsPage() {
             {TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left"
                 style={{
                   backgroundColor: activeTab === tab.id ? 'var(--t-primary)' : 'transparent',

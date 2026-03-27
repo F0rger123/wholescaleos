@@ -294,7 +294,7 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav relative z-[300]">
           <div>
-            <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter italic uppercase">Dashboard</h1>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic uppercase" style={{ color: 'var(--t-text)' }}>Dashboard</h1>
             <p className="text-[#6d758c] text-sm font-black uppercase tracking-[0.2em] mt-2 opacity-80 italic">Real-time Performance Metrics</p>
           </div>
           <div className="flex items-center gap-4 flex-wrap">
@@ -359,21 +359,21 @@ export default function Dashboard() {
                        <h3 className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-4 flex items-center gap-2 italic">
                         <TrendingUp size={14} /> Projected Profit
                        </h3>
-                       <p className="text-4xl font-black text-white mb-2 italic tracking-tighter"><AnimatedCounter value={projectedProfit} formatter={formatMoney} /></p>
+                       <p className="text-4xl font-black mb-2 italic tracking-tighter" style={{ color: 'var(--t-text)' }}><AnimatedCounter value={projectedProfit} formatter={formatMoney} /></p>
                        <p className="text-[10px] text-[#6d758c] font-bold uppercase tracking-widest">From {activeDeals.length} deals @ weighted probability</p>
                     </div>
                     <div className="astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
                        <h3 className="text-[10px] font-black uppercase text-purple-400 tracking-[0.2em] mb-4 flex items-center gap-2 italic">
                         <Map size={14} /> Expected Monthly
                        </h3>
-                       <p className="text-4xl font-black text-white mb-2 italic tracking-tighter"><AnimatedCounter value={monthlyProjection} formatter={formatMoney} /></p>
+                       <p className="text-4xl font-black mb-2 italic tracking-tighter" style={{ color: 'var(--t-text)' }}><AnimatedCounter value={monthlyProjection} formatter={formatMoney} /></p>
                        <p className="text-[10px] text-[#6d758c] font-bold uppercase tracking-widest">Trailing 90-day pipeline average</p>
                     </div>
                     <div className="astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
                        <h3 className="text-[10px] font-black uppercase text-pink-400 tracking-[0.2em] mb-4 flex items-center gap-2 italic">
                         <DollarSign size={14} /> In Negotiation
                        </h3>
-                       <p className="text-4xl font-black text-white mb-2 italic tracking-tighter"><AnimatedCounter value={negotiatingValue} formatter={formatMoney} /></p>
+                       <p className="text-4xl font-black mb-2 italic tracking-tighter" style={{ color: 'var(--t-text)' }}><AnimatedCounter value={negotiatingValue} formatter={formatMoney} /></p>
                        <p className="text-[10px] text-[#6d758c] font-bold uppercase tracking-widest">{dataToUse.filter(l => l.status === 'negotiating').length} contracts pending final signature</p>
                     </div>
                   </div>
@@ -382,7 +382,7 @@ export default function Dashboard() {
                   <div key="trends" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 astral-glass border border-indigo-500/10 rounded-[3rem] p-10 hover-lift group">
                       <div className="flex items-center justify-between mb-10">
-                        <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">Pipeline Performance</h2>
+                        <h2 className="text-2xl font-black italic uppercase tracking-tight" style={{ color: 'var(--t-text)' }}>Pipeline Performance</h2>
                         <div className="flex items-center gap-3 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
                           <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse shadow-[0_0_10px_rgba(159,167,255,0.8)]" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Live Infrastructure</span>
@@ -401,7 +401,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="astral-glass border border-indigo-500/10 rounded-[3rem] p-10 hover-lift group flex flex-col">
-                      <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3 italic uppercase tracking-tight"><Map size={24} className="text-indigo-400" /> Lead Sources</h2>
+                      <h2 className="text-2xl font-black mb-8 flex items-center gap-3 italic uppercase tracking-tight" style={{ color: 'var(--t-text)' }}><Map size={24} className="text-indigo-400" /> Lead Sources</h2>
                       <div className="space-y-6 flex-1 overflow-auto pr-2 custom-scrollbar">
                         {Object.entries(sourceCounts).sort(([,a],[,b])=>b-a).map(([source, count]) => {
                           const sc = SOURCE_COLORS[source as LeadSource] || SOURCE_COLORS.other;
@@ -425,7 +425,7 @@ export default function Dashboard() {
                 case 'leaderboard-recent': return (
                   <div key="bottom" className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     <div className="lg:col-span-1 astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
-                      <h2 className="text-xl font-black text-white mb-8 flex items-center gap-3 italic uppercase tracking-tight"><Zap size={20} className="text-amber-400 group-hover:scale-110 transition-transform" /> Hot Deals</h2>
+                      <h2 className="text-xl font-black mb-8 flex items-center gap-3 italic uppercase tracking-tight" style={{ color: 'var(--t-text)' }}><Zap size={20} className="text-amber-400 group-hover:scale-110 transition-transform" /> Hot Deals</h2>
                       <div className="space-y-5">
                         {topLeads.map((lead, i) => {
                           const score = calculateDealScore(lead);
@@ -445,7 +445,7 @@ export default function Dashboard() {
                     </div>
                     <div className="lg:col-span-2 astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
                        <div className="flex items-center justify-between mb-8">
-                        <h2 className="text-xl font-black text-white italic uppercase tracking-tight">Recent Activity</h2>
+                        <h2 className="text-xl font-black italic uppercase tracking-tight" style={{ color: 'var(--t-text)' }}>Recent Activity</h2>
                         <button onClick={() => navigate('/leads')} className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] hover:text-indigo-300 transition-colors">View All Infrastructure</button>
                        </div>
                        <div className="space-y-4">

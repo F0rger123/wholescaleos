@@ -81,7 +81,7 @@ export function StreakLeaderboard({ members }: { members: StreakMember[] }) {
           return (
             <div key={member.id} className="flex items-center gap-3 p-2 rounded-xl transition-colors" style={{ backgroundColor: 'transparent' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
               <span className="text-sm font-bold w-5" style={{ color: 'var(--t-text-muted)' }}>{i + 1}</span>
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: 'var(--t-gradient)' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ background: 'var(--t-gradient)', color: 'var(--t-on-primary)' }}>
                 {member.avatar}
               </div>
               <div className="flex-1 min-w-0">

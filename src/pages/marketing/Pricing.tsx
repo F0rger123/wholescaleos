@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
+import { supabase } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
 import { Check, ArrowRight, Zap, Shield, Users, CreditCard, Sparkles, X, Info } from 'lucide-react';
 
 export default function Pricing() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual');
   const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
   const { currentUser } = useStore();
 
-  const handleCheckout = (planName: string) => {
+  const handleCheckout = async (planName: string) => {
     if (planName === 'Free') {
       window.location.href = '/login?signup=true&plan=Free';
       return;
@@ -19,11 +21,31 @@ export default function Pricing() {
       return;
     }
 
-    // In a real app, this would call a Supabase Edge Function to create a Stripe Session
-    // For now, we simulate with a high-fidelity checkout link that includes return parameters
-    const baseUrl = window.location.origin;
-    const checkoutUrl = `https://buy.stripe.com/test_demo_checkout?client_reference_id=${currentUser.id}&success_url=${baseUrl}/settings?tab=billing&cancel_url=${baseUrl}/pricing`;
-    window.location.href = checkoutUrl;
+    setLoading(planName);
+
+    try {
+      if (!supabase) throw new Error('Supabase not configured');
+
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: { 
+          plan: planName.toLowerCase(),
+          success_url: `${window.location.origin}/settings?tab=billing`,
+          cancel_url: `${window.location.origin}/pricing`
+        }
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      alert('Checkout failed. Please ensure Supabase Edge Functions are deployed.');
+    } finally {
+      setLoading(null);
+    }
   };
 
   const plans = [
@@ -205,13 +227,14 @@ export default function Pricing() {
 
             <button
               onClick={() => handleCheckout(plan.name)}
+              disabled={loading !== null}
               className={`group flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover-glow hover-lift ${plan.popular
                 ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30'
                 : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
-                }`}
+                } ${loading === plan.name ? 'opacity-50 cursor-wait' : ''}`}
             >
-              {plan.cta}
-              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              {loading === plan.name ? 'Connecting...' : plan.cta}
+              {loading !== plan.name && <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />}
             </button>
           </div>
         ))}
