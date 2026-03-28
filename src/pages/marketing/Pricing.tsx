@@ -26,6 +26,9 @@ export default function Pricing() {
     try {
       if (!supabase) throw new Error('Supabase not configured');
 
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id || currentUser?.id;
+
       const response = await fetch('https://jdneeubmkgefhrfcurji.supabase.co/functions/v1/stripe-checkout', {
         method: 'POST',
         headers: {
@@ -35,6 +38,7 @@ export default function Pricing() {
         body: JSON.stringify({
           plan: planName.toLowerCase(),
           billing: billingCycle,
+          user_id: currentUserId,
           success_url: `${window.location.origin}/settings?tab=billing`,
           cancel_url: `${window.location.origin}/pricing`
         })
