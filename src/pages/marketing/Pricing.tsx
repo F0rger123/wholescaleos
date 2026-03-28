@@ -29,23 +29,17 @@ export default function Pricing() {
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserId = user?.id || currentUser?.id;
 
-      const response = await fetch('https://jdneeubmkgefhrfcurji.supabase.co/functions/v1/stripe-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: {
           plan: planName.toLowerCase(),
           billing: billingCycle,
           user_id: currentUserId,
           success_url: `${window.location.origin}/settings?tab=billing`,
           cancel_url: `${window.location.origin}/pricing`
-        })
+        }
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Checkout failed');
+      if (error) throw error;
       if (data?.url) {
         window.location.href = data.url;
       } else {
