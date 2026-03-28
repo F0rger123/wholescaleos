@@ -13,6 +13,7 @@ import Tasks from './pages/Tasks';
 import Chat from './pages/Chat';
 import Imports from './pages/Imports';
 import Contracts from './pages/Contracts';
+import Analytics from './pages/Analytics';
 import Calculators from './pages/Calculators';
 import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
@@ -237,6 +238,7 @@ export function App() {
             <Route path="/settings/ai" element={<AISettings />} />
             <Route path="/settings/sms" element={<SMSSettings />} />
             <Route path="/calendar" element={<Calendar />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/ai-test" element={<AITest />} />
             <Route path="/sms" element={<SMSInbox />} />
             <Route path="/email" element={<EmailInbox />} />

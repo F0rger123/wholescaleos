@@ -95,19 +95,31 @@ export default function Home() {
 
   return (
     <div className="flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30">
+      {/* CSS blob animations – replaces infinite Framer Motion JS animations for GPU perf */}
+      <style>{`
+        @keyframes heroBlob1 {
+          0%, 100% { transform: scale(1); opacity: 0.1; }
+          50% { transform: scale(1.1); opacity: 0.15; }
+        }
+        @keyframes heroBlob2 {
+          0%, 100% { transform: scale(1); opacity: 0.1; }
+          50% { transform: scale(1.2); opacity: 0.2; }
+        }
+        @keyframes ctaBlob {
+          0%, 100% { transform: scale(1); opacity: 0.05; }
+          50% { transform: scale(1.2); opacity: 0.15; }
+        }
+        .hero-blob-1 { animation: heroBlob1 8s ease-in-out infinite; will-change: transform, opacity; }
+        .hero-blob-2 { animation: heroBlob2 10s ease-in-out 2s infinite; will-change: transform, opacity; }
+        .cta-blob { animation: ctaBlob 10s linear infinite; will-change: transform, opacity; }
+      `}</style>
+      
       {/* Hero Section */}
       <section className="relative pt-20 pb-32 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[800px] bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.1, 0.15, 0.1] }}
-          transition={{ duration: 8, repeat: Infinity }}
-          className="absolute top-[10%] left-[10%] w-72 h-72 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" 
-        />
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 10, repeat: Infinity, delay: 2 }}
-          className="absolute top-[20%] right-[10%] w-96 h-96 bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" 
-        />
+        <div className="hero-blob-1 absolute top-[10%] left-[10%] w-72 h-72 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="hero-blob-2 absolute top-[20%] right-[10%] w-96 h-96 bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
+
 
         <div className="max-w-7xl mx-auto px-6 relative">
           <motion.div 
@@ -530,10 +542,8 @@ export default function Home() {
       <section className="py-40 relative overflow-hidden">
         <div className="absolute inset-0 bg-indigo-600" />
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-800 to-indigo-900 opacity-90" />
-        <motion.div 
-          animate={{ scale: [1, 1.2, 1], opacity: [0.05, 0.15, 0.05] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-          className="absolute top-0 left-0 w-full h-full pointer-events-none bg-[radial-gradient(circle_at_20%_30%,#fff_0%,transparent_50%)]" 
+        <div 
+          className="cta-blob absolute top-0 left-0 w-full h-full pointer-events-none bg-[radial-gradient(circle_at_20%_30%,#fff_0%,transparent_50%)]" 
         />
         
         <motion.div 
@@ -551,7 +561,7 @@ export default function Home() {
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link to="/pricing" className="block px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-black backdrop-blur-md hover:bg-white/20 transition-all">
+              <Link to="/pricing" className="block px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-black hover:bg-white/20 transition-all">
                 View All Tiers
               </Link>
             </motion.div>

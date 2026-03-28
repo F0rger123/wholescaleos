@@ -12,7 +12,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
-  Calculator, Calendar, Bot,
+  Calculator, Calendar, Bot, BarChart3,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
   Sparkles, ArrowRight
@@ -58,6 +58,7 @@ export function Layout() {
       { to: '/leads', label: 'Leads', icon: Users },
       { to: '/tasks', label: 'Tasks', icon: ListTodo },
       { to: '/calendar', label: 'Calendar', icon: Calendar },
+      { to: '/analytics', label: 'Analytics', icon: BarChart3 },
     ],
     Messages: [
       { to: '/notifications', label: 'Notification Inbox', icon: Bell },
