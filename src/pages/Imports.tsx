@@ -283,23 +283,59 @@ export default function Imports() {
     }
   };
 
+  const formatScrapeError = (err: any, data: any): string => {
+    // Check for structured error codes from the edge function
+    const errorCode = data?.errorCode || '';
+    switch (errorCode) {
+      case 'SITE_BLOCKED': return `⛔ ${new URL(data?.url || '').hostname || 'This site'} blocked our request. Some sites restrict automated access. Use the manual entry form below instead.`;
+      case 'TIMEOUT': return '⏱️ Request timed out — the site took too long to respond. Please try again or use manual entry.';
+      case 'NOT_FOUND': return '🔍 Page not found (404). Double-check the URL and try again.';
+      case 'NO_CONTENT': return '📄 The page returned empty content. This may be a JavaScript-rendered site. Use manual entry instead.';
+      case 'NETWORK_ERROR': return '🌐 Network error — could not reach the site. Check the URL and your connection.';
+      default: break;
+    }
+    // Fallback for unstructured errors
+    const msg = err?.message || data?.error || 'Unknown error';
+    if (msg.includes('FunctionsHttpError') || msg.includes('non-2xx')) {
+      return '⚠️ The scraping service encountered an error. This can happen with certain sites. Use the manual entry form below.';
+    }
+    return `⚠️ Scraping failed: ${msg}. Use the manual entry form below to enter details manually.`;
+  };
+
   const scrapeHomesUrl = async () => {
     if (!supabase) return;
     setIsLoading(true);
+    setConnectionError(null);
     try {
       const { data, error } = await supabase.functions.invoke('scrape-property', {
         body: { url: homesUrl }
       });
       
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        const errorMsg = formatScrapeError(error, data);
+        setConnectionError(errorMsg);
+        // Fallback to empty shell for manual entry
+        const fallback = { address: '', url: homesUrl, source: 'Homes.com' };
+        setScrapedData([fallback as any]);
+        setSelectedForImport(new Set([0]));
+        setWizardStep(1);
+        return;
+      }
+      if (data?.error || data?.errorCode) {
+        setConnectionError(formatScrapeError(null, data));
+        const fallback = { address: data?.address || '', url: homesUrl, source: 'Homes.com' };
+        setScrapedData([fallback as any]);
+        setSelectedForImport(new Set([0]));
+        setWizardStep(1);
+        return;
+      }
 
       setScrapedData([data]);
       setSelectedForImport(new Set([0]));
       setWizardStep(1);
     } catch (err: any) {
       console.error('Scraping failed', err);
-      alert(`Scraping failed (${err.message}). We've opened the manual entry form for you to fill the missing details.`);
+      setConnectionError(formatScrapeError(err, null));
       
       // Fallback to empty shell for manual entry
       const fallback = { address: '', url: homesUrl, source: 'Homes.com' };
@@ -314,20 +350,36 @@ export default function Imports() {
   const scrapeGenericUrl = async () => {
     if (!supabase) return;
     setIsLoading(true);
+    setConnectionError(null);
     try {
       const { data, error } = await supabase.functions.invoke('scrape-property', {
         body: { url: genericUrl }
       });
       
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
+      if (error) {
+        const errorMsg = formatScrapeError(error, data);
+        setConnectionError(errorMsg);
+        const fallback = { address: '', url: genericUrl, source: 'URL Import' };
+        setScrapedData([fallback as any]);
+        setSelectedForImport(new Set([0]));
+        setWizardStep(1);
+        return;
+      }
+      if (data?.error || data?.errorCode) {
+        setConnectionError(formatScrapeError(null, data));
+        const fallback = { address: data?.address || '', url: genericUrl, source: 'URL Import' };
+        setScrapedData([fallback as any]);
+        setSelectedForImport(new Set([0]));
+        setWizardStep(1);
+        return;
+      }
 
       setScrapedData([data]);
       setSelectedForImport(new Set([0]));
       setWizardStep(1);
     } catch (err: any) {
       console.error('Scraping failed', err);
-      alert(`Scraping failed (${err.message}). We've opened the manual entry form for you to fill the missing details.`);
+      setConnectionError(formatScrapeError(err, null));
       
       // Fallback to empty shell for manual entry
       const fallback = { address: '', url: genericUrl, source: 'URL Import' };
