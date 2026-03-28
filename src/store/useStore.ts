@@ -387,6 +387,7 @@ export interface ScrapedPropertyData {
   baths?: number;
   sqft?: number;
   propertyType?: string;
+  yearBuilt?: number;
   listingDate?: string;
   owner?: string;
   images?: string[];
@@ -1519,7 +1520,7 @@ interface AppState {
   getMockSheetData: () => Record<string, string>[];
   getMockScrapedProperty: (url: string) => ScrapedPropertyData;
   getMockPdfExtraction: () => ScrapedPropertyData[];
-  importLeadsFromData: (data: Array<any>) => Promise<{ imported: number; skipped: number; duplicates: number }>;
+  importLeadsFromData: (data: Array<any>, onProgress?: (current: number, total: number) => void) => Promise<{ imported: number; skipped: number; duplicates: number }>;
 
   // Theme
   currentTheme: string;
@@ -3721,7 +3722,7 @@ export const useStore = create<AppState>((set, get) => ({
                   return MOCK_PDF_EXTRACTIONS;
                 },
 
-                  importLeadsFromData: async (data: any[]) => {
+                  importLeadsFromData: async (data: any[], onProgress?: (current: number, total: number) => void) => {
                     const state = get();
                     const now = new Date().toISOString();
                     let importedCount = 0;
@@ -3731,7 +3732,14 @@ export const useStore = create<AppState>((set, get) => ({
                     const newLeads: Lead[] = [];
                     const mergedLeads: Lead[] = [];
 
-                    for (const d of data) {
+                    for (let i = 0; i < data.length; i++) {
+                      const d = data[i];
+                      
+                      // Report progress every 50 records during parsing
+                      if (onProgress && i % 50 === 0) {
+                        onProgress(i, data.length);
+                      }
+                      
                       const leadName = (d.name || '').trim();
                       const leadEmail = (d.email || '').trim();
                       const leadPhone = (d.phone || '').trim();
@@ -3821,6 +3829,7 @@ export const useStore = create<AppState>((set, get) => ({
                       importedCount++;
                     }
 
+                    // Pre-emptively update local state
                     set((s: any) => {
                       const mergedIds = new Set(mergedLeads.map(m => m.id));
                       const remainingLeads = s.leads.filter((l: Lead) => !mergedIds.has(l.id));
@@ -3860,12 +3869,22 @@ export const useStore = create<AppState>((set, get) => ({
                           updated_at: lead.updatedAt,
                         }));
 
-                        const { error } = await supabase.from('leads').insert(newRows);
-                        if (error) console.error('❌ Failed to save new leads to Supabase:', error);
+                        // Batch Insert
+                        const batchSize = 500;
+                        for (let i = 0; i < newRows.length; i += batchSize) {
+                          const batch = newRows.slice(i, i + batchSize);
+                          if (onProgress) onProgress(data.length + i, data.length + newRows.length);
+                          const { error } = await supabase.from('leads').insert(batch);
+                          if (error) console.error('❌ Failed to save new leads to Supabase:', error);
+                        }
                       }
                       
                       if (mergedLeads.length > 0) {
-                        for (const ml of mergedLeads) {
+                        for (let i = 0; i < mergedLeads.length; i++) {
+                          const ml = mergedLeads[i];
+                          if (onProgress && i % 10 === 0) {
+                             onProgress(data.length + newLeads.length + i, data.length + newLeads.length + mergedLeads.length);
+                          }
                           const { error } = await supabase.from('leads').update({
                             name: ml.name,
                             email: ml.email,
@@ -3883,6 +3902,10 @@ export const useStore = create<AppState>((set, get) => ({
                           if (error) console.error(`❌ Failed to update merged lead ${ml.id}:`, error);
                         }
                       }
+                    }
+
+                    if (onProgress) {
+                      onProgress(data.length * 2, data.length * 2); // Finalize progress
                     }
 
                     return { 

@@ -24,7 +24,7 @@ import {
   AlertTriangle, CheckCircle2, XCircle, Loader2, Eye, Users,
   RefreshCw, Copy, Plus, Settings, Shield,
   GripVertical, MapPin, DollarSign, User, Mail, Phone, Home,
-  StickyNote, Clock, Filter, FileImage, Sparkles, ClipboardPaste,
+  StickyNote, Clock, Filter, Sparkles, ClipboardPaste,
   Type, AtSign, TableProperties,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -125,7 +125,6 @@ export default function Imports() {
     importTemplates, importHistory, duplicateSettings,
     addImportTemplate, deleteImportTemplate,
     addImportHistory, updateDuplicateSettings,
-    getMockScrapedProperty,
     importLeadsFromData, teamId,
   } = useStore();  // Custom Fields State
   const [customFields, setCustomFields] = useState<Array<{ id: string; name: string; field_key: string; field_type: 'text' | 'number' }>>([]);
@@ -177,8 +176,9 @@ export default function Imports() {
   const [scrapedData, setScrapedData] = useState<ScrapedPropertyData[]>([]);
   const [selectedForImport, setSelectedForImport] = useState<Set<number>>(new Set());
 
-  // Import results
+  // Import results & progress
   const [importResult, setImportResult] = useState<{ total: number; imported: number; skipped: number; duplicates: number } | null>(null);
+  const [importProgress, setImportProgress] = useState<{current: number, total: number} | null>(null);
 
   // Smart Paste state
   const [pastedText, setPastedText] = useState('');
@@ -283,26 +283,60 @@ export default function Imports() {
     }
   };
 
-  const scrapeHomesUrl = () => {
+  const scrapeHomesUrl = async () => {
+    if (!supabase) return;
     setIsLoading(true);
-    setTimeout(() => {
-      const property = getMockScrapedProperty(homesUrl);
-      setScrapedData([property]);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-property', {
+        body: { url: homesUrl }
+      });
+      
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setScrapedData([data]);
       setSelectedForImport(new Set([0]));
-      setIsLoading(false);
       setWizardStep(1);
-    }, 2000);
+    } catch (err: any) {
+      console.error('Scraping failed', err);
+      alert(`Scraping failed (${err.message}). We've opened the manual entry form for you to fill the missing details.`);
+      
+      // Fallback to empty shell for manual entry
+      const fallback = { address: '', url: homesUrl, source: 'Homes.com' };
+      setScrapedData([fallback as any]);
+      setSelectedForImport(new Set([0]));
+      setWizardStep(1);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const scrapeGenericUrl = () => {
+  const scrapeGenericUrl = async () => {
+    if (!supabase) return;
     setIsLoading(true);
-    setTimeout(() => {
-      const property = getMockScrapedProperty(genericUrl);
-      setScrapedData([{ ...property, source: 'URL Import', sourceUrl: genericUrl }]);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-property', {
+        body: { url: genericUrl }
+      });
+      
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+
+      setScrapedData([data]);
       setSelectedForImport(new Set([0]));
-      setIsLoading(false);
       setWizardStep(1);
-    }, 2000);
+    } catch (err: any) {
+      console.error('Scraping failed', err);
+      alert(`Scraping failed (${err.message}). We've opened the manual entry form for you to fill the missing details.`);
+      
+      // Fallback to empty shell for manual entry
+      const fallback = { address: '', url: genericUrl, source: 'URL Import' };
+      setScrapedData([fallback as any]);
+      setSelectedForImport(new Set([0]));
+      setWizardStep(1);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const { getRootProps: getCsvProps, getInputProps: getCsvInputProps, isDragActive: isCsvDrag } = useDropzone({
@@ -458,7 +492,9 @@ export default function Imports() {
       }
 
       try {
-        const { imported, skipped, duplicates } = await importLeadsFromData(rows);
+        const { imported, skipped, duplicates } = await importLeadsFromData(rows, (current, total) => {
+          setImportProgress({ current, total });
+        });
 
         setImportResult({
           total: rowsToImport.length,
@@ -490,6 +526,7 @@ export default function Imports() {
       alert(`❌ Import failed: ${err.message}`);
     } finally {
       setIsLoading(false);
+      setImportProgress(null);
     }
   };
 
@@ -505,14 +542,16 @@ export default function Imports() {
           name: d.owner || 'Unknown Owner',
           email: '',
           phone: '',
-          address: d.address || '',
-          value: d.price || 0,
+          propertyAddress: d.address || '',
+          estimatedValue: d.price || 0,
           propertyType: mapPropertyType(d.propertyType || 'single-family') as PropertyType,
           source: (selectedSource === 'homes-com' ? 'website' : 'other') as LeadSource,
           notes: `Imported from ${d.source}. ${d.sourceUrl ? `URL: ${d.sourceUrl}` : ''} ${d.beds ? `${d.beds}bd/${d.baths}ba` : ''} ${d.sqft ? `${d.sqft}sqft` : ''}`.trim(),
         }));
 
-      importLeadsFromData(rows).then(({ imported, skipped, duplicates }) => {
+      importLeadsFromData(rows, (current, total) => {
+        setImportProgress({ current, total });
+      }).then(({ imported, skipped, duplicates }) => {
         setImportResult({
           total: scrapedData.length,
           imported,
@@ -534,10 +573,11 @@ export default function Imports() {
         });
       }).catch(err => {
         console.error('Scrape import failed:', err);
+      }).finally(() => {
+        setIsLoading(false);
+        setImportProgress(null);
+        setWizardStep(3);
       });
-
-      setIsLoading(false);
-      setWizardStep(3);
     }, 1500);
   };
 
@@ -613,8 +653,8 @@ export default function Imports() {
               name: mapped.name || '',
               email: mapped.email || '',
               phone: mapped.phone || '',
-              address: mapped.propertyAddress || '',
-              value: parseValue(mapped.estimatedValue || '0'),
+              propertyAddress: mapped.propertyAddress || '',
+              estimatedValue: parseValue(mapped.estimatedValue || '0'),
               propertyType: mapPropertyType(mapped.propertyType || 'single-family') as PropertyType,
               source: 'other' as LeadSource,
               notes: mapped.notes || '',
@@ -623,7 +663,7 @@ export default function Imports() {
             console.log('Mapped lead:', lead);
             return lead;
           }).filter(r => {
-            const valid = r.name.trim() || r.address.trim();
+            const valid = r.name.trim() || r.propertyAddress.trim();
             if (!valid) console.log('Filtering out invalid lead:', r);
             return valid;
           });
@@ -636,7 +676,9 @@ export default function Imports() {
           return;
         }
 
-        const { imported, skipped, duplicates } = await importLeadsFromData(rows);
+        const { imported, skipped, duplicates } = await importLeadsFromData(rows, (current, total) => {
+          setImportProgress({ current, total });
+        });
         console.log(`📊 importLeadsFromData returned: ${imported} imported, ${skipped} skipped, ${duplicates} duplicates`);
         
         setImportResult({
@@ -688,6 +730,45 @@ export default function Imports() {
   if (activeView === 'wizard' && selectedSource) {
     return (
       <div className="space-y-6">
+        {/* Import Progress Bar */}
+        {isLoading && importProgress && (
+          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6 mb-6 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[var(--t-primary-dim)] text-[var(--t-primary)]">
+                  <Loader2 size={18} className="animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Importing Leads...</h3>
+                  <p className="text-xs text-[var(--t-text-muted)]">Please keep this window open while we process your data.</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-sm font-bold text-white">
+                  {importProgress.total > 0 ? Math.round((importProgress.current / importProgress.total) * 100) : 0}%
+                </span>
+                <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-wider font-bold">
+                  {importProgress.current.toLocaleString()} / {importProgress.total.toLocaleString()}
+                </p>
+              </div>
+            </div>
+            
+            <div className="h-2 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden border border-[var(--t-border)]">
+              <div 
+                className="h-full bg-[var(--t-primary)] transition-all duration-300 ease-out"
+                style={{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }}
+              />
+            </div>
+            
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)] animate-pulse" />
+              <span className="text-[10px] font-medium text-[var(--t-text-muted)] italic">
+                {importProgress.current < importProgress.total / 2 ? 'Analyzing records...' : 'Synchronizing with database...'}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Wizard Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1456,115 +1537,234 @@ export default function Imports() {
               <>
                 <h2 className="text-lg font-semibold text-white">Review Extracted Data</h2>
                 <p className="text-sm text-[var(--t-text-muted)]">
-                  We found {scrapedData.length} {scrapedData.length === 1 ? 'property' : 'properties'}. Review the data and select which to import.
+                  We found {scrapedData.length} {scrapedData.length === 1 ? 'property' : 'properties'}. Review and edit the data below before importing.
                 </p>
 
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                   {scrapedData.map((property, idx) => (
-                    <div key={idx} className={`bg-[var(--t-surface)] rounded-xl p-5 border transition-colors cursor-pointer ${
+                    <div key={idx} className={`bg-[var(--t-surface)] rounded-xl p-5 border transition-colors ${
                       selectedForImport.has(idx) ? 'border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]/30' : 'border-[var(--t-border)] hover:border-[var(--t-border)]'
-                    }`} onClick={() => {
-                      setSelectedForImport(prev => {
-                        const next = new Set(prev);
-                        next.has(idx) ? next.delete(idx) : next.add(idx);
-                        return next;
-                      });
-                    }}>
+                    }`}>
                       <div className="flex items-start gap-4">
                         {/* Select checkbox */}
-                        <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                          selectedForImport.has(idx) ? 'bg-[var(--t-primary)] border-[var(--t-primary)]' : 'border-[var(--t-border)]'
-                        }`}>
+                        <button 
+                          className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors cursor-pointer ${
+                            selectedForImport.has(idx) ? 'bg-[var(--t-primary)] border-[var(--t-primary)]' : 'border-[var(--t-border)] hover:border-[var(--t-primary)]/50'
+                          }`}
+                          onClick={() => {
+                            setSelectedForImport(prev => {
+                              const next = new Set(prev);
+                              next.has(idx) ? next.delete(idx) : next.add(idx);
+                              return next;
+                            });
+                          }}
+                        >
                           {selectedForImport.has(idx) && <Check size={14} className="text-white" />}
-                        </div>
+                        </button>
 
-                        <div className="flex-1 min-w-0">
-                          {/* Address + price */}
-                          <div className="flex items-start justify-between gap-4 mb-3">
+                        <div className="flex-1 min-w-0 space-y-4">
+                          {/* Top Row: Address and Price */}
+                          <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex-1">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-1 block">Property Address</label>
+                              <div className="relative">
+                                <MapPin size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)]" />
+                                <input 
+                                  value={property.address || ''} 
+                                  onChange={(e) => {
+                                    const newData = [...scrapedData];
+                                    newData[idx].address = e.target.value;
+                                    setScrapedData(newData);
+                                  }}
+                                  className="w-full pl-9 pr-3 py-2 text-sm bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-white rounded-lg focus:outline-none focus:border-[var(--t-primary)]"
+                                  placeholder="123 Main St, City, ST"
+                                />
+                              </div>
+                            </div>
+                            <div className="w-full sm:w-32">
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-1 block">Price</label>
+                              <div className="relative">
+                                <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)]" />
+                                <input 
+                                  type="number"
+                                  value={property.price || ''} 
+                                  onChange={(e) => {
+                                    const newData = [...scrapedData];
+                                    newData[idx].price = e.target.value ? parseFloat(e.target.value) : undefined;
+                                    setScrapedData(newData);
+                                  }}
+                                  className="w-full pl-8 pr-3 py-2 text-sm bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-[var(--t-success)] font-medium rounded-lg focus:outline-none focus:border-[var(--t-primary)]"
+                                  placeholder="0"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Stats Row */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div>
-                              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                                <MapPin size={14} className="text-[var(--t-primary)]" />
-                                {property.address || 'Unknown Address'}
-                                <ConfidenceBadge score={property.confidence.address || 0} />
-                              </h3>
-                              {property.owner && (
-                                <p className="text-xs text-[var(--t-text-muted)] mt-1 flex items-center gap-1">
-                                  <User size={11} /> Owner: {property.owner}
-                                  <ConfidenceBadge score={property.confidence.owner || 0} />
-                                </p>
-                              )}
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-1 block">Beds</label>
+                              <input 
+                                type="number"
+                                value={property.beds || ''} 
+                                onChange={(e) => {
+                                  const newData = [...scrapedData];
+                                  newData[idx].beds = e.target.value ? parseInt(e.target.value) : undefined;
+                                  setScrapedData(newData);
+                                }}
+                                className="w-full px-3 py-2 text-sm bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-white rounded-lg focus:outline-none focus:border-[var(--t-primary)]"
+                                placeholder="-"
+                              />
                             </div>
-                            {property.price && (
-                              <div className="text-right shrink-0">
-                                <p className="text-lg font-bold text-[var(--t-success)]">${property.price.toLocaleString()}</p>
-                                <ConfidenceBadge score={property.confidence.price || 0} />
-                              </div>
-                            )}
+                            <div>
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-1 block">Baths</label>
+                              <input 
+                                type="number"
+                                step="0.5"
+                                value={property.baths || ''} 
+                                onChange={(e) => {
+                                  const newData = [...scrapedData];
+                                  newData[idx].baths = e.target.value ? parseFloat(e.target.value) : undefined;
+                                  setScrapedData(newData);
+                                }}
+                                className="w-full px-3 py-2 text-sm bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-white rounded-lg focus:outline-none focus:border-[var(--t-primary)]"
+                                placeholder="-"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-1 block">SqFt</label>
+                              <input 
+                                type="number"
+                                value={property.sqft || ''} 
+                                onChange={(e) => {
+                                  const newData = [...scrapedData];
+                                  newData[idx].sqft = e.target.value ? parseInt(e.target.value) : undefined;
+                                  setScrapedData(newData);
+                                }}
+                                className="w-full px-3 py-2 text-sm bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-white rounded-lg focus:outline-none focus:border-[var(--t-primary)]"
+                                placeholder="-"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-1 block">Year Built</label>
+                              <input 
+                                type="number"
+                                value={property.yearBuilt || ''} 
+                                onChange={(e) => {
+                                  const newData = [...scrapedData];
+                                  newData[idx].yearBuilt = e.target.value ? parseInt(e.target.value) : undefined;
+                                  setScrapedData(newData);
+                                }}
+                                className="w-full px-3 py-2 text-sm bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-white rounded-lg focus:outline-none focus:border-[var(--t-primary)]"
+                                placeholder="-"
+                              />
+                            </div>
                           </div>
 
-                          {/* Property details */}
-                          <div className="flex flex-wrap gap-3 mb-3">
-                            {property.beds !== undefined && (
-                              <span className="text-xs text-[var(--t-text-muted)] bg-[var(--t-surface-subtle)]/50 px-2 py-1 rounded-lg">{property.beds} beds</span>
-                            )}
-                            {property.baths !== undefined && (
-                              <span className="text-xs text-[var(--t-text-muted)] bg-[var(--t-surface-subtle)]/50 px-2 py-1 rounded-lg">{property.baths} baths</span>
-                            )}
-                            {property.sqft && (
-                              <span className="text-xs text-[var(--t-text-muted)] bg-[var(--t-surface-subtle)]/50 px-2 py-1 rounded-lg">{property.sqft.toLocaleString()} sqft</span>
-                            )}
-                            {property.propertyType && (
-                              <span className="text-xs text-[var(--t-text-muted)] bg-[var(--t-surface-subtle)]/50 px-2 py-1 rounded-lg">{property.propertyType}</span>
-                            )}
-                            {property.listingDate && (
-                              <span className="text-xs text-[var(--t-text-muted)] bg-[var(--t-surface-subtle)]/50 px-2 py-1 rounded-lg flex items-center gap-1">
-                                <Clock size={10} /> Listed {property.listingDate}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Source + confidence */}
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-[var(--t-text-muted)] flex items-center gap-1">
-                              <Link2 size={10} /> Source: {property.source}
+                          {/* Source + Source URL */}
+                          <div className="flex items-center gap-3 mt-2">
+                            <span className="text-[10px] text-[var(--t-text-muted)] flex items-center gap-1 bg-[var(--t-surface-subtle)] px-2 py-1 rounded">
+                              <Link2 size={10} /> Source: {property.source || 'Manual Entry'}
                             </span>
-                            {property.images && property.images.length > 0 && (
-                              <span className="text-[10px] text-[var(--t-text-muted)] flex items-center gap-1">
-                                <FileImage size={10} /> {property.images.length} images
-                              </span>
+                            {property.sourceUrl && (
+                               <a href={property.sourceUrl} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--t-primary)] hover:underline flex items-center gap-1">
+                                 View Original <ArrowRight size={10} />
+                               </a>
                             )}
                           </div>
-
-                          {/* Raw metadata */}
-                          {Object.keys(property.raw).length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-[var(--t-border)]/50">
-                              <p className="text-[10px] uppercase tracking-wider text-[var(--t-text-muted)] font-semibold mb-1.5">Raw Metadata</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {Object.entries(property.raw).map(([k, v]) => (
-                                  <span key={k} className="text-[10px] px-2 py-1 bg-[var(--t-surface-dim)]/50 rounded text-[var(--t-text-muted)]">
-                                    {k}: <span className="text-[var(--t-text-muted)]">{v}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-[var(--t-border)]">
+                <div className="border rounded-xl p-5 space-y-4 mb-4" style={{ background: 'var(--t-background)', borderColor: 'var(--t-border)' }}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <Shield size={16} style={{ color: 'var(--t-primary)' }} />
+                      Duplicate Detection
+                    </h3>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" checked={duplicateSettings.enabled}
+                        onChange={() => updateDuplicateSettings({ enabled: !duplicateSettings.enabled })}
+                        className="sr-only peer" />
+                      <div className="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"
+                        style={{ background: 'var(--t-border)' }}
+                        // @ts-expect-error custom prop
+                        css={duplicateSettings.enabled ? { background: 'var(--t-primary)' } : {}}
+                      />
+                    </label>
+                  </div>
+
+                  {duplicateSettings.enabled && (
+                    <>
+                      <div>
+                        <p className="text-xs mb-2" style={{ color: 'var(--t-text-muted)' }}>Match on fields:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(['name', 'email', 'phone', 'address'] as const).map(field => (
+                            <button key={field} onClick={() => {
+                              const current = duplicateSettings.matchFields;
+                              const next = current.includes(field)
+                                ? current.filter(f => f !== field)
+                                : [...current, field];
+                              updateDuplicateSettings({ matchFields: next });
+                            }}
+                              className="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+                              style={{ 
+                                background: duplicateSettings.matchFields.includes(field) ? 'var(--t-primary-dim)' : 'var(--t-surface)',
+                                borderColor: duplicateSettings.matchFields.includes(field) ? 'var(--t-primary)' : 'var(--t-border)',
+                                color: duplicateSettings.matchFields.includes(field) ? 'var(--t-primary)' : 'var(--t-text-muted)'
+                              }}
+                            >
+                              {field.charAt(0).toUpperCase() + field.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs mb-2" style={{ color: 'var(--t-text-muted)' }}>When duplicate found:</p>
+                        <div className="flex gap-2">
+                          {(['skip', 'merge', 'create-new'] as const).map(action => (
+                            <button key={action} onClick={() => updateDuplicateSettings({ action })}
+                              className="px-3 py-1.5 text-xs rounded-lg border transition-colors"
+                              style={{ 
+                                background: duplicateSettings.action === action ? 'var(--t-primary-dim)' : 'var(--t-surface)',
+                                borderColor: duplicateSettings.action === action ? 'var(--t-primary)' : 'var(--t-border)',
+                                color: duplicateSettings.action === action ? 'var(--t-primary)' : 'var(--t-text-muted)'
+                              }}
+                            >
+                              {action === 'skip' ? 'Skip Duplicate' : action === 'merge' ? 'Merge Data' : 'Create New'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-[var(--t-border)] mt-4">
                   <button onClick={() => setWizardStep(0)} className="flex items-center gap-1.5 px-4 py-2 text-sm text-[var(--t-text-muted)] hover:text-white">
                     <ArrowLeft size={14} /> Back
                   </button>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-[var(--t-text-muted)]">{selectedForImport.size} of {scrapedData.length} selected</span>
-                    <button onClick={() => setWizardStep(2)} disabled={selectedForImport.size === 0}
-                      className="flex items-center gap-1.5 px-5 py-2.5 disabled:opacity-50 text-white text-sm rounded-xl font-medium transition-all"
+                    <span className="text-xs text-[var(--t-text-muted)]">{selectedForImport.size} of {scrapedData.length} ready</span>
+                    <button 
+                      onClick={() => {
+                        if (selectedForImport.size === 0) {
+                          alert('Please select at least one property to import.');
+                          return;
+                        }
+                        importFromScraped(selectedForImport);
+                      }}
+                      disabled={isLoading || selectedForImport.size === 0}
+                      className="flex items-center gap-2 px-6 py-2.5 disabled:opacity-50 text-white text-sm rounded-xl font-medium transition-all shadow-sm"
                       style={{ background: 'var(--t-primary)' }}
                     >
-                      Continue <ArrowRight size={14} />
+                      {isLoading ? (
+                        <><Loader2 size={16} className="animate-spin" /> Importing...</>
+                      ) : (
+                        <><Download size={16} /> Import Selected ({selectedForImport.size})</>
+                      )}
                     </button>
                   </div>
                 </div>
