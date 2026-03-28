@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { useStore, Lead } from '../store/useStore';
 import { 
   FileText, Download, Mail, Save, Plus, Search, 
-  ChevronDown, User, FileSignature
+  ChevronDown, User, FileSignature, MapPin, DollarSign
 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { format } from 'date-fns';
@@ -183,20 +183,51 @@ export default function Contracts() {
   };
 
   const generatePDF = async () => {
-    if (!documentRef.current) return;
+    if (!activeTemplate.content) return;
     setIsExporting(true);
     
     try {
-      const element = documentRef.current;
+      // Create an off-screen container to guarantee full rendering without scroll container clipping
+      const printContainer = document.createElement('div');
+      printContainer.style.position = 'absolute';
+      printContainer.style.top = '-9999px';
+      printContainer.style.left = '-9999px';
+      printContainer.style.width = '8.5in'; // Standard US Letter width
+      printContainer.style.padding = '1in';
+      printContainer.style.backgroundColor = 'white';
+      printContainer.style.color = 'black';
+      printContainer.style.fontFamily = '"Times New Roman", Times, serif';
+      printContainer.style.lineHeight = '1.6';
+      
+      // Inject the global styles inline so html2canvas catches them
+      printContainer.innerHTML = `
+        <style>
+          .contract-content h1 { text-align: center; font-size: 1.5rem; margin-bottom: 2rem; text-transform: uppercase; }
+          .contract-content h2 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; text-transform: uppercase; }
+          .contract-content p { margin-bottom: 1rem; }
+        </style>
+        <div class="contract-content prose prose-sm max-w-none">
+          ${renderTemplateContent(activeTemplate.content, selectedLead)}
+        </div>
+      `;
+      
+      document.body.appendChild(printContainer);
+
+      const fileName = `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name.replace(/\s+/g, '_') || 'Draft'}.pdf`;
+
       const opt = {
-        margin:       1,
-        filename:     `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name.replace(/\s+/g, '_') || 'Draft'}.pdf`,
-        image:        { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
+        margin:       0.5,
+        filename:     fileName,
+        image:        { type: 'jpeg' as const, quality: 1 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
       
-      await html2pdf().set(opt).from(element).save();
+      await html2pdf().set(opt).from(printContainer).save();
+      
+      // Cleanup
+      document.body.removeChild(printContainer);
+      
     } catch (err) {
       console.error('Failed to generate PDF', err);
       alert('Failed to generate PDF. Check console.');
@@ -296,20 +327,21 @@ export default function Contracts() {
       {/* Main Content - Editor/Preview */}
       <div className="flex-1 flex flex-col min-w-0 bg-[var(--t-surface-dim)]">
         {/* Toolbar */}
-        <div className="h-20 border-b border-[var(--t-border)] bg-[var(--t-surface)] flex items-center justify-between px-8 px-6 backdrop-blur-md sticky top-0 z-20">
-          <div className="flex items-center gap-6 flex-1 max-w-lg">
-            <div>
-              <label className="text-xs font-medium text-[var(--t-text-muted)] mb-1 block">Data Source (Lead)</label>
+        <div className="border-b border-[var(--t-border)] bg-[var(--t-surface)] flex flex-col md:flex-row items-start md:items-center justify-between p-4 md:px-6 gap-4 sticky top-0 z-20 shadow-sm backdrop-blur-md">
+          
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+            <div className="w-full sm:w-auto">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-1.5 block">Contract Subject</label>
               <div className="relative">
                 <select
                   value={selectedLeadId}
                   onChange={(e) => setSelectedLeadId(e.target.value)}
-                  className="w-[300px] appearance-none pl-10 pr-10 py-2.5 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-border)] text-[var(--t-text)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none"
+                  className="w-full sm:w-[280px] appearance-none pl-10 pr-10 py-2.5 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-border)] text-[var(--t-text)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all shadow-sm"
                 >
                   <option value="">-- View Blank Template --</option>
                   {leads.map(lead => (
                     <option key={lead.id} value={lead.id}>
-                      {lead.name} • {lead.propertyAddress?.split(',')[0]}
+                      {lead.name} {lead.propertyAddress ? `• ${lead.propertyAddress.split(',')[0]}` : ''}
                     </option>
                   ))}
                 </select>
@@ -319,41 +351,51 @@ export default function Contracts() {
             </div>
             
             {selectedLead && (
-              <div className="h-10 w-px bg-[var(--t-border)]" />
-            )}
-            
-            {selectedLead && (
-               <div className="flex flex-col justify-center">
-                 <p className="text-xs font-semibold text-[var(--t-text)] truncate">{selectedLead.propertyAddress}</p>
-                 <p className="text-[10px] text-[var(--t-text-muted)]">Valued at ${selectedLead.estimatedValue?.toLocaleString()}</p>
+               <div className="hidden sm:flex flex-col justify-center bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 w-full sm:w-auto shadow-sm">
+                 <p className="text-sm font-semibold text-[var(--t-text)] truncate flex items-center gap-1.5">
+                   <MapPin size={14} className="text-[var(--t-primary)] shrink-0" />
+                   {selectedLead.propertyAddress || 'No Address'}
+                 </p>
+                 <div className="flex items-center gap-3 mt-0.5">
+                   <p className="text-[11px] text-[var(--t-text-muted)] flex items-center gap-1">
+                     <User size={11} /> {selectedLead.name}
+                   </p>
+                   {selectedLead.estimatedValue ? (
+                     <p className="text-[11px] text-[var(--t-success)] font-medium flex items-center gap-1">
+                       <DollarSign size={11} /> ${selectedLead.estimatedValue.toLocaleString()}
+                     </p>
+                   ) : null}
+                 </div>
                </div>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
             <button 
               onClick={handleEmailLead}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] text-[var(--t-text)]"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] hover:border-[var(--t-primary)]/30 text-[var(--t-text)] shadow-sm"
+              title="Email Document"
             >
-              <Mail size={16} /> Email
+              <Mail size={16} className="text-[var(--t-text-muted)]" /> <span className="hidden sm:inline">Email</span>
             </button>
             <button 
               onClick={handleSaveToLead}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] text-[var(--t-text)]"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] hover:border-[var(--t-primary)]/30 text-[var(--t-text)] shadow-sm"
+              title="Save to Lead Profile"
             >
-              <Save size={16} /> Save to Lead
+              <Save size={16} className="text-[var(--t-text-muted)]" /> <span className="hidden sm:inline">Save</span>
             </button>
             <button 
               onClick={generatePDF}
               disabled={isExporting}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-medium transition-colors bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary)]/90 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary)]/90 shadow-sm shadow-[var(--t-primary)]/20 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isExporting ? (
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
               ) : (
-                <Download size={16} />
+                <Download size={16} className="shrink-0" />
               )}
-              {isExporting ? 'Exporting...' : 'Export PDF'}
+              <span>{isExporting ? 'Exporting...' : 'Export PDF'}</span>
             </button>
           </div>
         </div>
