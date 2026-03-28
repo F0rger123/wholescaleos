@@ -29,21 +29,23 @@ export default function Pricing() {
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserId = user?.id || currentUser?.id;
 
-      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
-        body: {
+      const response = await fetch('https://jdneeubmkgefhrfcurji.supabase.co/functions/v1/stripe-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           plan: planName.toLowerCase(),
           billing: billingCycle,
           user_id: currentUserId,
-          success_url: `${window.location.origin}/settings?tab=billing`,
-          cancel_url: `${window.location.origin}/pricing`
-        }
+          success_url: 'https://wholescaleos.pages.dev/settings?tab=billing',
+          cancel_url: 'https://wholescaleos.pages.dev/pricing'
+        })
       });
 
-      if (error) throw error;
+      const data = await response.json();
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('No checkout URL returned');
+        throw new Error(data.error || 'No checkout URL returned');
       }
     } catch (err) {
       console.error('Checkout error:', err);
