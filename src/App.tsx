@@ -12,6 +12,7 @@ import Team from './pages/Team';
 import Tasks from './pages/Tasks';
 import Chat from './pages/Chat';
 import Imports from './pages/Imports';
+import Contracts from './pages/Contracts';
 import Calculators from './pages/Calculators';
 import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
@@ -229,6 +230,7 @@ export function App() {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/imports" element={<Imports />} />
+            <Route path="/contracts" element={<Contracts />} />
             <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
             <Route path="/calculators" element={<Calculators />} />
             <Route path="/settings" element={<SettingsPage />} />

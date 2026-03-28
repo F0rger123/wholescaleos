@@ -1,0 +1,25 @@
+src/pages/Contracts.tsx(194,23): error TS1127: Invalid character.
+src/pages/Contracts.tsx(194,24): error TS1136: Property assignment expected.
+src/pages/Contracts.tsx(392,27): error TS1005: ',' expected.
+src/pages/Contracts.tsx(392,30): error TS1005: ',' expected.
+src/pages/Contracts.tsx(393,15): error TS1005: ',' expected.
+src/pages/Contracts.tsx(393,21): error TS1005: ';' expected.
+src/pages/Contracts.tsx(394,20): error TS1005: ';' expected.
+src/pages/Contracts.tsx(394,25): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/pages/Contracts.tsx(395,24): error TS1005: ';' expected.
+src/pages/Contracts.tsx(395,27): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/pages/Contracts.tsx(396,25): error TS1005: ';' expected.
+src/pages/Contracts.tsx(398,9): error TS1472: 'catch' or 'finally' expected.
+src/pages/Contracts.tsx(398,27): error TS1005: ';' expected.
+src/pages/Contracts.tsx(399,20): error TS1005: ';' expected.
+src/pages/Contracts.tsx(399,25): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/pages/Contracts.tsx(400,21): error TS1005: ';' expected.
+src/pages/Contracts.tsx(400,26): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/pages/Contracts.tsx(401,24): error TS1005: ';' expected.
+src/pages/Contracts.tsx(401,29): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/pages/Contracts.tsx(402,25): error TS1005: ';' expected.
+src/pages/Contracts.tsx(404,9): error TS1128: Declaration or statement expected.
+src/pages/Contracts.tsx(404,27): error TS1005: ';' expected.
+src/pages/Contracts.tsx(405,24): error TS1005: ';' expected.
+src/pages/Contracts.tsx(405,27): error TS1351: An identifier or keyword cannot immediately follow a numeric literal.
+src/pages/Contracts.tsx(411,1): error TS1160: Unterminated template literal.

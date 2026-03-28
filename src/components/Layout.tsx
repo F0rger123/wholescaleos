@@ -68,6 +68,7 @@ export function Layout() {
     ],
     Tools: [
       { to: '/imports', label: 'Imports', icon: Download },
+      { to: '/contracts', label: 'Contracts', icon: FileText },
       { to: '/calculators', label: 'Calculators', icon: Calculator },
       { to: '/team', label: 'Team', icon: UserCog },
       { to: '/settings', label: 'Settings', icon: Settings },
