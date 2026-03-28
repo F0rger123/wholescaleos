@@ -28,6 +28,11 @@ import {
   Type, AtSign, TableProperties,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
+import { useDropzone } from 'react-dropzone';
+import Papa from 'papaparse';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -120,8 +125,8 @@ export default function Imports() {
     importTemplates, importHistory, duplicateSettings,
     addImportTemplate, deleteImportTemplate,
     addImportHistory, updateDuplicateSettings,
-    getMockScrapedProperty, getMockPdfExtraction,
-    importLeadsFromData, addLead, teamId,
+    getMockScrapedProperty,
+    importLeadsFromData, teamId,
   } = useStore();  // Custom Fields State
   const [customFields, setCustomFields] = useState<Array<{ id: string; name: string; field_key: string; field_type: 'text' | 'number' }>>([]);
   const [showAddField, setShowAddField] = useState(false);
@@ -300,16 +305,91 @@ export default function Imports() {
     }, 2000);
   };
 
-  const uploadPdf = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const extracted = getMockPdfExtraction();
-      setScrapedData(extracted);
-      setSelectedForImport(new Set(extracted.map((_, i) => i)));
-      setIsLoading(false);
-      setWizardStep(1);
-    }, 2500);
-  };
+  const { getRootProps: getCsvProps, getInputProps: getCsvInputProps, isDragActive: isCsvDrag } = useDropzone({
+    accept: { 'text/csv': ['.csv'], 'text/tab-separated-values': ['.tsv'] },
+    onDrop: (acceptedFiles) => {
+      setIsLoading(true);
+      const file = acceptedFiles[0];
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data && results.data.length > 0) {
+            setSheetData(results.data as Record<string, string>[]);
+            const headers = results.meta.fields || Object.keys(results.data[0] || {});
+            const smartMappings = smartDetectColumns(headers, results.data as Record<string, string>[]);
+            const columnMaps: ColumnMapping[] = smartMappings.map(m => ({
+              sourceColumn: m.sourceColumn,
+              targetField: m.targetField,
+              confidence: m.confidence,
+              sample: m.sample,
+            }));
+            setColumnMappings(columnMaps);
+            const allSelected = new Set<number>();
+            for (let i = 0; i < results.data.length; i++) allSelected.add(i);
+            setPreviewSelectedLeads(allSelected);
+            setIsConnected(true);
+            setWizardStep(1);
+          } else {
+            alert('No data found in CSV.');
+          }
+          setIsLoading(false);
+        },
+        error: (err: any) => {
+          alert('Error parsing CSV: ' + err.message);
+          setIsLoading(false);
+        }
+      });
+    }
+  });
+
+  const { getRootProps: getPdfProps, getInputProps: getPdfInputProps, isDragActive: isPdfDrag } = useDropzone({
+    accept: { 'application/pdf': ['.pdf'] },
+    onDrop: async (acceptedFiles) => {
+      setIsLoading(true);
+      try {
+        const file = acceptedFiles[0];
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          fullText += pageText + '\n';
+        }
+        
+        // Pass text directly to smart paste logic
+        setPastedText(fullText);
+        setSelectedSource('smart-paste');
+        
+        setTimeout(() => {
+          const result = parsePastedData(fullText);
+          setParseResult(result);
+          setEditedRows(result.rows.map(r => [...r]));
+          const mappings: ColumnMapping[] = result.columns.map(col => ({
+            sourceColumn: col.name,
+            targetField: DETECTED_TYPE_TO_TARGET[col.detectedType] || 'skip',
+            confidence: col.confidence,
+            sample: col.samples[0] || '',
+          }));
+          setPasteColumnMappings(mappings);
+          
+          const allSelected = new Set<number>();
+          for (let i = 0; i < result.rows.length; i++) allSelected.add(i);
+          setPreviewSelectedLeads(allSelected);
+          
+          setIsLoading(false);
+          setWizardStep(1);
+        }, 100);
+
+      } catch (err) {
+        console.error(err);
+        alert('Error parsing PDF. Please try again.');
+        setIsLoading(false);
+      }
+    }
+  });
 
   // ─── Apply template ────────────────────────────────────
 
@@ -377,44 +457,32 @@ export default function Imports() {
         return;
       }
 
-      let imported = 0;
-      const errors: string[] = [];
+      try {
+        const { imported, skipped, duplicates } = await importLeadsFromData(rows);
 
-      for (const lead of rows) {
-        try {
-          await addLead(lead);
-          imported++;
-        } catch (err: any) {
-          errors.push(err.message);
-          console.error('Failed to import lead:', err);
-        }
-      }
+        setImportResult({
+          total: rowsToImport.length,
+          imported,
+          skipped: skipped + (rowsToImport.length - rows.length),
+          duplicates,
+        });
 
-      const duplicates = rows.length - imported;
+        addImportHistory({
+          source: selectedSource === 'csv' ? 'csv' : 'google-sheets',
+          sourceName: sheetUrl || (selectedSource === 'csv' ? 'CSV Import' : 'Google Sheets Import'),
+          status: 'completed',
+          totalRows: rowsToImport.length,
+          importedCount: imported,
+          skippedCount: skipped + (rowsToImport.length - rows.length),
+          duplicateCount: duplicates,
+          templateUsed: selectedTemplate ? importTemplates.find(t => t.id === selectedTemplate)?.name : undefined,
+          errors: [],
+        });
 
-      setImportResult({
-        total: rowsToImport.length,
-        imported,
-        skipped: rowsToImport.length - rows.length,
-        duplicates,
-      });
-
-      addImportHistory({
-        source: 'google-sheets',
-        sourceName: sheetUrl || 'Google Sheets Import',
-        status: 'completed',
-        totalRows: rowsToImport.length,
-        importedCount: imported,
-        skippedCount: rowsToImport.length - rows.length,
-        duplicateCount: duplicates,
-        templateUsed: selectedTemplate ? importTemplates.find(t => t.id === selectedTemplate)?.name : undefined,
-        errors,
-      });
-
-      if (errors.length === 0) {
-        alert(`✅ Successfully imported ${imported} leads!`);
-      } else {
-        alert(`⚠️ Imported ${imported} leads, ${errors.length} errors. Check console.`);
+        alert(`✅ Successfully imported ${imported} leads! (Skipped: ${skipped}, Duplicates handled: ${duplicates})`);
+      } catch (err: any) {
+        console.error('Failed to import leads:', err);
+        alert(`❌ Import failed: ${err.message}`);
       }
 
       setWizardStep(3);
@@ -444,26 +512,28 @@ export default function Imports() {
           notes: `Imported from ${d.source}. ${d.sourceUrl ? `URL: ${d.sourceUrl}` : ''} ${d.beds ? `${d.beds}bd/${d.baths}ba` : ''} ${d.sqft ? `${d.sqft}sqft` : ''}`.trim(),
         }));
 
-      const imported = importLeadsFromData(rows);
+      importLeadsFromData(rows).then(({ imported, skipped, duplicates }) => {
+        setImportResult({
+          total: scrapedData.length,
+          imported,
+          skipped: skipped + (scrapedData.length - rows.length),
+          duplicates,
+        });
 
-      setImportResult({
-        total: scrapedData.length,
-        imported,
-        skipped: scrapedData.length - rows.length,
-        duplicates: rows.length - imported,
-      });
-
-      addImportHistory({
-        source: selectedSource || 'url',
-        sourceName: selectedSource === 'homes-com' ? (homesUrl || 'Homes.com Import')
-          : selectedSource === 'pdf' ? 'PDF Upload'
-          : (genericUrl || 'URL Import'),
-        status: 'completed',
-        totalRows: scrapedData.length,
-        importedCount: imported,
-        skippedCount: scrapedData.length - rows.length,
-        duplicateCount: rows.length - imported,
-        errors: [],
+        addImportHistory({
+          source: selectedSource || 'url',
+          sourceName: selectedSource === 'homes-com' ? (homesUrl || 'Homes.com Import')
+            : selectedSource === 'pdf' ? 'PDF Upload'
+            : (genericUrl || 'URL Import'),
+          status: 'completed',
+          totalRows: scrapedData.length,
+          importedCount: imported,
+          skippedCount: skipped + (scrapedData.length - rows.length),
+          duplicateCount: duplicates,
+          errors: [],
+        });
+      }).catch(err => {
+        console.error('Scrape import failed:', err);
       });
 
       setIsLoading(false);
@@ -524,7 +594,7 @@ export default function Imports() {
     console.log('Edited rows:', editedRows);
     console.log('Column mappings:', pasteColumnMappings);
     
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const leadsToUse = selectedLeads || previewSelectedLeads;
         console.log('Leads to use:', leadsToUse);
@@ -566,15 +636,13 @@ export default function Imports() {
           return;
         }
 
-        const imported = importLeadsFromData(rows);
-        console.log(`📊 importLeadsFromData returned: ${imported} imported`);
+        const { imported, skipped, duplicates } = await importLeadsFromData(rows);
+        console.log(`📊 importLeadsFromData returned: ${imported} imported, ${skipped} skipped, ${duplicates} duplicates`);
         
-        const duplicates = rows.length - imported;
-
         setImportResult({
           total: editedRows.length,
           imported,
-          skipped: editedRows.length - rows.length,
+          skipped: skipped + (editedRows.length - rows.length),
           duplicates,
         });
 
@@ -584,7 +652,7 @@ export default function Imports() {
           status: 'completed',
           totalRows: editedRows.length,
           importedCount: imported,
-          skippedCount: editedRows.length - rows.length,
+          skippedCount: skipped + (editedRows.length - rows.length),
           duplicateCount: duplicates,
           errors: [],
         });
@@ -603,7 +671,7 @@ export default function Imports() {
   // ─── Helper function to check if a row has valid data ─────────────────
 
   const isRowValid = (row: Record<string, string> | string[]): boolean => {
-    if (selectedSource === 'google-sheets' && isSheetRow(row)) {
+    if ((selectedSource === 'google-sheets' || selectedSource === 'csv') && isSheetRow(row)) {
       const nameCol = columnMappings.find(m => m.targetField === 'name')?.sourceColumn;
       const addressCol = columnMappings.find(m => m.targetField === 'propertyAddress')?.sourceColumn;
       return !!((nameCol && row[nameCol]) || (addressCol && row[addressCol]));
@@ -644,7 +712,7 @@ export default function Imports() {
 
         {/* Step indicator */}
         <div className="flex items-center gap-2">
-          {['Connect', selectedSource === 'google-sheets' ? 'Map Columns' : 'Review Data', 'Preview & Select', 'Done'].map((label, i) => (
+          {['Connect', (selectedSource === 'google-sheets' || selectedSource === 'csv') ? 'Map Columns' : 'Review Data', 'Preview & Select', 'Done'].map((label, i) => (
             <div key={label} className="flex items-center gap-2">
               {i > 0 && <div className="w-8 h-0.5" style={{ background: i <= wizardStep ? 'var(--t-primary)' : 'var(--t-border)' }} />}
               <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
@@ -797,6 +865,33 @@ export default function Imports() {
               </>
             )}
 
+            {selectedSource === 'csv' && (
+              <>
+                <h2 className="text-lg font-semibold text-white">Import from CSV</h2>
+                <div className="space-y-4">
+                  <div {...getCsvProps()} className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors group ${isCsvDrag ? 'border-[var(--t-primary)] bg-[var(--t-primary)]/5' : 'border-[var(--t-border)] bg-[var(--t-background)]'}`}>
+                    <input {...getCsvInputProps()} />
+                    {isLoading ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 size={40} className="animate-spin" style={{ color: 'var(--t-primary)' }} />
+                        <p className="text-sm font-medium" style={{ color: 'var(--t-primary)' }}>Parsing file...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload size={40} className={`mx-auto mb-3 transition-colors ${isCsvDrag ? 'text-[var(--t-primary)]' : 'text-[var(--t-text-muted)]'}`} />
+                        <p className="text-sm font-medium transition-colors" style={{ color: 'var(--t-text)' }}>
+                          {isCsvDrag ? 'Drop file here' : 'Click or drop a CSV/TSV file here'}
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: 'var(--t-text-muted)' }}>
+                          Must have column headers in the first row
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
             {selectedSource === 'homes-com' && (
               <>
                 <h2 className="text-lg font-semibold text-white">Import from Homes.com</h2>
@@ -852,10 +947,10 @@ export default function Imports() {
                 <h2 className="text-lg font-semibold text-white">Import from PDF</h2>
                 <div className="space-y-4">
                   <div
-                    onClick={uploadPdf}
-                    className="border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors group"
-                    style={{ borderColor: 'var(--t-border)', background: 'var(--t-background)' }}
+                    {...getPdfProps()}
+                    className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-colors group ${isPdfDrag ? 'border-[var(--t-primary)] bg-[var(--t-primary)]/5' : 'border-[var(--t-border)] bg-[var(--t-background)]'}`}
                   >
+                    <input {...getPdfInputProps()} />
                     {isLoading ? (
                       <div className="flex flex-col items-center gap-3">
                         <Loader2 size={40} className="animate-spin" style={{ color: 'var(--t-primary)' }} />
@@ -868,16 +963,15 @@ export default function Imports() {
                       </div>
                     ) : (
                       <>
-                        <Upload size={40} className="mx-auto mb-3 transition-colors" style={{ color: 'var(--t-text-muted)' }} />
+                        <Upload size={40} className={`mx-auto mb-3 transition-colors ${isPdfDrag ? 'text-[var(--t-primary)]' : 'text-[var(--t-text-muted)]'}`} />
                         <p className="text-sm font-medium transition-colors" style={{ color: 'var(--t-text)' }}>
-                          Click to upload a PDF document
+                          {isPdfDrag ? 'Drop document here' : 'Click or drop a PDF document here'}
                         </p>
                         <p className="text-xs mt-1" style={{ color: 'var(--t-text-muted)' }}>
                           Tax records, title reports, property lists, lead sheets
                         </p>
                         <div className="flex items-center justify-center gap-4 mt-4">
                           <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--t-text-muted)' }}><FileText size={10} /> PDF</span>
-                          <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--t-text-muted)' }}><FileImage size={10} /> Images</span>
                         </div>
                       </>
                     )}
