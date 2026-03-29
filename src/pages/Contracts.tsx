@@ -595,47 +595,26 @@ export default function Contracts() {
     setIsExporting(true);
     
     try {
-      // Create an off-screen container to guarantee full rendering
-      const printContainer = document.createElement('div');
-      printContainer.style.position = 'fixed';
-      printContainer.style.top = '0';
-      printContainer.style.left = '-9999px';
-      printContainer.style.width = '8.5in';
-      printContainer.style.padding = '0.75in';
-      printContainer.style.backgroundColor = 'white';
-      printContainer.style.color = 'black';
-      printContainer.style.fontFamily = '"Times New Roman", Times, serif';
-      printContainer.style.lineHeight = '1.6';
-      printContainer.style.fontSize = '11pt';
-      printContainer.style.zIndex = '99999';
-      printContainer.style.pointerEvents = 'none';
-      
-      printContainer.innerHTML = `
-        <style>
-          .contract-pdf * { color: #000 !important; background-color: transparent !important; }
-          .contract-pdf { background-color: #fff !important; color: #000 !important; }
-          .contract-pdf h1 { text-align: center; font-size: 16pt; margin-bottom: 24px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; color: #000 !important; }
-          .contract-pdf h2 { font-size: 12pt; margin-top: 20px; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; page-break-after: avoid; color: #000 !important; }
-          .contract-pdf p { margin-bottom: 10px; text-align: justify; font-size: 11pt; color: #000 !important; }
-          .contract-pdf ul { margin-bottom: 10px; }
-          .contract-pdf li { margin-bottom: 4px; font-size: 11pt; color: #000 !important; }
-          .contract-pdf table { page-break-inside: avoid; }
-          .contract-pdf td { color: #000 !important; background-color: #fff !important; }
-          .contract-pdf div[style*="border-bottom"] { page-break-inside: avoid; }
-          .contract-pdf strong { color: #000 !important; }
-          .contract-pdf span { color: #000 !important; }
-        </style>
-        <div class="contract-pdf">
-          ${renderTemplateContent(activeTemplate.content, selectedLead)}
+      const htmlContent = renderTemplateContent(activeTemplate.content, selectedLead);
+      const fileName = `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name.replace(/\s+/g, '_') || 'Draft'}.pdf`;
+
+      // Build a complete self-contained HTML document string for html2pdf
+      const fullHtml = `
+        <div style="width:100%;background:#fff;color:#000;font-family:'Times New Roman',Times,serif;line-height:1.6;font-size:11pt;padding:0;margin:0;">
+          <style>
+            * { color: #000 !important; }
+            h1 { text-align:center; font-size:16pt; margin-bottom:24px; text-transform:uppercase; font-weight:bold; letter-spacing:1px; }
+            h2 { font-size:12pt; margin-top:20px; margin-bottom:8px; text-transform:uppercase; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:4px; page-break-after:avoid; }
+            p { margin-bottom:10px; text-align:justify; font-size:11pt; }
+            ul { margin-bottom:10px; padding-left:20px; }
+            li { margin-bottom:4px; font-size:11pt; }
+            table { width:100%; border-collapse:collapse; page-break-inside:avoid; margin-bottom:12px; }
+            td, th { padding:6px 10px; border:1px solid #ddd; font-size:10pt; }
+            strong { font-weight:bold; }
+          </style>
+          ${htmlContent}
         </div>
       `;
-      
-      document.body.appendChild(printContainer);
-
-      // Wait for rendering to complete
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      const fileName = `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name.replace(/\s+/g, '_') || 'Draft'}.pdf`;
 
       const opt = {
         margin:       [0.5, 0.6, 0.7, 0.6] as [number, number, number, number],
@@ -646,21 +625,13 @@ export default function Contracts() {
           useCORS: true, 
           logging: false,
           letterRendering: true,
-          windowWidth: 816,
           backgroundColor: '#ffffff',
-          x: 0,
-          y: 0,
-          scrollX: 0,
-          scrollY: 0,
         },
         jsPDF:        { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const },
         pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
       };
       
-      await html2pdf().set(opt).from(printContainer).save();
-      
-      // Cleanup
-      document.body.removeChild(printContainer);
+      await html2pdf().set(opt).from(fullHtml).save();
       
     } catch (err) {
       console.error('Failed to generate PDF', err);
@@ -833,7 +804,7 @@ export default function Contracts() {
         </div>
 
         {/* Document Viewer */}
-        <div className="flex-1 overflow-y-auto p-8 md:p-12 flex justify-center pb-24" style={{ 
+        <div className="flex-1 overflow-y-auto p-8 md:p-12 flex justify-center items-start pb-24" style={{ 
           backgroundImage: 'radial-gradient(circle at center, var(--t-border) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}>

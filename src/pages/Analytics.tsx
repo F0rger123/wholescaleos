@@ -3,13 +3,14 @@ import { useState, useMemo, useRef } from 'react';
 import { useStore, Lead, LeadStatus } from '../store/useStore';
 import {
   ResponsiveContainer, AreaChart, Area, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend
+  XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend,
+  RadialBarChart, RadialBar
 } from 'recharts';
 import {
   TrendingUp, Target, Award, Download, Calendar,
   BarChart3, ArrowUpRight, ArrowDownRight, Users,
   DollarSign, CheckCircle2, Clock, Filter, FileText,
-  Loader2
+  Loader2, Activity, Layers
 } from 'lucide-react';
 import { format, subDays, subMonths, isAfter, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay } from 'date-fns';
 import html2pdf from 'html2pdf.js';
@@ -230,6 +231,90 @@ export default function Analytics() {
       revenue: { current: thisMonthRevenue, target: goals.revenue, pct: Math.min(100, Math.round((thisMonthRevenue / goals.revenue) * 100)) },
     };
   }, [safeLeads, goals]);
+
+  // ─── Lead Source Performance ──────────────────────────────────────────────
+
+  const sourcePerformance = useMemo(() => {
+    const SOURCE_LABELS: Record<string, string> = {
+      'bandit-signs': 'Bandit Signs', 'personal-relations': 'Personal', 'pay-per-lead': 'Pay-Per-Lead',
+      'doorknocking': 'Doorknocking', 'referral': 'Referral', 'website': 'Website',
+      'social-media': 'Social Media', 'open-house': 'Open House', 'fsbo': 'FSBO',
+      'cold-call': 'Cold Call', 'email-campaign': 'Email Campaign', 'other': 'Other',
+    };
+    const SOURCE_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#f43f5e', '#f59e0b', '#22c55e', '#06b6d4', '#3b82f6', '#64748b', '#84cc16', '#f97316'];
+    const grouped: Record<string, { total: number; closed: number; revenue: number }> = {};
+    filteredLeads.forEach(l => {
+      const src = l.source || 'other';
+      if (!grouped[src]) grouped[src] = { total: 0, closed: 0, revenue: 0 };
+      grouped[src].total++;
+      if (l.status === 'closed-won') {
+        grouped[src].closed++;
+        grouped[src].revenue += l.offerAmount || l.estimatedValue || 0;
+      }
+    });
+    return Object.entries(grouped)
+      .map(([src, data], i) => ({
+        name: SOURCE_LABELS[src] || src,
+        leads: data.total,
+        deals: data.closed,
+        revenue: data.revenue,
+        convRate: data.total > 0 ? Math.round((data.closed / data.total) * 100) : 0,
+        fill: SOURCE_COLORS[i % SOURCE_COLORS.length],
+      }))
+      .sort((a, b) => b.deals - a.deals);
+  }, [filteredLeads]);
+
+  // ─── Deal Size Distribution ───────────────────────────────────────────────
+
+  const dealSizeDistribution = useMemo(() => {
+    const closedLeads = filteredLeads.filter(l => l.status === 'closed-won');
+    const buckets = [
+      { name: '<$50k', min: 0, max: 50000, count: 0 },
+      { name: '$50k-$100k', min: 50000, max: 100000, count: 0 },
+      { name: '$100k-$200k', min: 100000, max: 200000, count: 0 },
+      { name: '$200k-$350k', min: 200000, max: 350000, count: 0 },
+      { name: '$350k-$500k', min: 350000, max: 500000, count: 0 },
+      { name: '$500k+', min: 500000, max: Infinity, count: 0 },
+    ];
+    closedLeads.forEach(l => {
+      const val = l.offerAmount || l.estimatedValue || 0;
+      for (const b of buckets) {
+        if (val >= b.min && val < b.max) { b.count++; break; }
+      }
+    });
+    return buckets;
+  }, [filteredLeads]);
+
+  // ─── Monthly Comparison ───────────────────────────────────────────────────
+
+  const monthlyComparison = useMemo(() => {
+    const now = new Date();
+    const thisMonthStart = startOfMonth(now);
+    const lastMonthStart = startOfMonth(subMonths(now, 1));
+    const lastMonthEnd = endOfMonth(subMonths(now, 1));
+
+    const thisMonth = safeLeads.filter(l => isAfter(new Date(l.createdAt), thisMonthStart));
+    const lastMonth = safeLeads.filter(l => {
+      const d = new Date(l.createdAt);
+      return d >= lastMonthStart && d <= lastMonthEnd;
+    });
+
+    const thisDeals = thisMonth.filter(l => l.status === 'closed-won');
+    const lastDeals = lastMonth.filter(l => l.status === 'closed-won');
+    const thisRev = thisDeals.reduce((s, l) => s + (l.offerAmount || l.estimatedValue || 0), 0);
+    const lastRev = lastDeals.reduce((s, l) => s + (l.offerAmount || l.estimatedValue || 0), 0);
+
+    const pctChange = (curr: number, prev: number) => {
+      if (prev === 0) return curr > 0 ? 100 : 0;
+      return Math.round(((curr - prev) / prev) * 100);
+    };
+
+    return {
+      leads: { current: thisMonth.length, previous: lastMonth.length, change: pctChange(thisMonth.length, lastMonth.length) },
+      deals: { current: thisDeals.length, previous: lastDeals.length, change: pctChange(thisDeals.length, lastDeals.length) },
+      revenue: { current: thisRev, previous: lastRev, change: pctChange(thisRev, lastRev) },
+    };
+  }, [safeLeads]);
 
   // ─── Save Goals ───────────────────────────────────────────────────────────
 
@@ -667,6 +752,108 @@ export default function Analytics() {
               />
             </BarChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Third Row: Lead Source & Deal Size */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Lead Source Performance */}
+        <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-[var(--t-text)] flex items-center gap-2">
+                <Activity size={18} className="text-[var(--t-primary)]" /> Lead Source Performance
+              </h3>
+              <p className="text-xs text-[var(--t-text-muted)] mt-0.5">Deals and conversion rate by source</p>
+            </div>
+          </div>
+          {sourcePerformance.length > 0 ? (
+            <div className="space-y-3">
+              {sourcePerformance.map((src, i) => {
+                const maxLeads = Math.max(...sourcePerformance.map(s => s.leads), 1);
+                return (
+                  <div key={i}>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="font-medium text-[var(--t-text)]">{src.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[var(--t-text-muted)]">{src.leads} leads</span>
+                        <span className="font-bold" style={{ color: src.fill }}>{src.deals} deals</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `color-mix(in srgb, ${src.fill} 15%, transparent)`, color: src.fill }}
+                        >{src.convRate}% conv</span>
+                      </div>
+                    </div>
+                    <div className="h-2 rounded-full bg-[var(--t-surface-dim)] overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${(src.leads / maxLeads) * 100}%`, backgroundColor: src.fill }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--t-text-muted)] text-center py-8">No lead data for this timeframe</p>
+          )}
+        </div>
+
+        {/* Deal Size Distribution */}
+        <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-bold text-[var(--t-text)] flex items-center gap-2">
+                <Layers size={18} className="text-[var(--t-warning)]" /> Deal Size Distribution
+              </h3>
+              <p className="text-xs text-[var(--t-text-muted)] mt-0.5">Closed deal values by price range</p>
+            </div>
+          </div>
+          <div className="h-[220px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dealSizeDistribution}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" vertical={false} />
+                <XAxis dataKey="name" stroke="var(--t-text-muted)" fontSize={9} axisLine={false} tickLine={false} />
+                <YAxis stroke="var(--t-text-muted)" fontSize={10} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '12px' }}
+                  formatter={(value: number) => [`${value} deals`, 'Count']}
+                />
+                <Bar dataKey="count" fill="var(--t-warning)" radius={[6, 6, 0, 0]} name="Deals" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly Comparison */}
+      <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-bold text-[var(--t-text)] flex items-center gap-2">
+            <Calendar size={18} className="text-[var(--t-primary)]" /> Monthly Comparison
+          </h3>
+          <p className="text-xs text-[var(--t-text-muted)] mt-0.5">This month vs last month performance</p>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          {[
+            { label: 'Leads', ...monthlyComparison.leads, icon: Users, color: 'var(--t-primary)', fmt: (v: number) => v.toString() },
+            { label: 'Deals', ...monthlyComparison.deals, icon: CheckCircle2, color: 'var(--t-success)', fmt: (v: number) => v.toString() },
+            { label: 'Revenue', ...monthlyComparison.revenue, icon: DollarSign, color: 'var(--t-warning)', fmt: (v: number) => `$${v.toLocaleString()}` },
+          ].map((m, i) => (
+            <div key={i} className="bg-[var(--t-surface-dim)] rounded-xl p-5 text-center">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <m.icon size={16} style={{ color: m.color }} />
+                <span className="text-[10px] font-black uppercase tracking-wider text-[var(--t-text-muted)]">{m.label}</span>
+              </div>
+              <div className="text-2xl font-black text-[var(--t-text)] mb-1">{m.fmt(m.current)}</div>
+              <div className="text-xs text-[var(--t-text-muted)] mb-2">vs {m.fmt(m.previous)} last month</div>
+              <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                m.change > 0 
+                  ? 'bg-green-500/10 text-green-500' 
+                  : m.change < 0 
+                    ? 'bg-red-500/10 text-red-500' 
+                    : 'bg-gray-500/10 text-gray-500'
+              }`}>
+                {m.change > 0 ? <ArrowUpRight size={12} /> : m.change < 0 ? <ArrowDownRight size={12} /> : null}
+                {m.change > 0 ? '+' : ''}{m.change}%
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
