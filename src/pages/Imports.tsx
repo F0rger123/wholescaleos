@@ -286,8 +286,10 @@ export default function Imports() {
   const formatScrapeError = (err: any, data: any): string => {
     // Check for structured error codes from the edge function
     const errorCode = data?.errorCode || '';
+    let hostname = 'This site';
+    try { hostname = new URL(data?.url || 'https://unknown').hostname; } catch { /* ignore */ }
     switch (errorCode) {
-      case 'SITE_BLOCKED': return `⛔ ${new URL(data?.url || '').hostname || 'This site'} blocked our request. Some sites restrict automated access. Use the manual entry form below instead.`;
+      case 'SITE_BLOCKED': return `⛔ ${hostname} blocked our request. Some sites restrict automated access. Use the manual entry form below instead.`;
       case 'TIMEOUT': return '⏱️ Request timed out — the site took too long to respond. Please try again or use manual entry.';
       case 'NOT_FOUND': return '🔍 Page not found (404). Double-check the URL and try again.';
       case 'NO_CONTENT': return '📄 The page returned empty content. This may be a JavaScript-rendered site. Use manual entry instead.';
@@ -299,16 +301,41 @@ export default function Imports() {
     if (msg.includes('FunctionsHttpError') || msg.includes('non-2xx')) {
       return '⚠️ The scraping service encountered an error. This can happen with certain sites. Use the manual entry form below.';
     }
+    if (msg.includes('Invalid URL')) {
+      return '🔗 Invalid URL. Please enter a valid URL starting with https:// (e.g. https://www.zillow.com/...)';
+    }
     return `⚠️ Scraping failed: ${msg}. Use the manual entry form below to enter details manually.`;
+  };
+
+  /** Validate and normalize a URL — auto-prepends https:// if missing */
+  const normalizeUrl = (raw: string): string | null => {
+    let url = raw.trim();
+    if (!url) return null;
+    // Auto-prepend https:// if scheme is missing
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+    // Validate
+    try {
+      new URL(url);
+      return url;
+    } catch {
+      return null;
+    }
   };
 
   const scrapeHomesUrl = async () => {
     if (!supabase) return;
+    const validUrl = normalizeUrl(homesUrl);
+    if (!validUrl) {
+      setConnectionError('🔗 Invalid URL. Please enter a valid Homes.com URL (e.g. https://www.homes.com/property/...)');
+      return;
+    }
     setIsLoading(true);
     setConnectionError(null);
     try {
       const { data, error } = await supabase.functions.invoke('scrape-property', {
-        body: { url: homesUrl }
+        body: { url: validUrl }
       });
       
       if (error) {
@@ -349,11 +376,16 @@ export default function Imports() {
 
   const scrapeGenericUrl = async () => {
     if (!supabase) return;
+    const validUrl = normalizeUrl(genericUrl);
+    if (!validUrl) {
+      setConnectionError('🔗 Invalid URL. Please enter a valid property URL starting with https:// (e.g. https://www.zillow.com/...)');
+      return;
+    }
     setIsLoading(true);
     setConnectionError(null);
     try {
       const { data, error } = await supabase.functions.invoke('scrape-property', {
-        body: { url: genericUrl }
+        body: { url: validUrl }
       });
       
       if (error) {
