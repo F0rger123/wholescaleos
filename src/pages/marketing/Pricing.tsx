@@ -47,7 +47,7 @@ export default function Pricing() {
     } catch (err: any) {
       console.error('Checkout error:', err);
       const msg = err?.message || '';
-      if (msg.includes('FunctionsHttpError') || msg.includes('Failed to send')) {
+      if (msg.includes('FunctionsHttpError') || msg.includes('Failed to send') || msg.includes('FunctionsFetchError')) {
         alert('⚠️ Could not reach the checkout service. Please try again in a moment, or contact support if this persists.');
       } else if (msg.includes('Unauthorized') || msg.includes('401')) {
         alert('🔒 Please log in first to upgrade your plan.');

@@ -1,22 +1,28 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import {
-  Trophy, Users, Target, Award, DollarSign, Zap, Filter
+  Trophy, Users, Target, Award, DollarSign, Zap
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line
 } from 'recharts';
+import { ReferralLeaderboard } from '../components/ReferralLeaderboard';
 
 export default function TeamAnalytics() {
-  const { team, leads } = useStore();
+  const { team, leads, tasks } = useStore();
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d' | '1yr'>('30d');
+  const [leaderboardFilter, setLeaderboardFilter] = useState<'revenue' | 'deals' | 'conversion'>('revenue');
 
   // Team-level metrics
   const closedDeals = leads.filter(l => l.status === 'closed-won');
   const totalRevenue = closedDeals.reduce((s, l) => s + (l.offerAmount || 0), 0);
   const totalLeads = leads.length;
   const conversionRate = totalLeads > 0 ? ((closedDeals.length / totalLeads) * 100).toFixed(1) : '0.0';
+  const completedTasks = tasks?.filter(t => t.status === 'done').length || 0;
+  const totalTasks = tasks?.length || 0;
+  const taskCompletionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : '0.0';
+  const avgDealsPerMember = team?.length > 0 ? (closedDeals.length / team.length).toFixed(1) : '0.0';
 
   // Agent leaderboard
   const agentStats = useMemo(() => {
@@ -43,9 +49,16 @@ export default function TeamAnalytics() {
       }
     });
 
-    return Object.values(agentMap)
-      .sort((a, b) => b.revenue - a.revenue);
-  }, [team, leads]);
+    return Object.values(agentMap).sort((a, b) => {
+      if (leaderboardFilter === 'deals') return b.deals - a.deals;
+      if (leaderboardFilter === 'conversion') {
+        const aConv = a.leads > 0 ? a.deals / a.leads : 0;
+        const bConv = b.leads > 0 ? b.deals / b.leads : 0;
+        return bConv - aConv;
+      }
+      return b.revenue - a.revenue;
+    });
+  }, [team, leads, leaderboardFilter]);
 
   // Conversion funnel data
   const funnelData = useMemo(() => {
@@ -115,6 +128,8 @@ export default function TeamAnalytics() {
           { label: 'Total Leads', value: totalLeads, icon: Users, color: 'blue', trend: '+12%' },
           { label: 'Closed Deals', value: closedDeals.length, icon: Target, color: 'green', trend: '+8%' },
           { label: 'Team Revenue', value: `$${(totalRevenue / 1000).toFixed(0)}k`, icon: DollarSign, color: 'purple', trend: '+15%' },
+          { label: 'Avg Deals / Rep', value: avgDealsPerMember, icon: Award, color: 'blue', trend: '+0.5' },
+          { label: 'Task Completion', value: `${taskCompletionRate}%`, icon: Target, color: 'pink', trend: '+5%' },
           { label: 'Conversion Rate', value: `${conversionRate}%`, icon: Zap, color: 'orange', trend: '+2.1%' },
         ].map((stat, i) => (
           <div
@@ -186,7 +201,20 @@ export default function TeamAnalytics() {
           <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
             <Award className="text-yellow-500" size={20} /> Agent Leaderboard
           </h3>
-          <Filter size={16} style={{ color: 'var(--t-text-muted)' }} />
+          <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
+            {(['revenue', 'deals', 'conversion'] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setLeaderboardFilter(f)}
+                className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${
+                  leaderboardFilter === f ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'hover:bg-white/5'
+                }`}
+                style={leaderboardFilter !== f ? { color: 'var(--t-text-muted)' } : undefined}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
 
         {agentStats.length === 0 ? (
@@ -212,7 +240,8 @@ export default function TeamAnalytics() {
                 </div>
 
                 {/* Avatar */}
-                <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-400 font-bold text-sm">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm"
+                     style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}>
                   {agent.avatar}
                 </div>
 
@@ -289,6 +318,9 @@ export default function TeamAnalytics() {
           })}
         </div>
       </div>
+
+      {/* Global Affiliate Leaderboard */}
+      <ReferralLeaderboard />
     </div>
   );
 }

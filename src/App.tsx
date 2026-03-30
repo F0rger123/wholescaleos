@@ -33,6 +33,7 @@ import AgentProfile from './pages/AgentProfile';
 import LeadManagement from './pages/LeadManagement';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 import TeamAnalytics from './pages/TeamAnalytics';
+import AdminDashboard from './pages/AdminDashboard';
 import AdminPromos from './pages/AdminPromos';
 import { CursorEffects } from './components/CursorEffects';
 import { MarketingLayout } from './components/MarketingLayout';
@@ -232,6 +233,7 @@ export function App() {
             <Route path="/team" element={<Team />} />
             <Route path="/team/members" element={<Team />} />
             <Route path="/team-analytics" element={<TeamAnalytics />} />
+            <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/promos" element={<AdminPromos />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/chat" element={<Chat />} />

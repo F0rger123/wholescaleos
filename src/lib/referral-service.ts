@@ -7,6 +7,26 @@ export interface ReferralData {
   status: 'pending' | 'active' | 'applied';
 }
 
+export interface ReferralTier {
+  name: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
+  minReferrals: number;
+  commissionRate: number;
+  bonus?: number;
+  color: string;
+}
+
+export const REFERRAL_TIERS: ReferralTier[] = [
+  { name: 'Bronze', minReferrals: 0, commissionRate: 0.10, color: 'text-amber-600' },
+  { name: 'Silver', minReferrals: 5, commissionRate: 0.15, bonus: 50, color: 'text-gray-400' },
+  { name: 'Gold', minReferrals: 15, commissionRate: 0.20, bonus: 150, color: 'text-yellow-400' },
+  { name: 'Platinum', minReferrals: 50, commissionRate: 0.25, bonus: 500, color: 'text-slate-300' },
+  { name: 'Diamond', minReferrals: 100, commissionRate: 0.35, bonus: 2000, color: 'text-blue-400' }
+];
+
+export const getReferralTier = (referralCount: number): ReferralTier => {
+  return [...REFERRAL_TIERS].reverse().find(t => referralCount >= t.minReferrals) || REFERRAL_TIERS[0];
+};
+
 export const referralService = {
   /**
    * Generates a unique referral code for a user
@@ -66,10 +86,11 @@ export const referralService = {
   },
 
   /**
-   * Calculates earnings based on a payment
+   * Calculates earnings based on a payment and user's tier
    */
-  calculateEarnings: (paymentAmount: number): number => {
-    return paymentAmount * 0.10; // 10% recurring commission
+  calculateEarnings: (paymentAmount: number, currentReferrals: number = 0): number => {
+    const tier = getReferralTier(currentReferrals);
+    return paymentAmount * tier.commissionRate;
   },
 
   /**
@@ -94,15 +115,19 @@ export const referralService = {
 
       if (earningsErr) throw earningsErr;
 
+      const activeCount = referrals.filter(r => r.status === 'active').length;
+      const tier = getReferralTier(activeCount);
+
       return {
         referralCount: referrals.length,
-        activeReferrals: referrals.filter(r => r.status === 'active').length,
+        activeReferrals: activeCount,
         totalEarned: earnings.total_earnings || 0,
-        availableBalance: earnings.available_earnings || 0
+        availableBalance: earnings.available_earnings || 0,
+        currentTier: tier
       };
     } catch (err) {
       console.error('Error getting referral stats:', err);
-      return { referralCount: 0, activeReferrals: 0, totalEarned: 0, availableBalance: 0 };
+      return { referralCount: 0, activeReferrals: 0, totalEarned: 0, availableBalance: 0, currentTier: REFERRAL_TIERS[0] };
     }
   }
 };

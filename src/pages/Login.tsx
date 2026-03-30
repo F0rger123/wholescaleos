@@ -6,7 +6,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { sendWelcomeEmail } from '../lib/email';
 import { referralService } from '../lib/referral-service';
 
-type AuthMode = 'login' | 'signup' | 'forgot';
+type AuthMode = 'login' | 'signup' | 'forgot' | 'mfa';
 
 // Detect database setup errors
 function isDatabaseSetupError(msg: string): boolean {
@@ -36,6 +36,9 @@ export default function Login() {
   const [showDbSetup, setShowDbSetup] = useState(false);
   const [showEmailFix, setShowEmailFix] = useState(false);
   const [sqlCopied, setSqlCopied] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [partialUser, setPartialUser] = useState<any>(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -416,6 +419,32 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
       lower.includes('over_email_send_rate_limit');
   };
 
+  const handleVerifyMfa = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    if (!mfaFactorId || !mfaCode || !partialUser) return;
+    
+    setLoading(true);
+    setError(null);
+    try {
+      if (!supabase) throw new Error('Supabase not configured');
+      const { error } = await supabase.auth.mfa.challengeAndVerify({
+        factorId: mfaFactorId,
+        code: mfaCode
+      });
+      if (error) throw error;
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.user) {
+        await finalizeLogin(sessionData.session.user);
+      } else {
+        await finalizeLogin(partialUser);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Invalid 2FA code');
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
@@ -449,6 +478,18 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             return;
           }
           if (data.user) {
+            const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
+              const { data: factors } = await supabase.auth.mfa.listFactors();
+              const totpFactor = factors?.totp?.[0] || factors?.all?.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
+              if (totpFactor) {
+                setMfaFactorId(totpFactor.id);
+                setPartialUser(data.user);
+                setMode('mfa');
+                setLoading(false);
+                return;
+              }
+            }
             await finalizeLogin(data.user);
           }
         } else if (mode === 'signup') {
@@ -900,6 +941,35 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             </div>
           )}
 
+          {mode === 'mfa' ? (
+            <form onSubmit={handleVerifyMfa} className="space-y-4">
+              <div>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Authenticator Code</label>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
+                  <input
+                    type="text"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
+                    className={inputClass}
+                    style={{ ...inputStyle, textAlign: 'center', letterSpacing: '0.25em' }}
+                    disabled={loading}
+                    maxLength={6}
+                    autoComplete="one-time-code"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={loading || mfaCode.length < 6}
+                className="w-full flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'var(--t-primary)' }}
+              >
+                {loading ? <><Loader2 size={16} className="animate-spin" />Verifying...</> : 'Verify & Sign In'}
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name (signup only) */}
             {mode === 'signup' && (
@@ -1061,6 +1131,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
               )}
             </button>
           </form>
+          )}
 
           {/* Demo login button */}
           <div className="relative mt-6">

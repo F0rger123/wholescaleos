@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore, Lead } from '../store/useStore';
 import { 
   FileText, Download, Mail, Save, Plus, Search, 
-  ChevronDown, User, FileSignature, MapPin, DollarSign
+  ChevronDown, User, FileSignature, MapPin, DollarSign, Loader2, Trash2
 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { format } from 'date-fns';
+import { supabase } from '../lib/supabase';
 
 interface ContractTemplate {
   id: string;
@@ -552,7 +553,7 @@ const PREBUILT_TEMPLATES: ContractTemplate[] = [
 ];
 
 export default function Contracts() {
-  const { leads } = useStore();
+  const { leads, currentUser } = useStore();
   
   const [activeTemplate, setActiveTemplate] = useState<ContractTemplate>(PREBUILT_TEMPLATES[0]);
   const [selectedLeadId, setSelectedLeadId] = useState<string>('');
@@ -560,6 +561,88 @@ export default function Contracts() {
   
   const [isExporting, setIsExporting] = useState(false);
   const documentRef = useRef<HTMLDivElement>(null);
+  
+  const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch custom templates on mount
+  useEffect(() => {
+    async function loadCustomTemplates() {
+      if (!supabase || !currentUser?.id) return;
+      try {
+        const { data, error } = await supabase.storage.from('contract_templates').list(currentUser.id + '/');
+        if (error) throw error;
+        
+        const templates: ContractTemplate[] = [];
+        for (const file of data || []) {
+          if (!file.name.endsWith('.html') && !file.name.endsWith('.txt')) continue;
+          
+          const { data: fileData, error: downloadError } = await supabase.storage
+            .from('contract_templates')
+            .download(currentUser.id + '/' + file.name);
+            
+          if (downloadError) continue;
+          
+          const text = await fileData.text();
+          templates.push({
+            id: file.name,
+            name: file.name.replace('.html', '').replace('.txt', '').replace(/_/g, ' '),
+            category: 'Custom',
+            content: text,
+            isCustom: true
+          });
+        }
+        setCustomTemplates(templates);
+      } catch (err) {
+        console.error('Failed to load custom templates', err);
+      }
+    }
+    loadCustomTemplates();
+  }, [currentUser?.id]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !supabase || !currentUser?.id) return;
+    
+    setIsUploading(true);
+    try {
+      if (!file.name.endsWith('.html') && !file.name.endsWith('.txt')) {
+        throw new Error('Only .html and .txt files are supported for templates');
+      }
+
+      const uploadPath = currentUser.id + '/' + file.name;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('contract_templates')
+        .upload(uploadPath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const text = await file.text();
+      const newTemplate = {
+        id: file.name,
+        name: file.name.replace('.html', '').replace('.txt', '').replace(/_/g, ' '),
+        category: 'Custom',
+        content: text,
+        isCustom: true
+      };
+      
+      setCustomTemplates(prev => {
+        // Replace existing if upserted
+        const filtered = prev.filter(t => t.id !== newTemplate.id);
+        return [...filtered, newTemplate];
+      });
+      setActiveTemplate(newTemplate);
+      
+    } catch (err: any) {
+      console.error('Upload error', err);
+      alert(err.message || 'Failed to upload custom template');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const selectedLead = leads.find(l => l.id === selectedLeadId);
 
@@ -684,8 +767,9 @@ export default function Contracts() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {['Acquisitions', 'Dispositions', 'Creative Finance', 'Property Management'].map(category => {
-            const temps = PREBUILT_TEMPLATES.filter(t => t.category === category && t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          {['Acquisitions', 'Dispositions', 'Creative Finance', 'Property Management', 'Custom'].map(category => {
+            const allTemplates = [...PREBUILT_TEMPLATES, ...customTemplates];
+            const temps = allTemplates.filter(t => t.category === category && t.name.toLowerCase().includes(searchQuery.toLowerCase()));
             if (temps.length === 0) return null;
             
             return (
@@ -698,19 +782,43 @@ export default function Contracts() {
                     <button
                       key={tmpl.id}
                       onClick={() => setActiveTemplate(tmpl)}
-                      className={`w-full flex items-start text-left p-3 rounded-xl transition-all ${
+                      className={`w-full flex items-start text-left p-3 rounded-xl transition-all group ${
                         activeTemplate.id === tmpl.id 
                           ? 'bg-[var(--t-primary-dim)] border border-[var(--t-primary)] shadow-[var(--t-glow-shadow)]' 
                           : 'hover:bg-[var(--t-surface-hover)] border border-transparent'
                       }`}
                     >
                       <FileText size={16} className={`mt-0.5 shrink-0 mr-3 ${activeTemplate.id === tmpl.id ? 'text-[var(--t-primary)]' : 'text-[var(--t-text-muted)]'}`} />
-                      <div>
+                      <div className="flex-1">
                         <p className={`text-sm font-medium ${activeTemplate.id === tmpl.id ? 'text-[var(--t-primary-text)]' : 'text-[var(--t-text)]'}`}>
                           {tmpl.name}
                         </p>
                         {tmpl.isCustom && <span className="text-[9px] bg-[var(--t-surface-subtle)] px-2 py-0.5 rounded-full mt-1 inline-block">Custom</span>}
                       </div>
+                      
+                      {tmpl.isCustom && (
+                        <div
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!window.confirm('Delete this template?')) return;
+                            if (!supabase) return;
+                            try {
+                              const { error } = await supabase.storage
+                                .from('contract_templates')
+                                .remove([`${currentUser?.id}/${tmpl.id}`]);
+                              if (error) throw error;
+                              setCustomTemplates(prev => prev.filter(t => t.id !== tmpl.id));
+                              if (activeTemplate.id === tmpl.id) setActiveTemplate(PREBUILT_TEMPLATES[0]);
+                            } catch (err) {
+                              console.error('Delete error', err);
+                              alert('Failed to delete template');
+                            }
+                          }}
+                          className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-red-400 rounded-lg transition-all cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -720,9 +828,20 @@ export default function Contracts() {
         </div>
 
         <div className="p-4 border-t border-[var(--t-border)]">
-          <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[var(--t-border)] border-dashed hover:border-[var(--t-primary)] hover:bg-[var(--t-primary-dim)] hover:text-[var(--t-primary)] transition-colors text-sm text-[var(--t-text-muted)]">
-            <Plus size={16} />
-            Upload Custom Template
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".html,.txt"
+            className="hidden"
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-[var(--t-border)] border-dashed hover:border-[var(--t-primary)] hover:bg-[var(--t-primary-dim)] hover:text-[var(--t-primary)] transition-colors text-sm text-[var(--t-text-muted)] disabled:opacity-50"
+          >
+            {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {isUploading ? 'Uploading...' : 'Upload Custom Template'}
           </button>
         </div>
       </div>

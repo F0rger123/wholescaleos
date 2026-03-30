@@ -93,7 +93,7 @@ function filterByTimeframe(leads: Lead[], timeframe: TimeframeKey, customStart?:
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function Analytics() {
-  const { leads, tasks } = useStore();
+  const { leads, tasks, currentUser } = useStore();
   const reportRef = useRef<HTMLDivElement>(null);
 
   // State
@@ -124,6 +124,20 @@ export default function Analytics() {
     const avgDealValue = closedWon.length > 0 ? totalRevenue / closedWon.length : 0;
     const completedTasks = safeTasks.filter(t => t.status === 'done').length;
 
+    let totalDays = 0;
+    let responseCount = 0;
+    filteredLeads.forEach(l => {
+      if (l.lastContact) {
+        const created = new Date(l.createdAt);
+        const contact = new Date(l.lastContact);
+        if (contact >= created) {
+          totalDays += (contact.getTime() - created.getTime()) / (1000 * 3600 * 24);
+          responseCount++;
+        }
+      }
+    });
+    const avgResponseDays = responseCount > 0 ? totalDays / responseCount : 0;
+
     return {
       totalLeads: filteredLeads.length,
       closedDeals: closedWon.length,
@@ -131,6 +145,7 @@ export default function Analytics() {
       conversionRate,
       avgDealValue,
       completedTasks,
+      avgResponseDays,
     };
   }, [filteredLeads, safeTasks]);
 
@@ -482,21 +497,23 @@ export default function Analytics() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
           { label: 'Total Leads', value: kpis.totalLeads, icon: Users, color: 'var(--t-primary)', fmt: (v: number) => v.toLocaleString() },
           { label: 'Closed Deals', value: kpis.closedDeals, icon: CheckCircle2, color: 'var(--t-success)', fmt: (v: number) => v.toLocaleString() },
           { label: 'Revenue', value: kpis.totalRevenue, icon: DollarSign, color: 'var(--t-success)', fmt: (v: number) => `$${v.toLocaleString()}` },
           { label: 'Conversion', value: kpis.conversionRate, icon: TrendingUp, color: 'var(--t-warning)', fmt: (v: number) => `${v.toFixed(1)}%` },
+          { label: 'Avg Response', value: kpis.avgResponseDays, icon: Clock, color: 'var(--t-accent, #a78bfa)', fmt: (v: number) => v > 0 ? `${v.toFixed(1)} days` : 'N/A' },
+          { label: 'Active Streak', value: currentUser?.streak || 0, icon: Activity, color: '#f97316', fmt: (v: number) => `${v} days` },
         ].map((card, i) => (
-          <div key={i} className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-5 hover:border-[var(--t-primary)]/30 transition-all group">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)]">{card.label}</span>
+          <div key={i} className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-4 hover:border-[var(--t-primary)]/30 transition-all group">
+            <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 rounded-lg group-hover:scale-110 transition-transform" style={{ backgroundColor: `color-mix(in srgb, ${card.color} 15%, transparent)` }}>
                 <card.icon size={14} style={{ color: card.color }} />
               </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] truncate">{card.label}</span>
             </div>
-            <p className="text-2xl font-black text-[var(--t-text)]">{card.fmt(card.value)}</p>
+            <p className="text-xl font-black text-[var(--t-text)]">{card.fmt(card.value)}</p>
           </div>
         ))}
       </div>
@@ -869,8 +886,8 @@ export default function Analytics() {
           const earliest = new Date(Math.min(...filteredLeads.map(l => new Date(l.createdAt).getTime())));
           return Math.max(1, (Date.now() - earliest.getTime()) / (30.44 * 24 * 60 * 60 * 1000));
         })());
-        const annualDeals = Math.round((closedDeals.length / monthsActive) * 12);
-        const annualRevenue = Math.round((totalRevenue / monthsActive) * 12);
+        const annualDeals = Math.round((kpis.closedDeals / monthsActive) * 12);
+        const annualRevenue = Math.round((kpis.totalRevenue / monthsActive) * 12);
         const annualLeads = Math.round((filteredLeads.length / monthsActive) * 12);
 
         // Percentile lookup: ratio to median → percentile

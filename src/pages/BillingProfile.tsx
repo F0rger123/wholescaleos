@@ -216,8 +216,11 @@ export default function BillingProfile() {
 }
 
 function BillingTab() {
-  const { currentUser } = useStore();
+  const { currentUser, team } = useStore();
   const [loading, setLoading] = useState(false);
+  
+  const currentSeats = Math.max(1, team?.length || 1);
+  const [targetSeats, setTargetSeats] = useState(currentSeats);
 
   const handleUpgrade = async () => {
     setLoading(true);
@@ -227,6 +230,7 @@ function BillingTab() {
       const { data, error } = await supabase.functions.invoke('stripe-checkout', {
         body: { 
           plan: (currentUser?.subscriptionTier === 'Free' ? 'solo' : currentUser?.subscriptionTier?.toLowerCase()) || 'solo',
+          seats: targetSeats,
           success_url: `${window.location.origin}/settings?tab=billing`,
           cancel_url: `${window.location.origin}/settings?tab=billing`
         }
@@ -269,16 +273,38 @@ function BillingTab() {
               <div>
                 <h2 className="text-4xl font-black">{currentUser?.subscriptionTier || 'Free Tier'}</h2>
                 <p className="opacity-80 font-medium">
-                  {currentUser?.subscriptionTier === 'Free' ? 'Unlock full OS potential' : '$27/month • Billed Annually'}
+                  {currentUser?.subscriptionTier === 'Free' ? 'Unlock full OS potential' : '$27/month per seat • Billed Annually'}
                 </p>
               </div>
+
+              {currentUser?.subscriptionTier && currentUser.subscriptionTier !== 'Free' && (
+                <div className="mt-4 flex items-center gap-4 bg-white/10 px-4 py-2 rounded-2xl border border-white/20 w-fit backdrop-blur-sm">
+                  <div className="text-sm font-bold opacity-90"><Users size={16} className="inline mr-2 opacity-50"/> Team Seats:</div>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => setTargetSeats(Math.max(1, targetSeats - 1))}
+                      className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-lg leading-none transition-all cursor-pointer border border-white/10"
+                    >-</button>
+                    <span className="font-mono font-bold w-6 text-center text-lg">{targetSeats}</span>
+                    <button 
+                      onClick={() => setTargetSeats(targetSeats + 1)}
+                      className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-lg leading-none transition-all cursor-pointer border border-white/10"
+                    >+</button>
+                  </div>
+                  {targetSeats !== currentSeats && (
+                    <div className="text-[10px] font-bold uppercase tracking-widest bg-yellow-500/20 text-yellow-300 px-3 py-1.5 rounded-lg border border-yellow-500/30">
+                      Update required
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <button 
               onClick={handleUpgrade}
               disabled={loading}
-              className="px-6 py-3 rounded-xl bg-white text-blue-600 font-bold hover:bg-gray-100 transition-all text-sm disabled:opacity-50"
+              className={`px-6 py-3 rounded-xl border font-bold transition-all text-sm disabled:opacity-50 ${targetSeats !== currentSeats ? 'bg-yellow-400 text-yellow-900 border-yellow-400 hover:bg-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-white text-blue-600 hover:bg-gray-100'}`}
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : (currentUser?.subscriptionTier === 'Free' ? 'Upgrade Now' : 'Change Plan')}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : (currentUser?.subscriptionTier === 'Free' ? 'Upgrade Now' : (targetSeats !== currentSeats ? 'Update Seats' : 'Change Plan'))}
             </button>
           </div>
           <div className="mt-12 pt-8 border-t border-white/20 flex flex-wrap gap-8 relative z-10">

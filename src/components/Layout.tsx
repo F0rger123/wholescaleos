@@ -12,10 +12,10 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
   ListTodo, MessageSquare, Download, ChevronDown, ChevronRight, Plus, ArrowRightLeft,
-  Calculator, Calendar, Bot, BarChart3,
+  Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
-  Trophy, Ticket
+  Trophy, Ticket, Shield
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -58,7 +58,6 @@ export function Layout() {
       { to: '/leads', label: 'Leads', icon: Users },
       { to: '/tasks', label: 'Tasks', icon: ListTodo },
       { to: '/calendar', label: 'Calendar', icon: Calendar },
-      { to: '/analytics', label: 'Analytics', icon: BarChart3 },
     ],
     Messages: [
       { to: '/notifications', label: 'Notification Inbox', icon: Bell },
@@ -74,6 +73,13 @@ export function Layout() {
       { to: '/settings', label: 'Settings', icon: Settings },
     ],
   };
+
+  const ADMIN_USER_ID = '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d';
+  const isAdmin = currentUser?.id === ADMIN_USER_ID;
+
+  if (isAdmin) {
+    navSections.Tools.push({ to: '/admin', label: 'Admin', icon: Shield });
+  }
 
   const teamSubNav = [
     { to: '/team', label: 'Team Dashboard', icon: UserCog },
