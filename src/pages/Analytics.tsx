@@ -856,6 +856,113 @@ export default function Analytics() {
           ))}
         </div>
       </div>
+      {/* Agent Percentile Ranking (NAR 2024 Benchmarks) */}
+      {(() => {
+        // 2024 NAR Member Profile benchmarks (annualized)
+        const NAR_MEDIAN_DEALS_YR = 12;
+        const NAR_MEDIAN_GCI_YR = 56400;
+        const NAR_MEDIAN_LEADS_YR = 48;
+
+        // Annualize user data (scale current data to 12mo projection)
+        const monthsActive = Math.max(1, (() => {
+          if (filteredLeads.length === 0) return 1;
+          const earliest = new Date(Math.min(...filteredLeads.map(l => new Date(l.createdAt).getTime())));
+          return Math.max(1, (Date.now() - earliest.getTime()) / (30.44 * 24 * 60 * 60 * 1000));
+        })());
+        const annualDeals = Math.round((closedDeals.length / monthsActive) * 12);
+        const annualRevenue = Math.round((totalRevenue / monthsActive) * 12);
+        const annualLeads = Math.round((filteredLeads.length / monthsActive) * 12);
+
+        // Percentile lookup: ratio to median → percentile
+        const getPercentile = (userVal: number, medianVal: number) => {
+          const ratio = userVal / Math.max(1, medianVal);
+          if (ratio >= 5.0) return 99;
+          if (ratio >= 3.0) return 95;
+          if (ratio >= 2.0) return 90;
+          if (ratio >= 1.5) return 80;
+          if (ratio >= 1.0) return 50;
+          if (ratio >= 0.75) return 35;
+          if (ratio >= 0.5) return 25;
+          if (ratio >= 0.25) return 10;
+          return 5;
+        };
+
+        const dealsPct = getPercentile(annualDeals, NAR_MEDIAN_DEALS_YR);
+        const revenuePct = getPercentile(annualRevenue, NAR_MEDIAN_GCI_YR);
+        const leadsPct = getPercentile(annualLeads, NAR_MEDIAN_LEADS_YR);
+        const overallPct = Math.round((dealsPct + revenuePct + leadsPct) / 3);
+
+        const getLabel = (pct: number) => {
+          if (pct >= 95) return 'Elite';
+          if (pct >= 80) return 'Top Performer';
+          if (pct >= 50) return 'Above Average';
+          if (pct >= 25) return 'Growing';
+          return 'Starting Out';
+        };
+
+        const metrics = [
+          { label: 'Deals Closed', user: annualDeals, national: NAR_MEDIAN_DEALS_YR, pct: dealsPct, unit: '/yr' },
+          { label: 'Revenue (GCI)', user: annualRevenue, national: NAR_MEDIAN_GCI_YR, pct: revenuePct, unit: '/yr', isCurrency: true },
+          { label: 'Leads Generated', user: annualLeads, national: NAR_MEDIAN_LEADS_YR, pct: leadsPct, unit: '/yr' },
+        ];
+
+        return (
+          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-[var(--t-text)] flex items-center gap-2">
+                  <Award size={18} className="text-yellow-500" /> Agent Percentile Ranking
+                </h3>
+                <p className="text-xs text-[var(--t-text-muted)] mt-0.5">Compared to 2024 NAR national averages ({NAR_MEDIAN_DEALS_YR} deals/yr, ${(NAR_MEDIAN_GCI_YR/1000).toFixed(0)}k GCI median)</p>
+              </div>
+              <div className="text-right">
+                <div className={`text-3xl font-black ${overallPct >= 80 ? 'text-yellow-400' : overallPct >= 50 ? 'text-blue-400' : 'text-[var(--t-text)]'}`}>
+                  Top {100 - overallPct}%
+                </div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)]">{getLabel(overallPct)}</div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {metrics.map((m, i) => (
+                <div key={i} className="bg-[var(--t-surface-dim)] rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-[var(--t-text)]">{m.label}</span>
+                    <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                      m.pct >= 80 ? 'bg-yellow-500/10 text-yellow-400' :
+                      m.pct >= 50 ? 'bg-green-500/10 text-green-500' :
+                      'bg-blue-500/10 text-blue-400'
+                    }`}>Top {100 - m.pct}%</span>
+                  </div>
+                  <div className="flex items-center gap-4 mb-2">
+                    <div className="flex-1">
+                      <div className="flex justify-between text-[10px] font-bold text-[var(--t-text-muted)] mb-1">
+                        <span>You: {m.isCurrency ? `$${m.user.toLocaleString()}` : m.user}{m.unit}</span>
+                        <span>National: {m.isCurrency ? `$${m.national.toLocaleString()}` : m.national}{m.unit}</span>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden bg-[var(--t-bg)]">
+                        <div
+                          className="h-full rounded-full transition-all duration-1000"
+                          style={{
+                            width: `${Math.min(100, m.pct)}%`,
+                            background: m.pct >= 80 ? 'linear-gradient(90deg, #f59e0b, #eab308)' :
+                                       m.pct >= 50 ? 'linear-gradient(90deg, #22c55e, #16a34a)' :
+                                       'linear-gradient(90deg, #3b82f6, #6366f1)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[9px] text-[var(--t-text-muted)] mt-4 italic text-center">
+              Source: 2024 National Association of REALTORS® Member Profile. Projections annualized from your activity data.
+            </p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

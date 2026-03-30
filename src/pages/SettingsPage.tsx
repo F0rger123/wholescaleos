@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { themes } from '../styles/themes';
 import {
-  Bell, Shield, Palette, Database, Save, Eye, EyeOff,
+  Bell, Shield, Palette, Database, Save,
   Check, Globe, Building, Mail, Phone, MapPin,
   Upload, Download, Trash2, RefreshCw, Smartphone, Lock,
   Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
@@ -377,6 +377,330 @@ function GeneralTab() {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ============================================================
+   SECURITY TAB - PASSWORD CHANGE + 2FA (SUPABASE MFA)
+   ============================================================ */
+function SecurityTab() {
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [passLoading, setPassLoading] = useState(false);
+  const [passResult, setPassResult] = useState<'success' | 'error' | null>(null);
+  const [passError, setPassError] = useState('');
+
+  // 2FA State
+  const [mfaStatus, setMfaStatus] = useState<'loading' | 'disabled' | 'enabled'>('loading');
+  const [enrolling, setEnrolling] = useState(false);
+  const [qrUri, setQrUri] = useState('');
+  const [qrImage, setQrImage] = useState('');
+  const [factorId, setFactorId] = useState('');
+  const [verifyCode, setVerifyCode] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaError, setMfaError] = useState('');
+
+  // Check 2FA status on mount
+  useEffect(() => {
+    checkMFAStatus();
+  }, []);
+
+  const checkMFAStatus = async () => {
+    if (!supabase) { setMfaStatus('disabled'); return; }
+    try {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+      const verified = data?.totp?.filter(f => f.status === 'verified') || [];
+      setMfaStatus(verified.length > 0 ? 'enabled' : 'disabled');
+      if (verified.length > 0) setFactorId(verified[0].id);
+    } catch {
+      setMfaStatus('disabled');
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (newPass !== confirmPass) {
+      setPassResult('error');
+      setPassError('Passwords do not match');
+      return;
+    }
+    if (newPass.length < 6) {
+      setPassResult('error');
+      setPassError('Password must be at least 6 characters');
+      return;
+    }
+    setPassLoading(true);
+    setPassResult(null);
+    try {
+      if (!supabase) throw new Error('Not connected to Supabase');
+      const { error } = await supabase.auth.updateUser({ password: newPass });
+      if (error) throw error;
+      setPassResult('success');
+      setCurrentPass('');
+      setNewPass('');
+      setConfirmPass('');
+      setTimeout(() => setPassResult(null), 4000);
+    } catch (err: any) {
+      setPassResult('error');
+      setPassError(err.message || 'Failed to update password');
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
+  const handleEnroll2FA = async () => {
+    if (!supabase) return;
+    setMfaLoading(true);
+    setMfaError('');
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator App' });
+      if (error) throw error;
+      setFactorId(data.id);
+      setQrUri(data.totp.uri);
+      // Generate QR code image
+      const QRCode = (await import('qrcode')).default;
+      const img = await QRCode.toDataURL(data.totp.uri, { width: 200, margin: 2 });
+      setQrImage(img);
+      setEnrolling(true);
+    } catch (err: any) {
+      setMfaError(err.message || 'Failed to start 2FA enrollment');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    if (!supabase || !factorId || !verifyCode) return;
+    setMfaLoading(true);
+    setMfaError('');
+    try {
+      const challenge = await supabase.auth.mfa.challenge({ factorId });
+      if (challenge.error) throw challenge.error;
+      const verify = await supabase.auth.mfa.verify({ factorId, challengeId: challenge.data.id, code: verifyCode });
+      if (verify.error) throw verify.error;
+      setMfaStatus('enabled');
+      setEnrolling(false);
+      setQrImage('');
+      setVerifyCode('');
+    } catch (err: any) {
+      setMfaError(err.message || 'Invalid verification code');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async () => {
+    if (!supabase || !factorId) return;
+    if (!confirm('Are you sure you want to disable 2FA? This will reduce your account security.')) return;
+    setMfaLoading(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId });
+      if (error) throw error;
+      setMfaStatus('disabled');
+      setFactorId('');
+    } catch (err: any) {
+      setMfaError(err.message || 'Failed to disable 2FA');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Password Change */}
+      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--t-text)' }}>
+          <Lock size={16} className="inline mr-2" />Change Password
+        </h2>
+        <p className="text-xs mb-4" style={{ color: 'var(--t-text-secondary)' }}>Update your account password</p>
+
+        {passResult === 'success' && (
+          <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: 'var(--t-success-dim)', border: '1px solid var(--t-success)' }}>
+            <Check size={14} style={{ color: 'var(--t-success)' }} />
+            <span className="text-sm" style={{ color: 'var(--t-success)' }}>Password updated successfully!</span>
+          </div>
+        )}
+        {passResult === 'error' && (
+          <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: 'var(--t-error-dim)', border: '1px solid var(--t-error)' }}>
+            <AlertTriangle size={14} style={{ color: 'var(--t-error)' }} />
+            <span className="text-sm" style={{ color: 'var(--t-error)' }}>{passError}</span>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs mb-1" style={{ color: 'var(--t-text-secondary)' }}>Current Password</label>
+            <input
+              type="password"
+              value={currentPass}
+              onChange={e => setCurrentPass(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg text-sm"
+              style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1" style={{ color: 'var(--t-text-secondary)' }}>New Password</label>
+            <input
+              type="password"
+              value={newPass}
+              onChange={e => setNewPass(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg text-sm"
+              style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs mb-1" style={{ color: 'var(--t-text-secondary)' }}>Confirm New Password</label>
+            <input
+              type="password"
+              value={confirmPass}
+              onChange={e => setConfirmPass(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg text-sm"
+              style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+            />
+          </div>
+          <button
+            onClick={handlePasswordChange}
+            disabled={passLoading || !newPass || !confirmPass}
+            className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-50"
+            style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+          >
+            {passLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {passLoading ? 'Updating...' : 'Update Password'}
+          </button>
+        </div>
+      </div>
+
+      {/* Two-Factor Authentication */}
+      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>
+              <QrCode size={16} className="inline mr-2" />Two-Factor Authentication
+            </h2>
+            <p className="text-xs mt-1" style={{ color: 'var(--t-text-secondary)' }}>
+              Add an extra layer of security using Google Authenticator or Authy
+            </p>
+          </div>
+          <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+            mfaStatus === 'enabled' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
+            mfaStatus === 'loading' ? 'bg-blue-500/10 text-blue-400' :
+            'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+          }`}>
+            {mfaStatus === 'loading' ? 'Checking...' : mfaStatus === 'enabled' ? '✓ Enabled' : 'Disabled'}
+          </div>
+        </div>
+
+        {mfaError && (
+          <div className="mb-4 p-3 rounded-lg flex items-center gap-2" style={{ backgroundColor: 'var(--t-error-dim)', border: '1px solid var(--t-error)' }}>
+            <AlertTriangle size={14} style={{ color: 'var(--t-error)' }} />
+            <span className="text-sm" style={{ color: 'var(--t-error)' }}>{mfaError}</span>
+          </div>
+        )}
+
+        {mfaStatus === 'disabled' && !enrolling && (
+          <div className="p-6 rounded-xl text-center" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
+            <Shield size={40} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--t-text-muted)' }} />
+            <p className="text-sm mb-4" style={{ color: 'var(--t-text-secondary)' }}>
+              Protect your account with time-based one-time passwords (TOTP)
+            </p>
+            <button
+              onClick={handleEnroll2FA}
+              disabled={mfaLoading}
+              className="px-6 py-2.5 rounded-lg text-sm font-bold transition-all"
+              style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+            >
+              {mfaLoading ? <Loader2 size={14} className="animate-spin inline mr-2" /> : null}
+              Enable 2FA
+            </button>
+          </div>
+        )}
+
+        {enrolling && qrImage && (
+          <div className="space-y-4">
+            <div className="p-6 rounded-xl text-center" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
+              <p className="text-sm font-bold mb-3" style={{ color: 'var(--t-text)' }}>
+                1. Scan this QR code with your authenticator app
+              </p>
+              <img src={qrImage} alt="2FA QR Code" className="mx-auto rounded-xl" style={{ width: 200, height: 200 }} />
+              <p className="text-[10px] mt-3 break-all px-8" style={{ color: 'var(--t-text-muted)' }}>
+                Manual entry: {qrUri.split('secret=')[1]?.split('&')[0] || ''}
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-bold mb-2" style={{ color: 'var(--t-text)' }}>
+                2. Enter the 6-digit code from your app
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={verifyCode}
+                  onChange={e => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="flex-1 px-4 py-3 rounded-lg text-center text-lg font-mono tracking-[0.5em]"
+                  style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+                />
+                <button
+                  onClick={handleVerify2FA}
+                  disabled={mfaLoading || verifyCode.length !== 6}
+                  className="px-6 py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+                >
+                  {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Verify & Enable'}
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => { setEnrolling(false); setQrImage(''); }}
+              className="text-xs font-medium"
+              style={{ color: 'var(--t-text-muted)' }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {mfaStatus === 'enabled' && (
+          <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <Shield size={20} className="text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>2FA is Active</p>
+                <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>Your account is secured with an authenticator app</p>
+              </div>
+            </div>
+            <button
+              onClick={handleDisable2FA}
+              disabled={mfaLoading}
+              className="px-4 py-2 rounded-lg text-xs font-bold transition-all"
+              style={{ border: '1px solid var(--t-error)', color: 'var(--t-error)', backgroundColor: 'transparent' }}
+            >
+              {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Disable 2FA'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Session Info */}
+      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--t-text)' }}>
+          <Monitor size={16} className="inline mr-2" />Active Sessions
+        </h2>
+        <div className="p-4 rounded-lg flex items-center justify-between" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <div>
+              <p className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>Current Session</p>
+              <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>This browser • {navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Browser'}</p>
+            </div>
+          </div>
+          <span className="text-[10px] font-bold uppercase text-green-500">Active Now</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1075,83 +1399,6 @@ function NotificationsTab() {
   );
 }
 
-/* ============================================================
-   SECURITY TAB
-   ============================================================ */
-function SecurityTab() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
-  const [twoFA, setTwoFA] = useState(false);
-
-  return (
-    <div className="space-y-6">
-      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: 'var(--t-text)' }}>Change Password</h2>
-        <div className="space-y-3 max-w-md">
-          {(['current', 'new', 'confirm'] as const).map((field) => (
-            <div key={field}>
-              <label className="block text-sm mb-1 capitalize" style={{ color: 'var(--t-text-secondary)' }}>{field === 'confirm' ? 'Confirm New' : field} Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={passwords[field]}
-                  onChange={(e) => setPasswords(prev => ({ ...prev, [field]: e.target.value }))}
-                  className="w-full px-3 py-2 rounded-lg text-sm pr-10"
-                  style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
-                />
-                <button onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-2" style={{ color: 'var(--t-text-secondary)' }}>
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-            </div>
-          ))}
-          <button className="px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}>
-            <Lock size={14} className="inline mr-1" /> Update Password
-          </button>
-        </div>
-      </div>
-
-      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>Two-Factor Authentication</h2>
-            <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Add extra security to your account</p>
-          </div>
-          <button
-            onClick={() => setTwoFA(!twoFA)}
-            className="relative w-10 h-5 rounded-full transition-colors"
-            style={{ backgroundColor: twoFA ? 'var(--t-primary)' : 'var(--t-border)' }}
-          >
-            <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform" style={{ left: twoFA ? '22px' : '2px' }} />
-          </button>
-        </div>
-        {twoFA && (
-          <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-            <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>
-              <Smartphone size={14} className="inline mr-1" />
-              Scan the QR code with your authenticator app to enable 2FA.
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Active Sessions</h2>
-        <p className="text-sm mb-3" style={{ color: 'var(--t-text-secondary)' }}>Manage your active login sessions</p>
-        <div className="p-3 rounded-lg flex items-center justify-between" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-          <div className="flex items-center gap-3">
-            <Monitor size={18} style={{ color: 'var(--t-primary)' }} />
-            <div>
-              <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Current Session</p>
-              <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Active now</p>
-            </div>
-          </div>
-          <span className="text-xs px-2 py-1 rounded-full" style={{ backgroundColor: 'var(--t-success-dim)', color: 'var(--t-success)' }}>Active</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ============================================================
    TEAM TAB

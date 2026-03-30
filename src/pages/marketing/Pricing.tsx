@@ -26,30 +26,34 @@ export default function Pricing() {
     try {
       if (!supabase) throw new Error('Supabase not configured');
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id || currentUser?.id;
-
-      const response = await fetch('https://jdneeubmkgefhrfcurji.supabase.co/functions/v1/stripe-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+        body: {
           plan: planName.toLowerCase(),
           billing: billingCycle,
-          user_id: currentUserId,
-          success_url: 'https://wholescaleos.pages.dev/settings?tab=billing',
-          cancel_url: 'https://wholescaleos.pages.dev/pricing'
-        })
+          success_url: `${window.location.origin}/settings?tab=billing`,
+          cancel_url: `${window.location.origin}/pricing`
+        }
       });
 
-      const data = await response.json();
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to connect to checkout service');
+      }
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error(data.error || 'No checkout URL returned');
+        throw new Error(data?.error || 'No checkout URL returned');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Checkout error:', err);
-      alert('Checkout failed. Please ensure Supabase Edge Functions are deployed.');
+      const msg = err?.message || '';
+      if (msg.includes('FunctionsHttpError') || msg.includes('Failed to send')) {
+        alert('⚠️ Could not reach the checkout service. Please try again in a moment, or contact support if this persists.');
+      } else if (msg.includes('Unauthorized') || msg.includes('401')) {
+        alert('🔒 Please log in first to upgrade your plan.');
+      } else {
+        alert(`⚠️ Checkout failed: ${msg}`);
+      }
     } finally {
       setLoading(null);
     }

@@ -11,11 +11,11 @@ import { switchToTeam } from '../lib/team-utils';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
-  ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
+  ListTodo, MessageSquare, Download, ChevronDown, ChevronRight, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot, BarChart3,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
-  Sparkles, ArrowRight
+  Trophy, Ticket
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -71,10 +71,17 @@ export function Layout() {
       { to: '/imports', label: 'Imports', icon: Download },
       { to: '/contracts', label: 'Contracts', icon: FileText },
       { to: '/calculators', label: 'Calculators', icon: Calculator },
-      { to: '/team', label: 'Team', icon: UserCog },
       { to: '/settings', label: 'Settings', icon: Settings },
     ],
   };
+
+  const teamSubNav = [
+    { to: '/team', label: 'Team Dashboard', icon: UserCog },
+    { to: '/team-analytics', label: 'Team Analytics', icon: Trophy },
+    { to: '/team/members', label: 'Team Members', icon: Users },
+  ];
+
+  const [teamExpanded, setTeamExpanded] = useState(true);
 
   const onlineCount = (team || []).filter(m => m.presenceStatus === 'online').length;
   const pendingTaskCount = (tasks || []).filter(t => t.status === 'todo' || t.status === 'in-progress').length;
@@ -546,19 +553,75 @@ export function Layout() {
             );
           })}
 
-          {/* Upgrade CTA */}
-          {sidebarOpen && (
-            <div className="mt-8 px-4 py-6 rounded-[2rem] bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border border-indigo-500/20 relative overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer shadow-lg"
-                 onClick={() => navigate('/settings')}>
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:rotate-12 transition-transform">
-                <Sparkles size={40} className="text-indigo-400" />
+          {/* Team Section — Collapsible */}
+          <div className="px-2">
+            <button
+              onClick={() => setTeamExpanded(!teamExpanded)}
+              className="w-full flex items-center justify-between px-3 py-2 mb-1 group cursor-pointer"
+            >
+              <span
+                className={`text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
+                style={{ color: 'var(--t-text-muted)' }}
+              >
+                Team
+              </span>
+              {sidebarOpen && (
+                teamExpanded 
+                  ? <ChevronDown size={14} style={{ color: 'var(--t-text-muted)' }} className="transition-transform" />
+                  : <ChevronRight size={14} style={{ color: 'var(--t-text-muted)' }} className="transition-transform" />
+              )}
+            </button>
+            {(teamExpanded || !sidebarOpen) && (
+              <div className="flex flex-col gap-1">
+                {teamSubNav.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={to === '/team'}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative ${
+                        isActive ? 'active-nav-item' : 'inactive-nav-item'
+                      }`
+                    }
+                    style={({ isActive }) => ({
+                      borderRadius: 'var(--t-radius)',
+                      background: isActive ? 'var(--t-primary-dim)' : 'transparent',
+                      color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
+                      boxShadow: isActive ? 'var(--t-glow-shadow)' : 'none',
+                    })}
+                  >
+                    <Icon size={20} className="shrink-0" />
+                    <span className={`flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
+                      {label}
+                    </span>
+                  </NavLink>
+                ))}
               </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2">Pro Feature Pack</p>
-              <h4 className="text-sm font-black italic text-white uppercase mb-3">Upgrade to Pro</h4>
-              <p className="text-[9px] text-[#6d758c] font-bold mb-4 leading-tight">Unlock AI triage, unlimited nodes & elite analytics.</p>
-              <div className="flex items-center gap-2 text-indigo-400 font-bold text-[10px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                Learn More <ArrowRight size={12} />
-              </div>
+            )}
+          </div>
+
+          {/* Admin-only nav */}
+          {currentUser?.id === '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d' && (
+            <div className="px-2 mt-2">
+              <div className="mx-3 my-2 border-b" style={{ borderColor: 'var(--t-sidebar-border)' }} />
+              <NavLink
+                to="/admin/promos"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                    isActive ? 'active-nav-item' : 'inactive-nav-item'
+                  }`
+                }
+                style={({ isActive }) => ({
+                  borderRadius: 'var(--t-radius)',
+                  background: isActive ? 'var(--t-primary-dim)' : 'transparent',
+                  color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
+                })}
+              >
+                <Ticket size={20} className="shrink-0" />
+                <span className={`flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
+                  Promo Codes
+                </span>
+              </NavLink>
             </div>
           )}
         </nav>

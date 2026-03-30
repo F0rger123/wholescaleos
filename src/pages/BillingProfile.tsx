@@ -4,13 +4,115 @@ import {
   CreditCard, BarChart3, Users, User, 
   ChevronRight, Download, Plus, AlertCircle,
   Copy, Share2, Wallet, ArrowUpRight, Check,
-  Camera, Twitter, Linkedin, Loader2
+  Camera, Twitter, Linkedin, Loader2, Ticket
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 
 type TabType = 'billing' | 'analytics' | 'referral' | 'profile';
 
+function PromoCodeInput() {
+  const [code, setCode] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+
+  const handleApply = async () => {
+    if (!supabase || !code.trim()) return;
+    setStatus('loading');
+    setMessage('');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Please log in first');
+
+      // Lookup promo code
+      const { data: promo, error: lookupErr } = await supabase
+        .from('promo_codes')
+        .select('*')
+        .eq('code', code.toUpperCase().trim())
+        .eq('is_active', true)
+        .single();
+
+      if (lookupErr || !promo) throw new Error('Invalid or expired promo code');
+
+      // Check max uses
+      if (promo.max_uses && promo.current_uses >= promo.max_uses) {
+        throw new Error('This promo code has reached its maximum uses');
+      }
+
+      // Check expiry
+      if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+        throw new Error('This promo code has expired');
+      }
+
+      // Check if already redeemed
+      const { data: existing } = await supabase
+        .from('promo_redemptions')
+        .select('id')
+        .eq('promo_code_id', promo.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (existing) throw new Error('You have already used this code');
+
+      // Redeem
+      const { error: redeemErr } = await supabase
+        .from('promo_redemptions')
+        .insert({ promo_code_id: promo.id, user_id: user.id });
+      if (redeemErr) throw redeemErr;
+
+      // Increment usage
+      await supabase
+        .from('promo_codes')
+        .update({ current_uses: promo.current_uses + 1 })
+        .eq('id', promo.id);
+
+      const typeMsg: Record<string, string> = {
+        free_forever: 'Free forever access activated!',
+        free_limited: `${promo.duration_months} months free activated!`,
+        percent_off: `${promo.value}% discount applied!`,
+        fixed_off: `$${promo.value} credit applied!`,
+        one_time: `$${promo.value} one-time credit applied!`,
+      };
+      setMessage(typeMsg[promo.type] || 'Code applied successfully!');
+      setStatus('success');
+      setCode('');
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to apply code');
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Ticket size={16} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" style={{ color: 'var(--t-text-muted)' }} />
+          <input
+            type="text"
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase())}
+            placeholder="Enter promo code (e.g. WOS-LAUNCH50)"
+            className="w-full pl-10 pr-3 py-3 rounded-xl text-sm font-mono"
+            style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+          />
+        </div>
+        <button
+          onClick={handleApply}
+          disabled={status === 'loading' || !code.trim()}
+          className="px-6 py-3 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+          style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+        >
+          {status === 'loading' ? <Loader2 size={14} className="animate-spin" /> : 'Apply'}
+        </button>
+      </div>
+      {message && (
+        <p className={`text-xs font-bold ${status === 'success' ? 'text-green-500' : 'text-red-500'}`}>
+          {status === 'success' ? '✓ ' : '✕ '}{message}
+        </p>
+      )}
+    </div>
+  );
+}
 export default function BillingProfile() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -136,9 +238,16 @@ function BillingTab() {
       } else {
         throw new Error('No checkout URL returned');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Checkout error:', err);
-      alert('Checkout failed. Please ensure Supabase Edge Functions are deployed.');
+      const msg = err?.message || '';
+      if (msg.includes('FunctionsHttpError') || msg.includes('Failed to send') || msg.includes('FunctionsFetchError')) {
+        alert('⚠️ Could not reach the checkout service. Please check your connection and try again.');
+      } else if (msg.includes('Unauthorized')) {
+        alert('🔒 Session expired. Please refresh and try again.');
+      } else {
+        alert(`⚠️ Checkout failed: ${msg || 'Unknown error'}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -182,6 +291,12 @@ function BillingTab() {
               <div className="text-sm font-bold flex items-center gap-2">Visa ending in 4242 <ChevronRight size={14} /></div>
             </div>
           </div>
+        </div>
+
+        {/* Apply Promo Code */}
+        <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-4">
+          <h3 className="text-lg font-bold italic tracking-tight" style={{ color: 'var(--t-text)' }}>Apply Promo Code</h3>
+          <PromoCodeInput />
         </div>
 
         {/* History Table */}
