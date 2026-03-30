@@ -157,29 +157,45 @@ export function App() {
             console.log('[App] SIGNED_OUT event. Clearing store...');
             store.logout();
           }
-        } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
+        } else if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED' || event === 'MFA_CHALLENGE_VERIFIED') && session?.user) {
           const userId = session.user.id;
           const store = useStore.getState();
           
+          console.log(`[App] ${event} event for user:`, userId);
+          
           if (!store.isAuthenticated || !store.teamId) {
-            console.log('[App] SIGNED_IN/INITIAL_SESSION event. Initializing profile...');
+            console.log(`[App] Initializing profile for ${event}...`);
             
             (async () => {
               try {
                 // Double check AAL before setting authenticated
-                const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-                const { data: factors } = await supabase.auth.mfa.listFactors();
+                const { data: aal, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (aalErr) console.error('[App] aal check error:', aalErr);
+
+                const { data: factors, error: factorsErr } = await supabase.auth.mfa.listFactors();
+                if (factorsErr) console.error('[App] factors check error:', factorsErr);
+
                 const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
 
+                console.log('[App] Auth State Check:', { 
+                  event, 
+                  currentLevel: aal?.currentLevel, 
+                  nextLevel: aal?.nextLevel,
+                  hasVerifiedMfa: !!verifiedFactor 
+                });
+
+                // If user HAS MFA but isn't at AAL2 yet, don't set as authenticated in store
+                // This prevents the ProtectedRoute from letting them in prematurely
                 if (verifiedFactor && aal?.currentLevel !== 'aal2') {
-                  console.log('[App] MFA Challenge active. Staying on current route.');
+                  console.log('[App] MFA required but not reached (AAL1). Blocking store authentication.');
                   return;
                 }
 
+                console.log('[App] AAL check passed. Setting store as authenticated.');
                 store.setAuthenticated(true);
                 await store.fetchProfile(userId);
                 store.incrementLoginStreak();
-                console.log('[App] Profile fetched via auth change. teamId:', store.teamId);
+                console.log('[App] Profile initialized successfully. teamId:', store.teamId);
               } catch (err) {
                 console.error('[App] Auth change initialization failed:', err);
               }

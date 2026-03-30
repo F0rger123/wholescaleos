@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { useStore, Lead } from '../store/useStore';
 import html2pdf from 'html2pdf.js';
 import { format } from 'date-fns';
@@ -718,12 +719,19 @@ export default function Contracts() {
         .pdf-content p { color: #333333 !important; }
         .pdf-content * { 
           border-color: #e5e7eb !important;
+          background-color: transparent !important;
+          color: inherit !important;
           --t-primary: #3b82f6;
           --t-text: #1a1a1a;
           --t-text-secondary: #4b5563;
           --t-text-muted: #9ca3af;
           --t-border: #e5e7eb;
+          /* Force solid colors for any common tailwind classes that might use oklch */
+          --tw-bg-opacity: 1 !important;
+          --tw-text-opacity: 1 !important;
+          --tw-border-opacity: 1 !important;
         }
+        .pdf-content strong, .pdf-content b { color: #000000 !important; }
       `;
       element.appendChild(style);
 
@@ -808,12 +816,18 @@ export default function Contracts() {
         .pdf-content p { color: #333333 !important; }
         .pdf-content * { 
           border-color: #e5e7eb !important;
+          background-color: transparent !important;
+          color: inherit !important;
           --t-primary: #3b82f6;
           --t-text: #1a1a1a;
           --t-text-secondary: #4b5563;
           --t-text-muted: #9ca3af;
           --t-border: #e5e7eb;
+          --tw-bg-opacity: 1 !important;
+          --tw-text-opacity: 1 !important;
+          --tw-border-opacity: 1 !important;
         }
+        .pdf-content strong, .pdf-content b { color: #000000 !important; }
       `;
       element.appendChild(style);
 
@@ -851,21 +865,22 @@ export default function Contracts() {
       });
       
       setSendStep('success');
+      toast.success('Document prepared for email!');
+      
       setTimeout(() => {
         setShowEmailModal(true);
         setIsSendingContract(false);
         setSendStep('idle');
-      }, 500);
+      }, 800);
     } catch (error: any) {
       console.error('[PDF] Email PDF Generation Error:', error);
-      alert(`Failed to prepare document for email: ${error?.message || 'Unknown error'}`);
+      toast.error(`Failed to prepare document for email: ${error?.message || 'Unknown error'}`);
       setIsSendingContract(false);
       setSendStep('idle');
     } finally {
       setGeneratingPdf(false);
     }
   };
-
 
   const handleToggleEdit = () => {
     if (isEditing) {

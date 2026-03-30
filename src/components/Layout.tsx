@@ -11,7 +11,7 @@ import { switchToTeam } from '../lib/team-utils';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
-  ListTodo, MessageSquare, Download, ChevronDown, ChevronRight, Plus, ArrowRightLeft,
+  ListTodo, MessageSquare, Download, ChevronDown, Plus, ArrowRightLeft,
   Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
@@ -468,21 +468,20 @@ export function Layout() {
               </>
             )}
           </div>
-
         {/* Nav */}
-        <nav className="flex-1 flex flex-col p-3 mt-2 overflow-y-auto">
+        <nav className="flex-1 flex flex-col p-4 mt-2 overflow-y-auto scrollbar-hide">
           {Object.entries(navSections).map(([sectionName, items], sectionIndex) => {
             const isCollapsed = collapsedSections[sectionName];
 
             return (
-              <div key={sectionName} className={sectionIndex > 0 ? "pt-2 space-y-1" : "space-y-1"}>
+              <div key={sectionName} className={sectionIndex > 0 ? "pt-6 space-y-1.5" : "space-y-1.5"}>
                 <button
                   onClick={() => toggleSection(sectionName)}
-                  className="w-full flex items-center justify-between px-3 py-2 group hover:bg-[var(--t-surface-dim)] rounded-xl transition-all"
+                  className="w-full flex items-center justify-between px-3 py-2 group hover:bg-[var(--t-surface-dim)] rounded-xl transition-all duration-300"
                 >
-                  <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
+                  <div className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
                     <span 
-                      className="text-[10px] uppercase tracking-[0.2em] font-black italic transition-colors group-hover:text-[var(--t-primary)] whitespace-nowrap"
+                      className="text-[10px] uppercase tracking-[0.25em] font-black italic transition-colors group-hover:text-[var(--t-primary)] whitespace-nowrap"
                       style={{ color: 'var(--t-text-muted)' }}
                     >
                       {sectionName}
@@ -490,19 +489,19 @@ export function Layout() {
                   </div>
                   <ChevronDown
                     size={12}
-                    className={`transition-transform duration-300 group-hover:text-[var(--t-primary)] ${isCollapsed ? '-rotate-90' : ''} ${!sidebarOpen ? 'opacity-0' : 'opacity-100'}`}
+                    className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:text-[var(--t-primary)] ${isCollapsed ? '-rotate-90' : ''} ${!sidebarOpen ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
                     style={{ color: 'var(--t-text-muted)' }}
                   />
                 </button>
                 
                 {(!isCollapsed || !sidebarOpen) && (
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-1.5 pl-1">
                     {(items as { to: string; label: string; icon: any }[]).map(({ to, label, icon: Icon }) => {
                       const badge =
                         label === 'Tasks' ? pendingTaskCount :
                         label === 'Team' ? onlineCount :
                         label === 'Team Chat' ? totalUnread : 
-                        label === 'SMS' ? 0 : 0; // Placeholder for SMS unread count
+                        label === 'SMS' ? 0 : 0; 
 
                       return (
                         <NavLink
@@ -510,73 +509,63 @@ export function Layout() {
                           to={to}
                           end={to === '/'}
                           className={({ isActive }) =>
-                            `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative ${
-                              isActive ? 'active-nav-item' : 'inactive-nav-item'
+                            `flex items-center gap-3 px-3 py-3 text-sm font-semibold transition-all duration-300 group relative ${
+                              isActive ? 'active-nav-item' : 'inactive-nav-item hover:translate-x-1'
                             }`
                           }
                           style={({ isActive }) => ({
-                            borderRadius: '1.25rem',
+                            borderRadius: '1rem',
                             background: isActive ? 'var(--t-primary-dim)' : 'transparent',
                             color: isActive ? 'var(--t-primary)' : 'var(--t-text-secondary)',
-                            border: isActive ? '1px solid var(--t-primary)' : '1px solid transparent',
-                            boxShadow: isActive ? '0 0 20px var(--t-primary-dim)' : 'none',
+                            border: isActive ? '1px solid var(--t-primary-dim)' : '1px solid transparent',
+                            boxShadow: isActive ? '0 10px 20px -10px var(--t-primary-dim)' : 'none',
                           })}
                         >
-                          <Icon size={20} className="shrink-0" />
-                          <span className={`flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
+                          <Icon size={18} className={`shrink-0 transition-transform duration-300 ${sidebarOpen ? '' : 'mx-auto'}`} />
+                          <span className={`flex-1 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
                             {label}
                           </span>
-                          {badge > 0 && (
-                            <div className={`transition-all duration-300 overflow-hidden ${sidebarOpen ? 'max-w-[40px] opacity-100' : 'max-w-0 opacity-0'}`}>
-                              <span
-                                className="text-[10px] font-bold text-white px-1.5 py-0.5 rounded-full min-w-[20px] text-center"
-                                style={{
-                                  background: label === 'Tasks' ? 'var(--t-warning)' :
-                                              label === 'Chat' ? 'var(--t-primary)' :
-                                              'var(--t-success)',
-                                }}
-                              >
-                                {badge}
-                              </span>
-                            </div>
-                          )}
-                          {!sidebarOpen && badge > 0 && (
+                          
+                          {/* Active Indicator Dot */}
+                          <NavLink
+                             to={to}
+                             end={to === '/'}
+                             className={({ isActive }) => `absolute left-0 w-1 h-4 bg-[var(--t-primary)] rounded-r-full transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}
+                          />
+
+                          {badge > 0 && sidebarOpen && (
                             <span
-                              className="absolute right-2 w-2 h-2 rounded-full"
+                              className="text-[9px] font-black text-white px-1.5 py-0.5 rounded-lg min-w-[20px] text-center shadow-sm"
                               style={{
                                 background: label === 'Tasks' ? 'var(--t-warning)' :
                                             label === 'Chat' ? 'var(--t-primary)' :
                                             'var(--t-success)',
                               }}
-                            />
+                            >
+                              {badge}
+                            </span>
                           )}
                         </NavLink>
                       );
                     })}
                   </div>
                 )}
-                
-                {!sidebarOpen && sectionIndex < Object.keys(navSections).length - 1 && (
-                  <div className="mx-3 my-2 border-b" style={{ borderColor: 'var(--t-sidebar-border)' }} />
-                )}
               </div>
             );
           })}
-
-          {/* Navigation sections are now all handled in navSections mapping above */}
-
-
-
         </nav>
 
         {/* Online Team Members */}
         <div
-          className={`px-4 py-3 border-t transition-all duration-300 overflow-hidden ${sidebarOpen ? 'max-h-[200px] opacity-100' : 'max-h-0 opacity-0 py-0 border-none'}`}
+          className={`px-6 py-4 border-t transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden ${sidebarOpen ? 'max-h-[250px] opacity-100' : 'max-h-0 opacity-0 py-0 border-none'}`}
           style={{ borderColor: 'var(--t-sidebar-border)' }}
         >
-          <p className="text-[10px] uppercase tracking-wider font-semibold mb-2 whitespace-nowrap" style={{ color: 'var(--t-text-muted)' }}>
-            Online Now
-          </p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[10px] uppercase tracking-[0.25em] font-black italic whitespace-nowrap" style={{ color: 'var(--t-text-muted)' }}>
+              Online Now
+            </p>
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-pulse" />
+          </div>
           <div className="space-y-1.5">
             {(team || [])
               .filter(m => m.presenceStatus !== 'offline')

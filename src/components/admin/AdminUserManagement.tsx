@@ -86,14 +86,23 @@ export default function AdminUserManagement() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all outline-none"
-            style={{ backgroundColor: 'var(--t-input-bg)', borderColor: 'var(--t-input-border)', color: 'var(--t-text)' }}
+            style={{ 
+              backgroundColor: 'var(--t-surface)', 
+              borderColor: 'var(--t-border)', 
+              color: 'var(--t-text)' 
+            }}
           />
         </div>
         <select 
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2.5 rounded-xl border outline-none focus:ring-2"
-          style={{ backgroundColor: 'var(--t-input-bg)', borderColor: 'var(--t-input-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
+          className="px-4 py-2.5 rounded-xl border outline-none focus:ring-2 transition-all appearance-none cursor-pointer"
+          style={{ 
+            backgroundColor: 'var(--t-surface)', 
+            borderColor: 'var(--t-border)', 
+            color: 'var(--t-text)', 
+            '--tw-ring-color': 'var(--t-primary-dim)' 
+          } as any}
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -103,8 +112,13 @@ export default function AdminUserManagement() {
         <select 
           value={tierFilter}
           onChange={(e) => setTierFilter(e.target.value)}
-          className="px-4 py-2.5 rounded-xl border outline-none focus:ring-2"
-          style={{ backgroundColor: 'var(--t-input-bg)', borderColor: 'var(--t-input-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
+          className="px-4 py-2.5 rounded-xl border outline-none focus:ring-2 transition-all appearance-none cursor-pointer"
+          style={{ 
+            backgroundColor: 'var(--t-surface)', 
+            borderColor: 'var(--t-border)', 
+            color: 'var(--t-text)', 
+            '--tw-ring-color': 'var(--t-primary-dim)' 
+          } as any}
         >
           <option value="all">All Tiers</option>
           <option value="Free">Free</option>
@@ -114,8 +128,7 @@ export default function AdminUserManagement() {
           <option value="Agency">Agency</option>
         </select>
         <button 
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-lg active:scale-95"
-          style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-lg active:scale-95 bg-purple-600 hover:bg-purple-700 text-white"
         >
           <UserPlus size={18} />
           Add User

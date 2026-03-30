@@ -444,25 +444,34 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     const displayName = name || (user.user_metadata?.full_name as string) || user.email?.split('@')[0] || 'User';
     const returnTo = new URLSearchParams(window.location.search).get('return_to');
 
+    console.log('[Auth] finalizeLogin starting for user:', user.id, 'Email:', user.email);
+
     // If signup had an invite code, join that team BEFORE navigating
     if (form.inviteCode.trim() && supabase) {
       const result = await joinTeamByInviteCode(form.inviteCode.trim(), user.id);
       if (result.success) {
-        console.log(`Joined team: ${result.teamName}`);
+        console.log(`[Auth] Joined team via invite code: ${result.teamName}`);
       }
     }
 
-    login(user.email || form.email, form.password);
+    // store.login(email, password) is REDUNDANT and HARMFUL here because:
+    // 1. Supabase already established the session (either via password login or MFA verification).
+    // 2. Calling signInWithPassword again would reset the session to AAL1, causing an MFA loop.
+    console.log('[Auth] Skipping store.login to preserve AAL session level.');
+    
     const store = useStore.getState();
     const avatar = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
     
-    // updateProfile just sets basic info, we need fetchProfile to get the role, etc.
+    // updateProfile just sets basic info in the store
     store.updateProfile({
       id: user.id,
       email: user.email || form.email,
       name: displayName,
       avatar,
     });
+
+    // Manually set authenticated in the store so routes can transition
+    store.setAuthenticated(true);
 
     // CRITICAL: Fetch the full profile from Supabase to get user.role and other DB fields
     console.log('[Auth] Fetching full profile for:', user.id);
@@ -471,8 +480,10 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     
     // Redirect logic: return_to takes precedence, then team selection
     if (returnTo) {
+      console.log('[Auth] Redirecting to returnTo:', returnTo);
       navigate(decodeURIComponent(returnTo));
     } else {
+      console.log('[Auth] Redirecting to team-selection');
       // Go to team selection so user can pick/create/join a team
       navigate('/team-selection');
     }

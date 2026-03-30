@@ -90,21 +90,30 @@ export default function AdminPlatformAnalytics() {
         });
       }
 
-      // Calculate Trends (Current vs Previous Month)
-      const currentMonth = last6Months[5].name;
-      const prevMonth = last6Months[4].name;
-      const currentRev = monthlyBuckets[currentMonth]?.revenue || 0;
-      const prevRev = monthlyBuckets[prevMonth]?.revenue || 0;
-      const growth = prevRev ? ((currentRev - prevRev) / prevRev) * 100 : 0;
+      // Calculate trends (Current vs Previous Month)
+      const currentMonthIndex = last6Months.length - 1;
+      const prevMonthIndex = last6Months.length - 2;
+      
+      const currentMonthData = last6Months[currentMonthIndex];
+      const prevMonthData = last6Months[prevMonthIndex];
+
+      const calculateTrend = (curr: number, prev: number) => {
+        if (!prev) return curr > 0 ? '+100%' : '0%';
+        const diff = ((curr - prev) / prev) * 100;
+        return `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`;
+      };
 
       setStats({
         totalUsers: userCount || 0,
         activeSubscriptions: activeSubs,
         totalLeads: leadCount || 0,
         mrr: mrr,
-        monthlyGrowth: growth,
-        conversionRate: userCount ? (activeSubs / userCount) * 100 : 0
-      });
+        monthlyGrowth: prevMonthData.revenue ? ((currentMonthData.revenue - prevMonthData.revenue) / prevMonthData.revenue) * 100 : 0,
+        conversionRate: userCount ? (activeSubs / userCount) * 100 : 0,
+        userTrend: calculateTrend(currentMonthData.users, prevMonthData.users),
+        revTrend: calculateTrend(currentMonthData.revenue, prevMonthData.revenue),
+        leadTrend: '+12%' // Placeholder for leads until we have monthly lead data
+      } as any);
 
       setProfiles(profiles || []);
       setHistoricalData(last6Months);
@@ -118,10 +127,10 @@ export default function AdminPlatformAnalytics() {
   }
 
   const kpis = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'blue', trend: `+${(stats.monthlyGrowth / 2).toFixed(1)}%` },
-    { label: 'Platform MRR', value: `$${stats.mrr.toLocaleString()}`, icon: DollarSign, color: 'green', trend: `+${stats.monthlyGrowth.toFixed(1)}%` },
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'blue', trend: (stats as any).userTrend || '+0%' },
+    { label: 'Platform MRR', value: `$${stats.mrr.toLocaleString()}`, icon: DollarSign, color: 'green', trend: (stats as any).revTrend || '+0%' },
     { label: 'Conv. Rate', value: `${stats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: 'purple', trend: '+0.4%' },
-    { label: 'Total Leads', value: stats.totalLeads.toLocaleString(), icon: BarChart3, color: 'orange', trend: '+12%' }
+    { label: 'Total Leads', value: stats.totalLeads.toLocaleString(), icon: BarChart3, color: 'orange', trend: (stats as any).leadTrend || '+0%' }
   ];
 
   if (loading) {
