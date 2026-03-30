@@ -612,42 +612,51 @@ import { useStore } from '../store/useStore';
  * Bypasses the need for a server-side Edge Function proxy by using the
  * user's own Google OAuth token from the user_connections table.
  */
+export interface EmailAttachment {
+  filename: string;
+  content: string; // base64
+  contentType?: string;
+}
+
+export interface EmailPayload {
+  to: string;
+  subject: string;
+  html?: string;
+  text?: string;
+  from?: string;
+  replyTo?: string;
+  threadId?: string;
+  attachments?: EmailAttachment[];
+}
+
+/**
+ * Send an email via the Gmail API directly.
+ */
 export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
 
-  // Dev mode — log to console if no user or no Supabase
   if (!isSupabaseConfigured || !supabase || !userId) {
     console.log('📧 [DEV] Email would be sent:', {
       to: payload.to,
       subject: payload.subject,
-      userId: userId,
-      supabase: !!supabase,
-      config: isSupabaseConfigured
+      attachments: payload.attachments?.length || 0,
     });
     return { success: true, messageId: `dev-${Date.now()}` };
   }
 
-  console.log(`📧 [EmailService] Attempting to send to: ${payload.to}`);
-
   try {
-    // 1. Get Google OAuth tokens for Gmail
-    let refreshToken = '';
-    const { data } = await supabase
+    const { data: conn } = await supabase
       .from('user_connections')
       .select('refresh_token')
       .eq('user_id', userId)
       .eq('provider', 'google')
       .maybeSingle();
     
-    refreshToken = data?.refresh_token || '';
-
-    if (!refreshToken) {
-      console.warn('Google account not connected — email suppressed.');
-      return { success: false, error: 'Google account not connected. Please connect your Gmail in Settings.' };
+    if (!conn?.refresh_token) {
+      return { success: false, error: 'Gmail account not connected. Please connect in Settings.' };
     }
 
-    // 2. Refresh Access Token
     const CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
     const CLIENT_SECRET = "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";
 
@@ -655,80 +664,73 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        refresh_token: refreshToken,
+        refresh_token: conn.refresh_token,
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
         grant_type: 'refresh_token',
       }),
     });
 
-    if (!refreshResponse.ok) {
-      const errData = await refreshResponse.json();
-      throw new Error(`Failed to refresh Google token: ${errData.error_description || refreshResponse.statusText}`);
-    }
-
+    if (!refreshResponse.ok) throw new Error('Failed to refresh Google token');
     const { access_token } = await refreshResponse.json();
 
-    const contentType = payload.html ? 'text/html' : 'text/plain';
-    const bodyContent = payload.html || payload.text || '';
-
     const fromEmail = payload.from || store.currentUser?.email || 'me';
+    const boundary = `-------314159265358979323846`;
     
-    // Use a unique, short subject tag to avoid carrier spam filters (AUP#MXRT)
-    const timestampTag = `[id:${Math.floor(Date.now() / 1000).toString().slice(-6)}]`;
-    const finalSubject = (payload.subject && payload.subject !== '.') ? payload.subject : timestampTag;
-
-    const headers = [
+    let emailContent = [
+      `MIME-Version: 1.0`,
       `From: <${fromEmail}>`,
       `To: ${payload.to}`,
-      `Date: ${new Date().toUTCString()}`,
-      `Message-ID: <${uuidv4()}@gmail.com>`,
-      `Subject: ${finalSubject}`,
-      `Content-Type: ${contentType}; charset="UTF-8"`,
-      `MIME-Version: 1.0`,
-      `Content-Transfer-Encoding: 7bit`
+      `Subject: ${payload.subject}`,
+      `Content-Type: multipart/mixed; boundary="${boundary}"`,
+      '',
+      `--${boundary}`,
+      `Content-Type: ${payload.html ? 'text/html' : 'text/plain'}; charset="UTF-8"`,
+      `Content-Transfer-Encoding: 7bit`,
+      '',
+      payload.html || payload.text || '',
+      ''
     ];
-    
-    // Ensure properly terminated headers block with strict CRLF
-    const strMessage = headers.join('\r\n') + '\r\n\r\n' + bodyContent;
 
-    console.log('📧 [EmailService] Full Message Payload:', strMessage);
+    if (payload.attachments && payload.attachments.length > 0) {
+      payload.attachments.forEach(attachment => {
+        emailContent.push(`--${boundary}`);
+        emailContent.push(`Content-Type: ${attachment.contentType || 'application/octet-stream'}`);
+        emailContent.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
+        emailContent.push(`Content-Transfer-Encoding: base64`);
+        emailContent.push('');
+        emailContent.push(attachment.content);
+        emailContent.push('');
+      });
+    }
 
+    emailContent.push(`--${boundary}--`);
+
+    const strMessage = emailContent.join('\r\n');
     const encodedMessage = btoa(new TextEncoder().encode(strMessage).reduce((data, byte) => data + String.fromCharCode(byte), ''))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
 
-    // 4. Send via Gmail API
     const gmailResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        raw: encodedMessage
-      }),
+      body: JSON.stringify({ raw: encodedMessage }),
     });
 
     if (!gmailResponse.ok) {
       const errData = await gmailResponse.json();
-      console.error('❌ Gmail API Error Detail:', errData);
       throw new Error(`Gmail API Error: ${errData.error?.message || gmailResponse.statusText}`);
     }
 
     const result = await gmailResponse.json();
-    console.log(`✅ [EmailService] Gmail API Success! Message ID: ${result.id}`);
-    
-    return {
-      success: true,
-      messageId: result.id || `msg-${Date.now()}`,
-    };
+    return { success: true, messageId: result.id };
 
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Email send error (Gmail API):', msg);
-    return { success: false, error: msg };
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
 

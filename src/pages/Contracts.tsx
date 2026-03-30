@@ -1,12 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore, Lead } from '../store/useStore';
-import { 
-  FileText, Download, Mail, Save, Plus, Search, 
-  ChevronDown, User, FileSignature, MapPin, DollarSign, Loader2, Trash2
-} from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
+import EmailComposeModal from '../components/EmailComposeModal';
+import { 
+  FileText, Download, Mail, Plus, Search, 
+  ChevronDown, User, FileSignature, Loader2, Trash2,
+  Bold, Italic, List, ListOrdered, Type, Edit3, Check
+} from 'lucide-react';
 
 interface ContractTemplate {
   id: string;
@@ -556,15 +558,16 @@ export default function Contracts() {
   const { leads, currentUser } = useStore();
   
   const [activeTemplate, setActiveTemplate] = useState<ContractTemplate>(PREBUILT_TEMPLATES[0]);
-  const [selectedLeadId, setSelectedLeadId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  const [isExporting, setIsExporting] = useState(false);
-  const documentRef = useRef<HTMLDivElement>(null);
-  
   const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState<string>('');
+  const [isExporting, setIsExporting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [showEmailModal, setShowEmailModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const documentRef = useRef<HTMLDivElement>(null);
 
   // Fetch custom templates on mount
   useEffect(() => {
@@ -619,20 +622,40 @@ export default function Contracts() {
       if (ext === 'html' || ext === 'txt') {
         content = await file.text();
       } else if (ext === 'pdf') {
-        // Basic PDF text extraction — read raw bytes and extract text between stream objects
-        const arrayBuf = await file.arrayBuffer();
-        const bytes = new Uint8Array(arrayBuf);
-        const raw = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-        // Extract readable text from PDF - get text between parentheses in content streams
-        const textMatches = raw.match(/\(([^)]{2,})\)/g);
-        if (textMatches && textMatches.length > 0) {
-          const extractedText = textMatches
-            .map(m => m.slice(1, -1))
-            .filter(t => t.length > 1 && /[a-zA-Z]/.test(t))
-            .join(' ');
-          content = `<h1>${baseName}</h1>\n<p style="font-style:italic;color:#666;">Imported from PDF — formatting may differ from original.</p>\n<div style="white-space:pre-wrap;line-height:1.8;">${extractedText}</div>`;
-        } else {
-          content = `<h1>${baseName}</h1>\n<p style="color:#999;">PDF text could not be extracted automatically. This PDF may contain scanned images. Please paste the contract text below or use an HTML/TXT file.</p>\n<p>[Paste your contract content here]</p>`;
+        try {
+          const arrayBuf = await file.arrayBuffer();
+          // Import pdfjs dynamically to avoid issues with SSR or heavy bundle size on initial load
+          const pdfjs = await import('pdfjs-dist');
+          // Set worker URL for pdfjs-dist
+          pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+          
+          const pdf = await pdfjs.getDocument({ data: arrayBuf }).promise;
+          let fullText = '';
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str)
+              .join(' ');
+            fullText += pageText + '\n\n';
+          }
+
+          // Clean extracted text
+          const cleanedText = fullText
+            .replace(/[^\x20-\x7E\n\r\t]/g, '') // Remove non-printable characters
+            .replace(/\s+/g, ' ')               // Normalize spaces
+            .replace(/\n\s*\n/g, '\n\n')        // Normalize paragraph breaks
+            .trim();
+
+          if (cleanedText.length > 10) {
+            content = `<h1>${baseName}</h1>\n<p style="font-style:italic;color:#666;">Imported from PDF — formatting preserved as possible.</p>\n<div style="white-space:pre-wrap;line-height:1.8;">${cleanedText}</div>`;
+          } else {
+            throw new Error('Could not extract meaningful text from PDF.');
+          }
+        } catch (pdfErr) {
+          console.error('PDF JS extraction failed', pdfErr);
+          content = `<h1>${baseName}</h1>\n<p style="color:#999;">Advanced extraction failed. This PDF may be an image-only scan.</p>\n<p>[Paste your contract content here]</p>`;
         }
       } else if (ext === 'docx') {
         // Extract text from DOCX (zip of XML) — use the raw XML content
@@ -671,6 +694,8 @@ export default function Contracts() {
         return [...filtered, newTemplate];
       });
       setActiveTemplate(newTemplate);
+      setEditedContent(content);
+      setIsEditing(true);
       
     } catch (err: any) {
       console.error('Upload error', err);
@@ -761,20 +786,86 @@ export default function Contracts() {
     }
   };
 
-  const handleSaveToLead = () => {
-    if (!selectedLead) {
-      alert('Please select a lead first to attach this document to.');
-      return;
-    }
-    alert(`Document "${activeTemplate.name}" mock-saved to lead ${selectedLead.name}'s profile!`);
-  };
 
-  const handleEmailLead = () => {
+  const [emailAttachment, setEmailAttachment] = useState<{filename: string, content: string, contentType: string} | undefined>();
+
+  const handleEmailLead = async () => {
     if (!selectedLead || !selectedLead.email) {
       alert('Please select a lead with a valid email address.');
       return;
     }
-    alert(`Document "${activeTemplate.name}" attached and email draft created for ${selectedLead.email}!`);
+
+    setIsExporting(true);
+    try {
+      const htmlContent = renderTemplateContent(activeTemplate.content, selectedLead);
+      const fileName = `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead.name.replace(/\s+/g, '_')}.pdf`;
+
+      // Build HTML document string
+      const fullHtml = `
+        <div style="width:100%;background:#fff;color:#000;font-family:'Times New Roman',Times,serif;line-height:1.6;font-size:11pt;padding:0.75in;margin:0;">
+          ${htmlContent}
+        </div>
+      `;
+
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
+        filename: fileName,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+      };
+      
+      // Get PDF as base64 string
+      const pdfDataUri = await html2pdf().set(opt).from(fullHtml).output('datauristring');
+      // Strip prefix: data:application/pdf;filename=...;base64,
+      const base64Content = pdfDataUri.split(',')[1];
+
+      setEmailAttachment({
+        filename: fileName,
+        content: base64Content,
+        contentType: 'application/pdf'
+      });
+      setShowEmailModal(true);
+    } catch (err) {
+      console.error('Failed to prepare email attachment', err);
+      alert('Failed to generate contract for email.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      // Save changes
+      const updatedTemplate = { ...activeTemplate, content: editedContent };
+      if (activeTemplate.isCustom) {
+        setCustomTemplates(prev => prev.map(t => t.id === activeTemplate.id ? updatedTemplate : t));
+      }
+      setActiveTemplate(updatedTemplate);
+      setIsEditing(false);
+    } else {
+      setEditedContent(activeTemplate.content);
+      setIsEditing(true);
+    }
+  };
+
+  const insertText = (before: string, after: string = '') => {
+    const textarea = document.getElementById('contract-editor') as HTMLTextAreaElement;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    const replacement = before + selected + after;
+    
+    setEditedContent(text.substring(0, start) + replacement + text.substring(end));
+    
+    // Set focus back and adjust selection
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, end + before.length);
+    }, 0);
   };
 
   return (
@@ -844,7 +935,7 @@ export default function Contracts() {
                                 .from('contract_templates')
                                 .remove([`${currentUser?.id}/${tmpl.id}`]);
                               if (error) throw error;
-                              setCustomTemplates(prev => prev.filter(t => t.id !== tmpl.id));
+                              setCustomTemplates((prev: ContractTemplate[]) => prev.filter((t: ContractTemplate) => t.id !== tmpl.id));
                               if (activeTemplate.id === tmpl.id) setActiveTemplate(PREBUILT_TEMPLATES[0]);
                             } catch (err) {
                               console.error('Delete error', err);
@@ -909,120 +1000,129 @@ export default function Contracts() {
               </div>
             </div>
             
-            {selectedLead && (
-               <div className="hidden sm:flex flex-col justify-center bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 w-full sm:w-auto shadow-sm">
-                 <p className="text-sm font-semibold text-[var(--t-text)] truncate flex items-center gap-1.5">
-                   <MapPin size={14} className="text-[var(--t-primary)] shrink-0" />
-                   {selectedLead.propertyAddress || 'No Address'}
-                 </p>
-                 <div className="flex items-center gap-3 mt-0.5">
-                   <p className="text-[11px] text-[var(--t-text-muted)] flex items-center gap-1">
-                     <User size={11} /> {selectedLead.name}
-                   </p>
-                   {selectedLead.estimatedValue ? (
-                     <p className="text-[11px] text-[var(--t-success)] font-medium flex items-center gap-1">
-                       <DollarSign size={11} /> ${selectedLead.estimatedValue.toLocaleString()}
-                     </p>
-                   ) : null}
-                 </div>
-               </div>
+            {isEditing && (
+              <div className="flex items-center gap-1 bg-[var(--t-surface-dim)] p-1 rounded-lg border border-[var(--t-border)] shadow-sm">
+                <button onClick={() => insertText('<strong>', '</strong>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Bold"><Bold size={16} /></button>
+                <button onClick={() => insertText('<em>', '</em>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Italic"><Italic size={16} /></button>
+                <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
+                <button onClick={() => insertText('<ul>\n  <li>', '</li>\n</ul>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="List"><List size={16} /></button>
+                <button onClick={() => insertText('<ol>\n  <li>', '</li>\n</ol>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Ordered List"><ListOrdered size={16} /></button>
+                <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
+                <button onClick={() => insertText('<h2>', '</h2>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Heading"><Type size={16} /></button>
+              </div>
             )}
           </div>
 
           <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
             <button 
-              onClick={handleEmailLead}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] hover:border-[var(--t-primary)]/30 text-[var(--t-text)] shadow-sm"
-              title="Email Document"
+              onClick={handleToggleEdit}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                isEditing 
+                  ? 'bg-[var(--t-success)] hover:bg-[var(--t-success-hover)] text-white shadow-lg shadow-[var(--t-success-dim)]' 
+                  : 'bg-[var(--t-surface-hover)] hover:bg-[var(--t-surface-hover)]/80 text-[var(--t-text)] border border-[var(--t-border)]'
+              }`}
             >
-              <Mail size={16} className="text-[var(--t-text-muted)]" /> <span className="hidden sm:inline">Email</span>
+              {isEditing ? (
+                <><Check size={16} /> Save Template</>
+              ) : (
+                <><Edit3 size={16} /> Edit Text</>
+              )}
             </button>
             <button 
-              onClick={handleSaveToLead}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] hover:border-[var(--t-primary)]/30 text-[var(--t-text)] shadow-sm"
-              title="Save to Lead Profile"
+              onClick={handleEmailLead}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] hover:border-[var(--t-primary)]/30 text-[var(--t-text)] shadow-sm"
+              title="Email Document"
             >
-              <Save size={16} className="text-[var(--t-text-muted)]" /> <span className="hidden sm:inline">Save</span>
+              <Mail size={16} className="text-[var(--t-primary)]" /> Email
             </button>
             <button 
               onClick={generatePDF}
               disabled={isExporting}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary)]/90 shadow-sm shadow-[var(--t-primary)]/20 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isExporting ? (
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                <Loader2 size={16} className="animate-spin" />
               ) : (
-                <Download size={16} className="shrink-0" />
+                <Download size={16} />
               )}
-              <span>{isExporting ? 'Exporting...' : 'Export PDF'}</span>
+              {isExporting ? 'Exporting...' : 'Export PDF'}
             </button>
           </div>
         </div>
 
-        {/* Document Viewer */}
-        <div className="flex-1 overflow-y-auto p-8 md:p-12 flex justify-center items-start pb-24" style={{ 
+        {/* Document Viewer / Editor */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-12 flex justify-center items-start pb-24" style={{ 
           backgroundImage: 'radial-gradient(circle at center, var(--t-border) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
         }}>
-          {/* Document Container */}
-          <div 
-            className="w-full max-w-[8.5in] bg-white shadow-2xl rounded-sm shrink-0 text-gray-800 transition-all doc-container"
-            style={{ 
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
-              padding: '0.75in',
-            }}
-          >
-            {/* The actual printable area */}
+          {isEditing ? (
+            <div className="w-full max-w-4xl bg-white shadow-2xl rounded-2xl border border-[var(--t-border)] overflow-hidden flex flex-col min-h-[800px]">
+              <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Editing Template</span>
+                </div>
+                <div className="text-[10px] text-slate-400 font-medium">Use HTML or variables like {'{{lead.name}}'}</div>
+              </div>
+              <textarea
+                id="contract-editor"
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                className="flex-1 w-full p-12 font-mono text-sm text-slate-800 bg-white border-none outline-none resize-none leading-relaxed"
+                placeholder="Paste your contract text here..."
+              />
+              <div className="p-4 bg-amber-50 border-t border-amber-100 flex items-center gap-3">
+                <Plus size={14} className="text-amber-600" />
+                <p className="text-[11px] text-amber-700">Changes will be saved as a custom template version.</p>
+              </div>
+            </div>
+          ) : (
             <div 
-              ref={documentRef}
-              className="prose prose-sm max-w-none contract-content"
-              style={{
-                fontFamily: '"Times New Roman", Times, serif',
-                lineHeight: '1.6',
-                fontSize: '11pt',
+              className="w-full max-w-[8.5in] bg-white shadow-2xl rounded-sm shrink-0 text-gray-800 transition-all doc-container"
+              style={{ 
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
+                padding: '0.75in',
               }}
-              dangerouslySetInnerHTML={{ 
-                __html: renderTemplateContent(activeTemplate.content, selectedLead) 
-              }}
-            />
-          </div>
+            >
+              <div 
+                ref={documentRef}
+                className="prose prose-sm max-w-none contract-content"
+                style={{
+                  fontFamily: '"Times New Roman", Times, serif',
+                  lineHeight: '1.6',
+                  fontSize: '11pt',
+                }}
+                dangerouslySetInnerHTML={{ 
+                  __html: renderTemplateContent(activeTemplate.content, selectedLead) 
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
       
       {/* Global styles for the injected HTML content */}
       <style>{`
-        .contract-content h1 {
-          text-align: center;
-          font-size: 16pt;
-          margin-bottom: 1.5rem;
-          text-transform: uppercase;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
-        .contract-content h2 {
-          font-size: 12pt;
-          margin-top: 1.5rem;
-          margin-bottom: 0.5rem;
-          text-transform: uppercase;
-          font-weight: bold;
-          border-bottom: 1px solid #ccc;
-          padding-bottom: 4px;
-        }
-        .contract-content p {
-          margin-bottom: 0.75rem;
-          text-align: justify;
-        }
-        .contract-content ul {
-          margin-bottom: 0.75rem;
-        }
-        .contract-content li {
-          margin-bottom: 0.25rem;
-        }
-        .contract-content table {
-          margin-bottom: 1rem;
-        }
-      `}
-      </style>
+        .contract-content h1 { text-align: center; font-size: 16pt; margin-bottom: 1.5rem; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+        .contract-content h2 { font-size: 12pt; margin-top: 1.5rem; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+        .contract-content p { margin-bottom: 0.75rem; text-align: justify; }
+        .contract-content ul { margin-bottom: 0.75rem; padding-left: 20px; list-style-type: disc; }
+        .contract-content ol { margin-bottom: 0.75rem; padding-left: 20px; list-style-type: decimal; }
+        .contract-content li { margin-bottom: 0.25rem; }
+        .contract-content table { margin-bottom: 1rem; width: 100%; border-collapse: collapse; }
+        .contract-content td, .contract-content th { border: 1px solid #ddd; padding: 8px; }
+      `}</style>
+
+      {selectedLead && (
+        <EmailComposeModal 
+          isOpen={showEmailModal}
+          onClose={() => setShowEmailModal(false)}
+          lead={selectedLead}
+          initialSubject={`Contract for ${selectedLead.propertyAddress || selectedLead.name}`}
+          initialBody={`Hi ${selectedLead.name || 'there'},\n\nPlease find the attached contract for the property at ${selectedLead.propertyAddress || 'your property'}.\n\nReview it and let me know if you have any questions.\n\nBest regards,\n${currentUser?.name || 'The WholeScale Team'}`}
+          attachment={emailAttachment}
+        />
+      )}
     </div>
   );
 }
