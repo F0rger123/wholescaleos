@@ -10,12 +10,11 @@ import {
   Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
   Users, UserMinus, Plus, Keyboard,
   HardDrive, Send, Sparkles, ExternalLink, QrCode, Award, 
-  Linkedin, Facebook, Instagram, Twitter, Share2, CreditCard
+  Linkedin, Facebook, Instagram, Twitter, Share2
 } from 'lucide-react';
 import AISettings from './AISettings';
 import SMSSettings from './SMSSettings';
 import ShortcutSettings from './ShortcutSettings';
-import BillingProfile from './BillingProfile';
 import { FileUploader } from '../components/FileUploader';
 import { GoogleCalendarService } from '../lib/google-calendar';
 
@@ -30,7 +29,6 @@ const TABS = [
   { id: 'ai', label: 'AI Assistant', icon: Sparkles },
   { id: 'sms', label: 'SMS Messaging', icon: Smartphone },
   { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
-  { id: 'billing', label: 'Billing & Plans', icon: CreditCard },
   { id: 'backup', label: 'Backup', icon: HardDrive },
   { id: 'data', label: 'Data', icon: Database },
 ];
@@ -103,7 +101,6 @@ export default function SettingsPage() {
           {activeTab === 'ai' && <AISettings hideHeader />}
           {activeTab === 'sms' && <SMSSettings />}
           {activeTab === 'shortcuts' && <ShortcutSettings />}
-          {activeTab === 'billing' && <BillingProfile />}
           {activeTab === 'backup' && <BackupTab />}
           {activeTab === 'data' && <DataTab />}
         </div>
@@ -402,6 +399,9 @@ function SecurityTab() {
   const [mfaLoading, setMfaLoading] = useState(false);
   const [mfaError, setMfaError] = useState('');
 
+  const [showMfaStepUp, setShowMfaStepUp] = useState(false);
+  const [stepUpCode, setStepUpCode] = useState('');
+
   // Check 2FA status on mount
   useEffect(() => {
     checkMFAStatus();
@@ -521,20 +521,51 @@ function SecurityTab() {
 
   const handleDisable2FA = async () => {
     if (!supabase || !factorId) return;
-    if (!confirm('Are you sure you want to disable 2FA? This will reduce your account security.')) return;
+    
     setMfaLoading(true);
     setMfaError('');
     try {
       // Check AAL level before unenrolling
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      
+      // If not AAL2, we need to "Step Up" via a challenge
       if (aal?.currentLevel !== 'aal2') {
-        throw new Error('You must be signed in with 2FA (AAL2) to disable security factors. Please sign out and sign in again with your code.');
+        if (!showMfaStepUp) {
+          setShowMfaStepUp(true);
+          setMfaLoading(false);
+          return;
+        }
+
+        // Verify the step-up code
+        if (!stepUpCode) {
+          throw new Error('Please enter your 2FA code to confirm.');
+        }
+
+        const challenge = await supabase.auth.mfa.challenge({ factorId });
+        if (challenge.error) throw challenge.error;
+        const verify = await supabase.auth.mfa.verify({ 
+          factorId, 
+          challengeId: challenge.data.id, 
+          code: stepUpCode 
+        });
+        if (verify.error) throw verify.error;
+        
+        // After verifying, we are now AAL2 in this session
+        console.log('[Auth] Step-up successful, proceeding to unenroll');
+      }
+
+      if (!confirm('Are you sure you want to disable 2FA? This will reduce your account security.')) {
+        setMfaLoading(false);
+        return;
       }
 
       const { error } = await supabase.auth.mfa.unenroll({ factorId });
       if (error) throw error;
+      
       setMfaStatus('disabled');
       setFactorId('');
+      setShowMfaStepUp(false);
+      setStepUpCode('');
     } catch (err: any) {
       console.error('[Auth] Disable 2FA failed:', err);
       setMfaError(err.message || 'Failed to disable 2FA');
@@ -699,24 +730,60 @@ function SecurityTab() {
         )}
 
         {mfaStatus === 'enabled' && (
-          <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                <Shield size={20} className="text-green-500" />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                  <Shield size={20} className="text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>2FA is Active</p>
+                  <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>Your account is secured with an authenticator app</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>2FA is Active</p>
-                <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>Your account is secured with an authenticator app</p>
-              </div>
+              {!showMfaStepUp && (
+                <button
+                  onClick={handleDisable2FA}
+                  disabled={mfaLoading}
+                  className="px-4 py-2 rounded-lg text-xs font-bold transition-all"
+                  style={{ border: '1px solid var(--t-error)', color: 'var(--t-error)', backgroundColor: 'transparent' }}
+                >
+                  {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Disable 2FA'}
+                </button>
+              )}
             </div>
-            <button
-              onClick={handleDisable2FA}
-              disabled={mfaLoading}
-              className="px-4 py-2 rounded-lg text-xs font-bold transition-all"
-              style={{ border: '1px solid var(--t-error)', color: 'var(--t-error)', backgroundColor: 'transparent' }}
-            >
-              {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Disable 2FA'}
-            </button>
+
+            {showMfaStepUp && (
+              <div className="p-4 rounded-xl animate-in slide-in-from-top-2" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-primary-dim)' }}>
+                <p className="text-sm font-bold mb-3" style={{ color: 'var(--t-text)' }}>Confirm Security Action</p>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={stepUpCode}
+                    onChange={e => setStepUpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="Enter 6-digit code to confirm"
+                    maxLength={6}
+                    className="flex-1 px-4 py-2 rounded-lg text-sm"
+                    style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+                  />
+                  <button
+                    onClick={handleDisable2FA}
+                    disabled={mfaLoading || stepUpCode.length !== 6}
+                    className="px-6 py-2 rounded-lg text-sm font-bold transition-all"
+                    style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+                  >
+                    {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Confirm Disable'}
+                  </button>
+                  <button
+                    onClick={() => { setShowMfaStepUp(false); setStepUpCode(''); }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium"
+                    style={{ color: 'var(--t-text-muted)' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

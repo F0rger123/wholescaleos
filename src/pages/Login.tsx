@@ -66,13 +66,14 @@ export default function Login() {
       console.log('[Auth] Found existing session for user:', session.user.email);      // ─── 2. MFA STRATEGY: Proactive Challenge ──────────────────────────
       console.log('🔐 [AUTH] Login successful, checking for MFA factors...');
       
-      const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+      const { data: factorData, error: factorsError } = await supabase.auth.mfa.listFactors();
       if (factorsError) {
         console.error('❌ [AUTH] Error listing MFA factors:', factorsError.message);
         throw factorsError;
       }
-
-      const verifiedFactor = (factors as any)?.all?.find((f: any) => f.status === 'verified');
+      
+      const totpFactors = factorData?.totp || [];
+      const verifiedFactor = totpFactors.find(f => f.status === 'verified');
       
       // Get current AAL (Authenticator Assurance Level)
       const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -84,7 +85,7 @@ export default function Login() {
         hasVerifiedFactor: !!verifiedFactor,
         currentAAL: aalData?.currentLevel,
         nextAAL: aalData?.nextLevel,
-        totalFactors: (factors as any)?.all?.length || 0
+        totalFactors: factorData?.totp?.length || 0
       });
 
       // FORCE MFA if a verified factor exists and we aren't already at AAL2
@@ -584,11 +585,10 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             // 2. List factors to see if any are verified
             const { data: factorData, error: factorsError } = await supabase.auth.mfa.listFactors();
             if (factorsError) console.error('[Auth] MFA listFactors error:', factorsError);
-            console.log('[Auth] MFA Factors raw data:', JSON.stringify(factorData, null, 2));
             
-            // Correctly handle the listFactors response structure
-            const factors = Array.isArray(factorData) ? factorData : (factorData as any)?.all || [];
-            const verifiedFactor = factors.find((f: any) => f.status === 'verified');
+            // Safely extract verified factors from the response structure
+            const totpFactors = factorData?.totp || [];
+            const verifiedFactor = totpFactors.find(f => f.status === 'verified');
 
             // Force MFA if we have a verified factor and the session is only AAL1
             if (verifiedFactor && aalData?.currentLevel !== 'aal2') {

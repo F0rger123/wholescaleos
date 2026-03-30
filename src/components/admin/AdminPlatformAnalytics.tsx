@@ -149,7 +149,7 @@ export default function AdminPlatformAnalytics() {
          <div className="lg:col-span-2 p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] h-[450px]">
             <div className="flex justify-between items-center mb-8">
               <h3 className="text-xl font-bold italic uppercase tracking-tighter text-[var(--t-text)]">User Acquisition</h3>
-              <div className="flex items-center gap-2 text-[10px] font-black text-[var(--t-text-muted)] uppercase bg-white/5 px-4 py-2 rounded-xl">
+              <div className="flex items-center gap-2 text-[10px] font-black text-[var(--t-text-muted)] uppercase bg-[var(--t-surface-dim)] px-4 py-2 rounded-xl">
                 <Calendar size={12} /> Last 6 Months
               </div>
             </div>
@@ -158,24 +158,24 @@ export default function AdminPlatformAnalytics() {
                   <AreaChart data={historicalData}>
                     <defs>
                       <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="var(--t-primary)" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="var(--t-primary)" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--t-border)" opacity={0.1} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--t-text-muted)', fontWeight: 'bold' }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--t-text-muted)', fontWeight: 'bold' }} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '16px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                      itemStyle={{ color: '#8b5cf6', fontSize: '12px', fontWeight: 'bold' }}
+                      itemStyle={{ color: 'var(--t-primary)', fontSize: '12px', fontWeight: 'bold' }}
                     />
-                    <Area type="monotone" dataKey="users" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorUsers)" />
+                    <Area type="monotone" dataKey="users" stroke="var(--t-primary)" strokeWidth={4} fillOpacity={1} fill="url(#colorUsers)" />
                   </AreaChart>
                </ResponsiveContainer>
             </div>
          </div>
 
-         <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-purple-900/40 to-[var(--t-surface)] border border-purple-500/20 space-y-6 flex flex-col justify-between">
+         <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-[var(--t-primary-dim)] to-[var(--t-surface)] border border-[var(--t-border)] space-y-6 flex flex-col justify-between">
             <div>
               <h3 className="text-xl font-bold italic uppercase tracking-tighter text-[var(--t-text)] mb-2">Revenue Mix</h3>
               <p className="text-xs text-[var(--t-text-muted)] mb-8">Estimated monthly recurring revenue by plan.</p>
@@ -183,7 +183,7 @@ export default function AdminPlatformAnalytics() {
               <div className="space-y-6">
                 {[
                   { plan: 'Solo', price: 27, color: '#3b82f6' },
-                  { plan: 'Pro', price: 97, color: '#8b5cf6' },
+                  { plan: 'Pro', price: 97, color: 'var(--t-primary)' },
                   { plan: 'Team', price: 197, color: '#6366f1' },
                   { plan: 'Agency', price: 497, color: '#ec4899' }
                 ].map((p, i) => {
@@ -195,7 +195,7 @@ export default function AdminPlatformAnalytics() {
                         <span className="text-[var(--t-text)]">{p.plan}</span>
                         <span className="text-[var(--t-text-muted)]">${revenue.toLocaleString()}</span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-white/5 overflow-hidden">
+                      <div className="w-full h-2 rounded-full bg-[var(--t-surface-dim)] overflow-hidden">
                         <div 
                           className="h-full rounded-full transition-all duration-1000" 
                           style={{ 
@@ -212,7 +212,7 @@ export default function AdminPlatformAnalytics() {
             
             <button 
               onClick={fetchGlobalStats}
-              className="w-full py-4 rounded-2xl bg-white/5 border border-[var(--t-border)] text-xs font-bold uppercase tracking-widest text-[var(--t-text-muted)] hover:bg-white/10 transition-all"
+              className="w-full py-4 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)] text-xs font-bold uppercase tracking-widest text-[var(--t-text-muted)] hover:bg-[var(--t-primary-dim)] hover:text-[var(--t-primary)] transition-all"
             >
               Sync Analytics
             </button>

@@ -702,6 +702,22 @@ export default function Contracts() {
       const element = previewRef.current;
       console.log('[PDF] Element dimensions:', element.offsetWidth, 'x', element.offsetHeight);
       
+      // Create a style element for the print job to avoid oklch and modern CSS issues
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .pdf-content { 
+          color: #1a1a1a !important; 
+          background: #ffffff !important; 
+          font-family: Arial, sans-serif !important;
+          line-height: 1.6 !important;
+          padding: 40px !important;
+        }
+        .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #000000 !important; }
+        .pdf-content p { color: #333333 !important; }
+        .pdf-content * { oklch: none !important; }
+      `;
+      element.appendChild(style);
+
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
         filename: `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name?.replace(/\s+/g, '_') || 'Draft'}.pdf`,
@@ -710,7 +726,8 @@ export default function Contracts() {
           scale: 2, 
           useCORS: true, 
           letterRendering: true,
-          logging: true
+          logging: true,
+          backgroundColor: '#ffffff'
         },
         jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
@@ -719,15 +736,18 @@ export default function Contracts() {
       
       // Ensure element is visible in the DOM
       if (element.offsetParent === null) {
-        throw new Error('PDF preview element is not visible or not rendered. Please switch back to preview mode.');
-      }
-
-      // Check if html2pdf is correctly loaded
-      if (typeof html2pdf !== 'function') {
-        throw new Error('html2pdf.js failed to load properly. Please refresh the page.');
+        element.style.position = 'absolute';
+        element.style.left = '-9999px';
+        document.body.appendChild(element);
       }
 
       await html2pdf().from(element).set(opt).save();
+      
+      // Cleanup
+      element.removeChild(style);
+      if (element.style.position === 'absolute') {
+        document.body.removeChild(element);
+      }
       
       console.log('[PDF] PDF generated successfully');
     } catch (error: any) {
@@ -763,10 +783,32 @@ export default function Contracts() {
     
     try {
       const element = previewRef.current;
+      
+      // Inject safety styles for PDF generation
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .pdf-content { 
+          color: #1a1a1a !important; 
+          background: #ffffff !important; 
+          font-family: Arial, sans-serif !important;
+          line-height: 1.6 !important;
+          padding: 40px !important;
+        }
+        .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #000000 !important; }
+        .pdf-content p { color: #333333 !important; }
+        .pdf-content * { oklch: none !important; }
+      `;
+      element.appendChild(style);
+
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          backgroundColor: '#ffffff'
+        },
         jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
@@ -777,6 +819,9 @@ export default function Contracts() {
         .set(opt)
         .outputPdf('datauristring');
       
+      // Cleanup
+      element.removeChild(style);
+
       if (!pdfBase64) throw new Error('PDF output returned empty data');
       
       const base64Content = pdfBase64.split(',')[1];
