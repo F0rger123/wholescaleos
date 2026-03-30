@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import {
-  Shield, Users, Mail, Settings, Ticket, AlertTriangle
+  Shield, Users, Mail, Settings, Ticket, AlertTriangle, BarChart3
 } from 'lucide-react';
 import AdminPromos from './AdminPromos';
 
@@ -10,7 +10,7 @@ const ADMIN_USER_ID = '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d';
 
 export default function AdminDashboard() {
   const { currentUser } = useStore();
-  const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'promos' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'promos' | 'settings' | 'analytics'>('users');
 
   const isAdmin = currentUser?.id === ADMIN_USER_ID;
 
@@ -30,6 +30,7 @@ export default function AdminDashboard() {
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'emails', label: 'Email Campaigns', icon: Mail },
     { id: 'promos', label: 'Promo Codes', icon: Ticket },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'settings', label: 'System Settings', icon: Settings },
   ] as const;
 
@@ -90,6 +91,17 @@ export default function AdminDashboard() {
         {activeTab === 'promos' && (
           <div>
              <AdminPromos />
+          </div>
+        )}
+
+        {activeTab === 'analytics' && (
+          <div className="p-12 text-center rounded-2xl border" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+            <BarChart3 size={48} className="mx-auto mb-4 opacity-20" style={{ color: 'var(--t-text)' }} />
+            <h3 className="text-xl font-bold mb-2">Platform Analytics</h3>
+            <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Global platform metrics, user growth, revenue tracking, and engagement analytics.</p>
+            <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+              <AlertTriangle size={16} /> Under Construction
+            </div>
           </div>
         )}
 

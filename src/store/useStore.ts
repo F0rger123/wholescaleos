@@ -248,6 +248,7 @@ export interface UserProfile {
   referredBy?: string;
   totalEarnings?: number;
   availableEarnings?: number;
+  referralCount?: number;
 }
 
 export interface Task {

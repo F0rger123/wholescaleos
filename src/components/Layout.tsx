@@ -15,7 +15,7 @@ import {
   Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
-  Trophy, Ticket, Shield
+  Trophy, Shield
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -84,7 +84,7 @@ export function Layout() {
   const teamSubNav = [
     { to: '/team', label: 'Team Dashboard', icon: UserCog },
     { to: '/team-analytics', label: 'Team Analytics', icon: Trophy },
-    { to: '/team/members', label: 'Team Members', icon: Users },
+    { to: '/team-calendar', label: 'Team Calendar', icon: Calendar },
   ];
 
   const [teamExpanded, setTeamExpanded] = useState(true);
@@ -606,30 +606,8 @@ export function Layout() {
             )}
           </div>
 
-          {/* Admin-only nav */}
-          {currentUser?.id === '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d' && (
-            <div className="px-2 mt-2">
-              <div className="mx-3 my-2 border-b" style={{ borderColor: 'var(--t-sidebar-border)' }} />
-              <NavLink
-                to="/admin/promos"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                    isActive ? 'active-nav-item' : 'inactive-nav-item'
-                  }`
-                }
-                style={({ isActive }) => ({
-                  borderRadius: 'var(--t-radius)',
-                  background: isActive ? 'var(--t-primary-dim)' : 'transparent',
-                  color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
-                })}
-              >
-                <Ticket size={20} className="shrink-0" />
-                <span className={`flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
-                  Promo Codes
-                </span>
-              </NavLink>
-            </div>
-          )}
+
+
         </nav>
 
         {/* Online Team Members */}

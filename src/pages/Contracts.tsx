@@ -576,7 +576,7 @@ export default function Contracts() {
         
         const templates: ContractTemplate[] = [];
         for (const file of data || []) {
-          if (!file.name.endsWith('.html') && !file.name.endsWith('.txt')) continue;
+          if (!file.name.match(/\.(html|txt|pdf|docx)$/i)) continue;
           
           const { data: fileData, error: downloadError } = await supabase.storage
             .from('contract_templates')
@@ -603,33 +603,70 @@ export default function Contracts() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !supabase || !currentUser?.id) return;
+    if (!file || !currentUser?.id) return;
     
     setIsUploading(true);
     try {
-      if (!file.name.endsWith('.html') && !file.name.endsWith('.txt')) {
-        throw new Error('Only .html and .txt files are supported for templates');
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      const supportedTypes = ['html', 'txt', 'pdf', 'docx'];
+      if (!supportedTypes.includes(ext)) {
+        throw new Error('Supported formats: .html, .txt, .pdf, .docx');
       }
 
-      const uploadPath = currentUser.id + '/' + file.name;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('contract_templates')
-        .upload(uploadPath, file, { upsert: true });
+      let content = '';
+      const baseName = file.name.replace(/\.[^.]+$/, '').replace(/_/g, ' ');
 
-      if (uploadError) throw uploadError;
+      if (ext === 'html' || ext === 'txt') {
+        content = await file.text();
+      } else if (ext === 'pdf') {
+        // Basic PDF text extraction — read raw bytes and extract text between stream objects
+        const arrayBuf = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuf);
+        const raw = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+        // Extract readable text from PDF - get text between parentheses in content streams
+        const textMatches = raw.match(/\(([^)]{2,})\)/g);
+        if (textMatches && textMatches.length > 0) {
+          const extractedText = textMatches
+            .map(m => m.slice(1, -1))
+            .filter(t => t.length > 1 && /[a-zA-Z]/.test(t))
+            .join(' ');
+          content = `<h1>${baseName}</h1>\n<p style="font-style:italic;color:#666;">Imported from PDF — formatting may differ from original.</p>\n<div style="white-space:pre-wrap;line-height:1.8;">${extractedText}</div>`;
+        } else {
+          content = `<h1>${baseName}</h1>\n<p style="color:#999;">PDF text could not be extracted automatically. This PDF may contain scanned images. Please paste the contract text below or use an HTML/TXT file.</p>\n<p>[Paste your contract content here]</p>`;
+        }
+      } else if (ext === 'docx') {
+        // Extract text from DOCX (zip of XML) — use the raw XML content
+        const arrayBuf = await file.arrayBuffer();
+        const raw = new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(arrayBuf));
+        // DOCX stores content in XML tags <w:t>
+        const textParts = raw.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+        if (textParts && textParts.length > 0) {
+          const paragraphs = textParts
+            .map(m => m.replace(/<[^>]+>/g, ''))
+            .join(' ');
+          content = `<h1>${baseName}</h1>\n<p style="font-style:italic;color:#666;">Imported from DOCX — formatting may differ from original.</p>\n<div style="white-space:pre-wrap;line-height:1.8;">${paragraphs}</div>`;
+        } else {
+          content = `<h1>${baseName}</h1>\n<p style="color:#999;">DOCX text extraction was limited. Consider uploading as HTML or TXT for best results.</p>\n<p>[Paste your contract content here]</p>`;
+        }
+      }
 
-      const text = await file.text();
-      const newTemplate = {
+      // Upload to Supabase storage if available
+      if (supabase) {
+        const uploadPath = currentUser.id + '/' + file.name;
+        await supabase.storage
+          .from('contract_templates')
+          .upload(uploadPath, file, { upsert: true });
+      }
+
+      const newTemplate: ContractTemplate = {
         id: file.name,
-        name: file.name.replace('.html', '').replace('.txt', '').replace(/_/g, ' '),
+        name: baseName,
         category: 'Custom',
-        content: text,
+        content,
         isCustom: true
       };
       
       setCustomTemplates(prev => {
-        // Replace existing if upserted
         const filtered = prev.filter(t => t.id !== newTemplate.id);
         return [...filtered, newTemplate];
       });
@@ -832,7 +869,7 @@ export default function Contracts() {
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
-            accept=".html,.txt"
+            accept=".html,.txt,.pdf,.docx"
             className="hidden"
           />
           <button 

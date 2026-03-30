@@ -319,6 +319,56 @@ function BillingTab() {
           </div>
         </div>
 
+        {/* Team Member Add-On Pricing */}
+        <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-6">
+          <h3 className="text-lg font-bold italic tracking-tight" style={{ color: 'var(--t-text)' }}>Team Member Add-Ons</h3>
+          <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Each plan includes a set number of team seats. Add more members as your team grows.</p>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              { plan: 'Free', price: '$0', included: 1, extra: '—', canAdd: false, highlight: false },
+              { plan: 'Solo', price: '$27', included: 1, extra: '$10/mo', canAdd: true, highlight: false },
+              { plan: 'Pro', price: '$97', included: 5, extra: '$10/mo', canAdd: true, highlight: true },
+              { plan: 'Team', price: '$197', included: 20, extra: '$5/mo', canAdd: true, highlight: false },
+              { plan: 'Agency', price: '$497', included: '∞', extra: 'Included', canAdd: false, highlight: false },
+            ].map((p) => {
+              const isCurrent = (currentUser?.subscriptionTier || 'Free').toLowerCase() === p.plan.toLowerCase();
+              return (
+                <div key={p.plan} className={`p-4 rounded-2xl border space-y-3 transition-all ${isCurrent ? 'ring-2' : ''}`}
+                  style={{
+                    backgroundColor: isCurrent ? 'var(--t-primary-dim)' : 'var(--t-bg)',
+                    borderColor: isCurrent ? 'var(--t-primary)' : 'var(--t-border)',
+                    '--tw-ring-color': 'var(--t-primary)',
+                  } as any}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase">{p.plan}</span>
+                    {isCurrent && <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-blue-600 text-white">Current</span>}
+                  </div>
+                  <div className="text-xl font-black">{p.price}<span className="text-[10px] font-normal text-gray-500">/mo</span></div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase">Included Seats</div>
+                    <div className="text-sm font-black">{p.included}</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase">Extra Seats</div>
+                    <div className="text-sm font-bold" style={{ color: p.canAdd ? 'var(--t-primary)' : 'var(--t-text-muted)' }}>{p.extra}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {(currentUser?.subscriptionTier || 'Free') !== 'Free' && (currentUser?.subscriptionTier || 'Free').toLowerCase() !== 'agency' && (
+            <button
+              onClick={handleUpgrade}
+              disabled={loading}
+              className="w-full py-3 rounded-xl border border-dashed hover:border-blue-500/50 text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
+            >
+              <Plus size={14} /> Add Team Member
+            </button>
+          )}
+        </div>
+
         {/* Apply Promo Code */}
         <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-4">
           <h3 className="text-lg font-bold italic tracking-tight" style={{ color: 'var(--t-text)' }}>Apply Promo Code</h3>
@@ -504,54 +554,103 @@ function ReferralTab({
   isApplying: boolean;
 }) {
   const { currentUser } = useStore();
+  
+  // Determine tier from referral count
+  const referralCount = currentUser?.referralCount || 3;
+  const tiers = [
+    { name: 'Bronze', minReferrals: 0, rate: 10, color: '#cd7f32', next: 5 },
+    { name: 'Silver', minReferrals: 5, rate: 15, color: '#9ca3af', next: 15 },
+    { name: 'Gold', minReferrals: 15, rate: 20, color: '#eab308', next: 50 },
+    { name: 'Platinum', minReferrals: 50, rate: 25, color: '#94a3b8', next: 100 },
+    { name: 'Diamond', minReferrals: 100, rate: 35, color: '#3b82f6', next: Infinity },
+  ];
+  const currentTier = [...tiers].reverse().find(t => referralCount >= t.minReferrals) || tiers[0];
+  const nextTier = tiers[tiers.indexOf(currentTier) + 1];
+  const progressToNext = nextTier ? Math.min(100, ((referralCount - currentTier.minReferrals) / (nextTier.minReferrals - currentTier.minReferrals)) * 100) : 100;
+  const referralsNeeded = nextTier ? nextTier.minReferrals - referralCount : 0;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 reveal">
       <div className="lg:col-span-2 space-y-8">
-        <div className="p-10 rounded-[2.5rem] bg-gradient-to-br from-blue-900/40 via-[#121a2d] to-[#0f172a] border border-blue-500/30 relative overflow-hidden shadow-2xl">
+        {/* Tier Card */}
+        <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-blue-900/40 via-[#121a2d] to-[#0f172a] border border-blue-500/30 relative overflow-hidden shadow-2xl">
           <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-600/10 blur-[100px] rounded-full" />
-          <div className="relative z-10 space-y-8 text-center md:text-left">
-             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-[11px] font-black text-blue-400 uppercase tracking-[0.2em]">10% Recurring Commission</div>
-             <h2 className="text-4xl md:text-5xl font-black leading-none">Share the OS, <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Get Paid.</span></h2>
-             
-             <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between group">
-                   <code className="text-blue-400 font-mono font-bold">{code}</code>
-                   <button onClick={onCopy} className="text-xs text-gray-500 hover:text-white font-bold flex items-center gap-2 transition-all">
-                      {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
-                   </button>
+          <div className="relative z-10 space-y-6">
+            {/* Current Tier Badge */}
+            <div className="flex items-center justify-between">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-[11px] font-black uppercase tracking-[0.2em]"
+                style={{ backgroundColor: currentTier.color + '20', borderColor: currentTier.color + '50', color: currentTier.color }}>
+                ★ {currentTier.name} Tier — {currentTier.rate}% Commission
+              </div>
+              <div className="text-right">
+                <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>This Month</div>
+                <div className="text-sm font-black" style={{ color: currentTier.color }}>{referralCount} referrals</div>
+              </div>
+            </div>
+
+            <h2 className="text-4xl md:text-5xl font-black leading-none">Share the OS, <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Get Paid.</span></h2>
+            
+            {/* Tier Progress */}
+            {nextTier && (
+              <div className="p-4 rounded-2xl bg-black/30 border border-white/10 space-y-2">
+                <div className="flex justify-between text-xs font-bold">
+                  <span style={{ color: currentTier.color }}>{currentTier.name}</span>
+                  <span style={{ color: nextTier.color }}>{nextTier.name} ({nextTier.rate}%)</span>
                 </div>
-                <button onClick={onCopy} className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black flex items-center justify-center gap-2 transition-all shadow-xl shadow-blue-600/20">
-                   <Share2 size={18} /> Copy Link
-                </button>
-             </div>
+                <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressToNext}%`, backgroundColor: currentTier.color }} />
+                </div>
+                <p className="text-[10px] font-bold text-center" style={{ color: 'var(--t-text-muted)' }}>
+                  {referralsNeeded} more referral{referralsNeeded !== 1 ? 's' : ''} to reach {nextTier.name}
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col md:flex-row gap-4">
+               <div className="flex-1 p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between group">
+                  <code className="text-blue-400 font-mono font-bold">{code}</code>
+                  <button onClick={onCopy} className="text-xs text-gray-500 hover:text-white font-bold flex items-center gap-2 transition-all">
+                     {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                  </button>
+               </div>
+               <button onClick={onCopy} className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black flex items-center justify-center gap-2 transition-all shadow-xl shadow-blue-600/20">
+                  <Share2 size={18} /> Copy Link
+               </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-           <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
+        {/* Stats Grid */}
+        <div className="grid md:grid-cols-4 gap-4">
+           <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
               <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Earned</div>
-              <div className="text-3xl font-black font-mono">${(currentUser?.totalEarnings || 0).toFixed(2)}</div>
+              <div className="text-2xl font-black font-mono">${(currentUser?.totalEarnings || 0).toFixed(2)}</div>
            </div>
-           <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
-              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Available Credit</div>
-              <div className="text-3xl font-black font-mono">${(currentUser?.availableEarnings || 14.50).toFixed(2)}</div>
+           <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Available</div>
+              <div className="text-2xl font-black font-mono text-green-400">${(currentUser?.availableEarnings || 14.50).toFixed(2)}</div>
            </div>
-           <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
-              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending Payouts</div>
-              <div className="text-3xl font-black font-mono text-orange-400">$0.00</div>
+           <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending</div>
+              <div className="text-2xl font-black font-mono text-orange-400">$0.00</div>
+           </div>
+           <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Referrals</div>
+              <div className="text-2xl font-black font-mono" style={{ color: currentTier.color }}>{referralCount}</div>
            </div>
         </div>
 
+        {/* Referred Users */}
         <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)]">
            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold italic">Referral Activity</h3>
+              <h3 className="text-xl font-bold italic">Referred Users</h3>
               <div className="text-xs text-gray-500 font-bold uppercase">Status</div>
            </div>
            <div className="space-y-4">
               {[
-                { name: 'Marcus Sterling', date: 'Mar 12, 2024', plan: 'Solo', amount: '$2.70' },
-                { name: 'Elena Rodriguez', date: 'Mar 08, 2024', plan: 'Pro', amount: '$9.70' },
-                { name: 'David Vance', date: 'Feb 28, 2024', plan: 'Team', amount: '$19.70' }
+                { name: 'Marcus Sterling', date: 'Mar 12, 2024', plan: 'Solo', amount: '$2.70', status: 'active' },
+                { name: 'Elena Rodriguez', date: 'Mar 08, 2024', plan: 'Pro', amount: '$9.70', status: 'active' },
+                { name: 'David Vance', date: 'Feb 28, 2024', plan: 'Team', amount: '$19.70', status: 'active' }
               ].map((ref, idx) => (
                 <div key={idx} className="flex items-center justify-between p-5 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
                    <div className="flex items-center gap-4">
@@ -563,7 +662,7 @@ function ReferralTab({
                    </div>
                    <div className="text-right">
                       <div className="text-sm font-black text-green-500">{ref.amount}</div>
-                      <div className="text-[9px] font-bold text-gray-500 uppercase">Monthly Earnings</div>
+                      <div className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-green-500/10 text-green-500">{ref.status}</div>
                    </div>
                 </div>
               ))}
