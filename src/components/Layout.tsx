@@ -74,8 +74,8 @@ export function Layout() {
     ],
   };
 
-  const ADMIN_USER_ID = '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d';
-  const isAdmin = currentUser?.id === ADMIN_USER_ID;
+  const isAdmin = currentUser?.role === 'admin';
+  console.log('[Admin] User object in store:', currentUser);
 
   if (isAdmin) {
     navSections.Tools.push({ to: '/admin', label: 'Admin', icon: Shield });

@@ -99,37 +99,34 @@ Deno.serve(async (req: Request) => {
         },
       });
 
-      console.log(`[Stripe] Session created: ${session.id}`);
+      console.log('[Stripe] Session created successfully:', session.id);
       return new Response(
-        JSON.stringify({ url: session.url }),
-        { 
+        JSON.stringify({ url: session.url, sessionId: session.id }),
+        {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,
         }
       );
     } catch (stripeError: any) {
-      console.error('[Stripe] Session Creation Error:', stripeError);
-      
-      let errorMessage = stripeError.message;
-      if (stripeError.message?.includes('No such price')) {
-        errorMessage = `Price ID ${priceId} not found in your Stripe account.`;
-      }
-
+      console.error('[Stripe] Checkout session creation failed:', stripeError);
       return new Response(
         JSON.stringify({ 
-          error: errorMessage,
+          error: stripeError.message, 
           code: stripeError.code,
-          priceId: priceId
+          type: stripeError.type,
+          detail: 'Failed to create Stripe checkout session. Please verify your Price IDs.'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
       );
     }
   } catch (error: any) {
-    console.error('[Stripe] Global Error:', error.message, error.stack);
-    
+    console.error('[Stripe] Unexpected function error:', error);
     return new Response(
-      JSON.stringify({ error: error?.message || 'Unknown error' }),
-      { 
+      JSON.stringify({ error: error.message }),
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       }

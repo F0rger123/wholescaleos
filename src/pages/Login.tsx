@@ -389,12 +389,18 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     login(user.email || form.email, form.password);
     const store = useStore.getState();
     const avatar = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+    
+    // updateProfile just sets basic info, we need fetchProfile to get the role, etc.
     store.updateProfile({
       id: user.id,
       email: user.email || form.email,
       name: displayName,
       avatar,
     });
+
+    // CRITICAL: Fetch the full profile from Supabase to get user.role and other DB fields
+    console.log('[Auth] Fetching full profile for:', user.id);
+    await store.fetchProfile(user.id);
     sendWelcomeEmail(user.email || form.email, displayName).catch(() => {});
     
     // Redirect logic: return_to takes precedence, then team selection
@@ -493,7 +499,9 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                  console.error('[Auth] List Factors Error:', factorsError);
               }
               
+              console.log('[Auth] All factors:', factors);
               const totpFactor = factors?.totp?.[0] || factors?.all?.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
+              
               if (totpFactor) {
                 console.log('[Auth] Found verified TOTP factor:', totpFactor.id);
                 setMfaFactorId(totpFactor.id);
@@ -502,7 +510,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                 setLoading(false);
                 return;
               } else {
-                console.warn('[Auth] MFA required but no verified TOTP factors found. Factors:', factors);
+                console.warn('[Auth] MFA required but no verified TOTP factors found. Check enrolment status.');
               }
             }
             

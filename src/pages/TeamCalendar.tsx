@@ -47,7 +47,12 @@ export default function TeamCalendar() {
 
   async function fetchEvents() {
     if (!supabase) return;
-    setLoading(true);
+    console.log('[Calendar] Fetching events for team:', teamId, 'month:', format(currentMonth, 'MMMM yyyy'));
+    if (!teamId) {
+      console.warn('[Calendar] No teamId found in store. Skipping fetch.');
+      setLoading(false);
+      return;
+    }
     try {
       const monthStart = startOfMonth(currentMonth);
       const monthEnd = endOfMonth(currentMonth);
@@ -72,9 +77,10 @@ export default function TeamCalendar() {
         color: EVENT_COLORS[e.type] || EVENT_COLORS.meeting,
       }));
 
+      console.log('[Calendar] Fetched events:', formattedEvents.length);
       setEvents(formattedEvents);
     } catch (err) {
-      console.error('Error fetching calendar events:', err);
+      console.error('[Calendar] Error fetching calendar events:', err);
     } finally {
       setLoading(false);
     }
@@ -106,8 +112,12 @@ export default function TeamCalendar() {
         })
         .select()
         .single();
+      if (error) {
+        console.error('[Calendar] Supabase insert error:', error);
+        throw error;
+      }
 
-      if (error) throw error;
+      console.log('[Calendar] Event created successfully:', data.id);
 
       const addedEvent: TeamEvent = {
         id: data.id,
