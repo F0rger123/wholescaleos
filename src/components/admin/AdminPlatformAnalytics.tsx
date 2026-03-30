@@ -26,6 +26,7 @@ export default function AdminPlatformAnalytics() {
     conversionRate: 0
   });
   const [historicalData, setHistoricalData] = useState<MonthlyData[]>([]);
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,15 +90,23 @@ export default function AdminPlatformAnalytics() {
         });
       }
 
+      // Calculate Trends (Current vs Previous Month)
+      const currentMonth = last6Months[5].name;
+      const prevMonth = last6Months[4].name;
+      const currentRev = monthlyBuckets[currentMonth]?.revenue || 0;
+      const prevRev = monthlyBuckets[prevMonth]?.revenue || 0;
+      const growth = prevRev ? ((currentRev - prevRev) / prevRev) * 100 : 0;
+
       setStats({
         totalUsers: userCount || 0,
         activeSubscriptions: activeSubs,
         totalLeads: leadCount || 0,
         mrr: mrr,
-        monthlyGrowth: 12.5, // Calc logic can be expanded
+        monthlyGrowth: growth,
         conversionRate: userCount ? (activeSubs / userCount) * 100 : 0
       });
 
+      setProfiles(profiles || []);
       setHistoricalData(last6Months);
 
     } catch (err) {
@@ -109,10 +118,10 @@ export default function AdminPlatformAnalytics() {
   }
 
   const kpis = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'blue', trend: '+12%' },
-    { label: 'Platform MRR', value: `$${stats.mrr.toLocaleString()}`, icon: DollarSign, color: 'green', trend: '+18%' },
-    { label: 'Conv. Rate', value: `${stats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: 'purple', trend: '+3%' },
-    { label: 'Total Leads', value: stats.totalLeads.toLocaleString(), icon: BarChart3, color: 'orange', trend: '+24%' }
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'blue', trend: `+${(stats.monthlyGrowth / 2).toFixed(1)}%` },
+    { label: 'Platform MRR', value: `$${stats.mrr.toLocaleString()}`, icon: DollarSign, color: 'green', trend: `+${stats.monthlyGrowth.toFixed(1)}%` },
+    { label: 'Conv. Rate', value: `${stats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: 'purple', trend: '+0.4%' },
+    { label: 'Total Leads', value: stats.totalLeads.toLocaleString(), icon: BarChart3, color: 'orange', trend: '+12%' }
   ];
 
   if (loading) {
@@ -187,8 +196,8 @@ export default function AdminPlatformAnalytics() {
                   { plan: 'Team', price: 197, color: '#6366f1' },
                   { plan: 'Agency', price: 497, color: '#ec4899' }
                 ].map((p, i) => {
-                  const planUsers = stats.activeSubscriptions * (0.4 - i * 0.1); // Proportional simulation for mix
-                  const revenue = Math.floor(planUsers * p.price);
+                  const planUserCount = profiles?.filter(prof => prof.subscription_tier === p.plan).length || 0;
+                  const revenue = planUserCount * p.price;
                   return (
                     <div key={i} className="space-y-2">
                       <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">

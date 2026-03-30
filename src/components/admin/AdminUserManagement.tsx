@@ -86,14 +86,14 @@ export default function AdminUserManagement() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border transition-all outline-none"
-            style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+            style={{ backgroundColor: 'var(--t-input-bg)', borderColor: 'var(--t-input-border)', color: 'var(--t-text)' }}
           />
         </div>
         <select 
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
           className="px-4 py-2.5 rounded-xl border outline-none focus:ring-2"
-          style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
+          style={{ backgroundColor: 'var(--t-input-bg)', borderColor: 'var(--t-input-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
         >
           <option value="all">All Status</option>
           <option value="active">Active</option>
@@ -104,7 +104,7 @@ export default function AdminUserManagement() {
           value={tierFilter}
           onChange={(e) => setTierFilter(e.target.value)}
           className="px-4 py-2.5 rounded-xl border outline-none focus:ring-2"
-          style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
+          style={{ backgroundColor: 'var(--t-input-bg)', borderColor: 'var(--t-input-border)', color: 'var(--t-text)', '--tw-ring-color': 'var(--t-primary)' } as any}
         >
           <option value="all">All Tiers</option>
           <option value="Free">Free</option>

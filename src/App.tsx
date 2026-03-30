@@ -117,7 +117,18 @@ export function App() {
           if (session?.user) {
             const userId = session.user.id;
             console.log('[App] Session found for user:', userId, '. Initializing profile...');
-            
+
+            // Check MFA Assurance Level
+            const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            const { data: factors } = await supabase.auth.mfa.listFactors();
+            const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
+
+            if (verifiedFactor && aal?.currentLevel !== 'aal2') {
+              console.log('[App] MFA REQUIRED. Bypassing automatic login...');
+              setChecking(false);
+              return;
+            }
+
             // Set authenticated first so ProtectedRoute allows us through
             useStore.getState().setAuthenticated(true);
             
@@ -127,10 +138,6 @@ export function App() {
             // incrementLoginStreak is internal to the store
             useStore.getState().incrementLoginStreak();
             
-            // IMPORTANT: Do NOT call loadLeads here. 
-            // SupabaseSync will handle loading all data once it mounts.
-            // Calling it here sets dataLoaded: true prematurely, which 
-            // causes SupabaseSync to skip team configuration loading.
             console.log('[App] Profile initialized. teamId:', useStore.getState().teamId);
           }
         } catch (err) {
@@ -156,10 +163,20 @@ export function App() {
           
           if (!store.isAuthenticated || !store.teamId) {
             console.log('[App] SIGNED_IN/INITIAL_SESSION event. Initializing profile...');
-            store.setAuthenticated(true);
             
             (async () => {
               try {
+                // Double check AAL before setting authenticated
+                const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+                const { data: factors } = await supabase.auth.mfa.listFactors();
+                const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
+
+                if (verifiedFactor && aal?.currentLevel !== 'aal2') {
+                  console.log('[App] MFA Challenge active. Staying on current route.');
+                  return;
+                }
+
+                store.setAuthenticated(true);
                 await store.fetchProfile(userId);
                 store.incrementLoginStreak();
                 console.log('[App] Profile fetched via auth change. teamId:', store.teamId);

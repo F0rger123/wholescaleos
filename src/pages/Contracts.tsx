@@ -7,7 +7,7 @@ import EmailComposeModal from '../components/EmailComposeModal';
 import { 
   FileText, Mail, Plus, Search, 
   ChevronDown, User, FileSignature, Loader2, Shield,
-  Check, Edit3
+  Check, Edit3, Send
 } from 'lucide-react';
 
 interface ContractTemplate {
@@ -455,6 +455,8 @@ export default function Contracts() {
   } | null>(null);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [isSendingContract, setIsSendingContract] = useState(false);
+  const [sendStep, setSendStep] = useState<'idle' | 'generating' | 'sending' | 'success'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
@@ -714,7 +716,14 @@ export default function Contracts() {
         }
         .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #000000 !important; }
         .pdf-content p { color: #333333 !important; }
-        .pdf-content * { oklch: none !important; }
+        .pdf-content * { 
+          border-color: #e5e7eb !important;
+          --t-primary: #3b82f6;
+          --t-text: #1a1a1a;
+          --t-text-secondary: #4b5563;
+          --t-text-muted: #9ca3af;
+          --t-border: #e5e7eb;
+        }
       `;
       element.appendChild(style);
 
@@ -778,7 +787,8 @@ export default function Contracts() {
       return;
     }
     
-    setGeneratingPdf(true);
+    setIsSendingContract(true);
+    setSendStep('generating');
     console.log('[PDF] Generating PDF for email context:', selectedLead?.email);
     
     try {
@@ -796,7 +806,14 @@ export default function Contracts() {
         }
         .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #000000 !important; }
         .pdf-content p { color: #333333 !important; }
-        .pdf-content * { oklch: none !important; }
+        .pdf-content * { 
+          border-color: #e5e7eb !important;
+          --t-primary: #3b82f6;
+          --t-text: #1a1a1a;
+          --t-text-secondary: #4b5563;
+          --t-text-muted: #9ca3af;
+          --t-border: #e5e7eb;
+        }
       `;
       element.appendChild(style);
 
@@ -833,10 +850,17 @@ export default function Contracts() {
         contentType: 'application/pdf'
       });
       
-      setShowEmailModal(true);
+      setSendStep('success');
+      setTimeout(() => {
+        setShowEmailModal(true);
+        setIsSendingContract(false);
+        setSendStep('idle');
+      }, 500);
     } catch (error: any) {
       console.error('[PDF] Email PDF Generation Error:', error);
       alert(`Failed to prepare document for email: ${error?.message || 'Unknown error'}`);
+      setIsSendingContract(false);
+      setSendStep('idle');
     } finally {
       setGeneratingPdf(false);
     }
@@ -1260,6 +1284,51 @@ export default function Contracts() {
           attachment={emailAttachment}
           isAttachmentLoading={generatingPdf}
         />
+      )}
+      {/* Send Contract Loading Modal */}
+      {isSendingContract && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-sm p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] shadow-2xl text-center space-y-6">
+            <div className="relative mx-auto w-20 h-20">
+              <div className="absolute inset-0 rounded-full border-4 border-[var(--t-primary-dim)]"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-[var(--t-primary)] border-t-transparent animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center text-[var(--t-primary)]">
+                {sendStep === 'generating' ? <FileText size={32} /> : <Send size={32} />}
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-[var(--t-text)]">
+                {sendStep === 'generating' ? 'Generating PDF...' : 'Sending Contract...'}
+              </h3>
+              <p className="text-sm text-[var(--t-text-muted)]">
+                {sendStep === 'generating' ? 'Applying your template and preparing the document.' : `Sending to ${selectedLead?.email || 'the lead'}.`}
+              </p>
+            </div>
+
+            <div className="pt-4">
+              <div className="h-1.5 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-[var(--t-primary)] transition-all duration-1000"
+                  style={{ width: sendStep === 'generating' ? '40%' : '80%' }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Animation Overlay (Temporary) */}
+      {sendStep === 'success' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--t-primary)]/10 backdrop-blur-xl animate-in fade-in zoom-in duration-500"
+             onAnimationEnd={() => setTimeout(() => { setSendStep('idle'); setIsSendingContract(false); }, 2000)}>
+          <div className="text-center space-y-4">
+            <div className="w-24 h-24 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto shadow-2xl shadow-green-500/40 scale-125 animate-bounce">
+              <Check size={48} strokeWidth={4} />
+            </div>
+            <h2 className="text-3xl font-black text-[var(--t-text)] uppercase tracking-tighter italic">Contract Sent!</h2>
+          </div>
+        </div>
       )}
     </div>
   );

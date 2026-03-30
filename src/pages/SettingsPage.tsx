@@ -641,21 +641,27 @@ function SecurityTab() {
 
       {/* Two-Factor Authentication */}
       <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>
-              <QrCode size={16} className="inline mr-2" />Two-Factor Authentication
-            </h2>
-            <p className="text-xs mt-1" style={{ color: 'var(--t-text-secondary)' }}>
-              Add an extra layer of security using Google Authenticator or Authy
-            </p>
+        <div className="flex items-center justify-between mb-6 p-4 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+              mfaStatus === 'enabled' ? 'bg-green-500/10 text-green-500 shadow-[0_0_15px_rgba(34,197,94,0.1)]' : 
+              'bg-orange-500/10 text-orange-400 shadow-[0_0_15px_rgba(251,146,60,0.1)]'
+            }`}>
+              <Shield size={24} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Two-Factor Authentication</h2>
+              <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>
+                {mfaStatus === 'enabled' ? 'Account currently secured with TOTP factors' : 'Add an extra layer of security to your account'}
+              </p>
+            </div>
           </div>
-          <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-            mfaStatus === 'enabled' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
-            mfaStatus === 'loading' ? 'bg-blue-500/10 text-blue-400' :
-            'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+          <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+            mfaStatus === 'enabled' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+            mfaStatus === 'loading' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
+            'bg-orange-500/10 text-orange-400 border-orange-500/20'
           }`}>
-            {mfaStatus === 'loading' ? 'Checking...' : mfaStatus === 'enabled' ? '✓ Enabled' : 'Disabled'}
+            {mfaStatus === 'loading' ? 'Checking...' : mfaStatus === 'enabled' ? 'Active' : 'Not Setup'}
           </div>
         </div>
 

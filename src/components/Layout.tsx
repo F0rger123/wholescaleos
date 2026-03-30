@@ -478,19 +478,19 @@ export function Layout() {
               <div key={sectionName} className={sectionIndex > 0 ? "pt-2 space-y-1" : "space-y-1"}>
                 <button
                   onClick={() => toggleSection(sectionName)}
-                  className="w-full flex items-center justify-between px-3 py-1 mb-1 group"
+                  className="w-full flex items-center justify-between px-3 py-2 group hover:bg-[var(--t-surface-dim)] rounded-xl transition-all"
                 >
                   <div className={`overflow-hidden transition-all duration-300 ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
                     <span 
-                      className="text-[10px] uppercase tracking-wider font-semibold transition-colors group-hover:text-current whitespace-nowrap"
+                      className="text-[10px] uppercase tracking-[0.2em] font-black italic transition-colors group-hover:text-[var(--t-primary)] whitespace-nowrap"
                       style={{ color: 'var(--t-text-muted)' }}
                     >
                       {sectionName}
                     </span>
                   </div>
                   <ChevronDown
-                    size={14}
-                    className={`transition-transform duration-200 group-hover:text-current ${isCollapsed ? '-rotate-90' : ''} ${!sidebarOpen ? 'opacity-0' : 'opacity-100'}`}
+                    size={12}
+                    className={`transition-transform duration-300 group-hover:text-[var(--t-primary)] ${isCollapsed ? '-rotate-90' : ''} ${!sidebarOpen ? 'opacity-0' : 'opacity-100'}`}
                     style={{ color: 'var(--t-text-muted)' }}
                   />
                 </button>
@@ -515,10 +515,11 @@ export function Layout() {
                             }`
                           }
                           style={({ isActive }) => ({
-                            borderRadius: 'var(--t-radius)',
+                            borderRadius: '1.25rem',
                             background: isActive ? 'var(--t-primary-dim)' : 'transparent',
-                            color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
-                            boxShadow: isActive ? 'var(--t-glow-shadow)' : 'none',
+                            color: isActive ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                            border: isActive ? '1px solid var(--t-primary)' : '1px solid transparent',
+                            boxShadow: isActive ? '0 0 20px var(--t-primary-dim)' : 'none',
                           })}
                         >
                           <Icon size={20} className="shrink-0" />
