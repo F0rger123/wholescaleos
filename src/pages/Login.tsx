@@ -489,6 +489,15 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     }
   };
 
+  const handleCancelMfa = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setMfaFactorId(null);
+    setPartialUser(null);
+    setMfaCode('');
+    setMode('login');
+    setError('2FA verification cancelled.');
+  };
+
   const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
     if (!validate()) return;
@@ -505,57 +514,51 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             email: form.email,
             password: form.password,
           });
+          
           if (authError) {
             if (isDatabaseSetupError(authError.message)) {
               setError('Database tables not set up yet.');
               setShowDbSetup(true);
             } else if (authError.message.includes('Email not confirmed') || authError.message.includes('email_not_confirmed')) {
-              // User exists but email not confirmed — show fix instructions
               setError('Email not confirmed yet.');
               setShowEmailFix(true);
             } else if (authError.message.includes('Invalid login') || authError.message.includes('invalid_credentials')) {
-              setError('Invalid email or password. Check your credentials or create an account.');
+              setError('Invalid email or password.');
             } else {
               setError(authError.message);
             }
             setLoading(false);
             return;
           }
-          if (data.user) {
-            console.log('[Auth] User signed in, checking MFA level...');
-            const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-            if (aalError) {
-               console.error('[Auth] MFA AAL Check Error:', aalError);
-            }
-            
-            console.log('[Auth] AAL Data:', aalData);
 
-            if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
-              console.log('[Auth] MFA required (aal2 next)');
-              const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-              if (factorsError) {
-                 console.error('[Auth] List Factors Error:', factorsError);
-              }
-              
-              console.log('[Auth] All factors:', factors);
-              const totpFactor = factors?.totp?.[0] || factors?.all?.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
-              
-              if (totpFactor) {
-                console.log('[Auth] Found verified TOTP factor:', totpFactor.id);
-                setMfaFactorId(totpFactor.id);
-                setPartialUser(data.user);
-                setMode('mfa');
-                setLoading(false);
-                return;
-              } else {
-                console.warn('[Auth] MFA required but no verified TOTP factors found. Check enrolment status.');
-              }
+          if (data.user) {
+            console.log('[Auth] User signed in, checking MFA requirements...');
+            
+            // 1. Check AAL
+            const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            console.log('[Auth] Current AAL:', aalData);
+
+            // 2. List factors to see if any are verified
+            const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+            if (factorsError) console.error('[Auth] MFA listFactors error:', factorsError);
+            
+            const totemFactor = factors?.totp?.find(f => f.status === 'verified');
+
+            // Force MFA if we have a verified factor and we are still at AAL1
+            if (totemFactor && aalData?.currentLevel !== 'aal2') {
+              console.log('[Auth] Verified factor found, switching to MFA mode:', totemFactor.id);
+              setMfaFactorId(totemFactor.id);
+              setPartialUser(data.user);
+              setMode('mfa');
+              setLoading(false);
+              return;
             }
             
-            console.log('[Auth] Proceeding to final login (aal1 or no MFA)');
+            console.log('[Auth] MFA not required or already satisfied. Finalizing login.');
             await finalizeLogin(data.user);
           }
         } else if (mode === 'signup') {
+
           const { data, error: authError } = await supabase.auth.signUp({
             email: form.email,
             password: form.password,
@@ -1023,14 +1026,24 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                   />
                 </div>
               </div>
-              <button
-                type="submit"
-                disabled={loading || mfaCode.length < 6}
-                className="w-full flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--t-primary)' }}
-              >
-                {loading ? <><Loader2 size={16} className="animate-spin" />Verifying...</> : 'Verify & Sign In'}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelMfa}
+                  className="flex-1 py-3 text-sm font-semibold rounded-xl transition-all border"
+                  style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || mfaCode.length < 6}
+                  className="flex-[2] flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--t-primary)' }}
+                >
+                  {loading ? <><Loader2 size={16} className="animate-spin" />Verifying...</> : 'Verify & Sign In'}
+                </button>
+              </div>
             </form>
           ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen } from 'lucide-react';
+import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2 } from 'lucide-react';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail } from '../lib/email';
 
@@ -13,7 +13,8 @@ interface EmailComposeModalProps {
     filename: string;
     content: string; // base64
     contentType: string;
-  };
+  } | null;
+  isAttachmentLoading?: boolean;
 }
 
 export default function EmailComposeModal({ 
@@ -22,8 +23,10 @@ export default function EmailComposeModal({
   lead: initialLead, 
   initialSubject = '', 
   initialBody = '',
-  attachment 
+  attachment,
+  isAttachmentLoading = false
 }: EmailComposeModalProps) {
+
   const { currentUser, updateLead, leads } = useStore();
   const [selectedLead, setSelectedLead] = useState<Lead | undefined>(initialLead);
   const [to, setTo] = useState(initialLead?.email || '');
@@ -117,14 +120,35 @@ export default function EmailComposeModal({
           });
         }
         
+        // Show success and close
+        alert('Email sent successfully!');
         onClose();
       } else {
         throw new Error(result.error || 'Failed to send email');
       }
     } catch (err: any) {
-      alert(err.message);
+      console.error('Send Error:', err);
+      alert(`Error: ${err.message}`);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handlePreviewPDF = () => {
+    if (!attachment) return;
+    try {
+      const byteCharacters = atob(attachment.content);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('Preview error:', err);
+      alert('Could not preview PDF. Please try again.');
     }
   };
 
@@ -146,7 +170,7 @@ export default function EmailComposeModal({
           </button>
         </div>
 
-        {/* Form */}
+        {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {!showConfirm ? (
             <>
@@ -289,8 +313,15 @@ export default function EmailComposeModal({
                 className="w-full h-64 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl p-4 text-sm text-[var(--t-text)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none resize-none transition-all"
               />
 
+              {isAttachmentLoading && (
+                <div className="flex items-center gap-3 p-3 bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-xl animate-pulse">
+                  <Loader2 size={18} className="text-[var(--t-primary)] animate-spin" />
+                  <p className="text-sm font-medium text-[var(--t-text-muted)]">Generating PDF attachment...</p>
+                </div>
+              )}
+
               {attachment && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between p-3 bg-[var(--t-primary-dim)]/30 border border-[var(--t-primary-dim)] rounded-xl group transition-all hover:bg-[var(--t-primary-dim)]/40">
                     <div className="flex items-center gap-3">
                       <Paperclip size={18} className="text-[var(--t-primary)]" />
@@ -299,13 +330,23 @@ export default function EmailComposeModal({
                         <p className="text-xs text-[var(--t-text-muted)]">PDF Document</p>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => setShowPreview(!showPreview)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-white/50 hover:bg-white rounded-lg text-xs font-bold text-[var(--t-primary)] transition-all"
-                    >
-                      {showPreview ? <Eye size={14} /> : <BookOpen size={14} />}
-                      {showPreview ? 'Hide Preview' : 'Preview PDF'}
-                    </button>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={handlePreviewPDF}
+                        className="p-2 hover:bg-[var(--t-primary)] hover:text-white text-[var(--t-primary)] rounded-lg transition-all flex items-center gap-2"
+                        title="Preview PDF"
+                      >
+                        <Eye size={16} />
+                        <span className="text-xs font-bold">Preview</span>
+                      </button>
+                      <button 
+                        onClick={() => setShowPreview(!showPreview)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white/50 hover:bg-white rounded-lg text-xs font-bold text-[var(--t-primary)] transition-all"
+                      >
+                        {showPreview ? <Eye size={14} /> : <BookOpen size={14} />}
+                        {showPreview ? 'Hide Local Preview' : 'Toggle Local Preview'}
+                      </button>
+                    </div>
                   </div>
 
                   {showPreview && (
@@ -313,17 +354,7 @@ export default function EmailComposeModal({
                       <div className="p-2 bg-[var(--t-surface-hover)] border-b border-[var(--t-border)] flex items-center justify-between">
                         <span className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider">PDF Preview</span>
                         <button 
-                          onClick={() => {
-                            const byteCharacters = atob(attachment.content);
-                            const byteNumbers = new Array(byteCharacters.length);
-                            for (let i = 0; i < byteCharacters.length; i++) {
-                              byteNumbers[i] = byteCharacters.charCodeAt(i);
-                            }
-                            const byteArray = new Uint8Array(byteNumbers);
-                            const blob = new Blob([byteArray], { type: attachment.contentType });
-                            const url = URL.createObjectURL(blob);
-                            window.open(url, '_blank');
-                          }}
+                          onClick={handlePreviewPDF}
                           className="text-[var(--t-primary)] hover:underline flex items-center gap-1 text-[10px] font-bold"
                         >
                           Open in Full Screen <ExternalLink size={10} />
@@ -378,7 +409,7 @@ export default function EmailComposeModal({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer Area */}
         <div className="p-4 border-t border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface-hover)]/30 rounded-b-2xl">
           <div className="flex items-center gap-4">
             <button className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl text-[var(--t-text-muted)] transition-colors">
@@ -405,7 +436,7 @@ export default function EmailComposeModal({
               >
                 {isSending ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <Loader2 size={20} className="animate-spin" />
                     Sending...
                   </>
                 ) : (
@@ -431,3 +462,4 @@ export default function EmailComposeModal({
     </div>
   );
 }
+

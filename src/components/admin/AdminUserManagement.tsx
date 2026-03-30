@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { 
-  Search, Shield, Edit2
+  Search, Edit2, UserPlus
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
 
 interface UserProfile {
   id: string;
@@ -19,8 +20,10 @@ interface UserProfile {
 export default function AdminUserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [tierFilter, setTierFilter] = useState('all');
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUsers();
@@ -45,74 +48,72 @@ export default function AdminUserManagement() {
   }
 
   const filteredUsers = users.filter(u => {
-    const matchesSearch = 
-      (u.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (u.email?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-    
-    if (filter === 'all') return matchesSearch;
-    if (filter === 'admin') return matchesSearch && u.role === 'admin';
-    if (filter === 'premium') return matchesSearch && u.subscription_tier !== 'Free';
-    return matchesSearch;
+    const matchesSearch = (u.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+                          (u.email?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || (u.subscription_status?.toLowerCase() || '') === statusFilter.toLowerCase();
+    const matchesTier = tierFilter === 'all' || u.subscription_tier === tierFilter;
+    return matchesSearch && matchesStatus && matchesTier;
   });
 
-  const handleUpdateRole = async (userId: string, newRole: string) => {
+  const handleUpdateUser = async (userId: string, updates: any) => {
     if (!supabase) return;
+    setLoadingId(userId);
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ role: newRole })
+        .update(updates)
         .eq('id', userId);
       
       if (error) throw error;
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    } catch (err) {
-      alert('Failed to update role');
-    }
-  };
-
-  const handleUpdateTier = async (userId: string, newTier: string) => {
-    if (!supabase) return;
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ subscription_tier: newTier })
-        .eq('id', userId);
       
-      if (error) throw error;
-      setUsers(users.map(u => u.id === userId ? { ...u, subscription_tier: newTier } : u));
-    } catch (err) {
-      alert('Failed to update tier');
+      setUsers(users.map(u => u.id === userId ? { ...u, ...updates } : u));
+      toast.success('User updated successfully');
+    } catch (err: any) {
+      toast.error(`Error: ${err.message}`);
+    } finally {
+      setLoadingId(null);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40" size={18} />
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="relative flex-1 min-w-[300px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
             placeholder="Search users by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border bg-[var(--t-bg)] text-sm focus:border-purple-500 outline-none transition-all"
-            style={{ borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
           />
         </div>
-        
-        <div className="flex items-center gap-2">
-          {['all', 'admin', 'premium'].map(f => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all ${
-                filter === f ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text-muted)] hover:bg-white/5'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
+        <select 
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="pending">Pending</option>
+        </select>
+        <select 
+          value={tierFilter}
+          onChange={(e) => setTierFilter(e.target.value)}
+          className="px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Tiers</option>
+          <option value="Free">Free</option>
+          <option value="Solo">Solo</option>
+          <option value="Pro">Pro</option>
+          <option value="Team">Team</option>
+          <option value="Agency">Agency</option>
+        </select>
+        <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20">
+          <UserPlus size={18} />
+          Add User
+        </button>
       </div>
 
       <div className="rounded-3xl border bg-[var(--t-surface)] overflow-hidden" style={{ borderColor: 'var(--t-border)' }}>
@@ -122,8 +123,8 @@ export default function AdminUserManagement() {
               <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">User</th>
               <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Plan</th>
               <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Role</th>
+              <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Status</th>
               <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Signup Date</th>
-              <th className="text-right px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y" style={{ borderColor: 'var(--t-border)' }}>
@@ -150,33 +151,51 @@ export default function AdminUserManagement() {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-5">
-                  <select 
-                    value={user.subscription_tier}
-                    onChange={(e) => handleUpdateTier(user.id, e.target.value)}
-                    className="bg-transparent border-none text-xs font-bold outline-none focus:ring-0 cursor-pointer text-blue-500"
-                  >
-                    <option value="Free">Free</option>
-                    <option value="Solo">Solo</option>
-                    <option value="Pro">Pro</option>
-                    <option value="Team">Team</option>
-                    <option value="Agency">Agency</option>
-                  </select>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex flex-col">
+                    <select 
+                      value={user.subscription_tier}
+                      onChange={(e) => handleUpdateUser(user.id, { subscription_tier: e.target.value })}
+                      disabled={loadingId === user.id}
+                      className="text-xs font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-600 border-none outline-none appearance-none cursor-pointer hover:bg-blue-100 transition-colors"
+                    >
+                      {['Free', 'Solo', 'Pro', 'Team', 'Agency'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                    <span className="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">Plan override</span>
+                  </div>
                 </td>
-                <td className="px-6 py-5">
-                   <div className="flex items-center gap-2">
-                     <Shield size={14} className={user.role === 'admin' ? 'text-purple-500' : 'text-gray-500'} />
-                     <select 
-                        value={user.role}
-                        onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                        className="bg-transparent border-none text-xs font-bold outline-none focus:ring-0 cursor-pointer"
-                        style={{ color: user.role === 'admin' ? 'var(--t-primary)' : 'var(--t-text)' }}
-                      >
-                        <option value="member">Member</option>
-                        <option value="admin">Admin</option>
-                        <option value="viewer">Viewer</option>
-                      </select>
-                   </div>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex flex-col">
+                    <select 
+                      value={user.role}
+                      onChange={(e) => handleUpdateUser(user.id, { role: e.target.value })}
+                      disabled={loadingId === user.id}
+                      className={`text-xs font-bold px-2 py-1 rounded-full border-none outline-none appearance-none cursor-pointer transition-colors ${
+                        user.role === 'admin' ? 'bg-purple-50 text-purple-600' : 'bg-gray-50 text-gray-600'
+                      }`}
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="member">Member</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <select 
+                    value={user.subscription_status?.toLowerCase() || 'active'}
+                    onChange={(e) => handleUpdateUser(user.id, { subscription_status: e.target.value })}
+                    disabled={loadingId === user.id}
+                    className={`text-xs font-medium px-2 py-1 rounded-full border-none outline-none appearance-none cursor-pointer transition-colors ${
+                      user.subscription_status === 'active' ? 'bg-green-50 text-green-600' : 
+                      user.subscription_status === 'suspended' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'
+                    }`}
+                  >
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                    <option value="pending">Pending</option>
+                  </select>
                 </td>
                 <td className="px-6 py-5 text-xs text-[var(--t-text-muted)]">
                   {new Date(user.created_at).toLocaleDateString()}

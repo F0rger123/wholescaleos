@@ -7,7 +7,7 @@ import EmailComposeModal from '../components/EmailComposeModal';
 import { 
   FileText, Mail, Plus, Search, 
   ChevronDown, User, FileSignature, Loader2, Shield,
-  Bold, Italic, List, ListOrdered, Type, Edit3, Check
+  Check, Edit3
 } from 'lucide-react';
 
 interface ContractTemplate {
@@ -16,6 +16,8 @@ interface ContractTemplate {
   category: string;
   content: string;
   isCustom?: boolean;
+  folder?: string;
+  updatedAt?: string;
 }
 
 const DISCLAIMER_HTML = `
@@ -559,48 +561,72 @@ export default function Contracts() {
   
   const [activeTemplate, setActiveTemplate] = useState<ContractTemplate>(PREBUILT_TEMPLATES[0]);
   const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLeadId, setSelectedLeadId] = useState<string>('');
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [editorMode, setEditorMode] = useState<'rich' | 'plain'>('rich');
+  const [folders, setFolders] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState<string>('');
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editedContent, setEditedContent] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [attachment, setAttachment] = useState<any>(null);
-  const [saveFormat, setSaveFormat] = useState<'html' | 'txt'>('html');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
 
-  // Fetch custom templates on mount
   useEffect(() => {
     async function loadCustomTemplates() {
       if (!supabase || !currentUser?.id) return;
       try {
-        const { data, error } = await supabase.storage.from('contract_templates').list(currentUser.id + '/');
+        const { error } = await supabase.storage.from('contract_templates').list(currentUser.id, {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' }
+        });
         if (error) throw error;
         
         const templates: ContractTemplate[] = [];
-        for (const file of data || []) {
-          if (!file.name.match(/\.(html|txt|pdf|docx)$/i)) continue;
-          
-          const { data: fileData, error: downloadError } = await supabase.storage
-            .from('contract_templates')
-            .download(currentUser.id + '/' + file.name);
+        const foundFolders = new Set<string>(['Main']);
+
+        const processFolder = async (path: string, currentFolder: string = 'Main') => {
+          if (!supabase) return;
+          const { data: files, error: listError } = await supabase.storage.from('contract_templates').list(path);
+          if (listError) return;
+
+          for (const file of files || []) {
+            if (file.id === null || file.metadata === null) {
+              foundFolders.add(file.name);
+              await processFolder(`${path}/${file.name}`, file.name);
+              continue;
+            }
+
+            if (!file.name.match(/\.(html|txt|pdf|docx)$/i)) continue;
             
-          if (downloadError) continue;
-          
-          const text = await fileData.text();
-          templates.push({
-            id: file.name,
-            name: file.name.replace('.html', '').replace('.txt', '').replace(/_/g, ' '),
-            category: 'Custom',
-            content: text,
-            isCustom: true
-          });
-        }
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('contract_templates')
+              .download(`${path}/${file.name}`);
+              
+            if (downloadError) continue;
+            
+            const text = await fileData.text();
+            templates.push({
+              id: `${path}/${file.name}`,
+              name: file.name.replace(/\.(html|txt|pdf|docx)$/i, '').replace(/_/g, ' '),
+              category: 'Custom',
+              content: text,
+              isCustom: true,
+              folder: currentFolder,
+              updatedAt: file.updated_at
+            });
+          }
+        };
+
+        await processFolder(currentUser.id);
+        
         setCustomTemplates(templates);
+        setFolders(Array.from(foundFolders));
       } catch (err) {
         console.error('Failed to load custom templates', err);
       }
@@ -610,9 +636,11 @@ export default function Contracts() {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !currentUser?.id) return;
+    if (!file || !currentUser?.id || !supabase) return;
     
     setIsUploading(true);
+    const uploadPath = currentUser.id + '/' + file.name;
+    
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
       const supportedTypes = ['html', 'txt', 'pdf', 'docx'];
@@ -673,18 +701,19 @@ export default function Contracts() {
       }
 
       if (supabase) {
-        const uploadPath = currentUser.id + '/' + file.name;
         await supabase.storage
           .from('contract_templates')
           .upload(uploadPath, file, { upsert: true });
       }
 
       const newTemplate: ContractTemplate = {
-        id: file.name,
+        id: uploadPath,
         name: baseName,
         category: 'Custom',
         content,
-        isCustom: true
+        isCustom: true,
+        folder: 'Main',
+        updatedAt: new Date().toISOString()
       };
       
       setCustomTemplates(prev => {
@@ -705,31 +734,22 @@ export default function Contracts() {
   };
 
   const renderTemplateContent = (template: string, lead?: Lead) => {
-    let html = template;
+    let text = template;
     const now = format(new Date(), 'MMMM do, yyyy');
     
-    html = html.replace(/{{date}}/g, now);
+    text = text.replace(/{{date}}/g, now);
     
     if (lead) {
-      html = html.replace(/{{lead.name}}/g, lead.name || '[Lead Name]');
-      html = html.replace(/{{lead.email}}/g, lead.email || '[Lead Email]');
-      html = html.replace(/{{lead.phone}}/g, lead.phone || '[Lead Phone]');
-      html = html.replace(/{{lead.propertyAddress}}/g, lead.propertyAddress || '[Property Address]');
-      html = html.replace(/{{lead.estimatedValue}}/g, lead.estimatedValue?.toLocaleString() || '[Estimated Value]');
-      html = html.replace(/{{lead.offerAmount}}/g, lead.offerAmount?.toLocaleString() || '[Offer Amount]');
-    } else {
-      html = html.replace(/{{lead.name}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Lead Name]</span>');
-      html = html.replace(/{{lead.email}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Lead Email]</span>');
-      html = html.replace(/{{lead.phone}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Lead Phone]</span>');
-      html = html.replace(/{{lead.propertyAddress}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Property Address]</span>');
-      html = html.replace(/{{lead.estimatedValue}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Estimated Value]</span>');
-      html = html.replace(/{{lead.offerAmount}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Offer Amount]</span>');
+      text = text.replace(/{{lead.name}}/g, lead.name || '[Lead Name]');
+      text = text.replace(/{{lead.email}}/g, lead.email || '[Lead Email]');
+      text = text.replace(/{{lead.phone}}/g, lead.phone || '[Lead Phone]');
+      text = text.replace(/{{lead.propertyAddress}}/g, lead.propertyAddress || '[Property Address]');
+      text = text.replace(/{{lead.estimatedValue}}/g, lead.estimatedValue?.toLocaleString() || '[Estimated Value]');
+      text = text.replace(/{{lead.offerAmount}}/g, lead.offerAmount?.toLocaleString() || '[Offer Amount]');
     }
 
-    return html;
+    return text;
   };
-
-
 
   const handleExportPDF = async () => {
     const element = document.getElementById('contract-preview');
@@ -740,7 +760,7 @@ export default function Contracts() {
       filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as 'portrait' }
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
     };
     
     setIsExporting(true);
@@ -756,54 +776,45 @@ export default function Contracts() {
     }
   };
 
-  const handleEmailLead = async () => {
-    const element = document.getElementById('contract-preview');
-    if (!element) return;
-
-    const opt = {
-      margin: [10, 10] as [number, number],
-      filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as 'portrait' }
-    };
+  const handleEmailLead = () => {
+    if (!selectedLead) return;
+    setShowEmailModal(true);
+    setAttachment(null);
     
-    setIsExporting(true);
-    try {
-      // @ts-ignore
-      const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
-      
-      const reader = new FileReader();
-      reader.readAsDataURL(pdfBlob);
-      reader.onloadend = () => {
-        const base64data = reader.result as string;
-        setAttachment({
-          filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
-          content: base64data.split(',')[1],
-          contentType: 'application/pdf'
-        });
-        setShowEmailModal(true);
+    const element = document.getElementById('contract-preview');
+    if (element) {
+      setIsExporting(true);
+      const opt = {
+        margin: [10, 10] as [number, number],
+        filename: `Contract_${selectedLead.name || 'Draft'}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
       };
-    } catch (err) {
-      console.error('Email preparation failed', err);
-    } finally {
-      setIsExporting(false);
+
+      // @ts-ignore
+      html2pdf().from(element).set(opt).output('blob').then((pdfBlob: Blob) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(pdfBlob);
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          setAttachment({
+            filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
+            content: base64data.split(',')[1],
+            contentType: 'application/pdf'
+          });
+          setIsExporting(false);
+        };
+      }).catch((err: any) => {
+        console.error('Email preparation failed', err);
+        setIsExporting(false);
+      });
     }
   };
 
   const handleToggleEdit = () => {
     if (isEditing) {
-      // If saving in plain text mode, we might want to convert it to basic HTML
-      // or save as is depending on user choice.
-      let finalContent = editedContent;
-      if (editorMode === 'plain' && saveFormat === 'html') {
-        finalContent = editedContent
-          .split('\n')
-          .map(line => line.trim() ? `<p>${line}</p>` : '<br/>')
-          .join('\n');
-      }
-
-      const updatedTemplate = { ...activeTemplate, content: finalContent };
+      const updatedTemplate = { ...activeTemplate, content: editedContent };
       if (activeTemplate.isCustom) {
         setCustomTemplates(prev => prev.map(t => t.id === activeTemplate.id ? updatedTemplate : t));
       }
@@ -815,35 +826,72 @@ export default function Contracts() {
     }
   };
 
-  const convertToPlainText = (html: string) => {
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-    
-    // Replace <p> and <br> with newlines before stripping
-    const paragraphs = temp.querySelectorAll('p, div, br, h1, h2, h3, h4, h5, h6, li');
-    paragraphs.forEach(p => {
-      p.after('\n');
-    });
-    
-    return temp.textContent || temp.innerText || '';
-  };
-
-  const insertText = (before: string, after: string = '') => {
+  const insertVariable = (variable: string) => {
     const textarea = document.getElementById('contract-editor') as HTMLTextAreaElement;
     if (!textarea) return;
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = textarea.value;
-    const selected = text.substring(start, end);
-    const replacement = before + selected + after;
+    const replacement = `{{${variable}}}`;
     
     setEditedContent(text.substring(0, start) + replacement + text.substring(end));
     
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(start + before.length, end + before.length);
+      textarea.setSelectionRange(start + replacement.length, start + replacement.length);
     }, 0);
+  };
+
+  const handleCreateFolder = () => {
+    if (!newFolderName.trim()) return;
+    setFolders(prev => [...new Set([...prev, newFolderName.trim()])]);
+    setNewFolderName('');
+    setIsCreatingFolder(false);
+  };
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!supabase || !currentUser?.id) return;
+    if (!confirm('Are you sure you want to delete this template?')) return;
+
+    try {
+      const { error } = await supabase.storage.from('contract_templates').remove([templateId]);
+      if (error) throw error;
+
+      setCustomTemplates(prev => prev.filter(t => t.id !== templateId));
+      if (activeTemplate.id === templateId) {
+        setActiveTemplate(PREBUILT_TEMPLATES[0]);
+      }
+    } catch (err) {
+      console.error('Failed to delete template', err);
+      alert('Failed to delete template');
+    }
+  };
+
+  const handleMoveTemplate = async (templateId: string, destFolder: string) => {
+    if (!supabase || !currentUser?.id) return;
+    const template = customTemplates.find(t => t.id === templateId);
+    if (!template) return;
+
+    try {
+      const fileName = templateId.split('/').pop();
+      const newPath = `${currentUser.id}/${destFolder === 'Main' ? '' : destFolder + '/'}${fileName}`;
+      
+      // Supabase storage doesn't have "move", so we copy and remove
+      const { error: copyError } = await supabase.storage.from('contract_templates').copy(templateId, newPath);
+      if (copyError) throw copyError;
+
+      const { error: removeError } = await supabase.storage.from('contract_templates').remove([templateId]);
+      if (removeError) throw removeError;
+
+      setCustomTemplates(prev => prev.map(t => t.id === templateId ? { ...t, id: newPath, folder: destFolder } : t));
+      if (activeTemplate.id === templateId) {
+        setActiveTemplate({ ...activeTemplate, id: newPath, folder: destFolder });
+      }
+    } catch (err) {
+      console.error('Failed to move template', err);
+      alert('Failed to move template');
+    }
   };
 
   return (
@@ -869,14 +917,15 @@ export default function Contracts() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {['Acquisitions', 'Dispositions', 'Creative Finance', 'Property Management', 'Custom'].map(category => {
-            const allTemplates = [...PREBUILT_TEMPLATES, ...customTemplates];
-            const temps = allTemplates.filter(t => t.category === category && t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          {/* Default Categories */}
+          {['Acquisitions', 'Dispositions', 'Creative Finance', 'Property Management'].map(category => {
+            const temps = PREBUILT_TEMPLATES.filter(t => t.category === category && t.name.toLowerCase().includes(searchQuery.toLowerCase()));
             if (temps.length === 0) return null;
             
             return (
               <div key={category}>
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-3 px-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] mb-3 px-2 flex items-center gap-2">
+                  <Shield size={10} className="text-[var(--t-primary)]" />
                   {category}
                 </h3>
                 <div className="space-y-1">
@@ -902,6 +951,84 @@ export default function Contracts() {
               </div>
             );
           })}
+
+          {/* Folders & Custom Templates */}
+          <div className="pt-4 border-t border-[var(--t-border)]">
+            <div className="flex items-center justify-between px-2 mb-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)]">Custom Templates</h3>
+              <button 
+                onClick={() => setIsCreatingFolder(true)}
+                className="p-1 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-primary)]"
+                title="New Folder"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+
+            {isCreatingFolder && (
+              <div className="px-2 mb-4">
+                <div className="flex gap-2">
+                  <input 
+                    autoFocus
+                    className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-[var(--t-input-bg)] border border-[var(--t-border)] text-[var(--t-text)] outline-none focus:ring-1 focus:ring-[var(--t-primary)]"
+                    placeholder="Folder name..."
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
+                  />
+                  <button onClick={handleCreateFolder} className="p-1 px-2 bg-[var(--t-primary)] text-white rounded-lg text-[10px] font-bold">Add</button>
+                </div>
+              </div>
+            )}
+
+            {folders.map(folder => {
+              const folderTemplates = customTemplates.filter(t => t.folder === folder && t.name.toLowerCase().includes(searchQuery.toLowerCase()));
+              return (
+                <div key={folder} className="mb-4">
+                  <div className="flex items-center gap-2 px-2 mb-2 text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest">
+                    <span>📁 {folder}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {folderTemplates.map(tmpl => (
+                      <div key={tmpl.id} className="relative group">
+                        <button
+                          onClick={() => setActiveTemplate(tmpl)}
+                          className={`w-full flex items-start text-left p-3 rounded-xl transition-all ${
+                            activeTemplate.id === tmpl.id 
+                              ? 'bg-[var(--t-primary-dim)] border border-[var(--t-primary)]' 
+                              : 'hover:bg-[var(--t-surface-hover)] border border-transparent'
+                          }`}
+                        >
+                          <FileText size={16} className={`mt-0.5 shrink-0 mr-3 ${activeTemplate.id === tmpl.id ? 'text-[var(--t-primary)]' : 'text-[var(--t-text-muted)]'}`} />
+                          <div className="flex-1 pr-12">
+                            <p className="text-sm font-medium">{tmpl.name}</p>
+                          </div>
+                        </button>
+                        
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <select 
+                            onChange={(e) => handleMoveTemplate(tmpl.id, e.target.value)}
+                            className="text-[9px] bg-white border border-gray-100 rounded px-1 py-0.5 outline-none hover:border-[var(--t-primary)]"
+                            value={folder}
+                            title="Move to Folder"
+                          >
+                            {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                          </select>
+                          <button 
+                            onClick={() => handleDeleteTemplate(tmpl.id)}
+                            className="p-1 text-red-400 hover:bg-red-50 rounded"
+                            title="Delete"
+                          >
+                            <Plus size={12} className="rotate-45" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="p-4 border-t border-[var(--t-border)]">
@@ -951,60 +1078,24 @@ export default function Contracts() {
             </div>
             
             {isEditing && (
-              <div className="flex items-center gap-4 border-r border-[var(--t-border)] pr-4">
-                <div className="flex items-center gap-1 bg-[var(--t-surface-subtle)] p-1 rounded-xl">
-                  <button 
-                    onClick={() => {
-                      if (editorMode === 'plain') {
-                        // Attempt to wrap plain text back into basic HTML
-                        const htmlContent = editedContent
-                          .split('\n')
-                          .map(line => line.trim() ? `<p>${line}</p>` : '<br/>')
-                          .join('\n');
-                        setEditedContent(htmlContent);
-                        setEditorMode('rich');
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${editorMode === 'rich' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)]'}`}
-                  >
-                    Rich Text
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (editorMode === 'rich') {
-                        setEditedContent(convertToPlainText(editedContent));
-                        setEditorMode('plain');
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${editorMode === 'plain' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)]'}`}
-                  >
-                    Plain Text
-                  </button>
+              <div className="flex items-center gap-2 border-r border-[var(--t-border)] pr-4">
+                <span className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest mr-2">Insert:</span>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { label: 'Name', var: 'lead.name' },
+                    { label: 'Address', var: 'lead.propertyAddress' },
+                    { label: 'Offer', var: 'lead.offerAmount' },
+                    { label: 'Date', var: 'date' }
+                  ].map(v => (
+                    <button
+                      key={v.var}
+                      onClick={() => insertVariable(v.var)}
+                      className="px-2 py-1 rounded bg-[var(--t-surface-subtle)] hover:bg-[var(--t-primary-dim)] hover:text-[var(--t-primary)] text-[9px] font-bold border border-[var(--t-border)] transition-colors"
+                    >
+                      {v.label}
+                    </button>
+                  ))}
                 </div>
-
-                <div className="flex flex-col">
-                  <label className="text-[8px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-0.5">Save As</label>
-                  <select 
-                    value={saveFormat}
-                    onChange={(e) => setSaveFormat(e.target.value as 'html' | 'txt')}
-                    className="bg-transparent text-[10px] font-bold text-[var(--t-primary)] outline-none border-none p-0 cursor-pointer"
-                  >
-                    <option value="html">HTML Document</option>
-                    <option value="txt">Plain Text (TXT)</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {isEditing && editorMode === 'rich' && (
-              <div className="flex items-center gap-1 border-r border-[var(--t-border)] pr-4">
-                <button onClick={() => insertText('<strong>', '</strong>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Bold"><Bold size={16} /></button>
-                <button onClick={() => insertText('<em>', '</em>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Italic"><Italic size={16} /></button>
-                <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
-                <button onClick={() => insertText('<ul>\n  <li>', '</li>\n</ul>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="List"><List size={16} /></button>
-                <button onClick={() => insertText('<ol>\n  <li>', '</li>\n</ol>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Ordered List"><ListOrdered size={16} /></button>
-                <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
-                <button onClick={() => insertText('<h2>', '</h2>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Heading"><Type size={16} /></button>
               </div>
             )}
           </div>
@@ -1061,7 +1152,7 @@ export default function Contracts() {
                 id="contract-editor"
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className={`flex-1 w-full p-12 text-sm text-slate-800 bg-white border-none outline-none resize-none leading-relaxed ${editorMode === 'plain' ? 'font-sans whitespace-pre-wrap' : 'font-mono'}`}
+                className="flex-1 w-full p-12 text-sm text-slate-800 bg-white border-none outline-none resize-none leading-relaxed font-sans whitespace-pre-wrap"
                 placeholder="Paste your contract text here..."
               />
               <div className="p-4 bg-amber-50 border-t border-amber-100 flex items-center gap-3">
@@ -1076,11 +1167,12 @@ export default function Contracts() {
               style={{ 
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
                 padding: '0.75in',
+                minHeight: '11in'
               }}
             >
               <div 
                 ref={documentRef}
-                className="prose prose-sm max-w-none contract-content"
+                className="prose prose-sm max-w-none contract-content whitespace-pre-wrap"
                 style={{
                   fontFamily: '"Times New Roman", Times, serif',
                   lineHeight: '1.6',

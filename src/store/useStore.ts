@@ -1663,6 +1663,10 @@ interface AppState {
   revertToBackup: (id: string) => void;
   deleteBackup: (id: string) => void;
   exportData: () => void;
+  
+  // NEW: Pricing & Plan Helpers
+  getMemberPrice: (tier: string) => number;
+  canAddMember: () => { can: boolean; reason?: string };
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -2292,6 +2296,37 @@ export const useStore = create<AppState>((set, get) => ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  },
+
+  getMemberPrice: (tier: string) => {
+    const t = tier.toLowerCase();
+    if (t === 'team') return 5;
+    if (t === 'solo' || t === 'pro') return 10;
+    return 0; // Free or Agency
+  },
+
+  canAddMember: () => {
+    const { currentUser, team } = get();
+    const tier = (currentUser?.subscriptionTier || 'Free').toLowerCase();
+    const count = team.length;
+
+    if (tier === 'free') {
+      return { can: false, reason: 'Free plan does not support team members. Please upgrade to Solo, Pro, or Team.' };
+    }
+
+    const limits: Record<string, number> = {
+      'solo': 1,
+      'pro': 5,
+      'team': 20,
+      'agency': 9999
+    };
+
+    const limit = limits[tier] || 1;
+    if (count < limit) {
+      return { can: true };
+    }
+
+    return { can: false, reason: `You have reached the ${limit} seat limit for your ${tier} plan. Please upgrade or add an extra seat.` };
   },
 
   setSMSAutoReplyEnabled: async (v: boolean) => {

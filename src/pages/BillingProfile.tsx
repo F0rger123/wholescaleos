@@ -216,7 +216,7 @@ export default function BillingProfile() {
 }
 
 function BillingTab() {
-  const { currentUser, team } = useStore();
+  const { currentUser, team, getMemberPrice } = useStore();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const planLimits: Record<string, number> = {
@@ -233,6 +233,9 @@ function BillingTab() {
   const remainingSeats = Math.max(0, maxSeats - currentSeats);
 
   const [targetSeats, setTargetSeats] = useState(currentSeats);
+  const seatPrice = getMemberPrice(currentPlan);
+  const extraSeats = Math.max(0, targetSeats - maxSeats);
+  const extraCost = extraSeats * seatPrice;
 
   // Sync targetSeats with currentSeats when plan or team changes
   useEffect(() => {
@@ -320,7 +323,8 @@ function BillingTab() {
               <div>
                 <h2 className="text-4xl font-black">{currentUser?.subscriptionTier || 'Free Tier'}</h2>
                 <p className="opacity-80 font-medium">
-                  {currentUser?.subscriptionTier === 'Free' ? 'Unlock full OS potential' : '$27/month per seat • Billed Annually'}
+                  {currentUser?.subscriptionTier === 'Free' ? 'Unlock full OS potential' : 
+                    `${currentPlan === 'team' ? '$197' : currentPlan === 'pro' ? '$97' : '$27'}/mo base + $${seatPrice}/mo per extra seat`}
                 </p>
               </div>
 
@@ -354,9 +358,11 @@ function BillingTab() {
             <button 
               onClick={() => handleUpgrade()}
               disabled={loading}
-              className={`px-6 py-3 rounded-xl border font-bold transition-all text-sm disabled:opacity-50 ${targetSeats !== currentSeats ? 'bg-yellow-400 text-yellow-900 border-yellow-400 hover:bg-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-white text-blue-600 hover:bg-gray-100'}`}
+              className={`px-6 py-3 rounded-xl border font-bold transition-all text-sm disabled:opacity-50 ${targetSeats > currentSeats ? 'bg-yellow-400 text-yellow-900 border-yellow-400 hover:bg-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-white text-blue-600 hover:bg-gray-100'}`}
             >
-              {loading ? <Loader2 size={16} className="animate-spin" /> : (currentUser?.subscriptionTier === 'Free' ? 'Upgrade Now' : (targetSeats !== currentSeats ? 'Update Seats' : 'Change Plan'))}
+              {loading ? <Loader2 size={16} className="animate-spin" /> : 
+                (currentUser?.subscriptionTier === 'Free' ? 'Upgrade Now' : 
+                (targetSeats > currentSeats ? `Update: +$${extraCost}/mo` : 'Change Plan'))}
             </button>
           </div>
           <div className="mt-12 pt-8 border-t border-white/20 flex flex-wrap gap-8 relative z-10">

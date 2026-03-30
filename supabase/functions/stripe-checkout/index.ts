@@ -74,28 +74,22 @@ Deno.serve(async (req: Request) => {
     };
 
     const priceId = priceMap[plan] || priceMap['solo'];
-    console.log(`[Stripe] Using price ID: ${priceId} for plan: ${plan}`);
+    console.log(`[Stripe] Configuration: Plan=${plan}, PriceID=${priceId}, Seats=${seats}, Email=${user.email}`);
 
     // Determine quantity - if it's the 'pro' or 'team' plan, we might want to scale by seats
     const quantity = Math.max(1, parseInt(seats?.toString() || '1'));
     
     let lineItems = [{ price: priceId, quantity }];
 
-    console.log(`[Stripe] Creating session for ${user.email} with ${quantity} x ${priceId}`);
+    const publicUrl = Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173';
+    const success_url_final = success_url || `${publicUrl}/dashboard/billing?tab=billing&session_id={CHECKOUT_SESSION_ID}`;
+    const cancel_url_final = cancel_url || `${publicUrl}/dashboard/billing?tab=billing`;
+
+    console.log(`[Stripe] Redirecting to: Success=${success_url_final}, Cancel=${cancel_url_final}`);
 
     try {
-      const session = await stripe.checkout.sessions.create({
-        customer_email: user.email,
-        line_items: lineItems,
-        mode: 'subscription',
-        allow_promotion_codes: true, // Enable promo codes in Stripe Checkout
-    const success_url_final = success_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing&session_id={CHECKOUT_SESSION_ID}`;
-    const cancel_url_final = cancel_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing`;
-
-    console.log(`[Stripe] Success Redirect: ${success_url_final}`);
-    console.log(`[Stripe] Cancel Redirect: ${cancel_url_final}`);
-
-    try {
+      console.log(`[Stripe] Creating session for ${user.email} with ${quantity} x ${priceId}`);
+      
       const session = await stripe.checkout.sessions.create({
         customer_email: user.email,
         line_items: lineItems,
@@ -124,9 +118,9 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           error: stripeError.message, 
-          code: stripeError.code,
-          type: stripeError.type,
-          detail: 'Failed to create Stripe checkout session. Please verify your Price IDs.'
+          code: stripeError.code || 'stripe_error',
+          type: stripeError.type || 'api_error',
+          detail: 'Failed to create Stripe checkout session. Please verify your Price IDs in the priceMap object.'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -137,7 +131,7 @@ Deno.serve(async (req: Request) => {
   } catch (error: any) {
     console.error('[Stripe] Unexpected function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message, detail: 'Internal Server Error in Edge Function' }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
@@ -145,3 +139,4 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+

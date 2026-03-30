@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Mail, Phone, Award, DollarSign, TrendingUp, Plus, X, Check,
   Shield, Eye, Crown, Copy, RefreshCw, UserMinus, ChevronDown,
@@ -38,8 +39,10 @@ export default function Team() {
     updateMemberStatus, setCustomStatus, updateMemberRole,
     addTeamMember, removeTeamMember,
     regenerateInviteCode, updateTeamConfig,
+    canAddMember
   } = useStore();
 
+  const navigate = useNavigate();
   const [showInvite, setShowInvite] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -111,6 +114,15 @@ export default function Team() {
   };
 
   const handleAddMember = () => {
+    const { can, reason } = canAddMember();
+    if (!can) {
+      alert(reason);
+      if (reason?.includes('upgrade')) {
+        navigate('/billing');
+      }
+      return;
+    }
+
     if (!newMember.name.trim() || !newMember.email.trim()) return;
     const initials = (newMember.name || 'Member').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     addTeamMember({
@@ -342,7 +354,16 @@ export default function Team() {
             <Copy size={14} /> Invite Code
           </button>
           <button
-            onClick={() => { setShowAddMember(true); }}
+            onClick={() => { 
+              const { can, reason } = canAddMember();
+              if (!can) {
+                if (window.confirm(`${reason}\n\nWould you like to upgrade your plan or add an extra seat?`)) {
+                  navigate('/billing');
+                }
+                return;
+              }
+              setShowAddMember(true); 
+            }}
             className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-xl transition-colors"
             style={{
               backgroundColor: 'var(--t-primary)',
