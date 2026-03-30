@@ -55,7 +55,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const { plan, cancel_url, success_url, seats = 1 } = body;
-    console.log('Checkout request:', { plan, seats, email: user.email });
+    const userId = user.id;
+    const userEmail = user.email;
+    const origin = req.headers.get('origin') || '';
 
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeKey || stripeKey.length < 10) {
@@ -100,7 +102,7 @@ Deno.serve(async (req: Request) => {
         client_reference_id: user.id,
         metadata: {
           userId: user.id,
-          plan: plan,
+          plan: plan || 'solo',
           seats: quantity.toString()
         },
       });
@@ -114,13 +116,21 @@ Deno.serve(async (req: Request) => {
         }
       );
     } catch (stripeError: any) {
-      console.error('[Stripe] Checkout session creation failed:', stripeError);
+      console.error('[Stripe] Checkout session creation failed. Full error:', JSON.stringify(stripeError, null, 2));
+      
+      // Provide more helpful error messages for common Stripe issues
+      let friendlyMessage = stripeError.message;
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        friendlyMessage = `Invalid request to Stripe: ${stripeError.message}. This usually means a Price ID (${priceId}) is incorrect or the product is inactive.`;
+      }
+
       return new Response(
         JSON.stringify({ 
-          error: stripeError.message, 
+          error: friendlyMessage, 
           code: stripeError.code || 'stripe_error',
           type: stripeError.type || 'api_error',
-          detail: 'Failed to create Stripe checkout session. Please verify your Price IDs in the priceMap object.'
+          priceId: priceId,
+          detail: 'Failed to create Stripe checkout session. Please verify your Price IDs in the priceMap object match your Stripe Dashboard.'
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -131,7 +141,11 @@ Deno.serve(async (req: Request) => {
   } catch (error: any) {
     console.error('[Stripe] Unexpected function error:', error);
     return new Response(
-      JSON.stringify({ error: error.message, detail: 'Internal Server Error in Edge Function' }),
+      JSON.stringify({ 
+        error: error.message, 
+        detail: 'Internal Server Error in Edge Function',
+        stack: error.stack
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,

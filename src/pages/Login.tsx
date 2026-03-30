@@ -535,20 +535,25 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             console.log('[Auth] User signed in, checking MFA requirements...');
             
             // 1. Check AAL
-            const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (aalError) console.error('[Auth] MFA getAAL error:', aalError);
             console.log('[Auth] Current AAL:', aalData);
 
             // 2. List factors to see if any are verified
             const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
             if (factorsError) console.error('[Auth] MFA listFactors error:', factorsError);
             
-            const totemFactor = factors?.totp?.find(f => f.status === 'verified');
+            // Handle multiple factor types (TOTP, etc.)
+            const allFactors = (factors as any)?.all || [];
+            const verifiedFactor = allFactors.find((f: any) => f.status === 'verified');
 
-            // Force MFA if we have a verified factor and we are still at AAL1
-            if (totemFactor && aalData?.currentLevel !== 'aal2') {
-              console.log('[Auth] Verified factor found, switching to MFA mode:', totemFactor.id);
-              setMfaFactorId(totemFactor.id);
+            // Force MFA if we have a verified factor and the session is only AAL1
+            // Or if nextLevel is aal2, indicating MFA is expected/available
+            if (verifiedFactor && aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
+              console.log('[Auth] MFA required. Verified factor:', verifiedFactor.id, 'of type:', verifiedFactor.factorType);
+              setMfaFactorId(verifiedFactor.id);
               setPartialUser(data.user);
+              setMfaCode(''); // Ensure input is clear
               setMode('mfa');
               setLoading(false);
               return;

@@ -20,14 +20,10 @@ interface ContractTemplate {
   updatedAt?: string;
 }
 
-const DISCLAIMER_HTML = `
-  <div style="margin-top: 60px; padding-top: 20px; border-top: 2px solid #ccc;">
-    <p style="font-size: 9px; color: #888; line-height: 1.5; text-align: center; font-style: italic;">
-      <strong>DISCLAIMER:</strong> This document is a template only. It does not constitute legal advice. 
-      Consult with a qualified real estate attorney before using any contract. 
-      Wholescale OS is not liable for any legal issues arising from use of these templates.
-    </p>
-  </div>
+const DISCLAIMER_TEXT = `
+DISCLAIMER: This document is a template only. It does not constitute legal advice. 
+Consult with a qualified real estate attorney before using any contract. 
+Wholescale OS is not liable for any legal issues arising from use of these templates.
 `;
 
 const PREBUILT_TEMPLATES: ContractTemplate[] = [
@@ -35,523 +31,405 @@ const PREBUILT_TEMPLATES: ContractTemplate[] = [
     id: 'wholesale-purchase',
     name: 'Wholesale Purchase Agreement',
     category: 'Acquisitions',
-    content: `
-      <h1>PURCHASE AND SALE AGREEMENT</h1>
-      <p style="text-align: center; margin-bottom: 2rem;">This Agreement is made and entered into on <strong>{{date}}</strong><br/>by and between the following parties:</p>
-      
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>SELLER:</strong><br/>
-            Name: {{lead.name}}<br/>
-            Email: {{lead.email}}<br/>
-            Phone: {{lead.phone}}
-          </td>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>BUYER:</strong><br/>
-            Name: [Your Company Name]<br/>
-            Email: [Your Email]<br/>
-            Phone: [Your Phone]
-          </td>
-        </tr>
-      </table>
+    content: `PURCHASE AND SALE AGREEMENT
 
-      <h2>1. PROPERTY DESCRIPTION</h2>
-      <p>The Seller agrees to sell and Buyer agrees to purchase the real property located at:<br/>
-      <strong>{{lead.propertyAddress}}</strong><br/>
-      together with all improvements, fixtures, and appurtenances thereon (the "Property"), more fully described in Exhibit A attached hereto and incorporated herein by reference.</p>
-      
-      <h2>2. PURCHASE PRICE AND TERMS</h2>
-      <p>The total purchase price for the Property shall be <strong>\${{lead.offerAmount}}</strong> (the "Purchase Price"), payable at closing in cash or certified funds. The parties acknowledge that the estimated market value of the Property is approximately <strong>\${{lead.estimatedValue}}</strong>.</p>
-      
-      <h2>3. EARNEST MONEY DEPOSIT</h2>
-      <p>Within three (3) business days following the Effective Date of this Agreement, Buyer shall deposit earnest money in the amount of <strong>$1,000.00</strong> ("Earnest Money") with the designated escrow agent or title company. Said Earnest Money shall be applied toward the Purchase Price at closing or refunded to Buyer in accordance with the terms of this Agreement.</p>
-      
-      <h2>4. CLOSING DATE</h2>
-      <p>The closing of this transaction ("Closing") shall occur on or before <strong>thirty (30) calendar days</strong> from the Effective Date of this Agreement, or at such other time as the parties may mutually agree in writing. Time is of the essence with respect to the Closing Date.</p>
-      
-      <h2>5. FINANCING CONTINGENCY</h2>
-      <p>This is a <strong>CASH PURCHASE</strong>. There is no financing contingency. Buyer represents that Buyer has sufficient funds available to complete the purchase and will provide proof of funds within five (5) business days of the Effective Date.</p>
-      
-      <h2>6. INSPECTION CONTINGENCY</h2>
-      <p>Buyer shall have a period of <strong>ten (10) business days</strong> from the Effective Date (the "Inspection Period") to conduct, at Buyer's expense, any inspections, tests, surveys, or studies of the Property that Buyer deems necessary. If the results of such inspections are unsatisfactory to Buyer in Buyer's sole discretion, Buyer may terminate this Agreement by providing written notice to Seller prior to the expiration of the Inspection Period, and the Earnest Money shall be returned to Buyer.</p>
-      
-      <h2>7. TITLE AND SURVEY</h2>
-      <p>Seller shall convey marketable and insurable fee simple title to the Property by general warranty deed, free and clear of all liens, encumbrances, easements, and restrictions except those acceptable to Buyer. Seller shall provide a preliminary title commitment within ten (10) days of the Effective Date. Buyer shall have five (5) business days following receipt of the title commitment to raise any objections. Any title defects not cured by Seller within ten (10) days of Buyer's objection shall entitle Buyer to terminate this Agreement and receive a full refund of the Earnest Money.</p>
-      
-      <h2>8. CLOSING COSTS</h2>
-      <p>Closing costs shall be allocated as follows:</p>
-      <ul style="margin-left: 20px;">
-        <li><strong>Seller</strong> shall pay: Documentary stamps on the deed, Seller's share of prorated taxes and assessments, any outstanding liens or mortgages, and Seller's attorney fees.</li>
-        <li><strong>Buyer</strong> shall pay: Recording fees for the deed, Buyer's title insurance policy, escrow fees, and Buyer's attorney fees.</li>
-      </ul>
-      
-      <h2>9. PROPERTY CONDITION — "AS-IS"</h2>
-      <p>Buyer is purchasing the Property in its present <strong>"AS-IS, WHERE-IS"</strong> condition with all faults, whether known or unknown. Seller makes no warranties or representations regarding the condition of the Property, including but not limited to structural integrity, mechanical systems, environmental conditions, roof, foundation, plumbing, electrical, HVAC, or compliance with building codes and zoning ordinances. Seller is not required to make any repairs or improvements.</p>
-      
-      <h2>10. RIGHT TO ASSIGN</h2>
-      <p>Buyer may assign this Agreement, in whole or in part, to any entity or individual <strong>without Seller's prior consent</strong>. Upon assignment, the assignee shall assume all of Buyer's obligations hereunder and Buyer shall be released from further liability, provided the assignee performs all terms and conditions of this Agreement.</p>
+This Agreement is made and entered into on {{date}}
+by and between the following parties:
 
-      <h2>11. DEFAULT AND REMEDIES</h2>
-      <p>If Buyer defaults under this Agreement, Seller's sole remedy shall be to retain the Earnest Money as liquidated damages. If Seller defaults, Buyer may (a) seek specific performance of this Agreement, (b) terminate this Agreement and receive a full refund of the Earnest Money, or (c) pursue any other remedy available at law or in equity.</p>
+SELLER:
+Name: {{lead.name}}
+Email: {{lead.email}}
+Phone: {{lead.phone}}
 
-      <h2>12. ENTIRE AGREEMENT</h2>
-      <p>This Agreement constitutes the entire agreement between the parties and supersedes all prior negotiations, representations, warranties, commitments, offers, and contracts, whether written or oral. This Agreement may not be modified or amended except by a written instrument signed by both parties. If any provision of this Agreement is held to be invalid or unenforceable, the remaining provisions shall remain in full force and effect.</p>
+BUYER:
+Name: [Your Company Name]
+Email: [Your Email]
+Phone: [Your Phone]
 
-      <h2>13. GOVERNING LAW</h2>
-      <p>This Agreement shall be governed by and construed in accordance with the laws of the state in which the Property is located.</p>
+1. PROPERTY DESCRIPTION
+The Seller agrees to sell and Buyer agrees to purchase the real property located at:
+{{lead.propertyAddress}}
+together with all improvements, fixtures, and appurtenances thereon (the "Property"), more fully described in Exhibit A attached hereto and incorporated herein by reference.
 
-      <h2>14. NOTICES</h2>
-      <p>All notices required or permitted under this Agreement shall be in writing and shall be deemed delivered when personally delivered, sent by certified mail (return receipt requested), or sent by nationally recognized overnight courier to the addresses listed above.</p>
+2. PURCHASE PRICE AND TERMS
+The total purchase price for the Property shall be \${{lead.offerAmount}} (the "Purchase Price"), payable at closing in cash or certified funds. The parties acknowledge that the estimated market value of the Property is approximately \${{lead.estimatedValue}}.
 
-      <div style="margin-top: 60px;">
-        <p><strong>IN WITNESS WHEREOF</strong>, the parties have executed this Agreement as of the date first written above.</p>
-      </div>
+3. EARNEST MONEY DEPOSIT
+Within three (3) business days following the Effective Date of this Agreement, Buyer shall deposit earnest money in the amount of $1,000.00 ("Earnest Money") with the designated escrow agent or title company. Said Earnest Money shall be applied toward the Purchase Price at closing or refunded to Buyer in accordance with the terms of this Agreement.
 
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Seller Signature</strong></p>
-          <p>Name: {{lead.name}}</p>
-          <p>Date: ________________</p>
-        </div>
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Buyer Signature</strong></p>
-          <p>Name: [Your Name]</p>
-          <p>Date: ________________</p>
-        </div>
-      </div>
+4. CLOSING DATE
+The closing of this transaction ("Closing") shall occur on or before thirty (30) calendar days from the Effective Date of this Agreement, or at such other time as the parties may mutually agree in writing. Time is of the essence with respect to the Closing Date.
 
-      ${DISCLAIMER_HTML}
+5. FINANCING CONTINGENCY
+This is a CASH PURCHASE. There is no financing contingency. Buyer represents that Buyer has sufficient funds available to complete the purchase and will provide proof of funds within five (5) business days of the Effective Date.
+
+6. INSPECTION CONTINGENCY
+Buyer shall have a period of ten (10) business days from the Effective Date (the "Inspection Period") to conduct, at Buyer's expense, any inspections, tests, surveys, or studies of the Property that Buyer deems necessary. If the results of such inspections are unsatisfactory to Buyer in Buyer's sole discretion, Buyer may terminate this Agreement by providing written notice to Seller prior to the expiration of the Inspection Period, and the Earnest Money shall be returned to Buyer.
+
+7. TITLE AND SURVEY
+Seller shall convey marketable and insurable fee simple title to the Property by general warranty deed, free and clear of all liens, encumbrances, easements, and restrictions except those acceptable to Buyer. Seller shall provide a preliminary title commitment within ten (10) days of the Effective Date. Buyer shall have five (5) business days following receipt of the title commitment to raise any objections. Any title defects not cured by Seller within ten (10) days of Buyer's objection shall entitle Buyer to terminate this Agreement and receive a full refund of the Earnest Money.
+
+8. CLOSING COSTS
+Closing costs shall be allocated as follows:
+- Seller shall pay: Documentary stamps on the deed, Seller's share of prorated taxes and assessments, any outstanding liens or mortgages, and Seller's attorney fees.
+- Buyer shall pay: Recording fees for the deed, Buyer's title insurance policy, escrow fees, and Buyer's attorney fees.
+
+9. PROPERTY CONDITION — "AS-IS"
+Buyer is purchasing the Property in its present "AS-IS, WHERE-IS" condition with all faults, whether known or unknown. Seller makes no warranties or representations regarding the condition of the Property, including but not limited to structural integrity, mechanical systems, environmental conditions, roof, foundation, plumbing, electrical, HVAC, or compliance with building codes and zoning ordinances. Seller is not required to make any repairs or improvements.
+
+10. RIGHT TO ASSIGN
+Buyer may assign this Agreement, in whole or in part, to any entity or individual without Seller's prior consent. Upon assignment, the assignee shall assume all of Buyer's obligations hereunder and Buyer shall be released from further liability, provided the assignee performs all terms and conditions of this Agreement.
+
+11. DEFAULT AND REMEDIES
+If Buyer defaults under this Agreement, Seller's sole remedy shall be to retain the Earnest Money as liquidated damages. If Seller defaults, Buyer may (a) seek specific performance of this Agreement, (b) terminate this Agreement and receive a full refund of the Earnest Money, or (c) pursue any other remedy available at law or in equity.
+
+12. ENTIRE AGREEMENT
+This Agreement constitutes the entire agreement between the parties and supersedes all prior negotiations, representations, warranties, commitments, offers, and contracts, whether written or oral. This Agreement may not be modified or amended except by a written instrument signed by both parties. If any provision of this Agreement is held to be invalid or unenforceable, the remaining provisions shall remain in full force and effect.
+
+13. GOVERNING LAW
+This Agreement shall be governed by and construed in accordance with the laws of the state in which the Property is located.
+
+14. NOTICES
+All notices required or permitted under this Agreement shall be in writing and shall be deemed delivered when personally delivered, sent by certified mail (return receipt requested), or sent by nationally recognized overnight courier to the addresses listed above.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first written above.
+
+Seller Signature: ________________		Buyer Signature: ________________
+Name: {{lead.name}}				Name: [Your Name]
+Date: ________________			Date: ________________
+
+${DISCLAIMER_TEXT}
     `
   },
   {
     id: 'assignment-contract',
     name: 'Assignment of Contract',
     category: 'Dispositions',
-    content: `
-      <h1>ASSIGNMENT OF REAL ESTATE PURCHASE CONTRACT</h1>
-      <p style="text-align: center; margin-bottom: 2rem;">This Assignment is entered into on <strong>{{date}}</strong>.</p>
-      
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>ASSIGNOR:</strong><br/>
-            Name: [Your Company Name]<br/>
-            (Original Buyer under the Purchase Agreement)
-          </td>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>ASSIGNEE:</strong><br/>
-            Name: ___________________________<br/>
-            Address: ___________________________<br/>
-            Phone: ___________________________
-          </td>
-        </tr>
-      </table>
+    content: `ASSIGNMENT OF REAL ESTATE PURCHASE CONTRACT
 
-      <h2>RECITALS</h2>
-      <p>WHEREAS, Assignor entered into a Purchase and Sale Agreement dated ________________ (the "Original Agreement") for the purchase of real property located at <strong>{{lead.propertyAddress}}</strong> (the "Property") from <strong>{{lead.name}}</strong> (the "Seller"); and</p>
-      <p>WHEREAS, the Original Agreement permits assignment of Buyer's rights and obligations; and</p>
-      <p>WHEREAS, Assignor desires to assign all rights, title, and interest in the Original Agreement to Assignee;</p>
-      <p>NOW, THEREFORE, in consideration of the mutual promises herein and the Assignment Fee described below, the parties agree as follows:</p>
+This Assignment is entered into on {{date}}.
 
-      <h2>1. ASSIGNMENT</h2>
-      <p>Assignor hereby assigns, transfers, and conveys to Assignee all of Assignor's right, title, and interest in and to the Original Agreement, including all rights to purchase the Property on the terms and conditions set forth therein.</p>
-      
-      <h2>2. ASSIGNMENT FEE</h2>
-      <p>In consideration for this Assignment, Assignee agrees to pay Assignor a non-refundable assignment fee of <strong>$__________</strong> (the "Assignment Fee"), payable as follows:</p>
-      <ul style="margin-left: 20px;">
-        <li><strong>$__________</strong> due upon execution of this Assignment as a non-refundable deposit.</li>
-        <li>The balance of <strong>$__________</strong> due at Closing of the transaction.</li>
-      </ul>
+ASSIGNOR:
+Name: [Your Company Name]
+(Original Buyer under the Purchase Agreement)
 
-      <h2>3. ASSUMPTION OF OBLIGATIONS</h2>
-      <p>Assignee hereby accepts and assumes all of Assignor's obligations, duties, and responsibilities under the Original Agreement, including but not limited to the obligation to close the purchase of the Property at the Purchase Price of <strong>\${{lead.offerAmount}}</strong> and in accordance with all terms and conditions of the Original Agreement.</p>
+ASSIGNEE:
+Name: ___________________________
+Address: ___________________________
+Phone: ___________________________
 
-      <h2>4. ORIGINAL AGREEMENT TERMS</h2>
-      <p>The Original Agreement, a copy of which is attached hereto as Exhibit A and incorporated herein by reference, shall remain in full force and effect. In the event of any conflict between this Assignment and the Original Agreement, the terms of the Original Agreement shall prevail.</p>
+RECITALS
+WHEREAS, Assignor entered into a Purchase and Sale Agreement dated ________________ (the "Original Agreement") for the purchase of real property located at {{lead.propertyAddress}} from {{lead.name}} (the "Seller"); and
+WHEREAS, the Original Agreement permits assignment of Buyer's rights and obligations; and
+WHEREAS, Assignor desires to assign all rights, title, and interest in the Original Agreement to Assignee;
 
-      <h2>5. REPRESENTATIONS AND WARRANTIES</h2>
-      <p>Assignor represents and warrants that: (a) Assignor has full authority to assign the Original Agreement; (b) the Original Agreement is in full force and effect; (c) Assignor is not in default under the Original Agreement; and (d) there are no outstanding claims or disputes regarding the Original Agreement.</p>
+NOW, THEREFORE, in consideration of the mutual promises herein and the Assignment Fee described below, the parties agree as follows:
 
-      <h2>6. INDEMNIFICATION</h2>
-      <p>Assignee shall indemnify and hold harmless Assignor from any and all claims, damages, losses, costs, and expenses arising from Assignee's failure to perform any obligations under the Original Agreement from and after the date of this Assignment.</p>
+1. ASSIGNMENT
+Assignor hereby assigns, transfers, and conveys to Assignee all of Assignor's right, title, and interest in and to the Original Agreement, including all rights to purchase the Property on the terms and conditions set forth therein.
 
-      <h2>7. CLOSING</h2>
-      <p>Assignee shall close on the Property in accordance with the Closing Date specified in the Original Agreement. Failure to close shall constitute a default under both this Assignment and the Original Agreement.</p>
+2. ASSIGNMENT FEE
+In consideration for this Assignment, Assignee agrees to pay Assignor a non-refundable assignment fee of \$__________ (the "Assignment Fee"), payable as follows:
+- \$__________ due upon execution of this Assignment as a non-refundable deposit.
+- The balance of \$__________ due at Closing of the transaction.
 
-      <h2>8. ENTIRE AGREEMENT</h2>
-      <p>This Assignment, together with the Original Agreement, constitutes the entire agreement between Assignor and Assignee with respect to the subject matter hereof. This Assignment may not be modified except by a written instrument signed by both Assignor and Assignee.</p>
+3. ASSUMPTION OF OBLIGATIONS
+Assignee hereby accepts and assumes all of Assignor's obligations, duties, and responsibilities under the Original Agreement, including but not limited to the obligation to close the purchase of the Property at the Purchase Price of \${{lead.offerAmount}} and in accordance with all terms and conditions of the Original Agreement.
 
-      <div style="margin-top: 60px;">
-        <p><strong>IN WITNESS WHEREOF</strong>, the parties have executed this Assignment as of the date first written above.</p>
-      </div>
+4. ORIGINAL AGREEMENT TERMS
+The Original Agreement, a copy of which is attached hereto as Exhibit A and incorporated herein by reference, shall remain in full force and effect. In the event of any conflict between this Assignment and the Original Agreement, the terms of the Original Agreement shall prevail.
 
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Assignor Signature</strong></p>
-          <p>Name: [Your Name]</p>
-          <p>Date: ________________</p>
-        </div>
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Assignee Signature</strong></p>
-          <p>Name: ___________________________</p>
-          <p>Date: ________________</p>
-        </div>
-      </div>
+5. REPRESENTATIONS AND WARRANTIES
+Assignor represents and warrants that: (a) Assignor has full authority to assign the Original Agreement; (b) the Original Agreement is in full force and effect; (c) Assignor is not in default under the Original Agreement; and (d) there are no outstanding claims or disputes regarding the Original Agreement.
 
-      ${DISCLAIMER_HTML}
+6. INDEMNIFICATION
+Assignee shall indemnify and hold harmless Assignor from any and all claims, damages, losses, costs, and expenses arising from Assignee's failure to perform any obligations under the Original Agreement from and after the date of this Assignment.
+
+7. CLOSING
+Assignee shall close on the Property in accordance with the Closing Date specified in the Original Agreement. Failure to close shall constitute a default under both this Assignment and the Original Agreement.
+
+8. ENTIRE AGREEMENT
+This Assignment, together with the Original Agreement, constitutes the entire agreement between Assignor and Assignee with respect to the subject matter hereof. This Assignment may not be modified except by a written instrument signed by both Assignor and Assignee.
+
+IN WITNESS WHEREOF, the parties have executed this Assignment as of the date first written above.
+
+Assignor Signature: ________________		Assignee Signature: ________________
+Name: [Your Name]					Name: ___________________________
+Date: ________________				Date: ________________
+
+${DISCLAIMER_TEXT}
     `
   },
   {
     id: 'fix-flip',
     name: 'Fix & Flip Joint Venture',
     category: 'Acquisitions',
-    content: `
-      <h1>FIX &amp; FLIP JOINT VENTURE AGREEMENT</h1>
-      <p style="text-align: center; margin-bottom: 2rem;">Agreement effective as of <strong>{{date}}</strong></p>
+    content: `FIX & FLIP JOINT VENTURE AGREEMENT
 
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>PARTY A (Capital Partner):</strong><br/>
-            Name: [Your Company Name]<br/>
-          </td>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>PARTY B (Property Owner):</strong><br/>
-            Name: {{lead.name}}<br/>
-            Email: {{lead.email}}<br/>
-            Phone: {{lead.phone}}
-          </td>
-        </tr>
-      </table>
+Agreement effective as of {{date}}
 
-      <h2>1. PURPOSE</h2>
-      <p>The parties enter into this Joint Venture Agreement for the purpose of acquiring, renovating, and reselling the real property located at <strong>{{lead.propertyAddress}}</strong> (the "Property") for profit.</p>
+PARTY A (Capital Partner):
+Name: [Your Company Name]
 
-      <h2>2. PROPERTY DETAILS</h2>
-      <p>Estimated Market Value (as-is): <strong>\${{lead.estimatedValue}}</strong><br/>
-      Agreed Purchase Price: <strong>\${{lead.offerAmount}}</strong><br/>
-      Estimated After Repair Value (ARV): $__________<br/>
-      Estimated Renovation Budget: $__________</p>
+PARTY B (Property Owner):
+Name: {{lead.name}}
+Email: {{lead.email}}
+Phone: {{lead.phone}}
 
-      <h2>3. CAPITAL CONTRIBUTIONS</h2>
-      <p>Party A shall contribute: $__________ for acquisition and renovation costs.<br/>
-      Party B shall contribute: the Property and/or project management services valued at $__________.</p>
-      <p>All capital contributions shall be documented and verifiable through receipts, bank statements, or closing statements.</p>
+1. PURPOSE
+The parties enter into this Joint Venture Agreement for the purpose of acquiring, renovating, and reselling the real property located at {{lead.propertyAddress}} (the "Property") for profit.
 
-      <h2>4. RESPONSIBILITIES</h2>
-      <p><strong>Party A</strong> shall be responsible for: arranging financing, managing contractor payments, and overseeing the renovation budget.</p>
-      <p><strong>Party B</strong> shall be responsible for: day-to-day project management, contractor coordination, obtaining permits, and managing the renovation timeline.</p>
+2. PROPERTY DETAILS
+Estimated Market Value (as-is): \${{lead.estimatedValue}}
+Agreed Purchase Price: \${{lead.offerAmount}}
+Estimated After Repair Value (ARV): $__________
+Estimated Renovation Budget: $__________
 
-      <h2>5. PROFIT DISTRIBUTION</h2>
-      <p>Upon the sale of the Property, net profits (defined as sale price minus total costs including acquisition, renovation, holding costs, closing costs, and commissions) shall be distributed as follows:</p>
-      <ul style="margin-left: 20px;">
-        <li>Party A: __________% of net profits</li>
-        <li>Party B: __________% of net profits</li>
-      </ul>
-      <p>Capital contributions shall be returned to each party before profit distribution.</p>
+3. CAPITAL CONTRIBUTIONS
+Party A shall contribute: $__________ for acquisition and renovation costs.
+Party B shall contribute: the Property and/or project management services valued at $__________.
+All capital contributions shall be documented and verifiable through receipts, bank statements, or closing statements.
 
-      <h2>6. TIMELINE</h2>
-      <p>The parties agree to complete renovations within __________ days of acquisition and list the Property for sale within __________ days of renovation completion. If the Property is not sold within __________ days of listing, the parties shall meet to discuss a revised strategy.</p>
+4. RESPONSIBILITIES
+Party A shall be responsible for: arranging financing, managing contractor payments, and overseeing the renovation budget.
+Party B shall be responsible for: day-to-day project management, contractor coordination, obtaining permits, and managing the renovation timeline.
 
-      <h2>7. BUDGET OVERRUNS</h2>
-      <p>Any renovation costs exceeding the approved budget by more than 10% shall require written approval from both parties. Unauthorized expenditures shall be the sole responsibility of the party who authorized them.</p>
+5. PROFIT DISTRIBUTION
+Upon the sale of the Property, net profits (defined as sale price minus total costs including acquisition, renovation, holding costs, closing costs, and commissions) shall be distributed as follows:
+- Party A: __________% of net profits
+- Party B: __________% of net profits
+Capital contributions shall be returned to each party before profit distribution.
 
-      <h2>8. DEFAULT AND DISPUTE RESOLUTION</h2>
-      <p>In the event of a dispute, the parties agree to first attempt resolution through mediation before pursuing any legal action. The prevailing party in any legal proceeding shall be entitled to recover reasonable attorney's fees.</p>
+6. TIMELINE
+The parties agree to complete renovations within __________ days of acquisition and list the Property for sale within __________ days of renovation completion. If the Property is not sold within __________ days of listing, the parties shall meet to discuss a revised strategy.
 
-      <h2>9. ENTIRE AGREEMENT</h2>
-      <p>This Agreement constitutes the entire agreement between the parties. Modifications must be in writing and signed by both parties.</p>
+7. BUDGET OVERRUNS
+Any renovation costs exceeding the approved budget by more than 10% shall require written approval from both parties. Unauthorized expenditures shall be the sole responsibility of the party who authorized them.
 
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Party A Signature</strong></p>
-          <p>Date: ________________</p>
-        </div>
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Party B Signature</strong></p>
-          <p>Name: {{lead.name}}</p>
-          <p>Date: ________________</p>
-        </div>
-      </div>
+8. DEFAULT AND DISPUTE RESOLUTION
+In the event of a dispute, the parties agree to first attempt resolution through mediation before pursuing any legal action. The prevailing party in any legal proceeding shall be entitled to recover reasonable attorney's fees.
 
-      ${DISCLAIMER_HTML}
+9. ENTIRE AGREEMENT
+This Agreement constitutes the entire agreement between the parties. Modifications must be in writing and signed by both parties.
+
+Party A Signature: ________________		Party B Signature: ________________
+Date: ________________				Name: {{lead.name}}
+						Date: ________________
+
+${DISCLAIMER_TEXT}
     `
   },
   {
     id: 'seller-financing',
     name: 'Seller Financing Agreement',
     category: 'Creative Finance',
-    content: `
-      <h1>SELLER FINANCING ADDENDUM</h1>
-      <p style="text-align: center; margin-bottom: 2rem;">Addendum to Purchase Agreement dated <strong>{{date}}</strong></p>
+    content: `SELLER FINANCING ADDENDUM
 
-      <h2>PARTIES AND PROPERTY</h2>
-      <p><strong>Seller/Lender:</strong> {{lead.name}}<br/>
-      <strong>Buyer/Borrower:</strong> [Your Company Name]<br/>
-      <strong>Property:</strong> {{lead.propertyAddress}}</p>
+Addendum to Purchase Agreement dated {{date}}
 
-      <h2>1. PRINCIPAL AMOUNT AND TERMS</h2>
-      <p>Seller agrees to finance the purchase of the Property under the following terms:</p>
-      <table style="width: 100%; border-collapse: collapse; margin: 1rem 0;">
-        <tr><td style="padding: 8px; border: 1px solid #ddd; width: 40%;"><strong>Purchase Price:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">\${{lead.offerAmount}}</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Down Payment:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">$__________</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Financed Amount:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">$__________</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Interest Rate:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">__________% per annum</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Loan Term:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">__________ months</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Monthly Payment:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">$__________</td></tr>
-        <tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>Balloon Payment Due:</strong></td><td style="padding: 8px; border: 1px solid #ddd;">[Date or N/A]</td></tr>
-      </table>
+PARTIES AND PROPERTY
+Seller/Lender: {{lead.name}}
+Buyer/Borrower: [Your Company Name]
+Property: {{lead.propertyAddress}}
 
-      <h2>2. PROMISSORY NOTE</h2>
-      <p>Buyer shall execute a Promissory Note in the amount of the financed balance, secured by a Deed of Trust or Mortgage on the Property. The promissory note shall contain the payment terms specified above.</p>
+1. PRINCIPAL AMOUNT AND TERMS
+Seller agrees to finance the purchase of the Property under the following terms:
+- Purchase Price: \${{lead.offerAmount}}
+- Down Payment: $__________
+- Financed Amount: $__________
+- Interest Rate: __________% per annum
+- Loan Term: __________ months
+- Monthly Payment: $__________
+- Balloon Payment Due: [Date or N/A]
 
-      <h2>3. SECURITY INSTRUMENT</h2>
-      <p>This financing shall be secured by a first lien position Deed of Trust or Mortgage recorded against the Property. Buyer grants Seller a security interest in the Property until the loan is paid in full.</p>
+2. PROMISSORY NOTE
+Buyer shall execute a Promissory Note in the amount of the financed balance, secured by a Deed of Trust or Mortgage on the Property. The promissory note shall contain the payment terms specified above.
 
-      <h2>4. PAYMENT TERMS</h2>
-      <p>Monthly payments are due on the 1st of each month, beginning __________. A late fee of __________% of the monthly payment or $__________ (whichever is greater) shall be assessed for payments received more than ten (10) days after the due date.</p>
+3. SECURITY INSTRUMENT
+This financing shall be secured by a first lien position Deed of Trust or Mortgage recorded against the Property. Buyer grants Seller a security interest in the Property until the loan is paid in full.
 
-      <h2>5. PREPAYMENT</h2>
-      <p>Buyer may prepay the loan in whole or in part at any time without penalty.</p>
+4. PAYMENT TERMS
+Monthly payments are due on the 1st of each month, beginning __________. A late fee of __________% of the monthly payment or $__________ (whichever is greater) shall be assessed for payments received more than ten (10) days after the due date.
 
-      <h2>6. INSURANCE AND TAXES</h2>
-      <p>Buyer shall maintain hazard insurance on the Property with Seller named as loss payee. Buyer shall pay all property taxes when due and provide Seller with evidence of payment upon request.</p>
+5. PREPAYMENT
+Buyer may prepay the loan in whole or in part at any time without penalty.
 
-      <h2>7. DEFAULT</h2>
-      <p>The following shall constitute events of default: (a) failure to make any payment within thirty (30) days of the due date; (b) failure to maintain insurance; (c) failure to pay property taxes; (d) transfer of the Property without Seller's consent. Upon default, Seller may declare the entire balance due and payable and exercise all remedies available under law.</p>
+6. INSURANCE AND TAXES
+Buyer shall maintain hazard insurance on the Property with Seller named as loss payee. Buyer shall pay all property taxes when due and provide Seller with evidence of payment upon request.
 
-      <h2>8. DUE ON SALE CLAUSE</h2>
-      <p>If Buyer sells, transfers, or conveys the Property without Seller's prior written consent, the entire unpaid balance shall become immediately due and payable.</p>
+7. DEFAULT
+The following shall constitute events of default: (a) failure to make any payment within thirty (30) days of the due date; (b) failure to maintain insurance; (c) failure to pay property taxes; (d) transfer of the Property without Seller's consent. Upon default, Seller may declare the entire balance due and payable and exercise all remedies available under law.
 
-      <h2>9. ENTIRE AGREEMENT</h2>
-      <p>This Addendum, together with the Purchase Agreement and Promissory Note, constitutes the entire agreement regarding the financing of this transaction.</p>
+8. DUE ON SALE CLAUSE
+If Buyer sells, transfers, or conveys the Property without Seller's prior written consent, the entire unpaid balance shall become immediately due and payable.
 
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Seller/Lender Signature</strong></p>
-          <p>Name: {{lead.name}}</p>
-          <p>Date: ________________</p>
-        </div>
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Buyer/Borrower Signature</strong></p>
-          <p>Name: [Your Name]</p>
-          <p>Date: ________________</p>
-        </div>
-      </div>
+9. ENTIRE AGREEMENT
+This Addendum, together with the Purchase Agreement and Promissory Note, constitutes the entire agreement regarding the financing of this transaction.
 
-      ${DISCLAIMER_HTML}
+Seller Signature: ________________		Buyer Signature: ________________
+Name: {{lead.name}}				Name: [Your Name]
+Date: ________________			Date: ________________
+
+${DISCLAIMER_TEXT}
     `
   },
   {
     id: 'standard-purchase',
     name: 'Standard Purchase Agreement',
     category: 'Acquisitions',
-    content: `
-      <h1>RESIDENTIAL PURCHASE AND SALE AGREEMENT</h1>
-      <p style="text-align: center; margin-bottom: 2rem;">Effective Date: <strong>{{date}}</strong></p>
+    content: `RESIDENTIAL PURCHASE AND SALE AGREEMENT
 
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>SELLER:</strong><br/>
-            Name: {{lead.name}}<br/>
-            Email: {{lead.email}}<br/>
-            Phone: {{lead.phone}}
-          </td>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>BUYER:</strong><br/>
-            Name: [Your Name]<br/>
-            Email: [Your Email]<br/>
-            Phone: [Your Phone]
-          </td>
-        </tr>
-      </table>
+Effective Date: {{date}}
 
-      <h2>1. PROPERTY</h2>
-      <p>Seller agrees to sell and Buyer agrees to purchase the following described real property:<br/>
-      <strong>{{lead.propertyAddress}}</strong><br/>
-      Including all improvements, fixtures, and appurtenances ("the Property").</p>
+SELLER:
+Name: {{lead.name}}
+Email: {{lead.email}}
+Phone: {{lead.phone}}
 
-      <h2>2. PURCHASE PRICE</h2>
-      <p>Purchase Price: <strong>\${{lead.offerAmount}}</strong><br/>
-      Estimated Value: <strong>\${{lead.estimatedValue}}</strong></p>
+BUYER:
+Name: [Your Name]
+Email: [Your Email]
+Phone: [Your Phone]
 
-      <h2>3. EARNEST MONEY</h2>
-      <p>Buyer shall deposit $__________ as earnest money within three (3) business days of the Effective Date with the title company or escrow agent agreed upon by the parties.</p>
+1. PROPERTY
+Seller agrees to sell and Buyer agrees to purchase the following described real property:
+{{lead.propertyAddress}}
+Including all improvements, fixtures, and appurtenances ("the Property").
 
-      <h2>4. FINANCING</h2>
-      <p>This Agreement is contingent upon Buyer obtaining financing approval within __________ days. If Buyer is unable to obtain financing, Buyer may terminate this Agreement and receive a full refund of the Earnest Money.</p>
+2. PURCHASE PRICE
+Purchase Price: \${{lead.offerAmount}}
+Estimated Value: \${{lead.estimatedValue}}
 
-      <h2>5. CLOSING</h2>
-      <p>Closing shall occur on or before __________ days from the Effective Date at a mutually agreed upon title company.</p>
+3. EARNEST MONEY
+Buyer shall deposit $__________ as earnest money within three (3) business days of the Effective Date with the title company or escrow agent agreed upon by the parties.
 
-      <h2>6. TITLE</h2>
-      <p>Seller shall convey marketable title by warranty deed free of liens and encumbrances except those acceptable to Buyer and Buyer's lender.</p>
+4. FINANCING
+This Agreement is contingent upon Buyer obtaining financing approval within __________ days. If Buyer is unable to obtain financing, Buyer may terminate this Agreement and receive a full refund of the Earnest Money.
 
-      <h2>7. INSPECTION</h2>
-      <p>Buyer shall have __________ days from the Effective Date to conduct inspections. If deficiencies are found, Buyer may request repairs, negotiate a price reduction, or terminate this Agreement.</p>
+5. CLOSING
+Closing shall occur on or before __________ days from the Effective Date at a mutually agreed upon title company.
 
-      <h2>8. PROPERTY CONDITION</h2>
-      <p>Seller represents that all major systems (HVAC, plumbing, electrical, roof, foundation) are in working condition as of the Effective Date unless otherwise disclosed. Seller shall provide all required disclosures as mandated by state law.</p>
+6. TITLE
+Seller shall convey marketable title by warranty deed free of liens and encumbrances except those acceptable to Buyer and Buyer's lender.
 
-      <h2>9. CLOSING COSTS</h2>
-      <p>Each party shall be responsible for their customary closing costs unless otherwise agreed in writing. Real property taxes shall be prorated as of the Closing Date.</p>
+7. INSPECTION
+Buyer shall have __________ days from the Effective Date to conduct inspections. If deficiencies are found, Buyer may request repairs, negotiate a price reduction, or terminate this Agreement.
 
-      <h2>10. DEFAULT AND REMEDIES</h2>
-      <p>If either party defaults, the non-defaulting party may pursue specific performance, terminate this Agreement, or seek any remedy available at law or in equity.</p>
+8. PROPERTY CONDITION
+Seller represents that all major systems (HVAC, plumbing, electrical, roof, foundation) are in working condition as of the Effective Date unless otherwise disclosed. Seller shall provide all required disclosures as mandated by state law.
 
-      <h2>11. ENTIRE AGREEMENT</h2>
-      <p>This Agreement constitutes the entire understanding between the parties and supersedes all prior agreements. Amendments must be in writing signed by both parties.</p>
+9. CLOSING COSTS
+Each party shall be responsible for their customary closing costs unless otherwise agreed in writing. Real property taxes shall be prorated as of the Closing Date.
 
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Seller Signature</strong></p>
-          <p>Name: {{lead.name}}</p>
-          <p>Date: ________________</p>
-        </div>
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Buyer Signature</strong></p>
-          <p>Name: [Your Name]</p>
-          <p>Date: ________________</p>
-        </div>
-      </div>
+10. DEFAULT AND REMEDIES
+If either party defaults, the non-defaulting party may pursue specific performance, terminate this Agreement, or seek any remedy available at law or in equity.
 
-      ${DISCLAIMER_HTML}
+11. ENTIRE AGREEMENT
+This Agreement constitutes the entire understanding between the parties and supersedes all prior agreements. Amendments must be in writing signed by both parties.
+
+Seller Signature: ________________		Buyer Signature: ________________
+Name: {{lead.name}}				Name: [Your Name]
+Date: ________________			Date: ________________
+
+${DISCLAIMER_TEXT}
     `
   },
   {
     id: 'lease-agreement',
     name: 'Lease Agreement',
     category: 'Property Management',
-    content: `
-      <h1>RESIDENTIAL LEASE AGREEMENT</h1>
-      <p style="text-align: center; margin-bottom: 2rem;">Effective Date: <strong>{{date}}</strong></p>
+    content: `RESIDENTIAL LEASE AGREEMENT
 
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem;">
-        <tr>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>LANDLORD:</strong><br/>
-            Name: [Your Company Name]
-          </td>
-          <td style="width: 50%; vertical-align: top; padding: 12px; border: 1px solid #ddd;">
-            <strong>TENANT:</strong><br/>
-            Name: {{lead.name}}<br/>
-            Email: {{lead.email}}<br/>
-            Phone: {{lead.phone}}
-          </td>
-        </tr>
-      </table>
+Effective Date: {{date}}
 
-      <h2>1. PREMISES</h2>
-      <p>Landlord leases to Tenant the property located at:<br/><strong>{{lead.propertyAddress}}</strong> ("the Premises").</p>
+LANDLORD:
+Name: [Your Company Name]
 
-      <h2>2. TERM</h2>
-      <p>The lease term shall be __________ months, commencing on __________ and ending on __________.</p>
+TENANT:
+Name: {{lead.name}}
+Email: {{lead.email}}
+Phone: {{lead.phone}}
 
-      <h2>3. RENT</h2>
-      <p>Monthly rent: $__________, due on the 1st of each month. Late fee of $__________ applies after the 5th. Payment methods accepted: __________.</p>
+1. PREMISES
+Landlord leases to Tenant the property located at:
+{{lead.propertyAddress}} ("the Premises").
 
-      <h2>4. SECURITY DEPOSIT</h2>
-      <p>Tenant shall deposit $__________ as a security deposit. The deposit will be returned within __________ days after lease termination, less any lawful deductions.</p>
+2. TERM
+The lease term shall be __________ months, commencing on __________ and ending on __________.
 
-      <h2>5. UTILITIES</h2>
-      <p>Tenant is responsible for: __________. Landlord is responsible for: __________.</p>
+3. RENT
+Monthly rent: $__________, due on the 1st of each month. Late fee of $__________ applies after the 5th. Payment methods accepted: __________.
 
-      <h2>6. MAINTENANCE AND REPAIRS</h2>
-      <p>Landlord shall maintain the structural integrity and major systems. Tenant shall maintain the Premises in clean, sanitary condition and report all needed repairs promptly. Tenant is responsible for damages caused by negligence or misuse.</p>
+4. SECURITY DEPOSIT
+Tenant shall deposit $__________ as a security deposit. The deposit will be returned within __________ days after lease termination, less any lawful deductions.
 
-      <h2>7. RULES AND RESTRICTIONS</h2>
-      <p>Pets: [Allowed / Not Allowed]. Smoking: [Allowed / Not Allowed]. Subletting: Not permitted without Landlord's written consent. Occupancy limited to __________ persons.</p>
+5. UTILITIES
+Tenant is responsible for: __________. Landlord is responsible for: __________.
 
-      <h2>8. DEFAULT AND TERMINATION</h2>
-      <p>Landlord may terminate this Lease upon __________ days written notice if Tenant fails to pay rent, violates lease terms, or causes damage to the Premises.</p>
+6. MAINTENANCE AND REPAIRS
+Landlord shall maintain the structural integrity and major systems. Tenant shall maintain the Premises in clean, sanitary condition and report all needed repairs promptly. Tenant is responsible for damages caused by negligence or misuse.
 
-      <h2>9. ENTIRE AGREEMENT</h2>
-      <p>This Lease constitutes the entire agreement. Amendments must be in writing signed by both parties.</p>
+7. RULES AND RESTRICTIONS
+Pets: [Allowed / Not Allowed]. Smoking: [Allowed / Not Allowed]. Subletting: Not permitted without Landlord's written consent. Occupancy limited to __________ persons.
 
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Landlord Signature</strong></p>
-          <p>Date: ________________</p>
-        </div>
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Tenant Signature</strong></p>
-          <p>Name: {{lead.name}}</p>
-          <p>Date: ________________</p>
-        </div>
-      </div>
+8. DEFAULT AND TERMINATION
+Landlord may terminate this Lease upon __________ days written notice if Tenant fails to pay rent, violates lease terms, or causes damage to the Premises.
 
-      ${DISCLAIMER_HTML}
+9. ENTIRE AGREEMENT
+This Lease constitutes the entire agreement. Amendments must be in writing signed by both parties.
+
+Landlord Signature: ________________		Tenant Signature: ________________
+Date: ________________				Name: {{lead.name}}
+						Date: ________________
+
+${DISCLAIMER_TEXT}
     `
   },
   {
     id: 'option-contract',
     name: 'Option to Purchase',
     category: 'Creative Finance',
-    content: `
-      <h1>REAL ESTATE OPTION AGREEMENT</h1>
-      <p style="text-align: center; margin-bottom: 2rem;">Effective Date: <strong>{{date}}</strong></p>
+    content: `REAL ESTATE OPTION AGREEMENT
 
-      <h2>PARTIES</h2>
-      <p><strong>Optionor (Seller):</strong> {{lead.name}}<br/>
-      <strong>Optionee (Buyer):</strong> [Your Company Name]</p>
+Effective Date: {{date}}
 
-      <h2>1. GRANT OF OPTION</h2>
-      <p>In consideration of the Option Fee specified below, Optionor hereby grants to Optionee the exclusive right and option to purchase the property located at:<br/><strong>{{lead.propertyAddress}}</strong> (the "Property").</p>
+PARTIES
+Optionor (Seller): {{lead.name}}
+Optionee (Buyer): [Your Company Name]
 
-      <h2>2. OPTION FEE</h2>
-      <p>Optionee shall pay Optionor a non-refundable option fee of <strong>$__________</strong> upon execution of this Agreement. This fee shall be applied toward the Purchase Price if the option is exercised.</p>
+1. GRANT OF OPTION
+In consideration of the Option Fee specified below, Optionor hereby grants to Optionee the exclusive right and option to purchase the property located at:
+{{lead.propertyAddress}} (the "Property").
 
-      <h2>3. PURCHASE PRICE</h2>
-      <p>If this option is exercised, the Purchase Price for the Property shall be <strong>\${{lead.offerAmount}}</strong>.</p>
+2. OPTION FEE
+Optionee shall pay Optionor a non-refundable option fee of $__________ upon execution of this Agreement. This fee shall be applied toward the Purchase Price if the option is exercised.
 
-      <h2>4. OPTION PERIOD</h2>
-      <p>This option shall be valid for a period of __________ days from the Effective Date. Optionee must exercise the option by providing written notice to Optionor before the expiration of the Option Period.</p>
+3. PURCHASE PRICE
+If this option is exercised, the Purchase Price for the Property shall be \${{lead.offerAmount}}.
 
-      <h2>5. EXERCISE OF OPTION</h2>
-      <p>Optionee may exercise this option at any time during the Option Period by delivering written notice to Optionor. Upon exercise, the parties will proceed to close the transaction within __________ days.</p>
+4. OPTION PERIOD
+This option shall be valid for a period of __________ days from the Effective Date. Optionee must exercise the option by providing written notice to Optionor before the expiration of the Option Period.
 
-      <h2>6. PROPERTY MAINTENANCE</h2>
-      <p>During the Option Period, Optionor agrees to maintain the Property in its current condition and not to enter into any other agreements for the sale or encumbrance of the Property.</p>
+5. EXERCISE OF OPTION
+Optionee may exercise this option at any time during the Option Period by delivering written notice to Optionor. Upon exercise, the parties will proceed to close the transaction within __________ days.
 
-      <h2>7. EXTENSION</h2>
-      <p>The Option Period may be extended by mutual written agreement and payment of an additional option fee to be negotiated by the parties.</p>
+6. PROPERTY MAINTENANCE
+During the Option Period, Optionor agrees to maintain the Property in its current condition and not to enter into any other agreements for the sale or encumbrance of the Property.
 
-      <h2>8. DEFAULT</h2>
-      <p>If Optionee fails to exercise the option within the Option Period, this Agreement shall terminate and the option fee shall be retained by Optionor as full consideration. If Optionor defaults, Optionee may seek specific performance or damages.</p>
+7. EXTENSION
+The Option Period may be extended by mutual written agreement and payment of an additional option fee to be negotiated by the parties.
 
-      <h2>9. ENTIRE AGREEMENT</h2>
-      <p>This Agreement constitutes the entire understanding between the parties. Amendments must be in writing signed by both parties.</p>
+8. DEFAULT
+If Optionee fails to exercise the option within the Option Period, this Agreement shall terminate and the option fee shall be retained by Optionor as full consideration. If Optionor defaults, Optionee may seek specific performance or damages.
 
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Optionor (Seller) Signature</strong></p>
-          <p>Name: {{lead.name}}</p>
-          <p>Date: ________________</p>
-        </div>
-        <div style="width: 45%;">
-          <div style="border-bottom: 1px solid black; height: 30px;"></div>
-          <p style="margin-top: 5px;"><strong>Optionee (Buyer) Signature</strong></p>
-          <p>Name: [Your Name]</p>
-          <p>Date: ________________</p>
-        </div>
-      </div>
+9. ENTIRE AGREEMENT
+This Agreement constitutes the entire understanding between the parties. Amendments must be in writing signed by both parties.
 
-      ${DISCLAIMER_HTML}
+Optionor (Seller) Signature: ________________		Optionee (Buyer) Signature: ________________
+Name: {{lead.name}}					Name: [Your Name]
+Date: ________________					Date: ________________
+
+${DISCLAIMER_TEXT}
     `
   }
 ];
@@ -562,18 +440,23 @@ export default function Contracts() {
   const [activeTemplate, setActiveTemplate] = useState<ContractTemplate>(PREBUILT_TEMPLATES[0]);
   const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
   const [folders, setFolders] = useState<string[]>([]);
-  const [isExporting, setIsExporting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeadId, setSelectedLeadId] = useState<string>('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [editedContent, setEditedContent] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [attachment, setAttachment] = useState<any>(null);
+  const [emailAttachment, setEmailAttachment] = useState<{
+    filename: string;
+    content: string;
+    contentType: string;
+  } | null>(null);
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -734,6 +617,7 @@ export default function Contracts() {
   };
 
   const renderTemplateContent = (template: string, lead?: Lead) => {
+    if (!template) return '';
     let text = template;
     const now = format(new Date(), 'MMMM do, yyyy');
     
@@ -744,71 +628,66 @@ export default function Contracts() {
       text = text.replace(/{{lead.email}}/g, lead.email || '[Lead Email]');
       text = text.replace(/{{lead.phone}}/g, lead.phone || '[Lead Phone]');
       text = text.replace(/{{lead.propertyAddress}}/g, lead.propertyAddress || '[Property Address]');
-      text = text.replace(/{{lead.estimatedValue}}/g, lead.estimatedValue?.toLocaleString() || '[Estimated Value]');
-      text = text.replace(/{{lead.offerAmount}}/g, lead.offerAmount?.toLocaleString() || '[Offer Amount]');
+      text = text.replace(/{{lead.estimatedValue}}/g, lead.estimatedValue ? lead.estimatedValue.toLocaleString() : '0');
+      text = text.replace(/{{lead.offerAmount}}/g, lead.offerAmount ? lead.offerAmount.toLocaleString() : '0');
     }
 
     return text;
   };
 
-  const handleExportPDF = async () => {
-    const element = document.getElementById('contract-preview');
-    if (!element) return;
-
-    const opt = {
-      margin: [10, 10] as [number, number],
-      filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-    };
-    
-    setIsExporting(true);
+  const handlePreviewPdf = async () => {
+    if (!previewRef.current) return;
+    setGeneratingPdf(true);
     try {
-      // @ts-ignore
-      const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      window.open(url, '_blank');
-    } catch (err) {
-      console.error('PDF generation failed', err);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleEmailLead = () => {
-    if (!selectedLead) return;
-    setShowEmailModal(true);
-    setAttachment(null);
-    
-    const element = document.getElementById('contract-preview');
-    if (element) {
-      setIsExporting(true);
+      const element = previewRef.current;
       const opt = {
-        margin: [10, 10] as [number, number],
-        filename: `Contract_${selectedLead.name || 'Draft'}.pdf`,
+        margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
+        filename: `${activeTemplate.name}_${selectedLead?.name || 'Draft'}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
       };
 
       // @ts-ignore
-      html2pdf().from(element).set(opt).output('blob').then((pdfBlob: Blob) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(pdfBlob);
-        reader.onloadend = () => {
-          const base64data = reader.result as string;
-          setAttachment({
-            filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
-            content: base64data.split(',')[1],
-            contentType: 'application/pdf'
-          });
-          setIsExporting(false);
-        };
-      }).catch((err: any) => {
-        console.error('Email preparation failed', err);
-        setIsExporting(false);
+      await html2pdf().from(element).set(opt).save();
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
+  const handleEmailLead = async () => {
+    if (!selectedLead || !previewRef.current) return;
+    
+    setGeneratingPdf(true);
+    try {
+      const element = previewRef.current;
+      const opt = {
+        margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+      };
+
+      // Generate PDF as blob/base64
+      const pdfWorker = html2pdf().from(element).set(opt).outputPdf('datauristring');
+      const dataUri = await pdfWorker;
+      const base64Content = dataUri.split(',')[1];
+
+      setEmailAttachment({
+        filename: `${activeTemplate.name}.pdf`,
+        content: base64Content,
+        contentType: 'application/pdf'
       });
+      
+      setShowEmailModal(true);
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+      alert('Failed to prepare document for email. Please try again.');
+    } finally {
+      setGeneratingPdf(false);
     }
   };
 
@@ -1116,8 +995,8 @@ export default function Contracts() {
               )}
             </button>
             <button 
-              onClick={handleExportPDF}
-              disabled={isExporting}
+              onClick={handlePreviewPdf}
+              disabled={generatingPdf}
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-[var(--t-surface-subtle)] text-[var(--t-text)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
             >
               <Shield size={14} className="text-[var(--t-primary)]" />
@@ -1125,7 +1004,7 @@ export default function Contracts() {
             </button>
             <button 
               onClick={handleEmailLead}
-              disabled={isExporting}
+              disabled={generatingPdf}
               className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70"
             >
               <Mail size={16} />
@@ -1146,13 +1025,13 @@ export default function Contracts() {
                   <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Editing Template</span>
                 </div>
-                <div className="text-[10px] text-slate-400 font-medium">Use HTML or variables like {'{{lead.name}}'}</div>
+                <div className="text-[10px] text-slate-400 font-medium">Plain text only. Use variables like {'{{lead.name}}'}</div>
               </div>
               <textarea
                 id="contract-editor"
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className="flex-1 w-full p-12 text-sm text-slate-800 bg-white border-none outline-none resize-none leading-relaxed font-sans whitespace-pre-wrap"
+                className="flex-1 w-full p-12 text-base text-slate-800 bg-white border-none outline-none resize-none leading-relaxed font-mono whitespace-pre-wrap"
                 placeholder="Paste your contract text here..."
               />
               <div className="p-4 bg-amber-50 border-t border-amber-100 flex items-center gap-3">
@@ -1162,26 +1041,37 @@ export default function Contracts() {
             </div>
           ) : (
             <div 
-              id="contract-preview"
-              className="w-full max-w-[8.5in] bg-white shadow-2xl rounded-sm shrink-0 text-gray-800 transition-all doc-container"
+              ref={previewRef}
+              className="w-full max-w-[8.5in] bg-white shadow-2xl rounded-sm shrink-0 text-gray-800 transition-all doc-container relative"
               style={{ 
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
                 padding: '0.75in',
                 minHeight: '11in'
               }}
             >
+              {generatingPdf && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center gap-4">
+                  <div className="p-4 bg-[var(--t-primary-dim)] rounded-full text-[var(--t-primary)] animate-pulse">
+                    <Loader2 size={32} className="animate-spin" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-[var(--t-text)]">Generating Document</p>
+                    <p className="text-sm text-[var(--t-text-muted)]">Preparing your PDF...</p>
+                  </div>
+                </div>
+              )}
               <div 
                 ref={documentRef}
-                className="prose prose-sm max-w-none contract-content whitespace-pre-wrap"
+                className="contract-content whitespace-pre-wrap"
                 style={{
                   fontFamily: '"Times New Roman", Times, serif',
                   lineHeight: '1.6',
                   fontSize: '11pt',
+                  wordBreak: 'break-word'
                 }}
-                dangerouslySetInnerHTML={{ 
-                  __html: renderTemplateContent(activeTemplate.content, selectedLead || undefined) 
-                }}
-              />
+              >
+                {renderTemplateContent(activeTemplate.content, selectedLead || undefined)}
+              </div>
             </div>
           )}
         </div>
@@ -1206,7 +1096,8 @@ export default function Contracts() {
           lead={selectedLead || { name: '', email: '', id: '', propertyAddress: '' } as any}
           initialSubject={`Contract for ${selectedLead?.propertyAddress || selectedLead?.name || 'Your Property'}`}
           initialBody={`Hi ${selectedLead?.name || 'there'},\n\nPlease find the attached contract for the property at ${selectedLead?.propertyAddress || 'your property'}.\n\nReview it and let me know if you have any questions.\n\nBest regards,\n${currentUser?.name || 'The WholeScale Team'}`}
-          attachment={attachment}
+          attachment={emailAttachment}
+          isAttachmentLoading={generatingPdf}
         />
       )}
     </div>

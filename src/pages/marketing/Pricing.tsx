@@ -194,12 +194,20 @@ export default function Pricing() {
         {plans.map((plan, idx) => (
           <div
             key={idx}
-            className={`relative flex flex-col p-8 rounded-[2.5rem] border transition-all duration-500 hover:-translate-y-2 ${plan.popular
-              ? 'bg-[#1e293b] border-blue-500 shadow-2xl shadow-blue-500/20 z-10 scale-105'
-              : 'bg-[#121a2d] border-white/5 hover:border-white/10'
-              }`}
+            className={`relative flex flex-col p-8 rounded-[2.5rem] border transition-all duration-500 hover:-translate-y-2 ${
+              (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
+                ? 'bg-blue-600/10 border-blue-500 shadow-2xl shadow-blue-500/20 z-10'
+                : plan.popular
+                  ? 'bg-[#1e293b] border-blue-500/50 shadow-xl z-5'
+                  : 'bg-[#121a2d] border-white/5 hover:border-white/10'
+            }`}
           >
-            {plan.popular && (
+            {(currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase() && (
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest shadow-xl border border-blue-400">
+                Current Plan
+              </div>
+            )}
+            {plan.popular && (currentUser?.subscriptionTier || 'Free').toLowerCase() !== plan.name.toLowerCase() && (
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">
                 Most Popular
               </div>
@@ -238,14 +246,23 @@ export default function Pricing() {
 
             <button
               onClick={() => handleCheckout(plan.name)}
-              disabled={loading !== null}
-              className={`group flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover-glow hover-lift ${plan.popular
-                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30'
-                : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
-                } ${loading === plan.name ? 'opacity-50 cursor-wait' : ''}`}
+              disabled={loading !== null || (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()}
+              className={`group flex items-center justify-center gap-2 w-full py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all hover-glow hover-lift ${
+                (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
+                  ? 'bg-white/5 text-gray-500 cursor-default border-transparent'
+                  : plan.popular || (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30'
+                    : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
+              } ${loading === plan.name ? 'opacity-50 cursor-wait' : ''}`}
             >
-              {loading === plan.name ? 'Connecting...' : plan.cta}
-              {loading !== plan.name && <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />}
+              {loading === plan.name 
+                ? 'Connecting...' 
+                : (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
+                  ? 'Active Plan'
+                  : plan.name === 'Free' ? 'Current Plan' : plan.cta}
+              {loading !== plan.name && (currentUser?.subscriptionTier || 'Free').toLowerCase() !== plan.name.toLowerCase() && (
+                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              )}
             </button>
           </div>
         ))}
