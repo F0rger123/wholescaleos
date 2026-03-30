@@ -455,6 +455,13 @@ function SecurityTab() {
     setMfaLoading(true);
     setMfaError('');
     try {
+      // 1. Clean up any existing unverified factors first to avoid "factor already exists" errors
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const unverified = factors?.totp?.filter((f: any) => f.status === 'unverified') || [];
+      for (const f of unverified) {
+        await supabase.auth.mfa.unenroll({ factorId: f.id });
+      }
+
       const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Authenticator App' });
       if (error) throw error;
       setFactorId(data.id);
@@ -466,6 +473,27 @@ function SecurityTab() {
       setEnrolling(true);
     } catch (err: any) {
       setMfaError(err.message || 'Failed to start 2FA enrollment');
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const cancelEnrollment = async () => {
+    if (!supabase || !factorId) {
+      setEnrolling(false);
+      setQrImage('');
+      return;
+    }
+    setMfaLoading(true);
+    try {
+      await supabase.auth.mfa.unenroll({ factorId });
+      setEnrolling(false);
+      setQrImage('');
+      setFactorId('');
+    } catch (err: any) {
+      console.error('Failed to cleanup factor:', err);
+      setEnrolling(false);
+      setQrImage('');
     } finally {
       setMfaLoading(false);
     }
@@ -653,11 +681,11 @@ function SecurityTab() {
               </div>
             </div>
             <button
-              onClick={() => { setEnrolling(false); setQrImage(''); }}
-              className="text-xs font-medium"
+              onClick={cancelEnrollment}
+              className="text-xs font-medium hover:underline"
               style={{ color: 'var(--t-text-muted)' }}
             >
-              Cancel
+              Cancel Enrollment
             </button>
           </div>
         )}

@@ -5,8 +5,8 @@ import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import EmailComposeModal from '../components/EmailComposeModal';
 import { 
-  FileText, Download, Mail, Plus, Search, 
-  ChevronDown, User, FileSignature, Loader2, Trash2,
+  FileText, Mail, Plus, Search, 
+  ChevronDown, User, FileSignature, Loader2, Shield,
   Bold, Italic, List, ListOrdered, Type, Edit3, Check
 } from 'lucide-react';
 
@@ -561,11 +561,15 @@ export default function Contracts() {
   const [customTemplates, setCustomTemplates] = useState<ContractTemplate[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeadId, setSelectedLeadId] = useState<string>('');
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [editorMode, setEditorMode] = useState<'rich' | 'plain'>('rich');
   const [isExporting, setIsExporting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const [attachment, setAttachment] = useState<any>(null);
+  const [saveFormat, setSaveFormat] = useState<'html' | 'txt'>('html');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
 
@@ -624,9 +628,7 @@ export default function Contracts() {
       } else if (ext === 'pdf') {
         try {
           const arrayBuf = await file.arrayBuffer();
-          // Import pdfjs dynamically to avoid issues with SSR or heavy bundle size on initial load
           const pdfjs = await import('pdfjs-dist');
-          // Set worker URL for pdfjs-dist
           pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
           
           const pdf = await pdfjs.getDocument({ data: arrayBuf }).promise;
@@ -641,11 +643,10 @@ export default function Contracts() {
             fullText += pageText + '\n\n';
           }
 
-          // Clean extracted text
           const cleanedText = fullText
-            .replace(/[^\x20-\x7E\n\r\t]/g, '') // Remove non-printable characters
-            .replace(/\s+/g, ' ')               // Normalize spaces
-            .replace(/\n\s*\n/g, '\n\n')        // Normalize paragraph breaks
+            .replace(/[^\x20-\x7E\n\r\t]/g, '')
+            .replace(/\s+/g, ' ')
+            .replace(/\n\s*\n/g, '\n\n')
             .trim();
 
           if (cleanedText.length > 10) {
@@ -658,10 +659,8 @@ export default function Contracts() {
           content = `<h1>${baseName}</h1>\n<p style="color:#999;">Advanced extraction failed. This PDF may be an image-only scan.</p>\n<p>[Paste your contract content here]</p>`;
         }
       } else if (ext === 'docx') {
-        // Extract text from DOCX (zip of XML) — use the raw XML content
         const arrayBuf = await file.arrayBuffer();
         const raw = new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(arrayBuf));
-        // DOCX stores content in XML tags <w:t>
         const textParts = raw.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
         if (textParts && textParts.length > 0) {
           const paragraphs = textParts
@@ -673,7 +672,6 @@ export default function Contracts() {
         }
       }
 
-      // Upload to Supabase storage if available
       if (supabase) {
         const uploadPath = currentUser.id + '/' + file.name;
         await supabase.storage
@@ -706,9 +704,6 @@ export default function Contracts() {
     }
   };
 
-  const selectedLead = leads.find(l => l.id === selectedLeadId);
-
-  // Parse template with lead data
   const renderTemplateContent = (template: string, lead?: Lead) => {
     let html = template;
     const now = format(new Date(), 'MMMM do, yyyy');
@@ -723,7 +718,6 @@ export default function Contracts() {
       html = html.replace(/{{lead.estimatedValue}}/g, lead.estimatedValue?.toLocaleString() || '[Estimated Value]');
       html = html.replace(/{{lead.offerAmount}}/g, lead.offerAmount?.toLocaleString() || '[Offer Amount]');
     } else {
-      // Unfilled placeholders
       html = html.replace(/{{lead.name}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Lead Name]</span>');
       html = html.replace(/{{lead.email}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Lead Email]</span>');
       html = html.replace(/{{lead.phone}}/g, '<span class="text-[var(--t-warning)] bg-[var(--t-warning-dim)] px-1 rounded">[Lead Phone]</span>');
@@ -735,100 +729,63 @@ export default function Contracts() {
     return html;
   };
 
-  const generatePDF = async () => {
-    if (!activeTemplate.content) return;
-    setIsExporting(true);
+
+
+  const handleExportPDF = async () => {
+    const element = document.getElementById('contract-preview');
+    if (!element) return;
+
+    const opt = {
+      margin: [10, 10] as [number, number],
+      filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as 'portrait' }
+    };
     
+    setIsExporting(true);
     try {
-      const htmlContent = renderTemplateContent(activeTemplate.content, selectedLead);
-      const fileName = `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name.replace(/\s+/g, '_') || 'Draft'}.pdf`;
-
-      // Build a complete self-contained HTML document string for html2pdf
-      const fullHtml = `
-        <div style="width:100%;background:#fff;color:#000;font-family:'Times New Roman',Times,serif;line-height:1.6;font-size:11pt;padding:0;margin:0;">
-          <style>
-            * { color: #000 !important; }
-            h1 { text-align:center; font-size:16pt; margin-bottom:24px; text-transform:uppercase; font-weight:bold; letter-spacing:1px; }
-            h2 { font-size:12pt; margin-top:20px; margin-bottom:8px; text-transform:uppercase; font-weight:bold; border-bottom:1px solid #ccc; padding-bottom:4px; page-break-after:avoid; }
-            p { margin-bottom:10px; text-align:justify; font-size:11pt; }
-            ul { margin-bottom:10px; padding-left:20px; }
-            li { margin-bottom:4px; font-size:11pt; }
-            table { width:100%; border-collapse:collapse; page-break-inside:avoid; margin-bottom:12px; }
-            td, th { padding:6px 10px; border:1px solid #ddd; font-size:10pt; }
-            strong { font-weight:bold; }
-          </style>
-          ${htmlContent}
-        </div>
-      `;
-
-      const opt = {
-        margin:       [0.5, 0.6, 0.7, 0.6] as [number, number, number, number],
-        filename:     fileName,
-        image:        { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas:  { 
-          scale: 2, 
-          useCORS: true, 
-          logging: false,
-          letterRendering: true,
-          backgroundColor: '#ffffff',
-        },
-        jsPDF:        { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-      };
-      
-      await html2pdf().set(opt).from(fullHtml).save();
-      
+      // @ts-ignore
+      const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      window.open(url, '_blank');
     } catch (err) {
-      console.error('Failed to generate PDF', err);
-      alert('Failed to generate PDF. Check console.');
+      console.error('PDF generation failed', err);
     } finally {
       setIsExporting(false);
     }
   };
 
-
-  const [emailAttachment, setEmailAttachment] = useState<{filename: string, content: string, contentType: string} | undefined>();
-
   const handleEmailLead = async () => {
-    if (!selectedLead || !selectedLead.email) {
-      alert('Please select a lead with a valid email address.');
-      return;
-    }
+    const element = document.getElementById('contract-preview');
+    if (!element) return;
 
+    const opt = {
+      margin: [10, 10] as [number, number],
+      filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as 'portrait' }
+    };
+    
     setIsExporting(true);
     try {
-      const htmlContent = renderTemplateContent(activeTemplate.content, selectedLead);
-      const fileName = `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead.name.replace(/\s+/g, '_')}.pdf`;
-
-      // Build HTML document string
-      const fullHtml = `
-        <div style="width:100%;background:#fff;color:#000;font-family:'Times New Roman',Times,serif;line-height:1.6;font-size:11pt;padding:0.75in;margin:0;">
-          ${htmlContent}
-        </div>
-      `;
-
-      const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
-        filename: fileName,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
-      };
+      // @ts-ignore
+      const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
       
-      // Get PDF as base64 string
-      const pdfDataUri = await html2pdf().set(opt).from(fullHtml).output('datauristring');
-      // Strip prefix: data:application/pdf;filename=...;base64,
-      const base64Content = pdfDataUri.split(',')[1];
-
-      setEmailAttachment({
-        filename: fileName,
-        content: base64Content,
-        contentType: 'application/pdf'
-      });
-      setShowEmailModal(true);
+      const reader = new FileReader();
+      reader.readAsDataURL(pdfBlob);
+      reader.onloadend = () => {
+        const base64data = reader.result as string;
+        setAttachment({
+          filename: `Contract_${selectedLead?.name || 'Draft'}.pdf`,
+          content: base64data.split(',')[1],
+          contentType: 'application/pdf'
+        });
+        setShowEmailModal(true);
+      };
     } catch (err) {
-      console.error('Failed to prepare email attachment', err);
-      alert('Failed to generate contract for email.');
+      console.error('Email preparation failed', err);
     } finally {
       setIsExporting(false);
     }
@@ -836,8 +793,17 @@ export default function Contracts() {
 
   const handleToggleEdit = () => {
     if (isEditing) {
-      // Save changes
-      const updatedTemplate = { ...activeTemplate, content: editedContent };
+      // If saving in plain text mode, we might want to convert it to basic HTML
+      // or save as is depending on user choice.
+      let finalContent = editedContent;
+      if (editorMode === 'plain' && saveFormat === 'html') {
+        finalContent = editedContent
+          .split('\n')
+          .map(line => line.trim() ? `<p>${line}</p>` : '<br/>')
+          .join('\n');
+      }
+
+      const updatedTemplate = { ...activeTemplate, content: finalContent };
       if (activeTemplate.isCustom) {
         setCustomTemplates(prev => prev.map(t => t.id === activeTemplate.id ? updatedTemplate : t));
       }
@@ -847,6 +813,19 @@ export default function Contracts() {
       setEditedContent(activeTemplate.content);
       setIsEditing(true);
     }
+  };
+
+  const convertToPlainText = (html: string) => {
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    
+    // Replace <p> and <br> with newlines before stripping
+    const paragraphs = temp.querySelectorAll('p, div, br, h1, h2, h3, h4, h5, h6, li');
+    paragraphs.forEach(p => {
+      p.after('\n');
+    });
+    
+    return temp.textContent || temp.innerText || '';
   };
 
   const insertText = (before: string, after: string = '') => {
@@ -861,7 +840,6 @@ export default function Contracts() {
     
     setEditedContent(text.substring(0, start) + replacement + text.substring(end));
     
-    // Set focus back and adjust selection
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(start + before.length, end + before.length);
@@ -870,16 +848,12 @@ export default function Contracts() {
 
   return (
     <div className="flex h-full bg-[var(--t-bg)]">
-      {/* Sidebar - Templates */}
       <div className="w-80 flex flex-col border-r border-[var(--t-border)] bg-[var(--t-surface)] z-10">
         <div className="p-6 border-b border-[var(--t-border)]">
           <h2 className="text-xl font-bold text-[var(--t-text)] flex items-center gap-2">
             <FileSignature className="text-[var(--t-primary)]" />
             Contracts
           </h2>
-          <p className="text-xs text-[var(--t-text-muted)] mt-1">
-            Pre-built and custom templates
-          </p>
         </div>
 
         <div className="p-4 border-b border-[var(--t-border)]">
@@ -921,32 +895,7 @@ export default function Contracts() {
                         <p className={`text-sm font-medium ${activeTemplate.id === tmpl.id ? 'text-[var(--t-primary-text)]' : 'text-[var(--t-text)]'}`}>
                           {tmpl.name}
                         </p>
-                        {tmpl.isCustom && <span className="text-[9px] bg-[var(--t-surface-subtle)] px-2 py-0.5 rounded-full mt-1 inline-block">Custom</span>}
                       </div>
-                      
-                      {tmpl.isCustom && (
-                        <div
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            if (!window.confirm('Delete this template?')) return;
-                            if (!supabase) return;
-                            try {
-                              const { error } = await supabase.storage
-                                .from('contract_templates')
-                                .remove([`${currentUser?.id}/${tmpl.id}`]);
-                              if (error) throw error;
-                              setCustomTemplates((prev: ContractTemplate[]) => prev.filter((t: ContractTemplate) => t.id !== tmpl.id));
-                              if (activeTemplate.id === tmpl.id) setActiveTemplate(PREBUILT_TEMPLATES[0]);
-                            } catch (err) {
-                              console.error('Delete error', err);
-                              alert('Failed to delete template');
-                            }
-                          }}
-                          className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-red-400 rounded-lg transition-all cursor-pointer"
-                        >
-                          <Trash2 size={14} />
-                        </div>
-                      )}
                     </button>
                   ))}
                 </div>
@@ -974,9 +923,7 @@ export default function Contracts() {
         </div>
       </div>
 
-      {/* Main Content - Editor/Preview */}
       <div className="flex-1 flex flex-col min-w-0 bg-[var(--t-surface-dim)]">
-        {/* Toolbar */}
         <div className="border-b border-[var(--t-border)] bg-[var(--t-surface)] flex flex-col md:flex-row items-start md:items-center justify-between p-4 md:px-6 gap-4 sticky top-0 z-20 shadow-sm backdrop-blur-md">
           
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
@@ -985,7 +932,10 @@ export default function Contracts() {
               <div className="relative">
                 <select
                   value={selectedLeadId}
-                  onChange={(e) => setSelectedLeadId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedLeadId(e.target.value);
+                    setSelectedLead(leads.find(l => l.id === e.target.value) || null);
+                  }}
                   className="w-full sm:w-[280px] appearance-none pl-10 pr-10 py-2.5 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-border)] text-[var(--t-text)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all shadow-sm"
                 >
                   <option value="">-- View Blank Template --</option>
@@ -1001,7 +951,53 @@ export default function Contracts() {
             </div>
             
             {isEditing && (
-              <div className="flex items-center gap-1 bg-[var(--t-surface-dim)] p-1 rounded-lg border border-[var(--t-border)] shadow-sm">
+              <div className="flex items-center gap-4 border-r border-[var(--t-border)] pr-4">
+                <div className="flex items-center gap-1 bg-[var(--t-surface-subtle)] p-1 rounded-xl">
+                  <button 
+                    onClick={() => {
+                      if (editorMode === 'plain') {
+                        // Attempt to wrap plain text back into basic HTML
+                        const htmlContent = editedContent
+                          .split('\n')
+                          .map(line => line.trim() ? `<p>${line}</p>` : '<br/>')
+                          .join('\n');
+                        setEditedContent(htmlContent);
+                        setEditorMode('rich');
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${editorMode === 'rich' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)]'}`}
+                  >
+                    Rich Text
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (editorMode === 'rich') {
+                        setEditedContent(convertToPlainText(editedContent));
+                        setEditorMode('plain');
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${editorMode === 'plain' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)]'}`}
+                  >
+                    Plain Text
+                  </button>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-[8px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-0.5">Save As</label>
+                  <select 
+                    value={saveFormat}
+                    onChange={(e) => setSaveFormat(e.target.value as 'html' | 'txt')}
+                    className="bg-transparent text-[10px] font-bold text-[var(--t-primary)] outline-none border-none p-0 cursor-pointer"
+                  >
+                    <option value="html">HTML Document</option>
+                    <option value="txt">Plain Text (TXT)</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {isEditing && editorMode === 'rich' && (
+              <div className="flex items-center gap-1 border-r border-[var(--t-border)] pr-4">
                 <button onClick={() => insertText('<strong>', '</strong>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Bold"><Bold size={16} /></button>
                 <button onClick={() => insertText('<em>', '</em>')} className="p-2 hover:bg-[var(--t-surface-hover)] rounded text-[var(--t-text)]" title="Italic"><Italic size={16} /></button>
                 <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
@@ -1029,23 +1025,20 @@ export default function Contracts() {
               )}
             </button>
             <button 
-              onClick={handleEmailLead}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] hover:border-[var(--t-primary)]/30 text-[var(--t-text)] shadow-sm"
-              title="Email Document"
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-[var(--t-surface-subtle)] text-[var(--t-text)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
             >
-              <Mail size={16} className="text-[var(--t-primary)]" /> Email
+              <Shield size={14} className="text-[var(--t-primary)]" />
+              Preview PDF
             </button>
             <button 
-              onClick={generatePDF}
+              onClick={handleEmailLead}
               disabled={isExporting}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70"
             >
-              {isExporting ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Download size={16} />
-              )}
-              {isExporting ? 'Exporting...' : 'Export PDF'}
+              <Mail size={16} />
+              Send Contract
             </button>
           </div>
         </div>
@@ -1068,7 +1061,7 @@ export default function Contracts() {
                 id="contract-editor"
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className="flex-1 w-full p-12 font-mono text-sm text-slate-800 bg-white border-none outline-none resize-none leading-relaxed"
+                className={`flex-1 w-full p-12 text-sm text-slate-800 bg-white border-none outline-none resize-none leading-relaxed ${editorMode === 'plain' ? 'font-sans whitespace-pre-wrap' : 'font-mono'}`}
                 placeholder="Paste your contract text here..."
               />
               <div className="p-4 bg-amber-50 border-t border-amber-100 flex items-center gap-3">
@@ -1078,6 +1071,7 @@ export default function Contracts() {
             </div>
           ) : (
             <div 
+              id="contract-preview"
               className="w-full max-w-[8.5in] bg-white shadow-2xl rounded-sm shrink-0 text-gray-800 transition-all doc-container"
               style={{ 
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
@@ -1093,7 +1087,7 @@ export default function Contracts() {
                   fontSize: '11pt',
                 }}
                 dangerouslySetInnerHTML={{ 
-                  __html: renderTemplateContent(activeTemplate.content, selectedLead) 
+                  __html: renderTemplateContent(activeTemplate.content, selectedLead || undefined) 
                 }}
               />
             </div>
@@ -1113,14 +1107,14 @@ export default function Contracts() {
         .contract-content td, .contract-content th { border: 1px solid #ddd; padding: 8px; }
       `}</style>
 
-      {selectedLead && (
+      {showEmailModal && (
         <EmailComposeModal 
           isOpen={showEmailModal}
           onClose={() => setShowEmailModal(false)}
-          lead={selectedLead}
-          initialSubject={`Contract for ${selectedLead.propertyAddress || selectedLead.name}`}
-          initialBody={`Hi ${selectedLead.name || 'there'},\n\nPlease find the attached contract for the property at ${selectedLead.propertyAddress || 'your property'}.\n\nReview it and let me know if you have any questions.\n\nBest regards,\n${currentUser?.name || 'The WholeScale Team'}`}
-          attachment={emailAttachment}
+          lead={selectedLead || { name: '', email: '', id: '', propertyAddress: '' } as any}
+          initialSubject={`Contract for ${selectedLead?.propertyAddress || selectedLead?.name || 'Your Property'}`}
+          initialBody={`Hi ${selectedLead?.name || 'there'},\n\nPlease find the attached contract for the property at ${selectedLead?.propertyAddress || 'your property'}.\n\nReview it and let me know if you have any questions.\n\nBest regards,\n${currentUser?.name || 'The WholeScale Team'}`}
+          attachment={attachment}
         />
       )}
     </div>

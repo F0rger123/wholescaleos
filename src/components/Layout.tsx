@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { NavLink, Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
@@ -51,35 +51,42 @@ export function Layout() {
     return () => clearInterval(interval);
   }, [manualSave]);
 
-  const navSections: Record<string, { to: string; label: string; icon: any }[]> = {
-    Core: [
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      { to: '/map', label: 'Map', icon: Map },
-      { to: '/leads', label: 'Leads', icon: Users },
-      { to: '/tasks', label: 'Tasks', icon: ListTodo },
-      { to: '/calendar', label: 'Calendar', icon: Calendar },
-    ],
-    Messages: [
-      { to: '/notifications', label: 'Notification Inbox', icon: Bell },
-      { to: '/sms', label: 'SMS', icon: Smartphone },
-      { to: '/email', label: 'Email', icon: Mail },
-      { to: '/chat', label: 'Team Chat', icon: MessageSquare },
-      { to: '/ai-test', label: aiName || 'OS Bot', icon: Bot },
-    ],
-    Tools: [
-      { to: '/imports', label: 'Imports', icon: Download },
-      { to: '/contracts', label: 'Contracts', icon: FileText },
-      { to: '/calculators', label: 'Calculators', icon: Calculator },
-      { to: '/settings', label: 'Settings', icon: Settings },
-    ],
-  };
+  const isAdmin = useMemo(() => {
+    return currentUser?.email?.toLowerCase() === 'drummerforger@gmail.com' || 
+           currentUser?.id === '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d';
+  }, [currentUser]);
 
-  const isAdmin = currentUser?.role === 'admin';
-  console.log('[Admin] User object in store:', currentUser);
+  const navSections = useMemo(() => {
+    const sections: Record<string, { to: string; label: string; icon: any }[]> = {
+      Core: [
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/map', label: 'Map', icon: Map },
+        { to: '/leads', label: 'Leads', icon: Users },
+        { to: '/tasks', label: 'Tasks', icon: ListTodo },
+        { to: '/calendar', label: 'Calendar', icon: Calendar },
+      ],
+      Messages: [
+        { to: '/notifications', label: 'Notification Inbox', icon: Bell },
+        { to: '/sms', label: 'SMS', icon: Smartphone },
+        { to: '/email', label: 'Email', icon: Mail },
+        { to: '/chat', label: 'Team Chat', icon: MessageSquare },
+        { to: '/ai-test', label: aiName || 'OS Bot', icon: Bot },
+      ],
+      Tools: [
+        { to: '/imports', label: 'Imports', icon: Download },
+        { to: '/contracts', label: 'Contracts', icon: FileText },
+        { to: '/calculators', label: 'Calculators', icon: Calculator },
+        { to: '/settings', label: 'Settings', icon: Settings },
+      ],
+    };
 
-  if (isAdmin) {
-    navSections.Tools.push({ to: '/admin', label: 'Admin', icon: Shield });
-  }
+    if (isAdmin) {
+      // Ensure Admin is always at the bottom of Tools
+      sections.Tools.push({ to: '/admin', label: 'Admin', icon: Shield });
+    }
+
+    return sections;
+  }, [isAdmin, aiName]);
 
   const teamSubNav = [
     { to: '/team', label: 'Team Dashboard', icon: UserCog },
@@ -494,7 +501,7 @@ export function Layout() {
                 
                 {(!isCollapsed || !sidebarOpen) && (
                   <div className="flex flex-col gap-1">
-                    {items.map(({ to, label, icon: Icon }) => {
+                    {(items as { to: string; label: string; icon: any }[]).map(({ to, label, icon: Icon }) => {
                       const badge =
                         label === 'Tasks' ? pendingTaskCount :
                         label === 'Team' ? onlineCount :

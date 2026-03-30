@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Calendar as CalendarIcon, Plus, Clock, MapPin, Users, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Clock, MapPin, Users, ChevronLeft, ChevronRight, X, Loader2, Check } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, startOfWeek, endOfWeek } from 'date-fns';
 import { supabase } from '../lib/supabase';
 
@@ -39,9 +39,24 @@ export default function TeamCalendar() {
   const [loading, setLoading] = useState(false);
   const [events, setEvents] = useState<TeamEvent[]>([]);
 
+  const [filters, setFilters] = useState<string[]>([]);
+  const [view, setView] = useState<'month' | 'team'>('month');
+
   useEffect(() => {
     if (teamId) {
       fetchEvents();
+      
+      // Real-time subscription
+      const channel = supabase
+        ?.channel('calendar_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events', filter: `team_id=eq.${teamId}` }, () => {
+          fetchEvents();
+        })
+        .subscribe();
+      
+      return () => {
+        supabase?.removeChannel(channel as any);
+      };
     }
   }, [currentMonth, teamId]);
 
@@ -72,8 +87,8 @@ export default function TeamCalendar() {
         date: new Date(e.start_time),
         time: format(new Date(e.start_time), 'HH:mm'),
         type: e.type as any,
-        location: e.description, // Using description as location for now or metadata if added
-        attendees: [], // We can expand this later
+        location: e.description,
+        attendees: e.attendees || [],
         color: EVENT_COLORS[e.type] || EVENT_COLORS.meeting,
       }));
 
@@ -108,7 +123,8 @@ export default function TeamCalendar() {
           description: newEvent.location,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
-          type: newEvent.type
+          type: newEvent.type,
+          attendees: newEvent.attendees.split(',').map(s => s.trim()).filter(Boolean)
         })
         .select()
         .single();
@@ -126,7 +142,7 @@ export default function TeamCalendar() {
         time: format(new Date(data.start_time), 'HH:mm'),
         type: data.type as any,
         location: data.description,
-        attendees: [],
+        attendees: data.attendees || [],
         color: EVENT_COLORS[data.type] || EVENT_COLORS.meeting,
       };
 
@@ -161,7 +177,18 @@ export default function TeamCalendar() {
   const calendarEnd = endOfWeek(monthEnd);
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const getEventsForDay = (day: Date) => events.filter(e => isSameDay(new Date(e.date), day));
+  const getEventsForDay = (day: Date) => events.filter(e => {
+    const isDay = isSameDay(new Date(e.date), day);
+    if (!isDay) return false;
+    // Apply filters
+    if (filters.length > 0) {
+      // Check if any filter (name) is in the attendees list
+      // Or if 'all' is an attendee
+      const isAll = e.attendees.some(a => a.toLowerCase() === 'all');
+      return isAll || filters.some(f => e.attendees.some(a => a.toLowerCase().includes(f.toLowerCase())));
+    }
+    return true;
+  });
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6" style={{ color: 'var(--t-text)' }}>
@@ -169,82 +196,197 @@ export default function TeamCalendar() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black italic tracking-tight uppercase flex items-center gap-3">
-            <CalendarIcon size={28} style={{ color: 'var(--t-primary)' }} /> Team Calendar
+            <CalendarIcon size={28} style={{ color: 'var(--t-primary)' }} /> Team Hub
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
-            Schedule shared events, open houses, and team meetings
+            Orchestrate your team's schedule and collective availability
           </p>
+        </div>
+        <div className="flex gap-2 bg-[var(--t-surface)] p-1 rounded-2xl border border-[var(--t-border)]">
+          <button 
+            onClick={() => setView('month')}
+            className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${view === 'month' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:bg-white/5'}`}
+          >
+            Month View
+          </button>
+          <button 
+            onClick={() => setView('team')}
+            className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${view === 'team' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:bg-white/5'}`}
+          >
+            Team Timeline
+          </button>
         </div>
         <button
           onClick={() => setShowAddEvent(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold shadow-lg transition-all hover:scale-105"
+          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-white text-sm font-bold shadow-lg transition-all hover:scale-[1.02] active:scale-95"
           style={{ backgroundColor: 'var(--t-primary)' }}
         >
           <Plus size={16} /> New Event
         </button>
       </div>
 
-      {/* Calendar Navigation */}
-      <div className="p-6 rounded-2xl border" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
-        <div className="flex items-center justify-between mb-6">
-          <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-            <ChevronLeft size={20} style={{ color: 'var(--t-text-muted)' }} />
-          </button>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-black uppercase tracking-wider">{format(currentMonth, 'MMMM yyyy')}</h2>
-            {loading && <Loader2 size={16} className="animate-spin text-purple-500" />}
-          </div>
-          <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-            <ChevronRight size={20} style={{ color: 'var(--t-text-muted)' }} />
-          </button>
-        </div>
-
-        {/* Day headers */}
-        <div className="grid grid-cols-7 mb-2">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} className="text-center text-[10px] font-bold uppercase tracking-wider py-2" style={{ color: 'var(--t-text-muted)' }}>{d}</div>
-          ))}
-        </div>
-
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-px rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--t-border)' }}>
-          {days.map((day, i) => {
-            const dayEvents = getEventsForDay(day);
-            const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
-            const today = isToday(day);
-            const isSelected = selectedDate && isSameDay(day, selectedDate);
-
-            return (
-              <div
-                key={i}
-                onClick={() => setSelectedDate(day)}
-                className={`min-h-[90px] p-1.5 cursor-pointer transition-all hover:brightness-110 ${!isCurrentMonth ? 'opacity-30' : ''}`}
-                style={{
-                  backgroundColor: isSelected ? 'var(--t-primary-dim)' : 'var(--t-surface)',
-                }}
+      <div className="flex gap-6">
+        {/* Sidebar Filters */}
+        <div className="w-64 hidden xl:block shrink-0 space-y-4">
+           <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-4">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)]">Team Members</h3>
+              <div className="space-y-2">
+                {(team || []).map(member => (
+                   <label key={member.id} className="flex items-center gap-3 p-2 rounded-xl border border-[var(--t-border)] hover:bg-[var(--t-surface-dim)] cursor-pointer transition-all group">
+                      <input 
+                        type="checkbox" 
+                        checked={filters.includes(member.name)}
+                        onChange={() => {
+                          if (filters.includes(member.name)) {
+                            setFilters(filters.filter(f => f !== member.name));
+                          } else {
+                            setFilters([...filters, member.name]);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <div className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${filters.includes(member.name) ? 'bg-[var(--t-primary)] border-[var(--t-primary)]' : 'border-[var(--t-border)] group-hover:border-[var(--t-text-muted)]'}`}>
+                         {filters.includes(member.name) && <Check size={10} className="text-white" />}
+                      </div>
+                      <div className="w-6 h-6 rounded-full bg-blue-600/10 flex items-center justify-center text-[10px] font-bold">{member.avatar}</div>
+                      <span className="text-xs font-bold truncate opacity-80">{member.name}</span>
+                   </label>
+                ))}
+              </div>
+              <button 
+                onClick={() => setFilters([])}
+                className="w-full py-2 text-[10px] font-bold uppercase text-[var(--t-primary)] hover:underline"
               >
-                <div className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${today ? 'text-white' : ''}`}
-                  style={{ backgroundColor: today ? 'var(--t-primary)' : 'transparent' }}
-                >
-                  {format(day, 'd')}
+                Reset Filters
+              </button>
+           </div>
+
+           <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-600/10 to-blue-600/10 border border-blue-500/20">
+              <div className="flex items-center gap-2 mb-2 text-blue-400">
+                 <Clock size={14} />
+                 <span className="text-[10px] font-black uppercase tracking-widest">Next Meeting</span>
+              </div>
+              <p className="text-xs font-bold mb-1">Weekly Pipeline Sync</p>
+              <p className="text-[10px] text-[var(--t-text-muted)]">Tomorrow at 10:00 AM</p>
+           </div>
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-6">
+          {view === 'month' ? (
+            <div className="p-6 rounded-[2.5rem] border shadow-xl bg-[var(--t-surface)]" style={{ borderColor: 'var(--t-border)' }}>
+              <div className="flex items-center justify-between mb-8 px-2">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-2">
+                    {format(currentMonth, 'MMMM')} <span className="opacity-30">{format(currentMonth, 'yyyy')}</span>
+                  </h2>
+                  {loading && <Loader2 size={16} className="animate-spin text-blue-500" />}
                 </div>
-                <div className="space-y-0.5">
-                  {dayEvents.slice(0, 3).map(ev => (
-                    <div
-                      key={ev.id}
-                      className="text-[9px] font-bold px-1 py-0.5 rounded truncate"
-                      style={{ backgroundColor: ev.color + '20', color: ev.color }}
-                    >
-                      {ev.title}
-                    </div>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <p className="text-[9px] font-bold pl-1" style={{ color: 'var(--t-text-muted)' }}>+{dayEvents.length - 3} more</p>
-                  )}
+                <div className="flex items-center gap-2 bg-[var(--t-bg)] p-1 rounded-xl border border-[var(--t-border)]">
+                  <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+                    <ChevronLeft size={20} style={{ color: 'var(--t-text-muted)' }} />
+                  </button>
+                  <button onClick={() => setCurrentMonth(new Date())} className="px-4 py-1 rounded-lg text-[10px] font-black uppercase hover:bg-white/5">Today</button>
+                  <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+                    <ChevronRight size={20} style={{ color: 'var(--t-text-muted)' }} />
+                  </button>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Day headers */}
+              <div className="grid grid-cols-7 mb-4">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => (
+                  <div key={d} className="text-center text-[10px] font-black uppercase tracking-[0.2em] py-2" style={{ color: i === 0 || i === 6 ? 'var(--t-text-muted)' : 'var(--t-primary)' }}>{d}</div>
+                ))}
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-3">
+                {days.map((day, i) => {
+                  const dayEvents = getEventsForDay(day);
+                  const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+                  const today = isToday(day);
+                  const isSelected = selectedDate && isSameDay(day, selectedDate);
+
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => setSelectedDate(day)}
+                      className={`min-h-[120px] p-4 rounded-[1.5rem] cursor-pointer transition-all duration-300 relative group border ${!isCurrentMonth ? 'opacity-20' : 'opacity-100'} ${isSelected ? 'shadow-2xl z-10 scale-[1.05]' : 'hover:scale-[1.02]'}`}
+                      style={{
+                        backgroundColor: isSelected ? 'var(--t-bg)' : 'var(--t-surface-dim)',
+                        borderColor: isSelected ? 'var(--t-primary)' : 'var(--t-border)',
+                      }}
+                    >
+                      <div className={`text-xs font-black mb-3 w-7 h-7 flex items-center justify-center rounded-xl transition-all ${today ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)]' : 'group-hover:bg-white/5'}`}>
+                        {format(day, 'd')}
+                      </div>
+                      <div className="space-y-1">
+                        {dayEvents.slice(0, 3).map(ev => (
+                          <div
+                            key={ev.id}
+                            className="text-[9px] font-black px-2 py-1 rounded-lg truncate border-l-2"
+                            style={{ 
+                              backgroundColor: ev.color + '15', 
+                              color: ev.color,
+                              borderColor: ev.color
+                            }}
+                          >
+                            {ev.title}
+                          </div>
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <p className="text-[9px] font-bold pl-2 pt-1 opacity-40">+{dayEvents.length - 3} more</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="p-8 rounded-[2.5rem] border shadow-xl bg-[var(--t-surface)]" style={{ borderColor: 'var(--t-border)' }}>
+               {/* Team View placeholder logic */}
+               <div className="flex items-center justify-between mb-8">
+                 <h2 className="text-xl font-bold uppercase tracking-widest">Global Team Timeline</h2>
+                 <p className="text-xs text-[var(--t-text-muted)]">{format(selectedDate || new Date(), 'EEEE, MMM d')}</p>
+               </div>
+               
+               <div className="relative overflow-x-auto">
+                 <div className="min-w-[800px] space-y-4">
+                   {/* Time Markers */}
+                   <div className="flex pl-32 mb-2">
+                     {Array.from({ length: 10 }).map((_, i) => (
+                       <div key={i} className="flex-1 text-[9px] font-bold text-[var(--t-text-muted)] border-l border-[var(--t-border)] pl-2">
+                         {i + 9}:00
+                       </div>
+                     ))}
+                   </div>
+                   
+                   {(team || []).map(member => (
+                     <div key={member.id} className="flex items-center gap-4 group">
+                       <div className="w-32 flex items-center gap-2 shrink-0">
+                         <div className="w-8 h-8 rounded-full bg-blue-600/10 flex items-center justify-center text-[10px] font-bold">{member.avatar}</div>
+                         <span className="text-xs font-bold truncate">{member.name}</span>
+                       </div>
+                       <div className="flex-1 h-12 bg-[var(--t-bg)] rounded-xl border border-[var(--t-border)] relative overflow-hidden">
+                          {/* Simplified busy block visualization */}
+                          {getEventsForDay(selectedDate || new Date()).length > 0 && (
+                            <div className="absolute inset-y-2 left-[20%] w-[15%] bg-blue-500/20 border-x border-blue-500/40 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-blue-400">BUSY</span>
+                            </div>
+                          )}
+                          <div className="absolute inset-0 grid grid-cols-10 pointer-events-none">
+                            {Array.from({ length: 10 }).map((_, j) => (
+                              <div key={j} className="border-r border-white/5 h-full" />
+                            ))}
+                          </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+            </div>
+          )}
         </div>
       </div>
 

@@ -18,7 +18,6 @@
 //   → This file generates the HTML template and calls the Edge Function.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { v4 as uuidv4 } from 'uuid';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,6 +73,27 @@ export interface EmailResult {
   success: boolean;
   messageId?: string;
   error?: string;
+}
+
+export interface dbEmailTemplate {
+  id: string;
+  user_id: string;
+  name: string;
+  subject: string;
+  body: string;
+  created_at: string;
+}
+
+export interface dbEmailCampaign {
+  id: string;
+  user_id: string;
+  name: string;
+  template_id: string;
+  status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'paused';
+  scheduled_at?: string;
+  recipients: string[];
+  metadata: any;
+  created_at: string;
 }
 
 // ─── Brand Constants ──────────────────────────────────────────────────────────
@@ -630,6 +650,47 @@ export interface EmailPayload {
 }
 
 /**
+ * Get a fresh Gmail access token using the user's refresh token
+ */
+async function getGmailToken(): Promise<string | null> {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  if (!isSupabaseConfigured || !supabase || !userId) return null;
+
+  try {
+    const { data: conn } = await supabase
+      .from('user_connections')
+      .select('refresh_token')
+      .eq('user_id', userId)
+      .eq('provider', 'google')
+      .maybeSingle();
+    
+    if (!conn?.refresh_token) return null;
+
+    const CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
+    const CLIENT_SECRET = "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";
+
+    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        refresh_token: conn.refresh_token,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!refreshResponse.ok) return null;
+    const { access_token } = await refreshResponse.json();
+    return access_token;
+  } catch (err) {
+    console.error('Failed to get Gmail token', err);
+    return null;
+  }
+}
+
+/**
  * Send an email via the Gmail API directly.
  */
 export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
@@ -646,33 +707,10 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   }
 
   try {
-    const { data: conn } = await supabase
-      .from('user_connections')
-      .select('refresh_token')
-      .eq('user_id', userId)
-      .eq('provider', 'google')
-      .maybeSingle();
-    
-    if (!conn?.refresh_token) {
+    const access_token = await getGmailToken();
+    if (!access_token) {
       return { success: false, error: 'Gmail account not connected. Please connect in Settings.' };
     }
-
-    const CLIENT_ID = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
-    const CLIENT_SECRET = "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";
-
-    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: conn.refresh_token,
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    if (!refreshResponse.ok) throw new Error('Failed to refresh Google token');
-    const { access_token } = await refreshResponse.json();
 
     const fromEmail = payload.from || store.currentUser?.email || 'me';
     const boundary = `-------314159265358979323846`;
@@ -737,36 +775,15 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
 /**
  * Fetch list of email threads from Gmail
  */
-export async function listThreads(maxResults = 20): Promise<{ threads: any[], error?: string }> {
-  const store = useStore.getState();
-  const userId = store.currentUser?.id;
-
-  if (!isSupabaseConfigured || !supabase || !userId) return { threads: [] };
-
+export async function listThreads(maxResults = 20, query = ''): Promise<{ threads: any[], error?: string }> {
   try {
-    const { data: conn } = await supabase
-      .from('user_connections')
-      .select('refresh_token')
-      .eq('user_id', userId)
-      .eq('provider', 'google')
-      .maybeSingle();
+    const access_token = await getGmailToken();
+    if (!access_token) return { threads: [], error: 'Gmail not connected' };
 
-    if (!conn?.refresh_token) return { threads: [], error: 'Gmail not connected' };
+    let url = `https://gmail.googleapis.com/gmail/v1/users/me/threads?maxResults=${maxResults}`;
+    if (query) url += `&q=${encodeURIComponent(query)}`;
 
-    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: conn.refresh_token,
-        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
-        client_secret: "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",
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    const { access_token } = await refreshResponse.json();
-
-    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads?maxResults=${maxResults}`, {
+    const response = await fetch(url, {
       headers: { 'Authorization': `Bearer ${access_token}` }
     });
 
@@ -797,27 +814,8 @@ export async function getThread(threadId: string): Promise<EmailThread | null> {
   if (!supabase || !userId) return null;
 
   try {
-    const { data: conn } = await supabase
-      .from('user_connections')
-      .select('refresh_token')
-      .eq('user_id', userId)
-      .eq('provider', 'google')
-      .maybeSingle();
-
-    if (!conn?.refresh_token) return null;
-
-    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: conn.refresh_token,
-        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
-        client_secret: "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",
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    const { access_token } = await refreshResponse.json();
+    const access_token = await getGmailToken();
+    if (!access_token) return null;
 
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}`, {
       headers: { 'Authorization': `Bearer ${access_token}` }
@@ -964,32 +962,9 @@ export async function sendMentionNotification(
  * Modify thread labels (Gmail API)
  */
 async function modifyThreadLabels(threadId: string, addLabelIds: string[] = [], removeLabelIds: string[] = []): Promise<boolean> {
-  const store = useStore.getState();
-  const userId = store.currentUser?.id;
-  if (!isSupabaseConfigured || !supabase || !userId) return false;
-
   try {
-    const { data: conn } = await supabase
-      .from('user_connections')
-      .select('refresh_token')
-      .eq('user_id', userId)
-      .eq('provider', 'google')
-      .maybeSingle();
-
-    if (!conn?.refresh_token) return false;
-
-    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: conn.refresh_token,
-        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
-        client_secret: "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",
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    const { access_token } = await refreshResponse.json();
+    const access_token = await getGmailToken();
+    if (!access_token) return false;
 
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}/modify`, {
       method: 'POST',
@@ -1019,32 +994,9 @@ export async function unstarThread(threadId: string) {
 }
 
 export async function trashThread(threadId: string) {
-  const store = useStore.getState();
-  const userId = store.currentUser?.id;
-  if (!isSupabaseConfigured || !supabase || !userId) return false;
-
   try {
-    const { data: conn } = await supabase
-      .from('user_connections')
-      .select('refresh_token')
-      .eq('user_id', userId)
-      .eq('provider', 'google')
-      .maybeSingle();
-
-    if (!conn?.refresh_token) return false;
-
-    const refreshResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        refresh_token: conn.refresh_token,
-        client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
-        client_secret: "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",
-        grant_type: 'refresh_token',
-      }),
-    });
-
-    const { access_token } = await refreshResponse.json();
+    const access_token = await getGmailToken();
+    if (!access_token) return false;
 
     const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/threads/${threadId}/trash`, {
       method: 'POST',
@@ -1056,4 +1008,171 @@ export async function trashThread(threadId: string) {
     console.error('trashThread error:', err);
     return false;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUPABASE CRUD FOR EMAIL SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export async function fetchEmailTemplates(): Promise<dbEmailTemplate[]> {
+  const userId = useStore.getState().currentUser?.id;
+  if (!supabase || !userId) return [];
+  
+  const { data, error } = await supabase
+    .from('email_templates')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+    
+  if (error) {
+    console.error('fetchEmailTemplates error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function saveEmailTemplate(template: Omit<dbEmailTemplate, 'id' | 'user_id' | 'created_at'>): Promise<dbEmailTemplate | null> {
+  const userId = useStore.getState().currentUser?.id;
+  if (!supabase || !userId) return null;
+  
+  const { data, error } = await supabase
+    .from('email_templates')
+    .insert([{ ...template, user_id: userId }])
+    .select()
+    .single();
+    
+  if (error) {
+    console.error('saveEmailTemplate error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateEmailTemplate(id: string, template: Partial<dbEmailTemplate>): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from('email_templates')
+    .update(template)
+    .eq('id', id);
+    
+  return !error;
+}
+
+export async function deleteEmailTemplate(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from('email_templates')
+    .delete()
+    .eq('id', id);
+    
+  return !error;
+}
+
+export async function fetchEmailCampaigns(): Promise<dbEmailCampaign[]> {
+  const userId = useStore.getState().currentUser?.id;
+  if (!supabase || !userId) return [];
+  
+  const { data, error } = await supabase
+    .from('email_campaigns')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+    
+  if (error) {
+    console.error('fetchEmailCampaigns error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function saveEmailCampaign(campaign: Omit<dbEmailCampaign, 'id' | 'user_id' | 'created_at'>): Promise<dbEmailCampaign | null> {
+  const userId = useStore.getState().currentUser?.id;
+  if (!supabase || !userId) return null;
+  
+  const { data, error } = await supabase
+    .from('email_campaigns')
+    .insert([{ ...campaign, user_id: userId }])
+    .select()
+    .single();
+    
+  if (error) {
+    console.error('saveEmailCampaign error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function updateEmailCampaign(id: string, campaign: Partial<dbEmailCampaign>): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from('email_campaigns')
+    .update(campaign)
+    .eq('id', id);
+    
+  return !error;
+}
+
+export async function deleteEmailCampaign(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from('email_campaigns')
+    .delete()
+    .eq('id', id);
+    
+  return !error;
+}
+export interface dbEmailSchedule {
+  id: string;
+  user_id: string;
+  campaign_id?: string;
+  template_id: string;
+  recipient_email: string;
+  scheduled_at: string;
+  status: 'pending' | 'sent' | 'failed' | 'cancelled';
+  error_message?: string;
+  created_at: string;
+}
+
+export async function fetchEmailSchedules(): Promise<dbEmailSchedule[]> {
+  const userId = useStore.getState().currentUser?.id;
+  if (!supabase || !userId) return [];
+  
+  const { data, error } = await supabase
+    .from('recurring_schedules')
+    .select('*')
+    .eq('user_id', userId)
+    .order('scheduled_at', { ascending: true });
+    
+  if (error) {
+    console.error('fetchEmailSchedules error:', error);
+    return [];
+  }
+  return data || [];
+}
+
+export async function saveEmailSchedule(schedule: Omit<dbEmailSchedule, 'id' | 'user_id' | 'created_at'>): Promise<dbEmailSchedule | null> {
+  const userId = useStore.getState().currentUser?.id;
+  if (!supabase || !userId) return null;
+  
+  const { data, error } = await supabase
+    .from('recurring_schedules')
+    .insert([{ ...schedule, user_id: userId }])
+    .select()
+    .single();
+    
+  if (error) {
+    console.error('saveEmailSchedule error:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function deleteEmailSchedule(id: string): Promise<boolean> {
+  if (!supabase) return false;
+  const { error } = await supabase
+    .from('recurring_schedules')
+    .delete()
+    .eq('id', id);
+    
+  return !error;
 }

@@ -13,8 +13,9 @@ export default function AdminDashboard() {
   const { currentUser } = useStore();
   const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'promos' | 'settings' | 'analytics'>('users');
 
-  const isAdmin = currentUser?.role === 'admin';
-  console.log('[AdminDashboard] currentUser in store:', currentUser);
+  const isAdmin = currentUser?.email?.toLowerCase() === 'drummerforger@gmail.com' || 
+                  currentUser?.id === '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d';
+  console.log('[AdminDashboard] currentUser in store:', currentUser, 'IsAdmin:', isAdmin);
 
   if (!isAdmin) {
     return (

@@ -220,6 +220,29 @@ CREATE TABLE IF NOT EXISTS access_codes (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Calendar Events table
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+    type TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow team members to manage events" ON public.calendar_events;
+CREATE POLICY "Allow team members to manage events"
+    ON public.calendar_events
+    FOR ALL
+    USING (auth.uid() IN (
+        SELECT user_id FROM team_members WHERE team_id = calendar_events.team_id
+    ));
+
 -- Trigger: auto-create profile on signup
 CREATE OR REPLACE FUNCTION handle_new_user() RETURNS TRIGGER AS $$
 BEGIN
@@ -433,12 +456,27 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     setError(null);
     try {
       if (!supabase) throw new Error('Supabase not configured');
-      const { error } = await supabase.auth.mfa.challengeAndVerify({
+      console.log('[Auth] MFA Challenge initiated...', { factorId: mfaFactorId });
+      
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challengeError) {
+        console.error('[Auth] MFA Challenge Error:', challengeError);
+        throw challengeError;
+      }
+      
+      console.log('[Auth] MFA Challenge success, verifying code...', { challengeId: challenge.id });
+      const { data: verifyData, error: verifyError } = await supabase.auth.mfa.verify({
         factorId: mfaFactorId,
+        challengeId: challenge.id,
         code: mfaCode
       });
-      if (error) throw error;
       
+      if (verifyError) {
+        console.error('[Auth] MFA Verify Error:', verifyError);
+        throw verifyError;
+      }
+      
+      console.log('[Auth] MFA verified successfully:', verifyData);
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.user) {
         await finalizeLogin(sessionData.session.user);

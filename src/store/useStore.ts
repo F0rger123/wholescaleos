@@ -281,6 +281,7 @@ export interface SMSMessage {
 export interface SavedContact {
   id: string;
   name: string;
+  email?: string;
   phone: string;
   notes?: string;
   createdAt: string;

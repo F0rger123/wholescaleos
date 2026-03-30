@@ -89,8 +89,20 @@ Deno.serve(async (req: Request) => {
         line_items: lineItems,
         mode: 'subscription',
         allow_promotion_codes: true, // Enable promo codes in Stripe Checkout
-        success_url: success_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancel_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing`,
+    const success_url_final = success_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing&session_id={CHECKOUT_SESSION_ID}`;
+    const cancel_url_final = cancel_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing`;
+
+    console.log(`[Stripe] Success Redirect: ${success_url_final}`);
+    console.log(`[Stripe] Cancel Redirect: ${cancel_url_final}`);
+
+    try {
+      const session = await stripe.checkout.sessions.create({
+        customer_email: user.email,
+        line_items: lineItems,
+        mode: 'subscription',
+        allow_promotion_codes: true,
+        success_url: success_url_final,
+        cancel_url: cancel_url_final,
         client_reference_id: user.id,
         metadata: {
           userId: user.id,
