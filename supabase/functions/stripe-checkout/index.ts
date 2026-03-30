@@ -22,59 +22,24 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('Missing Authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const { priceId, successUrl, cancelUrl, customerEmail, userId } = await req.json()
+    
+    console.log(`[STRIPE] 📥 Received checkout request:
+      - Raw PriceID: ${priceId}
+      - UserID: ${userId}
+      - Customer Email: ${customerEmail}
+      - Environment: ${Deno.env.get('STRIPE_SECRET_KEY')?.startsWith('sk_test') ? '🛠️ TEST MODE' : '🚀 LIVE MODE'}
+    `)
+
+    if (!priceId) {
+      console.error('[STRIPE] ❌ Missing Price ID in request body')
+      return new Response(JSON.stringify({ error: 'Missing priceId' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) {
-      console.error('Auth error:', userError?.message || 'No user found');
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized - please log in again' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Authenticated user:', user.id, user.email);
-
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return new Response(
-        JSON.stringify({ error: 'Invalid JSON payload' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const { plan, cancel_url, success_url, seats = 1 } = body;
-    const userId = user.id;
-    const userEmail = user.email;
-    const origin = req.headers.get('origin') || '';
-
-    if (!stripeKey || stripeKey.length < 10) {
-      console.error('[Stripe] STRIPE_SECRET_KEY is missing or invalid');
-      return new Response(
-        JSON.stringify({ error: 'Payment service is not configured. Please set STRIPE_SECRET_KEY in Supabase Edge Function secrets.' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // IMPORTANT: These Price IDs MUST match your Stripe Dashboard.
-    // TEST mode IDs start with price_test_ / price_ (test mode prefix varies)
-    // LIVE mode IDs start with price_ (but correspond to live products)
-    // Verify at: https://dashboard.stripe.com/products
+    // Map internal names to Stripe Price IDs (Verify these match your dashboard)
     const priceMap: Record<string, string> = {
       'solo': 'price_1PThelI0QxY7hIfL7sWqzvYI',
       'pro': 'price_1PThelI0QxY7hIfL9QWqzvYI',

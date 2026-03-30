@@ -1104,10 +1104,19 @@ export default function Contracts() {
             <button 
               onClick={handlePreviewPdf}
               disabled={generatingPdf}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-[var(--t-surface-subtle)] text-[var(--t-text)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-surface-subtle)] text-[var(--t-text)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] disabled:opacity-70 disabled:cursor-wait"
             >
-              {generatingPdf ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} className="text-[var(--t-primary)]" />}
-              {generatingPdf ? 'Generating...' : 'Preview PDF'}
+              {generatingPdf ? (
+                <>
+                  <Loader2 size={16} className="animate-spin text-[var(--t-primary)]" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                <>
+                  <Shield size={16} className="text-[var(--t-primary)]" />
+                  <span>Preview PDF</span>
+                </>
+              )}
             </button>
             <button 
               onClick={handleEmailLead}

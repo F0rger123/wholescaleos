@@ -63,36 +63,38 @@ export default function Login() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      console.log('[Auth] Found existing session for user:', session.user.email);
-      const { data: aal, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aalErr) {
-        console.error('[Auth] MFA AAL check error:', aalErr);
-        return;
-      }
+      console.log('[Auth] Found existing session for user:', session.user.email);      // ─── 2. MFA STRATEGY: Proactive Challenge ──────────────────────────
+      console.log('🔐 [AUTH] Login successful, checking for MFA factors...');
       
-      console.log('[Auth] AAL info:', aal);
+      const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+      if (factorsError) {
+        console.error('❌ [AUTH] Error listing MFA factors:', factorsError.message);
+        throw factorsError;
+      }
 
-      if (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
-        const { data: factorData, error } = await supabase.auth.mfa.listFactors();
-        if (error) {
-          console.error('[Auth] MFA listFactors error:', error);
-          return;
-        }
+      const verifiedFactor = (factors as any)?.all?.find((f: any) => f.status === 'verified');
+      
+      // Get current AAL (Authenticator Assurance Level)
+      const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalError) {
+        console.error('❌ [AUTH] Error getting AAL:', aalError.message);
+      }
 
-        // listFactors data can be either the array itself or { all: [...] } depending on version
-        const factors = Array.isArray(factorData) ? factorData : (factorData as any)?.all || [];
-        console.log('[Auth] Verified factors found:', factors.length);
-        
-        const verifiedFactor = factors.find((f: any) => f.status === 'verified');
+      console.log('📊 [AUTH] MFA State:', {
+        hasVerifiedFactor: !!verifiedFactor,
+        currentAAL: aalData?.currentLevel,
+        nextAAL: aalData?.nextLevel,
+        totalFactors: (factors as any)?.all?.length || 0
+      });
 
-        if (verifiedFactor) {
-          console.log('[Auth] User has verified MFA factor. Triggering challenge...', verifiedFactor.id);
-          setMfaFactorId(verifiedFactor.id);
-          setPartialUser(session.user);
-          setMode('mfa');
-        } else {
-          console.log('[Auth] User session is AAL1 but no verified MFA factors found.');
-        }
+      // FORCE MFA if a verified factor exists and we aren't already at AAL2
+      if (verifiedFactor && aalData?.currentLevel !== 'aal2') {
+        console.log('🛡️ [AUTH] Verified MFA factor detected. Forcing challenge modal...');
+        setMfaFactorId(verifiedFactor.id);
+        setPartialUser(session.user);
+        setMode('mfa');
+        setLoading(false);
+        return;
       }
     };
     checkAal();
@@ -589,14 +591,11 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             const verifiedFactor = factors.find((f: any) => f.status === 'verified');
 
             // Force MFA if we have a verified factor and the session is only AAL1
-            // Or if nextLevel is aal2, indicating MFA is expected/available
-            console.log('[Auth] MFA Decision - VerifiedFactor:', !!verifiedFactor, 'NextLevel:', aalData?.nextLevel, 'CurrentLevel:', aalData?.currentLevel);
-
-            if (verifiedFactor && aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
-              console.log('[Auth] MFA required. Verified factor ID:', verifiedFactor.id, 'Type:', verifiedFactor.factor_type || verifiedFactor.factorType);
+            if (verifiedFactor && aalData?.currentLevel !== 'aal2') {
+              console.log('[Auth] MFA required. Verified factor ID:', verifiedFactor.id);
               setMfaFactorId(verifiedFactor.id);
               setPartialUser(data.user);
-              setMfaCode(''); // Ensure input is clear
+              setMfaCode(''); 
               setMode('mfa');
               setLoading(false);
               return;

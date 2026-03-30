@@ -78,23 +78,19 @@ export function Layout() {
         { to: '/calculators', label: 'Calculators', icon: Calculator },
         { to: '/settings', label: 'Settings', icon: Settings },
       ],
+      Team: [
+        { to: '/team', label: 'Team Dashboard', icon: UserCog },
+        { to: '/team-analytics', label: 'Team Analytics', icon: Trophy },
+        { to: '/team-calendar', label: 'Team Calendar', icon: Calendar },
+      ],
     };
 
     if (isAdmin) {
-      // Ensure Admin is always at the bottom of Tools
       sections.Tools.push({ to: '/admin', label: 'Admin', icon: Shield });
     }
 
     return sections;
   }, [isAdmin, aiName]);
-
-  const teamSubNav = [
-    { to: '/team', label: 'Team Dashboard', icon: UserCog },
-    { to: '/team-analytics', label: 'Team Analytics', icon: Trophy },
-    { to: '/team-calendar', label: 'Team Calendar', icon: Calendar },
-  ];
-
-  const [teamExpanded, setTeamExpanded] = useState(true);
 
   const onlineCount = (team || []).filter(m => m.presenceStatus === 'online').length;
   const pendingTaskCount = (tasks || []).filter(t => t.status === 'todo' || t.status === 'in-progress').length;
@@ -566,52 +562,7 @@ export function Layout() {
             );
           })}
 
-          {/* Team Section — Collapsible */}
-          <div className="px-2">
-            <button
-              onClick={() => setTeamExpanded(!teamExpanded)}
-              className="w-full flex items-center justify-between px-3 py-2 mb-1 group cursor-pointer"
-            >
-              <span
-                className={`text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0'}`}
-                style={{ color: 'var(--t-text-muted)' }}
-              >
-                Team
-              </span>
-              {sidebarOpen && (
-                teamExpanded 
-                  ? <ChevronDown size={14} style={{ color: 'var(--t-text-muted)' }} className="transition-transform" />
-                  : <ChevronRight size={14} style={{ color: 'var(--t-text-muted)' }} className="transition-transform" />
-              )}
-            </button>
-            {(teamExpanded || !sidebarOpen) && (
-              <div className="flex flex-col gap-1">
-                {teamSubNav.map(({ to, label, icon: Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === '/team'}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-all duration-200 group relative ${
-                        isActive ? 'active-nav-item' : 'inactive-nav-item'
-                      }`
-                    }
-                    style={({ isActive }) => ({
-                      borderRadius: 'var(--t-radius)',
-                      background: isActive ? 'var(--t-primary-dim)' : 'transparent',
-                      color: isActive ? 'var(--t-primary-text)' : 'var(--t-text-muted)',
-                      boxShadow: isActive ? 'var(--t-glow-shadow)' : 'none',
-                    })}
-                  >
-                    <Icon size={20} className="shrink-0" />
-                    <span className={`flex-1 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
-                      {label}
-                    </span>
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
+          {/* Navigation sections are now all handled in navSections mapping above */}
 
 
 
