@@ -46,6 +46,7 @@ import About from './pages/marketing/About';
 import Privacy from './pages/marketing/Privacy';
 import Terms from './pages/marketing/Terms';
 import Contact from './pages/marketing/Contact';
+import Blog from './pages/marketing/Blog';
 import LeadShare from './pages/marketing/LeadShare';
 import LeadShareEditor from './pages/LeadShareEditor';
 import CRMCompare from './pages/marketing/CRMCompare';
@@ -202,6 +203,7 @@ export function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/blog" element={<Blog />} />
           <Route path="/integrations" element={<Integrations />} />
           <Route path="/compare" element={<CRMCompare />} />
         </Route>

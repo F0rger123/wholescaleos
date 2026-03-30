@@ -49,6 +49,7 @@ export const MarketingLayout: React.FC = () => {
     { name: 'Home', href: '/' },
     { name: 'Features', href: '/features' },
     { name: 'Pricing', href: '/pricing' },
+    { name: 'Blog', href: '/blog' },
     { name: 'Compare', href: '/compare' },
     { name: 'About', href: '/about' },
   ];

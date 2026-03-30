@@ -537,8 +537,11 @@ export default function Contracts() {
       if (ext === 'html' || ext === 'txt') {
         content = await file.text();
       } else if (ext === 'pdf') {
+        const arrayBuf = await file.arrayBuffer();
+        let extractedText = '';
+        
+        // Step 1: Try text extraction with pdfjs-dist
         try {
-          const arrayBuf = await file.arrayBuffer();
           const pdfjs = await import('pdfjs-dist');
           pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
           
@@ -554,20 +557,64 @@ export default function Contracts() {
             fullText += pageText + '\n\n';
           }
 
-          const cleanedText = fullText
+          extractedText = fullText
             .replace(/[^\x20-\x7E\n\r\t]/g, '')
             .replace(/\s+/g, ' ')
             .replace(/\n\s*\n/g, '\n\n')
             .trim();
-
-          if (cleanedText.length > 10) {
-            content = `<h1>${baseName}</h1>\n<p style="font-style:italic;color:#666;">Imported from PDF — formatting preserved as possible.</p>\n<div style="white-space:pre-wrap;line-height:1.8;">${cleanedText}</div>`;
-          } else {
-            throw new Error('Could not extract meaningful text from PDF.');
-          }
         } catch (pdfErr) {
-          console.error('PDF JS extraction failed', pdfErr);
-          content = `<h1>${baseName}</h1>\n<p style="color:#999;">Advanced extraction failed. This PDF may be an image-only scan.</p>\n<p>[Paste your contract content here]</p>`;
+          console.error('[PDF] pdfjs-dist extraction failed:', pdfErr);
+        }
+
+        // Step 2: If text extraction yielded little or nothing, try OCR with Tesseract.js
+        if (extractedText.length <= 10) {
+          console.log('[PDF] Text extraction insufficient, attempting OCR...');
+          try {
+            const { createWorker } = await import('tesseract.js');
+            const worker = await createWorker('eng');
+            
+            // Convert PDF pages to images using pdfjs-dist canvas rendering
+            const pdfjs = await import('pdfjs-dist');
+            pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+            const pdf = await pdfjs.getDocument({ data: arrayBuf }).promise;
+            
+            let ocrText = '';
+            const maxPages = Math.min(pdf.numPages, 5); // Limit to 5 pages for performance
+            
+            for (let i = 1; i <= maxPages; i++) {
+              const page = await pdf.getPage(i);
+              const viewport = page.getViewport({ scale: 2.0 });
+              
+              const canvas = document.createElement('canvas');
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) continue;
+              
+              await page.render({ canvasContext: ctx, viewport }).promise;
+              
+              const { data: { text } } = await worker.recognize(canvas);
+              ocrText += text + '\n\n';
+              canvas.remove();
+            }
+            
+            await worker.terminate();
+            
+            extractedText = ocrText.trim();
+            if (extractedText.length > 10) {
+              console.log('[PDF] OCR extraction succeeded, length:', extractedText.length);
+            }
+          } catch (ocrErr) {
+            console.error('[PDF] OCR extraction also failed:', ocrErr);
+          }
+        }
+
+        // Step 3: Build content based on extraction result
+        if (extractedText.length > 10) {
+          content = `<h1>${baseName}</h1>\n<p style="font-style:italic;color:#666;">Imported from PDF — formatting preserved as possible.</p>\n<div style="white-space:pre-wrap;line-height:1.8;">${extractedText}</div>`;
+        } else {
+          // Fallback: allow manual text entry
+          content = `<h1>${baseName}</h1>\n<p style="color:#e67e22;font-weight:bold;">PDF text extraction failed.</p>\n<p style="color:#666;">This PDF may be an image-only scan, password-protected, or use an unsupported format.</p>\n<p style="color:#666;margin-top:1rem;">Please paste your contract content below:</p>\n<div style="border:2px dashed #ccc;padding:2rem;margin-top:1rem;min-height:200px;border-radius:8px;">[Paste your contract content here]</div>`;
         }
       } else if (ext === 'docx') {
         const arrayBuf = await file.arrayBuffer();
@@ -636,45 +683,81 @@ export default function Contracts() {
   };
 
   const handlePreviewPdf = async () => {
-    if (!previewRef.current) return;
+    if (!previewRef.current) {
+      console.error('[PDF] Preview ref is null — no document to generate from');
+      alert('No document to generate. Please select a template first.');
+      return;
+    }
     setGeneratingPdf(true);
+    console.log('[PDF] Starting PDF generation for template:', activeTemplate.name);
+    
     try {
       const element = previewRef.current;
+      console.log('[PDF] Element dimensions:', element.offsetWidth, 'x', element.offsetHeight);
+      
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
         filename: `${activeTemplate.name}_${selectedLead?.name || 'Draft'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+        jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
+      console.log('[PDF] Generating PDF with options:', JSON.stringify(opt));
+      
       // @ts-ignore
-      await html2pdf().from(element).set(opt).save();
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-      alert('Failed to generate PDF. Please try again.');
+      const pdfInstance = html2pdf();
+      if (!pdfInstance) {
+        throw new Error('html2pdf failed to initialize. Check that html2pdf.js is properly installed.');
+      }
+      
+      await pdfInstance.set(opt).from(element).save();
+      console.log('[PDF] PDF generated successfully');
+    } catch (error: any) {
+      console.error('[PDF] Generation Error:', error);
+      console.error('[PDF] Error stack:', error?.stack);
+      alert(`Failed to generate PDF: ${error?.message || 'Unknown error'}. Check console for details.`);
     } finally {
       setGeneratingPdf(false);
     }
   };
 
   const handleEmailLead = async () => {
-    if (!selectedLead || !previewRef.current) return;
+    if (!previewRef.current) {
+      console.error('[PDF] Preview ref is null for email');
+      alert('No document to send. Please select a template first.');
+      return;
+    }
+    if (!selectedLead) {
+      console.error('[PDF] No lead selected for email');
+      alert('Please select a lead/contract subject first.');
+      return;
+    }
     
     setGeneratingPdf(true);
+    console.log('[PDF] Generating PDF for email to:', selectedLead.email);
+    
     try {
       const element = previewRef.current;
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
         image: { type: 'jpeg' as const, quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' as const }
+        jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
+      // @ts-ignore
+      const pdfInstance = html2pdf();
+      if (!pdfInstance) {
+        throw new Error('html2pdf failed to initialize');
+      }
+      
       // Generate PDF as blob/base64
-      const pdfWorker = html2pdf().from(element).set(opt).outputPdf('datauristring');
+      const pdfWorker = pdfInstance.from(element).set(opt).outputPdf('datauristring');
       const dataUri = await pdfWorker;
       const base64Content = dataUri.split(',')[1];
+
+      console.log('[PDF] PDF generated for email, base64 length:', base64Content.length);
 
       setEmailAttachment({
         filename: `${activeTemplate.name}.pdf`,
@@ -683,9 +766,9 @@ export default function Contracts() {
       });
       
       setShowEmailModal(true);
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-      alert('Failed to prepare document for email. Please try again.');
+    } catch (error: any) {
+      console.error('[PDF] Email PDF Generation Error:', error);
+      alert(`Failed to prepare document for email: ${error?.message || 'Unknown error'}`);
     } finally {
       setGeneratingPdf(false);
     }
@@ -999,16 +1082,16 @@ export default function Contracts() {
               disabled={generatingPdf}
               className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-[var(--t-surface-subtle)] text-[var(--t-text)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
             >
-              <Shield size={14} className="text-[var(--t-primary)]" />
-              Preview PDF
+              {generatingPdf ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} className="text-[var(--t-primary)]" />}
+              {generatingPdf ? 'Generating...' : 'Preview PDF'}
             </button>
             <button 
               onClick={handleEmailLead}
               disabled={generatingPdf}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-wait"
             >
-              <Mail size={16} />
-              Send Contract
+              {generatingPdf ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
+              {generatingPdf ? 'Preparing...' : 'Send Contract'}
             </button>
           </div>
         </div>

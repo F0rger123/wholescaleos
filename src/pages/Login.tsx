@@ -456,35 +456,35 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     setError(null);
     try {
       if (!supabase) throw new Error('Supabase not configured');
-      console.log('[Auth] MFA Challenge initiated...', { factorId: mfaFactorId });
+      console.log('[Auth] MFA Challenge initiated...', { factorId: mfaFactorId, codeLength: mfaCode.length });
       
-      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
-      if (challengeError) {
-        console.error('[Auth] MFA Challenge Error:', challengeError);
-        throw challengeError;
-      }
-      
-      console.log('[Auth] MFA Challenge success, verifying code...', { challengeId: challenge.id });
-      const { data: verifyData, error: verifyError } = await supabase.auth.mfa.verify({
+      // IMPORTANT: The TOTP code must be passed to challenge(), not verify()
+      // Supabase MFA flow: challenge({ factorId, code }) -> verify({ factorId, challengeId })
+      const { data: challenge, error: challengeError } = await supabase.auth.mfa.challengeAndVerify({
         factorId: mfaFactorId,
-        challengeId: challenge.id,
         code: mfaCode
       });
       
-      if (verifyError) {
-        console.error('[Auth] MFA Verify Error:', verifyError);
-        throw verifyError;
+      if (challengeError) {
+        console.error('[Auth] MFA Challenge/Verify Error:', challengeError);
+        throw challengeError;
       }
       
-      console.log('[Auth] MFA verified successfully:', verifyData);
+      console.log('[Auth] MFA verified successfully:', challenge);
+      
+      // Get the updated session after MFA verification
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.user) {
+        console.log('[Auth] Session updated after MFA, finalizing login');
         await finalizeLogin(sessionData.session.user);
       } else {
+        console.log('[Auth] No session after MFA, using partial user');
         await finalizeLogin(partialUser);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid 2FA code');
+      console.error('[Auth] MFA verification failed:', err);
+      const msg = err instanceof Error ? err.message : 'Invalid 2FA code';
+      setError(msg.includes('Invalid') ? 'Invalid code. Please check your authenticator app and try again.' : msg);
       setLoading(false);
     }
   };

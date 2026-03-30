@@ -2,9 +2,13 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@14.23.0";
 import { createClient } from "npm:@supabase/supabase-js@2.42.0";
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-  apiVersion: '2023-10-16',
+const stripeKey = Deno.env.get('STRIPE_SECRET_KEY') || '';
+const isLiveMode = stripeKey.startsWith('sk_live_');
+const stripe = new Stripe(stripeKey, {
+  apiVersion: '2024-12-18.acacia',
 });
+
+console.log(`[Stripe] Initialized. Mode: ${isLiveMode ? 'LIVE' : 'TEST'}, Key prefix: ${stripeKey.slice(0, 12)}...`);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,15 +63,18 @@ Deno.serve(async (req: Request) => {
     const userEmail = user.email;
     const origin = req.headers.get('origin') || '';
 
-    const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeKey || stripeKey.length < 10) {
-      console.error('STRIPE_SECRET_KEY is missing or invalid');
+      console.error('[Stripe] STRIPE_SECRET_KEY is missing or invalid');
       return new Response(
         JSON.stringify({ error: 'Payment service is not configured. Please set STRIPE_SECRET_KEY in Supabase Edge Function secrets.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // IMPORTANT: These Price IDs MUST match your Stripe Dashboard.
+    // TEST mode IDs start with price_test_ / price_ (test mode prefix varies)
+    // LIVE mode IDs start with price_ (but correspond to live products)
+    // Verify at: https://dashboard.stripe.com/products
     const priceMap: Record<string, string> = {
       'solo': 'price_1PThelI0QxY7hIfL7sWqzvYI',
       'pro': 'price_1PThelI0QxY7hIfL9QWqzvYI',
@@ -76,7 +83,12 @@ Deno.serve(async (req: Request) => {
     };
 
     const priceId = priceMap[plan] || priceMap['solo'];
-    console.log(`[Stripe] Configuration: Plan=${plan}, PriceID=${priceId}, Seats=${seats}, Email=${user.email}`);
+    console.log(`[Stripe] ===== CHECKOUT REQUEST =====`);
+    console.log(`[Stripe] Plan: ${plan}, Resolved PriceID: ${priceId}`);
+    console.log(`[Stripe] Seats: ${seats}, Email: ${user.email}`);
+    console.log(`[Stripe] Mode: ${isLiveMode ? 'LIVE' : 'TEST'}`);
+    console.log(`[Stripe] Available plans: ${Object.keys(priceMap).join(', ')}`);
+    console.log(`[Stripe] ==============================`);
 
     // Determine quantity - if it's the 'pro' or 'team' plan, we might want to scale by seats
     const quantity = Math.max(1, parseInt(seats?.toString() || '1'));
@@ -116,12 +128,27 @@ Deno.serve(async (req: Request) => {
         }
       );
     } catch (stripeError: any) {
-      console.error('[Stripe] Checkout session creation failed. Full error:', JSON.stringify(stripeError, null, 2));
+      console.error('[Stripe] Checkout session creation failed:', stripeError.type, stripeError.code, stripeError.message);
+      console.error('[Stripe] Full error:', JSON.stringify({
+        type: stripeError.type,
+        code: stripeError.code,
+        message: stripeError.message,
+        param: stripeError.param,
+        priceIdUsed: priceId,
+        stripeMode: isLiveMode ? 'live' : 'test',
+      }, null, 2));
       
-      // Provide more helpful error messages for common Stripe issues
       let friendlyMessage = stripeError.message;
+      let statusCode = 400;
+      
       if (stripeError.type === 'StripeInvalidRequestError') {
-        friendlyMessage = `Invalid request to Stripe: ${stripeError.message}. This usually means a Price ID (${priceId}) is incorrect or the product is inactive.`;
+        friendlyMessage = `Invalid Stripe request: ${stripeError.message}. Price ID "${priceId}" may be incorrect or inactive in ${isLiveMode ? 'live' : 'test'} mode.`;
+      } else if (stripeError.type === 'StripeAuthenticationError') {
+        friendlyMessage = 'Stripe API key is invalid. Check STRIPE_SECRET_KEY in Supabase secrets.';
+        statusCode = 401;
+      } else if (stripeError.type === 'StripeAPIError') {
+        friendlyMessage = 'Stripe API is temporarily unavailable. Please try again.';
+        statusCode = 502;
       }
 
       return new Response(
@@ -130,11 +157,12 @@ Deno.serve(async (req: Request) => {
           code: stripeError.code || 'stripe_error',
           type: stripeError.type || 'api_error',
           priceId: priceId,
-          detail: 'Failed to create Stripe checkout session. Please verify your Price IDs in the priceMap object match your Stripe Dashboard.'
+          stripeMode: isLiveMode ? 'live' : 'test',
+          detail: `Verify Price IDs at https://dashboard.stripe.com/products match the priceMap in the Edge Function.`
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: statusCode,
         }
       );
     }
