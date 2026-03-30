@@ -52,10 +52,50 @@ export default function Login() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('signup') === 'true') {
-      setMode('signup');
-    }
+    const handleUrlState = async () => {
+      // 1. Check for URL hash (Supabase defaults)
+      const hash = window.location.hash;
+      if (hash.includes('type=recovery')) {
+        setMode('forgot');
+        return;
+      }
+      if (hash.includes('type=signup')) {
+        setMode('signup');
+        return;
+      }
+
+      // 2. Check for AAL1 session (MFA Required)
+      if (isSupabaseConfigured && supabase) {
+        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2') {
+          console.log('[Login] AAL1 detected on mount, triggering MFA challenge...');
+          
+          // Get the verified factor to prepare the form
+          const { data: factors } = await supabase.auth.mfa.listFactors();
+          const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
+          
+          if (verifiedFactor) {
+            setMfaFactorId(verifiedFactor.id);
+            setMode('mfa');
+            
+            // Try to find the user to show a personalized message
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) setPartialUser(user);
+          }
+          return;
+        }
+      }
+
+      // 3. Fallback to query params
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('signup') === 'true') {
+        setMode('signup');
+      } else if (params.get('mode') === 'forgot') {
+        setMode('forgot');
+      }
+    };
+
+    handleUrlState();
   }, []);
 
   const switchMode = (m: AuthMode) => {
@@ -67,6 +107,11 @@ export default function Login() {
     setShowEmailFix(false);
     clearAuthError();
     setForgotSent(false);
+
+    // Clear hashes when manually switching modes to prevent sticky URL state
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
   };
 
   const validate = () => {
@@ -853,7 +898,8 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
               {mode === 'login' ? 'Welcome back' : 
                mode === 'signup' ? 'Create your account' : 
                mode === 'mfa' ? 'Two-Factor Auth' :
-               'Reset password'}
+               mode === 'forgot' ? 'Reset password' :
+               'Welcome back'}
             </h2>
             <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
               {mode === 'login'

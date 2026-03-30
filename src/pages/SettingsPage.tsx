@@ -656,12 +656,27 @@ function SecurityTab() {
               </p>
             </div>
           </div>
-          <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-            mfaStatus === 'enabled' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-            mfaStatus === 'loading' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
-            'bg-orange-500/10 text-orange-400 border-orange-500/20'
-          }`}>
-            {mfaStatus === 'loading' ? 'Checking...' : mfaStatus === 'enabled' ? 'Active' : 'Not Setup'}
+          <div className="flex items-center gap-3">
+            {mfaStatus === 'loading' ? (
+              <Loader2 size={16} className="animate-spin" style={{ color: 'var(--t-text-muted)' }} />
+            ) : (
+              <label className="relative inline-flex items-center cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer"
+                  checked={mfaStatus === 'enabled'}
+                  onChange={() => {
+                    if (mfaStatus === 'enabled') handleDisable2FA();
+                    else handleEnroll2FA();
+                  }}
+                  disabled={mfaLoading}
+                />
+                <div className="w-11 h-6 bg-[var(--t-surface-dim)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--t-primary)]"></div>
+                <span className="ms-3 text-[10px] font-black uppercase tracking-widest" style={{ color: mfaStatus === 'enabled' ? 'var(--t-success)' : 'var(--t-text-muted)' }}>
+                  {mfaStatus === 'enabled' ? 'Enabled' : 'Disabled'}
+                </span>
+              </label>
+            )}
           </div>
         </div>
 
@@ -672,20 +687,19 @@ function SecurityTab() {
           </div>
         )}
 
-        {mfaStatus === 'disabled' && !enrolling && (
-          <div className="p-6 rounded-xl text-center" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-            <Shield size={40} className="mx-auto mb-3 opacity-30" style={{ color: 'var(--t-text-muted)' }} />
-            <p className="text-sm mb-4" style={{ color: 'var(--t-text-secondary)' }}>
-              Protect your account with time-based one-time passwords (TOTP)
+        {mfaStatus === 'disabled' && !enrolling && !mfaLoading && (
+          <div className="p-8 rounded-xl text-center border-2 border-dashed border-[var(--t-border)]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+            <Shield size={48} className="mx-auto mb-4 opacity-10" style={{ color: 'var(--t-text)' }} />
+            <p className="text-sm font-medium mb-1" style={{ color: 'var(--t-text)' }}>Two-Factor Authentication is currently inactive.</p>
+            <p className="text-xs mb-6 max-w-sm mx-auto" style={{ color: 'var(--t-text-secondary)' }}>
+              Enable 2FA to protect your account from unauthorized access attempt by requiring a temporary code from your mobile device.
             </p>
             <button
               onClick={handleEnroll2FA}
-              disabled={mfaLoading}
-              className="px-6 py-2.5 rounded-lg text-sm font-bold transition-all"
+              className="px-6 py-2.5 rounded-lg text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
             >
-              {mfaLoading ? <Loader2 size={14} className="animate-spin inline mr-2" /> : null}
-              Enable 2FA
+              Configure Authenticator App
             </button>
           </div>
         )}

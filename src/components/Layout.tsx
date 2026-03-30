@@ -468,40 +468,52 @@ export function Layout() {
               </>
             )}
           </div>
-        {/* Nav */}
-        <nav className="flex-1 flex flex-col p-4 mt-2 overflow-y-auto scrollbar-hide">
+        {/* Nav */}        <nav className="flex-1 flex flex-col p-4 mt-2 overflow-y-auto scrollbar-hide">
           {Object.entries(navSections).map(([sectionName, items], sectionIndex) => {
             const isCollapsed = collapsedSections[sectionName];
 
             return (
-              <div key={sectionName} className={sectionIndex > 0 ? "pt-6 space-y-1.5" : "space-y-1.5"}>
+              <div key={sectionName} className={sectionIndex > 0 ? "pt-6 space-y-1" : "space-y-1"}>
                 <button
                   onClick={() => toggleSection(sectionName)}
-                  className="w-full flex items-center justify-between px-3 py-2 group hover:bg-[var(--t-surface-dim)] rounded-xl transition-all duration-300"
+                  className="w-full flex items-center justify-between px-3 py-2.5 group hover:bg-[var(--t-surface-dim)] rounded-xl transition-all duration-300"
                 >
                   <div className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
                     <span 
-                      className="text-[10px] uppercase tracking-[0.25em] font-black italic transition-colors group-hover:text-[var(--t-primary)] whitespace-nowrap"
+                      className="text-[10px] uppercase tracking-[0.3em] font-black italic transition-colors group-hover:text-[var(--t-primary)] whitespace-nowrap"
                       style={{ color: 'var(--t-text-muted)' }}
                     >
                       {sectionName}
                     </span>
                   </div>
-                  <ChevronDown
-                    size={12}
-                    className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:text-[var(--t-primary)] ${isCollapsed ? '-rotate-90' : ''} ${!sidebarOpen ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
-                    style={{ color: 'var(--t-text-muted)' }}
-                  />
+                  <div className="flex items-center gap-2">
+                    {sectionName === 'Team' && sidebarOpen && (
+                      <Plus 
+                        size={12} 
+                        className="cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity hover:text-[var(--t-primary)]" 
+                        style={{ color: 'var(--t-text-muted)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowJoinModal(true);
+                        }}
+                      />
+                    )}
+                    <ChevronDown
+                      size={12}
+                      className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:text-[var(--t-primary)] ${isCollapsed ? '-rotate-90' : ''} ${!sidebarOpen ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}
+                      style={{ color: 'var(--t-text-muted)' }}
+                    />
+                  </div>
                 </button>
                 
                 {(!isCollapsed || !sidebarOpen) && (
-                  <div className="flex flex-col gap-1.5 pl-1">
+                  <div className="flex flex-col gap-1 pl-1">
                     {(items as { to: string; label: string; icon: any }[]).map(({ to, label, icon: Icon }) => {
                       const badge =
                         label === 'Tasks' ? pendingTaskCount :
-                        label === 'Team' ? onlineCount :
+                        label === 'Team Dashboard' ? onlineCount :
                         label === 'Team Chat' ? totalUnread : 
-                        label === 'SMS' ? 0 : 0; 
+                        0; 
 
                       return (
                         <NavLink
@@ -509,8 +521,8 @@ export function Layout() {
                           to={to}
                           end={to === '/'}
                           className={({ isActive }) =>
-                            `flex items-center gap-3 px-3 py-3 text-sm font-semibold transition-all duration-300 group relative ${
-                              isActive ? 'active-nav-item' : 'inactive-nav-item hover:translate-x-1'
+                            `flex items-center gap-3 px-3 py-3 text-[13px] font-bold transition-all duration-300 group relative ${
+                              isActive ? 'active-nav-item' : 'inactive-nav-item hover:translate-x-1.5'
                             }`
                           }
                           style={({ isActive }) => ({
@@ -521,24 +533,22 @@ export function Layout() {
                             boxShadow: isActive ? '0 10px 20px -10px var(--t-primary-dim)' : 'none',
                           })}
                         >
-                          <Icon size={18} className={`shrink-0 transition-transform duration-300 ${sidebarOpen ? '' : 'mx-auto'}`} />
+                          <Icon size={18} className={`shrink-0 transition-all duration-300 ${sidebarOpen ? 'group-hover:scale-110' : 'mx-auto group-hover:scale-125'}`} />
                           <span className={`flex-1 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>
                             {label}
                           </span>
                           
                           {/* Active Indicator Dot */}
-                          <NavLink
-                             to={to}
-                             end={to === '/'}
-                             className={({ isActive }) => `absolute left-0 w-1 h-4 bg-[var(--t-primary)] rounded-r-full transition-all duration-300 ${isActive ? 'opacity-100' : 'opacity-0'}`}
+                          <div
+                             className={`absolute left-0 w-1 h-5 bg-[var(--t-primary)] rounded-r-full transition-all duration-300 ${location.pathname === to ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
                           />
 
                           {badge > 0 && sidebarOpen && (
                             <span
-                              className="text-[9px] font-black text-white px-1.5 py-0.5 rounded-lg min-w-[20px] text-center shadow-sm"
+                              className="text-[9px] font-black text-white px-1.5 py-0.5 rounded-lg min-w-[20px] text-center shadow-lg animate-in zoom-in-50 duration-500"
                               style={{
                                 background: label === 'Tasks' ? 'var(--t-warning)' :
-                                            label === 'Chat' ? 'var(--t-primary)' :
+                                            label === 'Team Chat' ? 'var(--t-primary)' :
                                             'var(--t-success)',
                               }}
                             >

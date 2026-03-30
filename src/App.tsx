@@ -53,26 +53,40 @@ import CRMCompare from './pages/marketing/CRMCompare';
 import Integrations from './pages/marketing/Integrations';
 import ScrollToTop from './components/ScrollToTop';
 
-function ProtectedRoute({ children, checking }: { children: React.ReactNode, checking?: boolean }) {
+function ProtectedRoute({ children, checking, isMfaRequired }: { children: React.ReactNode, checking?: boolean, isMfaRequired: boolean }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   
   if (checking) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
+  // Only redirect to login for MFA if we are NOT already on the login page
+  if (isMfaRequired) {
+    const isLoginPage = window.location.pathname === '/login';
+    if (!isLoginPage) {
+      console.log('[App] MFA required, redirecting to login');
+      return <Navigate to="/login" replace />;
+    }
+  }
+
   // If Supabase is configured but no team selected, redirect to team selection
   if (isSupabaseConfigured) {
     const hasTeam = localStorage.getItem('wholescale-preferred-team');
-    if (!hasTeam) return <Navigate to="/team-selection" replace />;
+    const isTeamSelectionPage = window.location.pathname === '/team-selection';
+    if (!hasTeam && !isTeamSelectionPage) {
+      console.log('[App] No team selected, redirecting to team-selection');
+      return <Navigate to="/team-selection" replace />;
+    }
   }
 
   return <>{children}</>;
 }
 
-function PublicRoute({ children, checking }: { children: React.ReactNode, checking?: boolean }) {
+function PublicRoute({ children, checking, isMfaRequired }: { children: React.ReactNode, checking?: boolean, isMfaRequired: boolean }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   if (checking) return null;
-  if (isAuthenticated) {
-    // If authenticated with Supabase, check if team is selected
+  
+  if (isAuthenticated && !isMfaRequired) {
+    // If authenticated and no MFA needed, check team selection
     if (isSupabaseConfigured && !localStorage.getItem('wholescale-preferred-team')) {
       return <Navigate to="/team-selection" replace />;
     }
@@ -95,50 +109,55 @@ function DataSyncWrapper() {
 
 export function App() {
   const [checking, setChecking] = useState(true);
+  const [isMfaRequired, setIsMfaRequired] = useState(false);
   const { login, updateProfile, incrementLoginStreak, loadLeads } = useStore();
+
+  const updateMfaStatus = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data: aal, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (error) {
+        console.error('[App] MFA getAAL error:', error);
+        return;
+      }
+      
+      const mfaNeeded = aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2';
+      console.log('[App] MFA check:', { current: aal?.currentLevel, next: aal?.nextLevel, needed: mfaNeeded });
+      setIsMfaRequired(mfaNeeded);
+    } catch (err) {
+      console.error('[App] MFA check failed:', err);
+    }
+  };
 
   // On mount: check for existing Supabase session
   useEffect(() => {
     async function checkSession() {
       if (isSupabaseConfigured && supabase) {
         try {
-          // Check for Supabase auth callback in URL (for email confirmations)
-          const hash = window.location.hash;
-          if (hash.includes('access_token') && (hash.includes('type=signup') || hash.includes('type=magiclink') || hash.includes('type=recovery'))) {
-            if (!hash.includes('/email-confirmed')) {
-              const tokenHash = hash.startsWith('#/') ? hash : hash;
-              sessionStorage.setItem('supabase-auth-callback', tokenHash);
-              setChecking(false);
-              return;
-            }
-          }
-
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
             const userId = session.user.id;
-            console.log('[App] Session found for user:', userId, '. Initializing profile...');
+            console.log('[App] Session check: user logged in. AAL level check...');
 
-            // Check MFA Assurance Level
+            // Fetch AAL level immediately and update state
             const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
             const { data: factors } = await supabase.auth.mfa.listFactors();
             const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
+            
+            const mfaNeeded = verifiedFactor && aal?.currentLevel === 'aal1';
+            console.log('[App] Session check result:', { 
+              current: aal?.currentLevel, 
+              factorVerified: !!verifiedFactor,
+              needed: mfaNeeded 
+            });
 
-            if (verifiedFactor && aal?.currentLevel !== 'aal2') {
-              console.log('[App] MFA REQUIRED. Bypassing automatic login...');
-              setChecking(false);
-              return;
+            setIsMfaRequired(mfaNeeded);
+            
+            if (!mfaNeeded) {
+              // Only load profile if MFA is satisfied
+              await useStore.getState().fetchProfile(userId);
+              useStore.getState().incrementLoginStreak();
             }
-
-            // Set authenticated first so ProtectedRoute allows us through
-            useStore.getState().setAuthenticated(true);
-            
-            // fetchProfile will get the full user data AND the correct teamId
-            await useStore.getState().fetchProfile(userId);
-            
-            // incrementLoginStreak is internal to the store
-            useStore.getState().incrementLoginStreak();
-            
-            console.log('[App] Profile initialized. teamId:', useStore.getState().teamId);
           }
         } catch (err) {
           console.error('[App] Session check failed:', err);
@@ -168,34 +187,27 @@ export function App() {
             
             (async () => {
               try {
-                // Double check AAL before setting authenticated
-                const { data: aal, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-                if (aalErr) console.error('[App] aal check error:', aalErr);
+                // Check MFA status immediately
+                await updateMfaStatus();
 
-                const { data: factors, error: factorsErr } = await supabase.auth.mfa.listFactors();
-                if (factorsErr) console.error('[App] factors check error:', factorsErr);
-
+                // Get current levels
+                const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+                const { data: factors } = await supabase.auth.mfa.listFactors();
                 const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
 
-                console.log('[App] Auth State Check:', { 
-                  event, 
-                  currentLevel: aal?.currentLevel, 
-                  nextLevel: aal?.nextLevel,
-                  hasVerifiedMfa: !!verifiedFactor 
-                });
-
                 // If user HAS MFA but isn't at AAL2 yet, don't set as authenticated in store
-                // This prevents the ProtectedRoute from letting them in prematurely
                 if (verifiedFactor && aal?.currentLevel !== 'aal2') {
                   console.log('[App] MFA required but not reached (AAL1). Blocking store authentication.');
+                  setIsMfaRequired(true);
+                  store.setAuthenticated(false);
                   return;
                 }
 
                 console.log('[App] AAL check passed. Setting store as authenticated.');
+                setIsMfaRequired(false);
                 store.setAuthenticated(true);
                 await store.fetchProfile(userId);
                 store.incrementLoginStreak();
-                console.log('[App] Profile initialized successfully. teamId:', store.teamId);
               } catch (err) {
                 console.error('[App] Auth change initialization failed:', err);
               }
@@ -246,16 +258,20 @@ export function App() {
 
 
         {/* Public routes */}
-        <Route path="/login" element={<PublicRoute checking={checking}><Login /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><Login /></PublicRoute>} />
 
         {/* Email confirmation — accessible with or without auth */}
         <Route path="/email-confirmed" element={<EmailConfirmed />} />
 
-        {/* Team selection — after login, before main app */}
-        <Route path="/team-selection" element={<TeamSelection />} />
+        {/* Team selection — after login, before main app. Also gated by MFA. */}
+        <Route path="/team-selection" element={
+          <ProtectedRoute checking={checking} isMfaRequired={isMfaRequired}>
+            <TeamSelection />
+          </ProtectedRoute>
+        } />
 
         {/* Protected routes wrapped in a single SupabaseSync to prevent flicker on navigation */}
-        <Route element={<ProtectedRoute checking={checking}><DataSyncWrapper /></ProtectedRoute>}>
+        <Route element={<ProtectedRoute checking={checking} isMfaRequired={isMfaRequired}><DataSyncWrapper /></ProtectedRoute>}>
           {/* Full-page routes (No Sidebar) */}
           <Route path="/leads/:id/manage" element={<LeadManagement />} />
           

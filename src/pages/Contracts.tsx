@@ -721,15 +721,25 @@ export default function Contracts() {
           border-color: #e5e7eb !important;
           background-color: transparent !important;
           color: inherit !important;
-          --t-primary: #3b82f6;
-          --t-text: #1a1a1a;
-          --t-text-secondary: #4b5563;
-          --t-text-muted: #9ca3af;
-          --t-border: #e5e7eb;
+          --t-primary: #3b82f6 !important;
+          --t-primary-dim: rgba(59, 130, 246, 0.1) !important;
+          --t-background: #ffffff !important;
+          --t-bg: #ffffff !important;
+          --t-surface: #ffffff !important;
+          --t-text: #1a1a1a !important;
+          --t-text-secondary: #4b5563 !important;
+          --t-text-muted: #9ca3af !important;
+          --t-border: #e5e7eb !important;
+          --t-border-light: #f3f4f6 !important;
+          --t-success: #10b981 !important;
+          --t-warning: #f59e0b !important;
+          --t-error: #ef4444 !important;
+          --t-info: #3b82f6 !important;
           /* Force solid colors for any common tailwind classes that might use oklch */
           --tw-bg-opacity: 1 !important;
           --tw-text-opacity: 1 !important;
           --tw-border-opacity: 1 !important;
+          background: none !important;
         }
         .pdf-content strong, .pdf-content b { color: #000000 !important; }
       `;
@@ -818,14 +828,24 @@ export default function Contracts() {
           border-color: #e5e7eb !important;
           background-color: transparent !important;
           color: inherit !important;
-          --t-primary: #3b82f6;
-          --t-text: #1a1a1a;
-          --t-text-secondary: #4b5563;
-          --t-text-muted: #9ca3af;
-          --t-border: #e5e7eb;
+          --t-primary: #3b82f6 !important;
+          --t-primary-dim: rgba(59, 130, 246, 0.1) !important;
+          --t-background: #ffffff !important;
+          --t-bg: #ffffff !important;
+          --t-surface: #ffffff !important;
+          --t-text: #1a1a1a !important;
+          --t-text-secondary: #4b5563 !important;
+          --t-text-muted: #9ca3af !important;
+          --t-border: #e5e7eb !important;
+          --t-border-light: #f3f4f6 !important;
+          --t-success: #10b981 !important;
+          --t-warning: #f59e0b !important;
+          --t-error: #ef4444 !important;
+          --t-info: #3b82f6 !important;
           --tw-bg-opacity: 1 !important;
           --tw-text-opacity: 1 !important;
           --tw-border-opacity: 1 !important;
+          background: none !important;
         }
         .pdf-content strong, .pdf-content b { color: #000000 !important; }
       `;
@@ -864,14 +884,9 @@ export default function Contracts() {
         contentType: 'application/pdf'
       });
       
-      setSendStep('success');
-      toast.success('Document prepared for email!');
-      
-      setTimeout(() => {
-        setShowEmailModal(true);
-        setIsSendingContract(false);
-        setSendStep('idle');
-      }, 800);
+      setShowEmailModal(true);
+      setIsSendingContract(false);
+      setSendStep('idle');
     } catch (error: any) {
       console.error('[PDF] Email PDF Generation Error:', error);
       toast.error(`Failed to prepare document for email: ${error?.message || 'Unknown error'}`);
@@ -1298,6 +1313,10 @@ export default function Contracts() {
           initialBody={`Hi ${selectedLead?.name || 'there'},\n\nPlease find the attached contract for the property at ${selectedLead?.propertyAddress || 'your property'}.\n\nReview it and let me know if you have any questions.\n\nBest regards,\n${currentUser?.name || 'The WholeScale Team'}`}
           attachment={emailAttachment}
           isAttachmentLoading={generatingPdf}
+          onSuccess={() => {
+            setSendStep('success');
+            setIsSendingContract(true);
+          }}
         />
       )}
       {/* Send Contract Loading Modal */}

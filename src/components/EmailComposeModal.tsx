@@ -15,6 +15,7 @@ interface EmailComposeModalProps {
     contentType: string;
   } | null;
   isAttachmentLoading?: boolean;
+  onSuccess?: () => void;
 }
 
 export default function EmailComposeModal({ 
@@ -24,7 +25,8 @@ export default function EmailComposeModal({
   initialSubject = '', 
   initialBody = '',
   attachment,
-  isAttachmentLoading = false
+  isAttachmentLoading = false,
+  onSuccess
 }: EmailComposeModalProps) {
 
   const { currentUser, updateLead, leads } = useStore();
@@ -121,7 +123,7 @@ export default function EmailComposeModal({
         }
         
         // Show success and close
-        alert('Email sent successfully!');
+        if (onSuccess) onSuccess();
         onClose();
       } else {
         throw new Error(result.error || 'Failed to send email');

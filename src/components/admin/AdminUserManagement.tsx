@@ -104,10 +104,10 @@ export default function AdminUserManagement() {
             '--tw-ring-color': 'var(--t-primary-dim)' 
           } as any}
         >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
-          <option value="pending">Pending</option>
+          <option value="all" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>All Status</option>
+          <option value="active" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Active</option>
+          <option value="suspended" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Suspended</option>
+          <option value="pending" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Pending</option>
         </select>
         <select 
           value={tierFilter}
@@ -120,12 +120,12 @@ export default function AdminUserManagement() {
             '--tw-ring-color': 'var(--t-primary-dim)' 
           } as any}
         >
-          <option value="all">All Tiers</option>
-          <option value="Free">Free</option>
-          <option value="Solo">Solo</option>
-          <option value="Pro">Pro</option>
-          <option value="Team">Team</option>
-          <option value="Agency">Agency</option>
+          <option value="all" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>All Tiers</option>
+          <option value="Free" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Free</option>
+          <option value="Solo" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Solo</option>
+          <option value="Pro" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Pro</option>
+          <option value="Team" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Team</option>
+          <option value="Agency" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Agency</option>
         </select>
         <button 
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-lg active:scale-95 bg-purple-600 hover:bg-purple-700 text-white"
@@ -196,13 +196,17 @@ export default function AdminUserManagement() {
                       value={user.role}
                       onChange={(e) => handleUpdateUser(user.id, { role: e.target.value })}
                       disabled={loadingId === user.id}
-                      className={`text-xs font-bold px-2 py-1 rounded-full border-none outline-none appearance-none cursor-pointer transition-colors ${
-                        user.role === 'admin' ? 'bg-purple-50 text-purple-600' : 'bg-gray-50 text-gray-600'
+                      className={`text-xs font-bold px-3 py-1 rounded-full border-none outline-none appearance-none cursor-pointer transition-colors ${
+                        user.role === 'admin' ? 'bg-purple-500/10 text-purple-500' : 'bg-[var(--t-surface-dim)] text-[var(--t-text-muted)]'
                       }`}
+                      style={{ 
+                        backgroundColor: user.role === 'admin' ? 'rgba(168, 85, 247, 0.1)' : 'var(--t-surface-dim)',
+                        color: user.role === 'admin' ? '#a855f7' : 'var(--t-text-muted)'
+                      }}
                     >
-                      <option value="admin">Admin</option>
-                      <option value="member">Member</option>
-                      <option value="viewer">Viewer</option>
+                      <option value="admin" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Admin</option>
+                      <option value="member" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Member</option>
+                      <option value="viewer" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Viewer</option>
                     </select>
                   </div>
                 </td>
@@ -220,9 +224,9 @@ export default function AdminUserManagement() {
                       borderColor: 'transparent'
                     }}
                   >
-                    <option value="active">Active</option>
-                    <option value="suspended">Suspended</option>
-                    <option value="pending">Pending</option>
+                    <option value="active" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Active</option>
+                    <option value="suspended" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Suspended</option>
+                    <option value="pending" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Pending</option>
                   </select>
                 </td>
                 <td className="px-6 py-5 text-xs text-[var(--t-text-muted)]">
