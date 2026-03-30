@@ -56,49 +56,6 @@ export default function Login() {
     if (params.get('signup') === 'true') {
       setMode('signup');
     }
-
-    // Check if user is already signed in at AAL1 but needs MFA
-    const checkAal = async () => {
-      if (!isSupabaseConfigured || !supabase) return;
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-
-      console.log('[Auth] Found existing session for user:', session.user.email);      // ─── 2. MFA STRATEGY: Proactive Challenge ──────────────────────────
-      console.log('🔐 [AUTH] Login successful, checking for MFA factors...');
-      
-      const { data: factorData, error: factorsError } = await supabase.auth.mfa.listFactors();
-      if (factorsError) {
-        console.error('❌ [AUTH] Error listing MFA factors:', factorsError.message);
-        throw factorsError;
-      }
-      
-      const totpFactors = factorData?.totp || [];
-      const verifiedFactor = totpFactors.find(f => f.status === 'verified');
-      
-      // Get current AAL (Authenticator Assurance Level)
-      const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aalError) {
-        console.error('❌ [AUTH] Error getting AAL:', aalError.message);
-      }
-
-      console.log('📊 [AUTH] MFA State:', {
-        hasVerifiedFactor: !!verifiedFactor,
-        currentAAL: aalData?.currentLevel,
-        nextAAL: aalData?.nextLevel,
-        totalFactors: factorData?.totp?.length || 0
-      });
-
-      // FORCE MFA if a verified factor exists and we aren't already at AAL2
-      if (verifiedFactor && aalData?.currentLevel !== 'aal2') {
-        console.log('🛡️ [AUTH] Verified MFA factor detected. Forcing challenge modal...');
-        setMfaFactorId(verifiedFactor.id);
-        setPartialUser(session.user);
-        setMode('mfa');
-        setLoading(false);
-        return;
-      }
-    };
-    checkAal();
   }, []);
 
   const switchMode = (m: AuthMode) => {
@@ -893,13 +850,18 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white">
-              {mode === 'login' ? 'Welcome back' : mode === 'signup' ? 'Create your account' : 'Reset password'}
+              {mode === 'login' ? 'Welcome back' : 
+               mode === 'signup' ? 'Create your account' : 
+               mode === 'mfa' ? 'Two-Factor Auth' :
+               'Reset password'}
             </h2>
             <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
               {mode === 'login'
                 ? 'Sign in to access your WholeScale dashboard'
                 : mode === 'signup'
                 ? 'Start managing deals in minutes'
+                : mode === 'mfa'
+                ? 'Enter the code from your authenticator app'
                 : 'We\'ll send you a reset link'}
             </p>
           </div>
