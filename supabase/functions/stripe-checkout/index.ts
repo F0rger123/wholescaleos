@@ -82,10 +82,13 @@ Deno.serve(async (req: Request) => {
       'agency': 'price_1PThelI0QxY7hIfL3NWqzvYI',
     };
 
-    const priceId = priceMap[plan] || priceMap['solo'];
+    const requestedPlan = (plan || 'solo').toString().toLowerCase();
+    const priceId = priceMap[requestedPlan] || priceMap['solo'];
+    
     console.log(`[Stripe] ===== CHECKOUT REQUEST =====`);
-    console.log(`[Stripe] Plan: ${plan}, Resolved PriceID: ${priceId}`);
-    console.log(`[Stripe] Seats: ${seats}, Email: ${user.email}`);
+    console.log(`[Stripe] Requested Plan: ${plan}, Normalized: ${requestedPlan}`);
+    console.log(`[Stripe] Resolved PriceID: ${priceId}`);
+    console.log(`[Stripe] Seats: ${seats}, Email: ${userEmail}`);
     console.log(`[Stripe] Mode: ${isLiveMode ? 'LIVE' : 'TEST'}`);
     console.log(`[Stripe] Available plans: ${Object.keys(priceMap).join(', ')}`);
     console.log(`[Stripe] ==============================`);
@@ -100,6 +103,7 @@ Deno.serve(async (req: Request) => {
     const cancel_url_final = cancel_url || `${publicUrl}/dashboard/billing?tab=billing`;
 
     console.log(`[Stripe] Redirecting to: Success=${success_url_final}, Cancel=${cancel_url_final}`);
+
 
     try {
       console.log(`[Stripe] Creating session for ${user.email} with ${quantity} x ${priceId}`);
@@ -156,9 +160,7 @@ Deno.serve(async (req: Request) => {
           error: friendlyMessage, 
           code: stripeError.code || 'stripe_error',
           type: stripeError.type || 'api_error',
-          priceId: priceId,
-          stripeMode: isLiveMode ? 'live' : 'test',
-          detail: `Verify Price IDs at https://dashboard.stripe.com/products match the priceMap in the Edge Function.`
+          detail: `Verify Price IDs in [Stripe Dashboard > Products](https://dashboard.stripe.com/${isLiveMode ? '' : 'test/'}products) match the priceMap in the Edge Function code. [Mode: ${isLiveMode ? 'LIVE' : 'TEST'}]`
         }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

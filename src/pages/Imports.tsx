@@ -225,6 +225,150 @@ export default function Imports() {
     setActiveView('home');
   }, []);
 
+  // ─── Dropzone Hooks ─────────────────────────────────────
+  
+  const { getRootProps: getCsvProps, getInputProps: getCsvInputProps, isDragActive: isCsvDrag } = useDropzone({
+    accept: { 'text/csv': ['.csv'], 'text/tab-separated-values': ['.tsv'] },
+    onDrop: (acceptedFiles) => {
+      setIsLoading(true);
+      const file = acceptedFiles[0];
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          if (results.data && results.data.length > 0) {
+            setSheetData(results.data as Record<string, string>[]);
+            const headers = results.meta.fields || Object.keys(results.data[0] || {});
+            const smartMappings = smartDetectColumns(headers, results.data as Record<string, string>[]);
+            const columnMaps: ColumnMapping[] = smartMappings.map(m => ({
+              sourceColumn: m.sourceColumn,
+              targetField: m.targetField,
+              confidence: m.confidence,
+              sample: m.sample,
+            }));
+            setColumnMappings(columnMaps);
+            setIsConnected(true);
+            setIsLoading(false);
+            setWizardStep(1);
+            
+            const allSelected = new Set<number>();
+            for (let i = 0; i < results.data.length; i++) allSelected.add(i);
+            setPreviewSelectedLeads(allSelected);
+          } else {
+            setIsLoading(false);
+            alert('No data found in CSV.');
+          }
+        },
+        error: (err) => {
+          console.error('CSV Parse Error:', err);
+          setIsLoading(false);
+          alert('Failed to parse CSV file.');
+        }
+      });
+    }
+  });
+
+  const { getRootProps: getPdfProps, getInputProps: getPdfInputProps, isDragActive: isPdfDrag } = useDropzone({
+    accept: { 'application/pdf': ['.pdf'] },
+    onDrop: async (acceptedFiles) => {
+      setIsLoading(true);
+      setConnectionError(null);
+      try {
+        const file = acceptedFiles[0];
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // Dynamic import for pdfjs worker
+        const pdfjs = await import('pdfjs-dist');
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+        
+        const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+        let extractedText = '';
+        
+        console.log('[PDF] Attempting standard text extraction...');
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          let pageText = (textContent.items as any[]).map(item => item.str).join(' ');
+          extractedText += pageText + '\n';
+        }
+        
+        let cleanedText = extractedText.replace(/\s+/g, ' ').trim();
+
+        // OCR Fallback if text is too short
+        if (cleanedText.length < 50) {
+          console.log('[PDF] Text too short, attempting OCR...');
+          try {
+            console.log('[PDF] Initializing Tesseract worker...');
+            const { createWorker } = await import('tesseract.js');
+            const worker = await createWorker('eng', 1, {
+              logger: m => console.log('[OCR]', m.status, Math.round(m.progress * 100) + '%')
+            });
+            
+            let ocrText = '';
+            const maxPages = Math.min(pdf.numPages, 3);
+            for (let i = 1; i <= maxPages; i++) {
+              console.log(`[PDF] Processing page ${i} for OCR...`);
+              const page = await pdf.getPage(i);
+              const viewport = page.getViewport({ scale: 2.0 });
+              const canvas = document.createElement('canvas');
+              canvas.width = viewport.width;
+              canvas.height = viewport.height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+                const { data: { text } } = await worker.recognize(canvas);
+                ocrText += text + '\n';
+              }
+              canvas.remove();
+            }
+            await worker.terminate();
+            if (ocrText.trim().length > 20) {
+              console.log('[PDF] OCR succeeded! Extracted', ocrText.trim().length, 'chars');
+              cleanedText = ocrText.trim();
+            } else {
+              console.warn('[PDF] OCR extracted too little text.');
+            }
+          } catch (ocrErr) {
+            console.error('[PDF] OCR failed:', ocrErr);
+          }
+        }
+
+        if (cleanedText.length < 10) {
+          throw new Error('Could not extract text from PDF.');
+        }
+
+        setPastedText(cleanedText);
+        setSelectedSource('smart-paste');
+        
+        setTimeout(() => {
+          const result = parsePastedData(cleanedText);
+          setParseResult(result);
+          setEditedRows(result.rows.map(r => [...r]));
+          const mappings: ColumnMapping[] = result.columns.map(col => ({
+            sourceColumn: col.name,
+            targetField: DETECTED_TYPE_TO_TARGET[col.detectedType] || 'skip',
+            confidence: col.confidence,
+            sample: col.samples[0] || '',
+          }));
+          setPasteColumnMappings(mappings);
+          const allSelected = new Set<number>();
+          for (let i = 0; i < result.rows.length; i++) allSelected.add(i);
+          setPreviewSelectedLeads(allSelected);
+          setIsLoading(false);
+          setWizardStep(1);
+        }, 100);
+
+      } catch (err: any) {
+        console.error('[PDF] Import Error:', err);
+        setConnectionError(`Advanced extraction failed. This PDF may be an image-only scan. Please enter details manually below.`);
+        setScrapedData([{ address: '', owner: '', source: 'PDF Manual Entry' } as any]);
+        setSelectedForImport(new Set([0]));
+        setWizardStep(1);
+        setIsLoading(false);
+      }
+    }
+  });
+
   // ─── Connect / Fetch data ──────────────────────────────
 
   const connectGoogleSheets = async () => {
@@ -422,112 +566,6 @@ export default function Imports() {
       setIsLoading(false);
     }
   };
-
-  const { getRootProps: getCsvProps, getInputProps: getCsvInputProps, isDragActive: isCsvDrag } = useDropzone({
-    accept: { 'text/csv': ['.csv'], 'text/tab-separated-values': ['.tsv'] },
-    onDrop: (acceptedFiles) => {
-      setIsLoading(true);
-      const file = acceptedFiles[0];
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.data && results.data.length > 0) {
-            setSheetData(results.data as Record<string, string>[]);
-            const headers = results.meta.fields || Object.keys(results.data[0] || {});
-            const smartMappings = smartDetectColumns(headers, results.data as Record<string, string>[]);
-            const columnMaps: ColumnMapping[] = smartMappings.map(m => ({
-              sourceColumn: m.sourceColumn,
-              targetField: m.targetField,
-              confidence: m.confidence,
-              sample: m.sample,
-            }));
-            setColumnMappings(columnMaps);
-            const allSelected = new Set<number>();
-            for (let i = 0; i < results.data.length; i++) allSelected.add(i);
-            setPreviewSelectedLeads(allSelected);
-            setIsConnected(true);
-            setWizardStep(1);
-          } else {
-            alert('No data found in CSV.');
-          }
-          setIsLoading(false);
-        },
-        error: (err: any) => {
-          alert('Error parsing CSV: ' + err.message);
-          setIsLoading(false);
-        }
-      });
-    }
-  });
-
-  const { getRootProps: getPdfProps, getInputProps: getPdfInputProps, isDragActive: isPdfDrag } = useDropzone({
-    accept: { 'application/pdf': ['.pdf'] },
-    onDrop: async (acceptedFiles) => {
-      setIsLoading(true);
-      try {
-        const file = acceptedFiles[0];
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          
-          // Better text extraction: handle spacing and line breaks
-          let lastY = -1;
-          let pageText = '';
-          for (const item of textContent.items as any[]) {
-            if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
-              pageText += '\n';
-            } else if (pageText.length > 0 && !pageText.endsWith('\n')) {
-              pageText += ' ';
-            }
-            pageText += item.str;
-            lastY = item.transform[5];
-          }
-          fullText += pageText + '\n';
-        }
-        
-        // Clean extracted text: remove common PDF artifacts
-        const cleanedText = fullText
-          .replace(/[â€œâ€]/g, '"') // Replace curly quotes
-          .replace(/[â€˜â€™]/g, "'") // Replace curly apostrophes
-          .replace(/\s{3,}/g, '  ') // Collapse excessive spaces but keep some structure
-          .replace(/\n{3,}/g, '\n\n') // Collapse excessive newlines
-          .trim();
-
-        // Pass text directly to smart paste logic
-        setPastedText(cleanedText);
-        setSelectedSource('smart-paste');
-        
-        setTimeout(() => {
-          const result = parsePastedData(fullText);
-          setParseResult(result);
-          setEditedRows(result.rows.map(r => [...r]));
-          const mappings: ColumnMapping[] = result.columns.map(col => ({
-            sourceColumn: col.name,
-            targetField: DETECTED_TYPE_TO_TARGET[col.detectedType] || 'skip',
-            confidence: col.confidence,
-            sample: col.samples[0] || '',
-          }));
-          setPasteColumnMappings(mappings);
-          
-          const allSelected = new Set<number>();
-          for (let i = 0; i < result.rows.length; i++) allSelected.add(i);
-          setPreviewSelectedLeads(allSelected);
-          
-          setIsLoading(false);
-          setWizardStep(1);
-        }, 100);
-
-      } catch (err) {
-        console.error(err);
-        alert('Error parsing PDF. Please try again.');
-        setIsLoading(false);
-      }
-    }
-  });
 
   // ─── Apply template ────────────────────────────────────
 

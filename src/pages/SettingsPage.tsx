@@ -523,12 +523,20 @@ function SecurityTab() {
     if (!supabase || !factorId) return;
     if (!confirm('Are you sure you want to disable 2FA? This will reduce your account security.')) return;
     setMfaLoading(true);
+    setMfaError('');
     try {
+      // Check AAL level before unenrolling
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal?.currentLevel !== 'aal2') {
+        throw new Error('You must be signed in with 2FA (AAL2) to disable security factors. Please sign out and sign in again with your code.');
+      }
+
       const { error } = await supabase.auth.mfa.unenroll({ factorId });
       if (error) throw error;
       setMfaStatus('disabled');
       setFactorId('');
     } catch (err: any) {
+      console.error('[Auth] Disable 2FA failed:', err);
       setMfaError(err.message || 'Failed to disable 2FA');
     } finally {
       setMfaLoading(false);

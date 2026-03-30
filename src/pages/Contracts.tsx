@@ -570,8 +570,11 @@ export default function Contracts() {
         if (extractedText.length <= 10) {
           console.log('[PDF] Text extraction insufficient, attempting OCR...');
           try {
+            console.log('[PDF] Initializing Tesseract worker...');
             const { createWorker } = await import('tesseract.js');
-            const worker = await createWorker('eng');
+            const worker = await createWorker('eng', 1, {
+              logger: m => console.log('[OCR]', m.status, Math.round(m.progress * 100) + '%')
+            });
             
             // Convert PDF pages to images using pdfjs-dist canvas rendering
             const pdfjs = await import('pdfjs-dist');
@@ -582,6 +585,7 @@ export default function Contracts() {
             const maxPages = Math.min(pdf.numPages, 5); // Limit to 5 pages for performance
             
             for (let i = 1; i <= maxPages; i++) {
+              console.log(`[PDF] Processing page ${i} for OCR...`);
               const page = await pdf.getPage(i);
               const viewport = page.getViewport({ scale: 2.0 });
               
@@ -591,7 +595,7 @@ export default function Contracts() {
               const ctx = canvas.getContext('2d');
               if (!ctx) continue;
               
-              await page.render({ canvasContext: ctx, viewport }).promise;
+              await page.render({ canvasContext: ctx, viewport, canvas: canvas }).promise;
               
               const { data: { text } } = await worker.recognize(canvas);
               ocrText += text + '\n\n';
@@ -599,13 +603,12 @@ export default function Contracts() {
             }
             
             await worker.terminate();
-            
             extractedText = ocrText.trim();
             if (extractedText.length > 10) {
               console.log('[PDF] OCR extraction succeeded, length:', extractedText.length);
             }
           } catch (ocrErr) {
-            console.error('[PDF] OCR extraction also failed:', ocrErr);
+            console.error('[PDF] OCR extraction failed:', ocrErr);
           }
         }
 
@@ -685,38 +688,52 @@ export default function Contracts() {
   const handlePreviewPdf = async () => {
     if (!previewRef.current) {
       console.error('[PDF] Preview ref is null — no document to generate from');
-      alert('No document to generate. Please select a template first.');
+      alert('No document to generate. Please select a template and ensured it\'s rendered first.');
       return;
     }
     setGeneratingPdf(true);
     console.log('[PDF] Starting PDF generation for template:', activeTemplate.name);
     
     try {
+      if (isEditing) {
+        console.warn('[PDF] Warning: User is still in editing mode while generating PDF');
+      }
+
       const element = previewRef.current;
       console.log('[PDF] Element dimensions:', element.offsetWidth, 'x', element.offsetHeight);
       
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
-        filename: `${activeTemplate.name}_${selectedLead?.name || 'Draft'}.pdf`,
+        filename: `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name?.replace(/\s+/g, '_') || 'Draft'}.pdf`,
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          logging: true
+        },
         jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
-      console.log('[PDF] Generating PDF with options:', JSON.stringify(opt));
+      console.log('[PDF] Initializing html2pdf generation process...');
       
-      // @ts-ignore
-      const pdfInstance = html2pdf();
-      if (!pdfInstance) {
-        throw new Error('html2pdf failed to initialize. Check that html2pdf.js is properly installed.');
+      // Ensure element is visible in the DOM
+      if (element.offsetParent === null) {
+        throw new Error('PDF preview element is not visible or not rendered. Please switch back to preview mode.');
       }
+
+      // Check if html2pdf is correctly loaded
+      if (typeof html2pdf !== 'function') {
+        throw new Error('html2pdf.js failed to load properly. Please refresh the page.');
+      }
+
+      await html2pdf().from(element).set(opt).save();
       
-      await pdfInstance.set(opt).from(element).save();
       console.log('[PDF] PDF generated successfully');
     } catch (error: any) {
       console.error('[PDF] Generation Error:', error);
       console.error('[PDF] Error stack:', error?.stack);
-      alert(`Failed to generate PDF: ${error?.message || 'Unknown error'}. Check console for details.`);
+      alert(`Failed to generate PDF: ${error?.message || 'Unknown error'}. Please check if the document contains images from blocked domains.`);
     } finally {
       setGeneratingPdf(false);
     }
@@ -728,14 +745,21 @@ export default function Contracts() {
       alert('No document to send. Please select a template first.');
       return;
     }
-    if (!selectedLead) {
-      console.error('[PDF] No lead selected for email');
-      alert('Please select a lead/contract subject first.');
+    
+    if (!selectedLead && leads.length > 0) {
+      // Auto-select first lead if none selected
+      console.log('[PDF] Auto-selecting first lead for email context');
+      const firstLead = leads[0];
+      setSelectedLead(firstLead);
+      setSelectedLeadId(firstLead.id);
+    } else if (!selectedLead) {
+      console.error('[PDF] No lead available for email context');
+      alert('You must have at least one lead to send a contract.');
       return;
     }
     
     setGeneratingPdf(true);
-    console.log('[PDF] Generating PDF for email to:', selectedLead.email);
+    console.log('[PDF] Generating PDF for email context:', selectedLead?.email);
     
     try {
       const element = previewRef.current;
@@ -746,21 +770,20 @@ export default function Contracts() {
         jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
-      // @ts-ignore
-      const pdfInstance = html2pdf();
-      if (!pdfInstance) {
-        throw new Error('html2pdf failed to initialize');
-      }
+      console.log('[PDF] Generating base64 string for attachment...');
       
-      // Generate PDF as blob/base64
-      const pdfWorker = pdfInstance.from(element).set(opt).outputPdf('datauristring');
-      const dataUri = await pdfWorker;
-      const base64Content = dataUri.split(',')[1];
-
-      console.log('[PDF] PDF generated for email, base64 length:', base64Content.length);
+      const pdfBase64 = await html2pdf()
+        .from(element)
+        .set(opt)
+        .outputPdf('datauristring');
+      
+      if (!pdfBase64) throw new Error('PDF output returned empty data');
+      
+      const base64Content = pdfBase64.split(',')[1];
+      console.log('[PDF] Email PDF ready, length:', base64Content.length);
 
       setEmailAttachment({
-        filename: `${activeTemplate.name}.pdf`,
+        filename: `${activeTemplate.name.replace(/\s+/g, '_')}.pdf`,
         content: base64Content,
         contentType: 'application/pdf'
       });
@@ -773,6 +796,7 @@ export default function Contracts() {
       setGeneratingPdf(false);
     }
   };
+
 
   const handleToggleEdit = () => {
     if (isEditing) {

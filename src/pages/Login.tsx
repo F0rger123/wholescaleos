@@ -56,6 +56,46 @@ export default function Login() {
     if (params.get('signup') === 'true') {
       setMode('signup');
     }
+
+    // Check if user is already signed in at AAL1 but needs MFA
+    const checkAal = async () => {
+      if (!isSupabaseConfigured || !supabase) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      console.log('[Auth] Found existing session for user:', session.user.email);
+      const { data: aal, error: aalErr } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aalErr) {
+        console.error('[Auth] MFA AAL check error:', aalErr);
+        return;
+      }
+      
+      console.log('[Auth] AAL info:', aal);
+
+      if (aal.nextLevel === 'aal2' && aal.currentLevel !== 'aal2') {
+        const { data: factorData, error } = await supabase.auth.mfa.listFactors();
+        if (error) {
+          console.error('[Auth] MFA listFactors error:', error);
+          return;
+        }
+
+        // listFactors data can be either the array itself or { all: [...] } depending on version
+        const factors = Array.isArray(factorData) ? factorData : (factorData as any)?.all || [];
+        console.log('[Auth] Verified factors found:', factors.length);
+        
+        const verifiedFactor = factors.find((f: any) => f.status === 'verified');
+
+        if (verifiedFactor) {
+          console.log('[Auth] User has verified MFA factor. Triggering challenge...', verifiedFactor.id);
+          setMfaFactorId(verifiedFactor.id);
+          setPartialUser(session.user);
+          setMode('mfa');
+        } else {
+          console.log('[Auth] User session is AAL1 but no verified MFA factors found.');
+        }
+      }
+    };
+    checkAal();
   }, []);
 
   const switchMode = (m: AuthMode) => {
@@ -540,17 +580,20 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             console.log('[Auth] Current AAL:', aalData);
 
             // 2. List factors to see if any are verified
-            const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+            const { data: factorData, error: factorsError } = await supabase.auth.mfa.listFactors();
             if (factorsError) console.error('[Auth] MFA listFactors error:', factorsError);
+            console.log('[Auth] MFA Factors raw data:', JSON.stringify(factorData, null, 2));
             
-            // Handle multiple factor types (TOTP, etc.)
-            const allFactors = (factors as any)?.all || [];
-            const verifiedFactor = allFactors.find((f: any) => f.status === 'verified');
+            // Correctly handle the listFactors response structure
+            const factors = Array.isArray(factorData) ? factorData : (factorData as any)?.all || [];
+            const verifiedFactor = factors.find((f: any) => f.status === 'verified');
 
             // Force MFA if we have a verified factor and the session is only AAL1
             // Or if nextLevel is aal2, indicating MFA is expected/available
+            console.log('[Auth] MFA Decision - VerifiedFactor:', !!verifiedFactor, 'NextLevel:', aalData?.nextLevel, 'CurrentLevel:', aalData?.currentLevel);
+
             if (verifiedFactor && aalData?.nextLevel === 'aal2' && aalData?.currentLevel !== 'aal2') {
-              console.log('[Auth] MFA required. Verified factor:', verifiedFactor.id, 'of type:', verifiedFactor.factorType);
+              console.log('[Auth] MFA required. Verified factor ID:', verifiedFactor.id, 'Type:', verifiedFactor.factor_type || verifiedFactor.factorType);
               setMfaFactorId(verifiedFactor.id);
               setPartialUser(data.user);
               setMfaCode(''); // Ensure input is clear
@@ -558,6 +601,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
               setLoading(false);
               return;
             }
+
             
             console.log('[Auth] MFA not required or already satisfied. Finalizing login.');
             await finalizeLogin(data.user);

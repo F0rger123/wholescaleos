@@ -274,9 +274,9 @@ function BillingTab() {
     } catch (err: any) {
       console.error('Checkout error:', err);
       const msg = err?.message || err?.error || '';
-      
-      if (msg.includes('Price ID')) {
-        alert(`⚠️ Stripe Configuration Error: ${msg}\n\nPlease ensure your Stripe Price IDs match those in the edge function.`);
+      if (msg.includes('Price ID') || msg.includes('Invalid Stripe request')) {
+        const detail = err?.detail || 'Please ensure your Stripe Price IDs match those in the edge function.';
+        alert(`⚠️ Stripe Configuration Error:\n\n${msg}\n\n${detail}`);
       } else if (msg.includes('FunctionsHttpError') || msg.includes('Failed to send') || msg.includes('FunctionsFetchError')) {
         alert('⚠️ Could not reach the checkout service. Please check your connection and try again.');
       } else if (msg.includes('Unauthorized')) {
