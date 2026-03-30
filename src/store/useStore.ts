@@ -244,6 +244,7 @@ export interface UserProfile {
   stripeCustomerId?: string;
   subscriptionTier?: string;
   subscriptionStatus?: string;
+  role?: string;
   referralCode?: string;
   referredBy?: string;
   totalEarnings?: number;

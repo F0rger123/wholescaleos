@@ -1,8 +1,8 @@
-// @ts-nocheck
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Calendar as CalendarIcon, Plus, Clock, MapPin, Users, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Clock, MapPin, Users, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, isToday, startOfWeek, endOfWeek } from 'date-fns';
+import { supabase } from '../lib/supabase';
 
 interface TeamEvent {
   id: string;
@@ -32,24 +32,53 @@ const EVENT_LABELS: Record<string, string> = {
 };
 
 export default function TeamCalendar() {
-  const { team } = useStore();
+  const { team, currentUser, teamId } = useStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAddEvent, setShowAddEvent] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  
-  const [events, setEvents] = useState<TeamEvent[]>(() => {
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  const [loading, setLoading] = useState(false);
+  const [events, setEvents] = useState<TeamEvent[]>([]);
+
+  useEffect(() => {
+    if (teamId) {
+      fetchEvents();
+    }
+  }, [currentMonth, teamId]);
+
+  async function fetchEvents() {
+    if (!supabase) return;
+    setLoading(true);
     try {
-      const saved = localStorage.getItem('wholescale-team-events');
-      if (saved) return JSON.parse(saved).map((e: any) => ({ ...e, date: new Date(e.date) }));
-    } catch {}
-    
-    const now = new Date();
-    return [
-      { id: '1', title: 'Weekly Team Standup', date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 9, 0), time: '09:00', type: 'meeting', attendees: ['All'], color: EVENT_COLORS.meeting },
-      { id: '2', title: '123 Oak St Open House', date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 14, 0), time: '14:00', type: 'open_house', location: '123 Oak St', attendees: ['Team A'], color: EVENT_COLORS.open_house },
-      { id: '3', title: 'Closing - 456 Elm Dr', date: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 5, 10, 0), time: '10:00', type: 'closing', location: '456 Elm Dr', attendees: ['Team B'], color: EVENT_COLORS.closing },
-    ];
-  });
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      
+      const { data, error } = await (supabase as any)
+        .from('calendar_events')
+        .select('*')
+        .eq('team_id', teamId)
+        .gte('start_time', monthStart.toISOString())
+        .lte('start_time', monthEnd.toISOString());
+
+      if (error) throw error;
+
+      const formattedEvents: TeamEvent[] = (data || []).map((e: any) => ({
+        id: e.id,
+        title: e.title,
+        date: new Date(e.start_time),
+        time: format(new Date(e.start_time), 'HH:mm'),
+        type: e.type as any,
+        location: e.description, // Using description as location for now or metadata if added
+        attendees: [], // We can expand this later
+        color: EVENT_COLORS[e.type] || EVENT_COLORS.meeting,
+      }));
+
+      setEvents(formattedEvents);
+    } catch (err) {
+      console.error('Error fetching calendar events:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const [newEvent, setNewEvent] = useState({
     title: '', date: format(new Date(), 'yyyy-MM-dd'), time: '09:00',
@@ -57,30 +86,63 @@ export default function TeamCalendar() {
     location: '', attendees: ''
   });
 
-  const saveEvents = (updated: TeamEvent[]) => {
-    setEvents(updated);
-    localStorage.setItem('wholescale-team-events', JSON.stringify(updated));
+  const handleAddEvent = async () => {
+    if (!newEvent.title.trim() || !currentUser || !teamId) return;
+    
+    const startTime = new Date(newEvent.date + 'T' + newEvent.time);
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Default 1 hour
+
+    try {
+      const { data, error } = await (supabase as any)
+        .from('calendar_events')
+        .insert({
+          team_id: teamId,
+          user_id: currentUser.id,
+          title: newEvent.title.trim(),
+          description: newEvent.location,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          type: newEvent.type
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const addedEvent: TeamEvent = {
+        id: data.id,
+        title: data.title,
+        date: new Date(data.start_time),
+        time: format(new Date(data.start_time), 'HH:mm'),
+        type: data.type as any,
+        location: data.description,
+        attendees: [],
+        color: EVENT_COLORS[data.type] || EVENT_COLORS.meeting,
+      };
+
+      setEvents([...events, addedEvent]);
+      setNewEvent({ title: '', date: format(new Date(), 'yyyy-MM-dd'), time: '09:00', type: 'meeting', location: '', attendees: '' });
+      setShowAddEvent(false);
+    } catch (err) {
+      console.error('Error adding event:', err);
+      alert('Failed to save event');
+    }
   };
 
-  const handleAddEvent = () => {
-    if (!newEvent.title.trim()) return;
-    const event: TeamEvent = {
-      id: Date.now().toString(),
-      title: newEvent.title.trim(),
-      date: new Date(newEvent.date + 'T' + newEvent.time),
-      time: newEvent.time,
-      type: newEvent.type,
-      location: newEvent.location,
-      attendees: newEvent.attendees.split(',').map(a => a.trim()).filter(Boolean),
-      color: EVENT_COLORS[newEvent.type],
-    };
-    saveEvents([...events, event]);
-    setNewEvent({ title: '', date: format(new Date(), 'yyyy-MM-dd'), time: '09:00', type: 'meeting', location: '', attendees: '' });
-    setShowAddEvent(false);
-  };
+  const deleteEvent = async (id: string) => {
+    if (!supabase) return;
+    try {
+      const { error } = await (supabase as any)
+        .from('calendar_events')
+        .delete()
+        .eq('id', id);
 
-  const deleteEvent = (id: string) => {
-    saveEvents(events.filter(e => e.id !== id));
+      if (error) throw error;
+      setEvents(events.filter(e => e.id !== id));
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      alert('Failed to delete event');
+    }
   };
 
   const monthStart = startOfMonth(currentMonth);
@@ -118,7 +180,10 @@ export default function TeamCalendar() {
           <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
             <ChevronLeft size={20} style={{ color: 'var(--t-text-muted)' }} />
           </button>
-          <h2 className="text-xl font-black uppercase tracking-wider">{format(currentMonth, 'MMMM yyyy')}</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-black uppercase tracking-wider">{format(currentMonth, 'MMMM yyyy')}</h2>
+            {loading && <Loader2 size={16} className="animate-spin text-purple-500" />}
+          </div>
           <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
             <ChevronRight size={20} style={{ color: 'var(--t-text-muted)' }} />
           </button>

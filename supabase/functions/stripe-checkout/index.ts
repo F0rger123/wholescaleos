@@ -74,65 +74,64 @@ Deno.serve(async (req: Request) => {
     };
 
     const priceId = priceMap[plan] || priceMap['solo'];
-    console.log('Using price ID:', priceId, 'for plan:', plan);
+    console.log(`[Stripe] Using price ID: ${priceId} for plan: ${plan}`);
 
-    let lineItems = [{ price: priceId, quantity: 1 }];
-
-    if (seats > 1) {
-      const extraSeatsPriceMap: Record<string, string> = {
-        'solo': 'price_1PThelI0QxY7hIfLEXTRA10',
-        'pro': 'price_1PThelI0QxY7hIfLEXTRA10',
-        'team': 'price_1PThelI0QxY7hIfLEXTRA5',
-      };
-      const extraSeatsPrice = extraSeatsPriceMap[plan];
-      if (extraSeatsPrice) {
-        lineItems.push({
-          price: extraSeatsPrice,
-          quantity: seats - 1,
-        });
-      }
-    }
-
-    console.log('Creating Stripe session with line items:', JSON.stringify(lineItems));
-
-    const session = await stripe.checkout.sessions.create({
-      customer_email: user.email,
-      line_items: lineItems,
-      mode: 'subscription',
-      success_url: success_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/settings?tab=billing`,
-      cancel_url: cancel_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/pricing`,
-      client_reference_id: user.id,
-      metadata: {
-        userId: user.id,
-        plan: plan,
-        seats: seats.toString()
-      },
-    });
-
-    console.log('Stripe session created:', session.id, session.url);
-
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
-    );
-  } catch (error: any) {
-    console.error('Stripe Checkout Error:', error.message, error.stack);
+    // Determine quantity - if it's the 'pro' or 'team' plan, we might want to scale by seats
+    const quantity = Math.max(1, parseInt(seats?.toString() || '1'));
     
-    let userMessage = error?.message || 'Unknown error';
-    if (userMessage.includes('No such price')) {
-      userMessage = 'This plan is not yet configured in Stripe. Please contact support.';
-    } else if (userMessage.includes('api_key')) {
-      userMessage = 'Payment service configuration error. Please contact support.';
-    }
+    let lineItems = [{ price: priceId, quantity }];
 
+    console.log(`[Stripe] Creating session for ${user.email} with ${quantity} x ${priceId}`);
+
+    try {
+      const session = await stripe.checkout.sessions.create({
+        customer_email: user.email,
+        line_items: lineItems,
+        mode: 'subscription',
+        allow_promotion_codes: true, // Enable promo codes in Stripe Checkout
+        success_url: success_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: cancel_url || `${Deno.env.get('PUBLIC_SITE_URL') || 'http://localhost:5173'}/dashboard/billing?tab=billing`,
+        client_reference_id: user.id,
+        metadata: {
+          userId: user.id,
+          plan: plan,
+          seats: quantity.toString()
+        },
+      });
+
+      console.log(`[Stripe] Session created: ${session.id}`);
+      return new Response(
+        JSON.stringify({ url: session.url }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    } catch (stripeError: any) {
+      console.error('[Stripe] Session Creation Error:', stripeError);
+      
+      let errorMessage = stripeError.message;
+      if (stripeError.message?.includes('No such price')) {
+        errorMessage = `Price ID ${priceId} not found in your Stripe account.`;
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          error: errorMessage,
+          code: stripeError.code,
+          priceId: priceId
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  } catch (error: any) {
+    console.error('[Stripe] Global Error:', error.message, error.stack);
+    
     return new Response(
-      JSON.stringify({ error: userMessage }),
+      JSON.stringify({ error: error?.message || 'Unknown error' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       }
     );
   }

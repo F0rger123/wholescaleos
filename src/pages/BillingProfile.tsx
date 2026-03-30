@@ -25,7 +25,7 @@ function PromoCodeInput() {
       if (!user) throw new Error('Please log in first');
 
       // Lookup promo code
-      const { data: promo, error: lookupErr } = await supabase
+      const { data: promo, error: lookupErr } = await (supabase as any)
         .from('promo_codes')
         .select('*')
         .eq('code', code.toUpperCase().trim())
@@ -45,7 +45,7 @@ function PromoCodeInput() {
       }
 
       // Check if already redeemed
-      const { data: existing } = await supabase
+      const { data: existing } = await (supabase as any)
         .from('promo_redemptions')
         .select('id')
         .eq('promo_code_id', promo.id)
@@ -55,13 +55,13 @@ function PromoCodeInput() {
       if (existing) throw new Error('You have already used this code');
 
       // Redeem
-      const { error: redeemErr } = await supabase
+      const { error: redeemErr } = await (supabase as any)
         .from('promo_redemptions')
         .insert({ promo_code_id: promo.id, user_id: user.id });
       if (redeemErr) throw redeemErr;
 
       // Increment usage
-      await supabase
+      await (supabase as any)
         .from('promo_codes')
         .update({ current_uses: promo.current_uses + 1 })
         .eq('id', promo.id);
@@ -218,34 +218,63 @@ export default function BillingProfile() {
 function BillingTab() {
   const { currentUser, team } = useStore();
   const [loading, setLoading] = useState(false);
-  
+  const navigate = useNavigate();
+  const planLimits: Record<string, number> = {
+    'free': 1,
+    'solo': 1,
+    'pro': 5,
+    'team': 20,
+    'agency': 9999
+  };
+
+  const currentPlan = (currentUser?.subscriptionTier || 'Free').toLowerCase();
+  const maxSeats = planLimits[currentPlan] || 1;
   const currentSeats = Math.max(1, team?.length || 1);
+  const remainingSeats = Math.max(0, maxSeats - currentSeats);
+
   const [targetSeats, setTargetSeats] = useState(currentSeats);
 
-  const handleUpgrade = async () => {
+  // Sync targetSeats with currentSeats when plan or team changes
+  useEffect(() => {
+    setTargetSeats(currentSeats);
+  }, [currentSeats]);
+
+  const handleUpgrade = async (overriddenSeats?: number) => {
     setLoading(true);
     try {
       if (!supabase) throw new Error('Supabase not configured');
       
+      const seatsToRequest = overriddenSeats || targetSeats;
+      
       const { data, error } = await supabase.functions.invoke('stripe-checkout', {
         body: { 
-          plan: (currentUser?.subscriptionTier === 'Free' ? 'solo' : currentUser?.subscriptionTier?.toLowerCase()) || 'solo',
-          seats: targetSeats,
-          success_url: `${window.location.origin}/settings?tab=billing`,
-          cancel_url: `${window.location.origin}/settings?tab=billing`
+          plan: currentPlan === 'free' ? 'solo' : currentPlan,
+          seats: seatsToRequest,
+          success_url: `${window.location.origin}/dashboard/billing?tab=billing&success=true`,
+          cancel_url: `${window.location.origin}/dashboard/billing?tab=billing`
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific edge function errors
+        const errorData = error instanceof Error ? { message: error.message } : error;
+        throw errorData;
+      }
+
+      if (data?.error) throw new Error(data.error);
+
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('No checkout URL returned');
+        throw new Error('No checkout URL returned from payment service');
       }
     } catch (err: any) {
       console.error('Checkout error:', err);
-      const msg = err?.message || '';
-      if (msg.includes('FunctionsHttpError') || msg.includes('Failed to send') || msg.includes('FunctionsFetchError')) {
+      const msg = err?.message || err?.error || '';
+      
+      if (msg.includes('Price ID')) {
+        alert(`⚠️ Stripe Configuration Error: ${msg}\n\nPlease ensure your Stripe Price IDs match those in the edge function.`);
+      } else if (msg.includes('FunctionsHttpError') || msg.includes('Failed to send') || msg.includes('FunctionsFetchError')) {
         alert('⚠️ Could not reach the checkout service. Please check your connection and try again.');
       } else if (msg.includes('Unauthorized')) {
         alert('🔒 Session expired. Please refresh and try again.');
@@ -254,6 +283,24 @@ function BillingTab() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddTeamMember = () => {
+    if (remainingSeats > 0) {
+       // Still have slots in existing plan
+       alert(`You have ${remainingSeats} slots remaining in your ${currentUser?.subscriptionTier} plan. You can invite them from the Team page!`);
+       navigate('/dashboard/team');
+    } else {
+       // Need to pay for an extra seat or upgrade
+       if (currentPlan === 'agency') {
+          alert('Agency plan already includes unlimited seats!');
+          return;
+       }
+       // If they click 'Add Team Member' and are full, increment target and prompt to pay
+       const nextTarget = currentSeats + 1;
+       setTargetSeats(nextTarget);
+       handleUpgrade(nextTarget);
     }
   };
 
@@ -291,16 +338,21 @@ function BillingTab() {
                       className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center font-bold text-lg leading-none transition-all cursor-pointer border border-white/10"
                     >+</button>
                   </div>
-                  {targetSeats !== currentSeats && (
-                    <div className="text-[10px] font-bold uppercase tracking-widest bg-yellow-500/20 text-yellow-300 px-3 py-1.5 rounded-lg border border-yellow-500/30">
-                      Update required
+                  <div className="flex items-center gap-2">
+                    <div className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+                      {currentSeats} of {maxSeats} used
                     </div>
-                  )}
+                    {targetSeats !== currentSeats && (
+                      <div className="text-[10px] font-bold uppercase tracking-widest bg-yellow-500/20 text-yellow-300 px-3 py-1.5 rounded-lg border border-yellow-500/30">
+                        Update required
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
             <button 
-              onClick={handleUpgrade}
+              onClick={() => handleUpgrade()}
               disabled={loading}
               className={`px-6 py-3 rounded-xl border font-bold transition-all text-sm disabled:opacity-50 ${targetSeats !== currentSeats ? 'bg-yellow-400 text-yellow-900 border-yellow-400 hover:bg-yellow-300 shadow-[0_0_20px_rgba(250,204,21,0.4)]' : 'bg-white text-blue-600 hover:bg-gray-100'}`}
             >
@@ -359,12 +411,12 @@ function BillingTab() {
           </div>
           {(currentUser?.subscriptionTier || 'Free') !== 'Free' && (currentUser?.subscriptionTier || 'Free').toLowerCase() !== 'agency' && (
             <button
-              onClick={handleUpgrade}
+              onClick={handleAddTeamMember}
               disabled={loading}
               className="w-full py-3 rounded-xl border border-dashed hover:border-blue-500/50 text-xs font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
               style={{ borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
             >
-              <Plus size={14} /> Add Team Member
+              <Plus size={14} /> {remainingSeats > 0 ? `Add Team Member (${remainingSeats} slots left)` : 'Buy Extra Seat / Add Team Member'}
             </button>
           )}
         </div>
@@ -430,7 +482,7 @@ function BillingTab() {
              </div>
           </div>
           <button 
-            onClick={handleUpgrade}
+            onClick={() => handleUpgrade()}
             className="w-full py-3 rounded-xl border border-dashed border-[var(--t-border)] hover:border-blue-500/50 text-xs text-gray-500 font-bold flex items-center justify-center gap-2 transition-all"
           >
             <Plus size={14} /> Add New Method
@@ -515,14 +567,28 @@ function AnalyticsTab() {
               <p className="text-xs text-[var(--t-text-muted)] mb-8 leading-relaxed">AI automation has offloaded hours of administrative work this month.</p>
               
               <div className="space-y-6">
-                 <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                    <span className="text-xs font-bold text-[var(--t-text-muted)]">Total Hours Saved</span>
-                    <span className="text-xl font-black text-blue-500">142h</span>
-                 </div>
-                 <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                    <span className="text-xs font-bold text-[var(--t-text-muted)]">Estimated Value</span>
-                    <span className="text-xl font-black text-[var(--t-success)]">$7,100</span>
-                 </div>
+                 {(() => {
+                    const { tasks } = useStore.getState();
+                    const completedTasks = tasks.filter(t => t.status === 'done').length;
+                    const leadCount = leads.length;
+                    // Formula: 10 mins per lead + 15 mins per completed task
+                    const totalMins = (leadCount * 10) + (completedTasks * 15);
+                    const hours = Math.floor(totalMins / 60);
+                    const value = hours * 50; // Assume $50/hr value
+                    
+                    return (
+                      <>
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                           <span className="text-xs font-bold text-[var(--t-text-muted)]">Total Hours Saved</span>
+                           <span className="text-xl font-black text-blue-500">{hours}h</span>
+                        </div>
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                           <span className="text-xs font-bold text-[var(--t-text-muted)]">Estimated Value</span>
+                           <span className="text-xl font-black text-[var(--t-success)]">${value.toLocaleString()}</span>
+                        </div>
+                      </>
+                    );
+                 })()}
               </div>
               
               <div className="mt-8 p-4 rounded-2xl bg-blue-600/10 border border-blue-500/20">
@@ -554,20 +620,79 @@ function ReferralTab({
   isApplying: boolean;
 }) {
   const { currentUser } = useStore();
+  const [loading, setLoading] = useState(true);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [earnings, setEarnings] = useState<any[]>([]);
+  const [rates, setRates] = useState<any>(null);
+
+  useEffect(() => {
+    if (currentUser?.id) {
+      fetchReferralData();
+    }
+  }, [currentUser?.id]);
+
+  async function fetchReferralData() {
+    setLoading(true);
+    try {
+      // Fetch system settings for rates
+      const { data: settingsData } = await (supabase as any)
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'referral_rates')
+        .single();
+      
+      if (settingsData) setRates(settingsData.value);
+
+      // Fetch referrals with profile info
+      const { data: refData, error: refError } = await (supabase as any)
+        .from('referrals')
+        .select(`
+          id,
+          signup_date,
+          status,
+          referred_id,
+          referred:profiles!referrals_referred_id_fkey (
+            full_name,
+            subscription_tier
+          )
+        `)
+        .eq('referrer_id', (currentUser as any).id);
+
+      if (refError) throw refError;
+      setReferrals((refData as any) || []);
+
+      // Fetch earnings
+      const { data: earnData } = await (supabase as any)
+        .from('referral_earnings')
+        .select('*')
+        .eq('user_id', (currentUser as any).id)
+        .order('created_at', { ascending: false });
+
+      setEarnings(earnData || []);
+    } catch (err) {
+      console.error('Error fetching referral data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
   
   // Determine tier from referral count
-  const referralCount = currentUser?.referralCount || 3;
+  const referralCount = referrals.length;
   const tiers = [
-    { name: 'Bronze', minReferrals: 0, rate: 10, color: '#cd7f32', next: 5 },
-    { name: 'Silver', minReferrals: 5, rate: 15, color: '#9ca3af', next: 15 },
-    { name: 'Gold', minReferrals: 15, rate: 20, color: '#eab308', next: 50 },
-    { name: 'Platinum', minReferrals: 50, rate: 25, color: '#94a3b8', next: 100 },
-    { name: 'Diamond', minReferrals: 100, rate: 35, color: '#3b82f6', next: Infinity },
+    { name: 'Bronze', minReferrals: 0, rate: rates?.bronze || 10, color: '#cd7f32' },
+    { name: 'Silver', minReferrals: 5, rate: rates?.silver || 15, color: '#9ca3af' },
+    { name: 'Gold', minReferrals: 15, rate: rates?.gold || 20, color: '#eab308' },
+    { name: 'Platinum', minReferrals: 50, rate: rates?.platinum || 25, color: '#94a3b8' },
+    { name: 'Diamond', minReferrals: 100, rate: rates?.diamond || 35, color: '#3b82f6' },
   ];
+
   const currentTier = [...tiers].reverse().find(t => referralCount >= t.minReferrals) || tiers[0];
   const nextTier = tiers[tiers.indexOf(currentTier) + 1];
   const progressToNext = nextTier ? Math.min(100, ((referralCount - currentTier.minReferrals) / (nextTier.minReferrals - currentTier.minReferrals)) * 100) : 100;
   const referralsNeeded = nextTier ? nextTier.minReferrals - referralCount : 0;
+
+  const totalEarned = earnings.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
+  const pendingEarnings = earnings.filter(e => e.status === 'pending').reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 reveal">
@@ -583,8 +708,8 @@ function ReferralTab({
                 ★ {currentTier.name} Tier — {currentTier.rate}% Commission
               </div>
               <div className="text-right">
-                <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>This Month</div>
-                <div className="text-sm font-black" style={{ color: currentTier.color }}>{referralCount} referrals</div>
+                <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Network Strength</div>
+                <div className="text-sm font-black" style={{ color: currentTier.color }}>{referralCount} active users</div>
               </div>
             </div>
 
@@ -624,15 +749,15 @@ function ReferralTab({
         <div className="grid md:grid-cols-4 gap-4">
            <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
               <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Earned</div>
-              <div className="text-2xl font-black font-mono">${(currentUser?.totalEarnings || 0).toFixed(2)}</div>
+              <div className="text-2xl font-black font-mono">${totalEarned.toFixed(2)}</div>
            </div>
            <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
               <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Available</div>
-              <div className="text-2xl font-black font-mono text-green-400">${(currentUser?.availableEarnings || 14.50).toFixed(2)}</div>
+              <div className="text-2xl font-black font-mono text-green-400">${(currentUser?.availableEarnings || 0).toFixed(2)}</div>
            </div>
            <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
               <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Pending</div>
-              <div className="text-2xl font-black font-mono text-orange-400">$0.00</div>
+              <div className="text-2xl font-black font-mono text-orange-400">${pendingEarnings.toFixed(2)}</div>
            </div>
            <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
               <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Referrals</div>
@@ -647,25 +772,37 @@ function ReferralTab({
               <div className="text-xs text-gray-500 font-bold uppercase">Status</div>
            </div>
            <div className="space-y-4">
-              {[
-                { name: 'Marcus Sterling', date: 'Mar 12, 2024', plan: 'Solo', amount: '$2.70', status: 'active' },
-                { name: 'Elena Rodriguez', date: 'Mar 08, 2024', plan: 'Pro', amount: '$9.70', status: 'active' },
-                { name: 'David Vance', date: 'Feb 28, 2024', plan: 'Team', amount: '$19.70', status: 'active' }
-              ].map((ref, idx) => (
-                <div key={idx} className="flex items-center justify-between p-5 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
-                   <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 font-black">{ref.name[0]}</div>
-                      <div>
-                         <div className="text-sm font-bold">{ref.name}</div>
-                         <div className="text-[10px] text-gray-500 font-bold uppercase">{ref.plan} Plan • Signed up {ref.date}</div>
-                      </div>
-                   </div>
-                   <div className="text-right">
-                      <div className="text-sm font-black text-green-500">{ref.amount}</div>
-                      <div className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-green-500/10 text-green-500">{ref.status}</div>
-                   </div>
+              {loading ? (
+                <div className="animate-pulse space-y-4">
+                  {[1, 2].map(i => <div key={i} className="h-20 bg-white/5 rounded-2xl" />)}
                 </div>
-              ))}
+              ) : referrals.length === 0 ? (
+                <p className="text-center py-8 text-sm text-[var(--t-text-muted)]">No referrals yet. Start sharing your link!</p>
+              ) : (
+                referrals.map((ref, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-5 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
+                     <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 font-black">
+                          {ref.referred?.name?.[0] || 'U'}
+                        </div>
+                        <div>
+                           <div className="text-sm font-bold">{ref.referred?.name || 'Anonymous User'}</div>
+                           <div className="text-[10px] text-gray-500 font-bold uppercase">
+                             {ref.referred?.subscription_tier || 'Free'} Plan • Joined {new Date(ref.signup_date).toLocaleDateString()}
+                           </div>
+                        </div>
+                     </div>
+                     <div className="text-right">
+                        <div className="text-sm font-black text-green-500">
+                          ${earnings.filter(e => e.referred_user_id === ref.referred_id).reduce((s, e) => s + Number(e.amount), 0).toFixed(2)}
+                        </div>
+                        <div className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${ref.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'}`}>
+                          {ref.status}
+                        </div>
+                     </div>
+                  </div>
+                ))
+              )}
            </div>
         </div>
       </div>

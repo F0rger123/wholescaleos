@@ -478,18 +478,35 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             return;
           }
           if (data.user) {
-            const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            console.log('[Auth] User signed in, checking MFA level...');
+            const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (aalError) {
+               console.error('[Auth] MFA AAL Check Error:', aalError);
+            }
+            
+            console.log('[Auth] AAL Data:', aalData);
+
             if (aalData?.currentLevel === 'aal1' && aalData?.nextLevel === 'aal2') {
-              const { data: factors } = await supabase.auth.mfa.listFactors();
+              console.log('[Auth] MFA required (aal2 next)');
+              const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+              if (factorsError) {
+                 console.error('[Auth] List Factors Error:', factorsError);
+              }
+              
               const totpFactor = factors?.totp?.[0] || factors?.all?.find((f: any) => f.factor_type === 'totp' && f.status === 'verified');
               if (totpFactor) {
+                console.log('[Auth] Found verified TOTP factor:', totpFactor.id);
                 setMfaFactorId(totpFactor.id);
                 setPartialUser(data.user);
                 setMode('mfa');
                 setLoading(false);
                 return;
+              } else {
+                console.warn('[Auth] MFA required but no verified TOTP factors found. Factors:', factors);
               }
             }
+            
+            console.log('[Auth] Proceeding to final login (aal1 or no MFA)');
             await finalizeLogin(data.user);
           }
         } else if (mode === 'signup') {

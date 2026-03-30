@@ -473,12 +473,32 @@ export default function Imports() {
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          
+          // Better text extraction: handle spacing and line breaks
+          let lastY = -1;
+          let pageText = '';
+          for (const item of textContent.items as any[]) {
+            if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 5) {
+              pageText += '\n';
+            } else if (pageText.length > 0 && !pageText.endsWith('\n')) {
+              pageText += ' ';
+            }
+            pageText += item.str;
+            lastY = item.transform[5];
+          }
           fullText += pageText + '\n';
         }
         
+        // Clean extracted text: remove common PDF artifacts
+        const cleanedText = fullText
+          .replace(/[â€œâ€]/g, '"') // Replace curly quotes
+          .replace(/[â€˜â€™]/g, "'") // Replace curly apostrophes
+          .replace(/\s{3,}/g, '  ') // Collapse excessive spaces but keep some structure
+          .replace(/\n{3,}/g, '\n\n') // Collapse excessive newlines
+          .trim();
+
         // Pass text directly to smart paste logic
-        setPastedText(fullText);
+        setPastedText(cleanedText);
         setSelectedSource('smart-paste');
         
         setTimeout(() => {
