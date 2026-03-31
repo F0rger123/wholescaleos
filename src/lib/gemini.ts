@@ -219,6 +219,7 @@ export function getTeamAvailability() {
 
 export async function sendSMSViaAI(target: string, message: string, targetCarrier?: string): Promise<{ success: boolean; message: string; formattedPhone?: string }> {
   const store = useStore.getState();
+  const currentUser = store.currentUser;
   
   // Resolve Target Phone from Leads
   let phoneToUse = target;
@@ -237,10 +238,23 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
   
   const result = await sendSMS(phoneToUse, message, carrier);
   
-  if (result.success && lead && !lead.carrier && result.gatewaysUsed.length > 0) {
-     // Indirectly update carrier if it was unknown and we succeeded? 
-     // The sms-service doesn't tell us WHICH one worked if it tried multiple, 
-     // but CARRIER_GATEWAYS mapping is static.
+  if (result.success && currentUser) {
+    // Record in Supabase so it shows up in the SMS Inbox
+    if (isSupabaseConfigured && supabase) {
+      const formattedForSend = result.formattedPhone || phoneToUse.replace(/\D/g, '');
+      
+      supabase.from('sms_messages').insert({
+        user_id: currentUser.id,
+        lead_id: lead?.id ?? null,
+        phone_number: formattedForSend,
+        content: message,
+        direction: 'outbound',
+        carrier: carrier !== 'Unknown' ? carrier : null,
+        is_read: true
+      }).then(({ error }) => {
+        if (error) console.error('[SMS AI] Failed to log to DB:', error);
+      });
+    }
   }
 
   return {
@@ -502,20 +516,30 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     // Fallback to local storage
     if (!apiKey) {
       provider = (localStorage.getItem('user_ai_provider') as any) || 'gemini';
-      if (!model) model = localStorage.getItem('user_ai_model') || '';
+      model = localStorage.getItem('user_ai_model') || '';
       
       if (provider === 'gemini') {
         apiKey = localStorage.getItem('user_gemini_api_key') || '';
-        if (!model) model = 'gemini-2.0-flash';
+        if (!model || !model.startsWith('gemini')) model = 'gemini-2.0-flash';
       } else if (provider === 'openai') {
         apiKey = localStorage.getItem('user_openai_api_key') || '';
-        if (!model) model = 'gpt-4o';
+        if (!model || !model.startsWith('gpt')) model = 'gpt-4o';
       } else if (provider === 'anthropic') {
         apiKey = localStorage.getItem('user_anthropic_api_key') || '';
-        if (!model) model = 'claude-3-5-sonnet-latest';
+        if (!model || !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
       }
+    } else {
+      // Even if we have a key (from Supabase), validate the model-provider combo
+      if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+      if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
+      if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
     }
   }
+
+  // CRITICAL: Final safeguard against model name mismatch in URL construction
+  if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+  if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
+  if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
 
   if (!apiKey) {
     return {
@@ -758,6 +782,18 @@ Time: ${context.currentTime || new Date().toISOString()}`;
 
   } catch (error: any) {
     clearTimeout(timeoutId);
+    
+    // SMART FALLBACK: If model is not found, retry with a core model
+    if (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('invalid model')) {
+      if (!modelOverride) { // Avoid infinite loops
+        console.warn(`Model ${model} not found for ${provider}. Retrying with default...`);
+        const fallbackModel = provider === 'gemini' ? 'gemini-2.0-flash' : 
+                            provider === 'openai' ? 'gpt-4o-mini' : 
+                            'claude-3-5-sonnet-latest';
+        return processPrompt(prompt, context, fallbackModel, signal);
+      }
+    }
+
     console.error(`Error processing prompt with ${provider}:`, error);
     
     if (error.message === "RATE_LIMIT") {

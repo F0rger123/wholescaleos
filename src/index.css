@@ -27,6 +27,8 @@
   --t-primary: #3b82f6; /* Midnight Blue */
   --t-primary-dim: rgba(59, 130, 246, 0.2);
   --t-primary-text: #60a5fa;
+  --t-on-primary: #ffffff;
+  --t-text-on-primary: #ffffff;
   --t-secondary: #6b7280;
   --t-accent: #8b5cf6;
   --t-bg: #060e20;
@@ -71,6 +73,8 @@
   --t-primary: #1a1a1a;
   --t-primary-dim: rgba(26, 26, 26, 0.1);
   --t-primary-text: #1a1a1a;
+  --t-on-primary: #ffffff;
+  --t-text-on-primary: #ffffff;
   --t-secondary: #4a4a4a;
   --t-accent: #6b6b6b;
   --t-bg: #f5f5f5;
@@ -110,6 +114,8 @@
   --t-primary: #3b82f6;
   --t-primary-dim: rgba(59, 130, 246, 0.2);
   --t-primary-text: #60a5fa;
+  --t-on-primary: #ffffff;
+  --t-text-on-primary: #ffffff;
   --t-secondary: #6b7280;
   --t-accent: #8b5cf6;
   --t-bg: #000000;
@@ -144,6 +150,8 @@
   --t-primary: #4299e1;
   --t-primary-dim: rgba(66, 153, 225, 0.2);
   --t-primary-text: #63b3ed;
+  --t-on-primary: #ffffff;
+  --t-text-on-primary: #ffffff;
   --t-secondary: #9f7aea;
   --t-accent: #ed64a6;
   --t-bg: #0b1120;
@@ -225,6 +233,8 @@
   --t-primary: #ffffff;
   --t-primary-dim: rgba(255, 255, 255, 0.15);
   --t-primary-text: #ffffff;
+  --t-on-primary: #000000;
+  --t-text-on-primary: #000000;
   --t-secondary: #9ca3af;
   --t-accent: #ffffff;
   --t-bg: #000000;

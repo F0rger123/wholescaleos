@@ -14,6 +14,8 @@ import {
 } from '../lib/email';
 import { analyzeConversation } from '../lib/ai-reply-service';
 import EmailComposeModal from '../components/EmailComposeModal';
+import { DEFAULT_TEMPLATES } from '../lib/default-templates';
+import { BookOpenText } from 'lucide-react';
 
 type EmailView = 'inbox' | 'sent' | 'starred' | 'trash' | 'templates' | 'campaigns' | 'scheduled';
 
@@ -189,7 +191,7 @@ export default function EmailInbox() {
       {/* ─── Main Content ─── */}
       <div className="flex-1 flex overflow-hidden">
         {/* List Pane */}
-        <div className={`flex flex-col border-r border-[var(--t-border)] bg-[var(--t-surface)]/30 shrink-0 ${selectedThread ? 'hidden lg:flex w-80 xl:w-96' : 'flex w-full lg:w-80 xl:w-96'}`}>
+        <div className={`flex flex-col border-r border-[var(--t-border)] bg-[var(--t-surface)]/30 shrink-0 w-80 xl:w-96 ${selectedThread ? 'hidden lg:flex' : 'flex w-full lg:w-80 xl:w-96'}`}>
           <div className="p-4 border-b border-[var(--t-border)] flex items-center justify-between">
             <h2 className="text-lg font-bold capitalize">{view}</h2>
             <button 
@@ -316,6 +318,9 @@ export default function EmailInbox() {
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--t-border); border-radius: 10px; }
+        .email-content img { max-width: 100%; height: auto; border-radius: 0.5rem; }
+        .email-content table { display: block; overflow-x: auto; max-width: 100%; }
+        .email-content pre { white-space: pre-wrap; word-break: break-all; }
       `}</style>
     </div>
   );
@@ -790,6 +795,7 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
 
 function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendReply, isSending, aiSuggestions, isAnalyzing, onRunAI, onAssignLead }: any) {
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
   
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -827,10 +833,12 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
                   <p className="text-[10px] text-[var(--t-text-muted)]">{msg.from.email} · {idx === 0 ? 'Original message' : `Reply #${idx}`}</p>
                </div>
             </div>
-            <div 
-              className="pl-11 text-sm leading-relaxed text-[var(--t-text-muted)] email-content"
-              dangerouslySetInnerHTML={{ __html: msg.body || msg.snippet }}
-            />
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <div 
+                className="pl-11 text-sm leading-relaxed text-[var(--t-text-muted)] email-content overflow-x-auto max-w-full break-words"
+                dangerouslySetInnerHTML={{ __html: msg.body || msg.snippet }}
+              />
+            </div>
           </div>
         ))}
         <div ref={chatEndRef} />
@@ -839,6 +847,14 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
       <div className="p-6 border-t border-[var(--t-border)] bg-[var(--t-surface-dim)]/30 space-y-4">
         {aiSuggestions.length > 0 && (
           <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={() => setShowTemplates(!showTemplates)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${showTemplates ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] border-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)] text-[var(--t-primary)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
+            >
+              <BookOpenText size={12} />
+              Templates
+            </button>
+            <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
             {aiSuggestions.map((s: string, i: number) => (
               <button 
                 key={i} 
@@ -846,6 +862,21 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
                 className="px-3 py-1.5 bg-[var(--t-primary-dim)]/20 border border-[var(--t-primary-dim)] text-[var(--t-primary)] rounded-full text-[10px] font-medium hover:bg-[var(--t-primary-dim)]/40 transition-all"
               >
                 {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showTemplates && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+            {DEFAULT_TEMPLATES.map(t => (
+              <button
+                key={t.id}
+                onClick={() => { setReplyText(t.body); setShowTemplates(false); }}
+                className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
+              >
+                <p className="text-[10px] font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors mb-0.5">{t.name}</p>
+                <p className="text-[9px] text-[var(--t-text-muted)] line-clamp-1">{t.category} script</p>
               </button>
             ))}
           </div>

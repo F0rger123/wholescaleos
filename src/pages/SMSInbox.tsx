@@ -544,7 +544,7 @@ export default function SMSInbox() {
       <div className={`flex flex-col border-r ${selectedPhone ? 'hidden md:flex md:w-80' : 'w-full md:w-80'}`} style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.4)', borderColor: 'var(--t-border)' }}>
         <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold" style={{ color: 'var(--t-text-color)' }}>Messages</h2>
+            <h2 className="text-xl font-bold" style={{ color: 'var(--t-text)' }}>Messages</h2>
             <div className="flex items-center gap-1">
               <button 
                 onClick={handleManualRefresh}
@@ -567,7 +567,7 @@ export default function SMSInbox() {
               <button 
                 onClick={() => setShowCompose(true)}
                 className="p-2 rounded-xl transition-all hover:scale-105"
-                style={{ background: 'var(--t-primary)', color: 'white' }}
+                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
                 title="New Message"
               >
                 <Plus size={18} />
@@ -634,8 +634,8 @@ export default function SMSInbox() {
                 </p>
               </div>
               {conv.unreadCount > 0 && (
-                <div className="absolute right-4 bottom-4 w-5 h-5 text-white rounded-full flex items-center justify-center text-[10px] font-bold"
-                  style={{ background: 'var(--t-primary)' }}
+                <div className="absolute right-4 bottom-4 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
+                  style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
                 >
                   {conv.unreadCount}
                 </div>
@@ -1100,11 +1100,11 @@ export default function SMSInbox() {
                     <div className={`flex w-full ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                         msg.direction === 'outbound' 
-                          ? 'text-white rounded-tr-none' 
+                          ? 'rounded-tr-none' 
                           : 'rounded-tl-none'
                       }`}
                       style={msg.direction === 'outbound' 
-                        ? { background: 'var(--t-primary)', color: 'var(--t-text-on-primary)' } 
+                        ? { background: 'var(--t-primary)', color: 'var(--t-on-primary)' } 
                         : { backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
                       }
                       >
@@ -1163,8 +1163,8 @@ export default function SMSInbox() {
                 <button 
                   type="submit"
                   disabled={!replyText.trim() || sending}
-                  className="disabled:opacity-50 text-white p-2.5 rounded-xl transition-colors shrink-0"
-                  style={{ background: 'var(--t-primary)' }}
+                  className="disabled:opacity-50 p-2.5 rounded-xl transition-colors shrink-0"
+                  style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
                 >
                   {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
@@ -1284,7 +1284,7 @@ export default function SMSInbox() {
                 }}
                 disabled={!newNumber.trim()}
                 className="w-full py-2.5 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                style={{ background: 'var(--t-primary)', color: 'white' }}
+                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
               >
                 Start Conversation
               </button>
@@ -1342,8 +1342,8 @@ export default function SMSInbox() {
                     setEditNameModal({ isOpen: false, currentName: '', phone: '' });
                   }
                 }}
-                className="flex-1 py-2 rounded-xl text-sm font-bold text-white"
-                style={{ background: 'var(--t-primary)' }}
+                className="flex-1 py-2 rounded-xl text-sm font-bold"
+                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
               >Save</button>
             </div>
           </div>
@@ -1389,8 +1389,8 @@ export default function SMSInbox() {
                     executeSend(phone, message, selectedCarrier === 'Auto-Detect (Universal Blast)' ? undefined : selectedCarrier);
                   }
                 }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
-                style={{ background: 'var(--t-primary)' }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
               >{carrierPicker.message ? 'Save & Send' : 'Save Carrier'}</button>
             </div>
           </div>

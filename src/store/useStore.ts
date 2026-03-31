@@ -1731,7 +1731,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   // —— AI State ——————————————————————————————————————————————
   aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
-  aiModel: 'gpt-4o',
+  aiModel: 'gemini-2.0-flash',
   aiPersonality: 'Professional, efficient, and proactive real estate assistant.',
   aiUsage: (() => {
     try {

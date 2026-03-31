@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2 } from 'lucide-react';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail } from '../lib/email';
+import { DEFAULT_TEMPLATES, AgentTemplate } from '../lib/default-templates';
+import { BookOpenText } from 'lucide-react';
 
 interface EmailComposeModalProps {
   isOpen: boolean;
@@ -44,6 +46,7 @@ export default function EmailComposeModal({
   const [showLeadSelect, setShowLeadSelect] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState<'leads' | 'contacts'>('leads');
+  const [showTemplates, setShowTemplates] = useState(false);
 
   // Filter leads for selection
   const filteredLeads = useMemo(() => {
@@ -79,6 +82,32 @@ export default function EmailComposeModal({
     }
     setShowLeadSelect(false);
     setSearchQuery('');
+  };
+
+  const handleApplyTemplate = (template: AgentTemplate) => {
+    let newBody = template.body;
+    let newSubject = template.subject;
+
+    // Replace variables
+    const vars: Record<string, string> = {
+      '{{name}}': selectedLead?.name || 'there',
+      '{{address}}': selectedLead?.propertyAddress || 'your property',
+      '{{area}}': selectedLead?.city || 'your area',
+      '{{agent_name}}': currentUser?.name || 'your agent',
+      '{{offer_amount}}': '$' + ((selectedLead as any)?.metadata?.estimatedValue?.toLocaleString() || '---'),
+      '{{closing_date}}': '30 days from now',
+      '{{inspection_period}}': '7'
+    };
+
+    Object.entries(vars).forEach(([key, val]) => {
+      const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      newBody = newBody.replace(regex, val);
+      newSubject = newSubject.replace(regex, val);
+    });
+
+    setSubject(newSubject);
+    setBody(newBody);
+    setShowTemplates(false);
   };
 
   const handleSend = async () => {
@@ -307,6 +336,33 @@ export default function EmailComposeModal({
                   />
                 </div>
               </div>
+
+              {/* Template Quick Selection */}
+              <div className="flex items-center justify-between pb-2">
+                <button 
+                  onClick={() => setShowTemplates(!showTemplates)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-primary-dim)]/10 hover:bg-[var(--t-primary-dim)]/20 text-[var(--t-primary)] rounded-lg text-xs font-bold transition-all border border-[var(--t-primary-dim)]/20"
+                >
+                  <BookOpenText size={14} />
+                  {showTemplates ? 'Hide Templates' : 'Use Agent Template'}
+                </button>
+                <p className="text-[10px] text-[var(--t-text-muted)] font-medium">✨ High-converting scripts included</p>
+              </div>
+
+              {showTemplates && (
+                <div className="grid grid-cols-2 gap-2 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  {DEFAULT_TEMPLATES.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleApplyTemplate(t)}
+                      className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
+                    >
+                      <p className="text-xs font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors mb-0.5">{t.name}</p>
+                      <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <textarea 
                 value={body}

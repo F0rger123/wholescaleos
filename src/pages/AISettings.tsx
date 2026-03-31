@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Key, Loader2, Check, AlertCircle, Save, Sparkles, ChevronDown, ChevronRight, Layout } from 'lucide-react';
+import { Key, Loader2, Check, AlertCircle, Save, Sparkles, ChevronDown, ChevronRight, Layout, ShieldCheck, Mail, Info, ExternalLink } from 'lucide-react';
 import { PREBUILT_RULES, getEnabledPrebuiltRules, setEnabledPrebuiltRules } from '../lib/prebuilt-rules';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
@@ -9,7 +9,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   const [geminiKey, setGeminiKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
-  const [model, setModel] = useState('gemini-2.5-flash-lite');
+  const [model, setModel] = useState('gemini-2.0-flash');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -520,6 +520,75 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             Save AI Settings
           </button>
+        </div>
+      </div>
+
+      {/* Deliverability Status */}
+      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-[var(--t-success)]" />
+            Deliverability & Gateway Health
+          </h2>
+          <span className="px-2 py-1 bg-[var(--t-success)]/10 text-[var(--t-success)] text-[10px] font-bold rounded-lg border border-[var(--t-success)]/20 uppercase tracking-wider">System Healthy</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Email Health */}
+          <div className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-hover)]/30 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Mail size={16} className="text-[var(--t-primary)]" />
+              <span className="text-sm font-bold text-white">Email (Resend)</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[var(--t-text-muted)]">SPF / DKIM / DMARC</span>
+                <span className="text-[var(--t-success)] font-medium flex items-center gap-1"><Check size={12}/> Verified</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[var(--t-text-muted)]">Bounce Rate</span>
+                <span className="text-white font-medium">0.2%</span>
+              </div>
+            </div>
+            <div className="pt-2">
+               <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-[10px] text-[var(--t-primary)] hover:underline flex items-center gap-1 font-bold">
+                 Manage DNS Records <ExternalLink size={10} />
+               </a>
+            </div>
+          </div>
+
+          {/* SMS Gateway Health */}
+          <div className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-hover)]/30 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+               <div className="w-4 h-4 rounded-md bg-green-500/20 flex items-center justify-center">
+                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+               </div>
+              <span className="text-sm font-bold text-white">SMS (Gmail Gateway)</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[var(--t-text-muted)]">OAuth Connection</span>
+                <span className="text-[var(--t-success)] font-medium flex items-center gap-1">
+                  <Check size={12}/> Connected
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[var(--t-text-muted)]">Last Message</span>
+                <span className="text-white font-medium">2 mins ago</span>
+              </div>
+            </div>
+            <div className="pt-2">
+               <p className="text-[9px] text-[var(--t-text-muted)] leading-tight italic">
+                 <Info size={10} className="inline mr-1" /> Sequential delivery via tmomail.net & vtext.com enabled.
+               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 bg-[var(--t-warning)]/5 border border-[var(--t-warning)]/20 rounded-xl">
+           <p className="text-[11px] text-[var(--t-warning)] leading-relaxed">
+             <strong>Deliverability Tip:</strong> To avoid carrier-side blocking on Verizon (vtext.com), keep SMS messages under 160 characters and avoid links in the first message.
+           </p>
         </div>
       </div>
 

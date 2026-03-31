@@ -658,7 +658,7 @@ function RevenueShareTab({
           signup_date,
           status,
           referred_id,
-          referred:profiles!referrals_referred_id_fkey (
+          referred:profiles!referrals_referred_profiles_fkey (
             full_name,
             subscription_tier
           )

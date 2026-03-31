@@ -1071,12 +1071,17 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           )}
 
           {forgotSent && (
-            <div className="flex items-center gap-2 p-3 mb-4 rounded-xl border" style={{ 
+            <div className="p-3 mb-4 rounded-xl border space-y-2" style={{ 
               backgroundColor: 'var(--t-success-dim)',
               borderColor: 'var(--t-success-border)'
             }}>
-              <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--t-success)' }} />
-              <p className="text-sm" style={{ color: 'var(--t-success)' }}>Password reset link sent to {form.email}</p>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--t-success)' }} />
+                <p className="text-sm font-bold" style={{ color: 'var(--t-success)' }}>Password reset link sent!</p>
+              </div>
+              <p className="text-xs ml-6" style={{ color: 'var(--t-success)', opacity: 0.8 }}>
+                Check your email (and spam folder) for the reset link.
+              </p>
             </div>
           )}
 

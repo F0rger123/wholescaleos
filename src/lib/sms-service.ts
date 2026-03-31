@@ -48,7 +48,12 @@ export async function sendSMS(
     
     try {
       // Use "." as default subject via email.ts logic
-      const res = await sendEmail({ to, subject: '.', text: hardenedMessage });
+      const res = await sendEmail({ 
+        to, 
+        subject: '', 
+        text: hardenedMessage,
+        mode: 'sms'
+      });
       if (res.success) {
         successfulGateways.push(gateway);
         // If we found the right carrier, stop trying others

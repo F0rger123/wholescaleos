@@ -42,7 +42,7 @@ export interface EmailPayload {
   from?: string;
   replyTo?: string;
   threadId?: string;
-  mode?: 'user' | 'system';
+  mode?: 'user' | 'system' | 'sms';
 }
 
 export interface EmailThread {
@@ -657,7 +657,7 @@ export interface EmailPayload {
   from?: string;
   replyTo?: string;
   threadId?: string;
-  mode?: 'user' | 'system';
+  mode?: 'user' | 'system' | 'sms';
   attachments?: EmailAttachment[];
 }
 
@@ -758,36 +758,56 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
       return btoa(String.fromCharCode(...bytes));
     };
 
-    let emailContent = [
-      `MIME-Version: 1.0`,
-      `From: <${fromEmail}>`,
-      `To: ${payload.to}`,
-      `Subject: =?UTF-8?B?${base64UTF8(payload.subject)}?=`,
-      `Content-Type: multipart/mixed; boundary="${boundary}"`,
-      '',
-      `--${boundary}`,
-      `Content-Type: ${payload.html ? 'text/html' : 'text/plain'}; charset="UTF-8"`,
-      `Content-Transfer-Encoding: base64`,
-      '',
-      base64UTF8(payload.html || payload.text || ''),
-      ''
-    ];
+    let strMessage = '';
+    
+    if (payload.mode === 'sms') {
+      // ─── Minimalist MIME for SMS Gateways ───────────────────────────────────
+      // Many carriers (Verizon, AT&T) reject complex multi-part messages.
+      // We use a single-part text/plain message for maximum compatibility.
+      strMessage = [
+        `MIME-Version: 1.0`,
+        `From: <${fromEmail}>`,
+        `To: ${payload.to}`,
+        `Subject: `, // Empty subject is often required for SMS
+        `Content-Type: text/plain; charset="UTF-8"`,
+        `Content-Transfer-Encoding: 7bit`, // 7bit is safest for SMS
+        '',
+        payload.text || '',
+        ''
+      ].join('\r\n');
+    } else {
+      // ─── Standard Multi-Part MIME for Rich Emails ───────────────────────────
+      const emailContent = [
+        `MIME-Version: 1.0`,
+        `From: <${fromEmail}>`,
+        `To: ${payload.to}`,
+        `Subject: =?UTF-8?B?${base64UTF8(payload.subject)}?=`,
+        `Content-Type: multipart/mixed; boundary="${boundary}"`,
+        '',
+        `--${boundary}`,
+        `Content-Type: ${payload.html ? 'text/html' : 'text/plain'}; charset="UTF-8"`,
+        `Content-Transfer-Encoding: base64`,
+        '',
+        base64UTF8(payload.html || payload.text || ''),
+        ''
+      ];
 
-    if (payload.attachments && payload.attachments.length > 0) {
-      payload.attachments.forEach(attachment => {
-        emailContent.push(`--${boundary}`);
-        emailContent.push(`Content-Type: ${attachment.contentType || 'application/octet-stream'}`);
-        emailContent.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
-        emailContent.push(`Content-Transfer-Encoding: base64`);
-        emailContent.push('');
-        emailContent.push(attachment.content);
-        emailContent.push('');
-      });
+      if (payload.attachments && payload.attachments.length > 0) {
+        payload.attachments.forEach(attachment => {
+          emailContent.push(`--${boundary}`);
+          emailContent.push(`Content-Type: ${attachment.contentType || 'application/octet-stream'}`);
+          emailContent.push(`Content-Disposition: attachment; filename="${attachment.filename}"`);
+          emailContent.push(`Content-Transfer-Encoding: base64`);
+          emailContent.push('');
+          emailContent.push(attachment.content);
+          emailContent.push('');
+        });
+      }
+
+      emailContent.push(`--${boundary}--`);
+      strMessage = emailContent.join('\r\n');
     }
 
-    emailContent.push(`--${boundary}--`);
-
-    const strMessage = emailContent.join('\r\n');
     const encodedMessage = btoa(new TextEncoder().encode(strMessage).reduce((data, byte) => data + String.fromCharCode(byte), ''))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
