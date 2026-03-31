@@ -688,36 +688,42 @@ function SecurityTab() {
         )}
 
         {mfaStatus === 'disabled' && !enrolling && !mfaLoading && (
-          <div className="p-8 rounded-xl text-center border-2 border-dashed border-[var(--t-border)]" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-            <Shield size={48} className="mx-auto mb-4 opacity-10" style={{ color: 'var(--t-text)' }} />
-            <p className="text-sm font-medium mb-1" style={{ color: 'var(--t-text)' }}>Two-Factor Authentication is currently inactive.</p>
-            <p className="text-xs mb-6 max-w-sm mx-auto" style={{ color: 'var(--t-text-secondary)' }}>
-              Enable 2FA to protect your account from unauthorized access attempt by requiring a temporary code from your mobile device.
+          <div className="p-10 rounded-2xl text-center border border-dashed border-[var(--t-border)] bg-[var(--t-surface-dim)]">
+            <div className="w-16 h-16 rounded-full bg-[var(--t-primary-dim)] flex items-center justify-center mx-auto mb-6">
+              <Shield size={32} className="text-[var(--t-primary)] opacity-40" />
+            </div>
+            <h3 className="text-xl font-black text-[var(--t-text)] mb-2">Secure Your Account</h3>
+            <p className="text-xs text-[var(--t-text-secondary)] max-w-xs mx-auto mb-8 leading-relaxed">
+              Use the toggle above to enable Two-Factor Authentication. Protect your data with an additional layer of verification.
             </p>
-            <button
-              onClick={handleEnroll2FA}
-              className="px-6 py-2.5 rounded-lg text-sm font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
-            >
-              Configure Authenticator App
-            </button>
+            <div className="flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--t-primary)]">
+              <RefreshCw size={12} className="animate-spin-slow" /> Awaiting Activation
+            </div>
           </div>
         )}
 
         {enrolling && qrImage && (
-          <div className="space-y-4">
-            <div className="p-6 rounded-xl text-center" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-              <p className="text-sm font-bold mb-3" style={{ color: 'var(--t-text)' }}>
-                1. Scan this QR code with your authenticator app
-              </p>
-              <img src={qrImage} alt="2FA QR Code" className="mx-auto rounded-xl" style={{ width: 200, height: 200 }} />
-              <p className="text-[10px] mt-3 break-all px-8" style={{ color: 'var(--t-text-muted)' }}>
-                Manual entry: {qrUri.split('secret=')[1]?.split('&')[0] || ''}
-              </p>
+          <div className="space-y-6 p-6 rounded-2xl bg-[var(--t-bg)] border border-[var(--t-border)] animate-in zoom-in-95 duration-300">
+            <div className="text-center space-y-4">
+              <div className="inline-block p-4 rounded-3xl bg-white shadow-2xl">
+                <img src={qrImage} alt="2FA QR Code" className="w-48 h-48" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-[var(--t-text)]">Scan to Enroll</p>
+                <p className="text-[10px] text-[var(--t-text-muted)] mt-1 max-w-[200px] mx-auto">
+                  Scan this code with Google Authenticator, Authy, or your preferred 2FA app.
+                </p>
+              </div>
+              <div className="py-2 px-3 rounded-lg bg-[var(--t-surface-dim)] border border-[var(--t-border)] inline-block">
+                <code className="text-[9px] font-mono break-all text-[var(--t-text-muted)]">
+                  {qrUri.split('secret=')[1]?.split('&')[0] || ''}
+                </code>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-bold mb-2" style={{ color: 'var(--t-text)' }}>
-                2. Enter the 6-digit code from your app
+
+            <div className="space-y-3 pt-4 border-t border-[var(--t-border)]">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">
+                Verification Code
               </label>
               <div className="flex gap-3">
                 <input
@@ -726,81 +732,78 @@ function SecurityTab() {
                   onChange={e => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000"
                   maxLength={6}
-                  className="flex-1 px-4 py-3 rounded-lg text-center text-lg font-mono tracking-[0.5em]"
-                  style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+                  className="flex-1 px-4 py-3 rounded-xl text-center text-xl font-mono tracking-[0.5em] outline-none transition-all focus:ring-2 focus:ring-[var(--t-primary)]"
+                  style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
                 />
                 <button
                   onClick={handleVerify2FA}
                   disabled={mfaLoading || verifyCode.length !== 6}
-                  className="px-6 py-3 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                  className="px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-xl shadow-[var(--t-primary-dim)] disabled:opacity-50"
                   style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
                 >
-                  {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Verify & Enable'}
+                  {mfaLoading ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
                 </button>
               </div>
+              <button
+                onClick={cancelEnrollment}
+                className="w-full py-2 text-[10px] font-bold text-[var(--t-text-muted)] hover:text-[var(--t-error)] transition-colors"
+              >
+                Cancel Setup
+              </button>
             </div>
-            <button
-              onClick={cancelEnrollment}
-              className="text-xs font-medium hover:underline"
-              style={{ color: 'var(--t-text-muted)' }}
-            >
-              Cancel Enrollment
-            </button>
           </div>
         )}
 
         {mfaStatus === 'enabled' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <Shield size={20} className="text-green-500" />
+            {showMfaStepUp ? (
+              <div className="p-6 rounded-2xl bg-[var(--t-error-dim)] border border-[var(--t-error-dim)] animate-in slide-in-from-top-4 duration-300">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-[var(--t-error)] text-white">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-[var(--t-error)] uppercase tracking-tight">Confirm Deactivation</h4>
+                    <p className="text-[10px] text-[var(--t-error)] opacity-80">Enter your 2FA code to disable security protections.</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>2FA is Active</p>
-                  <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>Your account is secured with an authenticator app</p>
-                </div>
-              </div>
-              {!showMfaStepUp && (
-                <button
-                  onClick={handleDisable2FA}
-                  disabled={mfaLoading}
-                  className="px-4 py-2 rounded-lg text-xs font-bold transition-all"
-                  style={{ border: '1px solid var(--t-error)', color: 'var(--t-error)', backgroundColor: 'transparent' }}
-                >
-                  {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Disable 2FA'}
-                </button>
-              )}
-            </div>
 
-            {showMfaStepUp && (
-              <div className="p-4 rounded-xl animate-in slide-in-from-top-2" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-primary-dim)' }}>
-                <p className="text-sm font-bold mb-3" style={{ color: 'var(--t-text)' }}>Confirm Security Action</p>
                 <div className="flex gap-3">
                   <input
                     type="text"
                     value={stepUpCode}
                     onChange={e => setStepUpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="Enter 6-digit code to confirm"
+                    placeholder="000000"
                     maxLength={6}
-                    className="flex-1 px-4 py-2 rounded-lg text-sm"
-                    style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+                    className="flex-1 px-4 py-3 rounded-xl text-center text-xl font-mono tracking-[0.5em] outline-none border border-[var(--t-error)]/20"
+                    style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}
+                    autoFocus
                   />
                   <button
                     onClick={handleDisable2FA}
                     disabled={mfaLoading || stepUpCode.length !== 6}
-                    className="px-6 py-2 rounded-lg text-sm font-bold transition-all"
-                    style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+                    className="px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-[var(--t-error)] text-white shadow-xl shadow-[var(--t-error-dim)]"
                   >
-                    {mfaLoading ? <Loader2 size={14} className="animate-spin" /> : 'Confirm Disable'}
+                    {mfaLoading ? <Loader2 size={16} className="animate-spin" /> : 'Confirm'}
                   </button>
                   <button
                     onClick={() => { setShowMfaStepUp(false); setStepUpCode(''); }}
-                    className="px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{ color: 'var(--t-text-muted)' }}
+                    className="px-4 py-3 rounded-xl text-xs font-bold text-[var(--t-text-muted)] hover:text-[var(--t-text)]"
                   >
                     Cancel
                   </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 p-8 rounded-2xl border border-[var(--t-border)] bg-[var(--t-surface-dim)]">
+                <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center shrink-0">
+                  <Shield size={28} className="text-green-500" />
+                </div>
+                <div>
+                  <p className="text-lg font-black text-[var(--t-text)]">Account Protected</p>
+                  <p className="text-xs text-[var(--t-text-muted)] max-w-xs">
+                    Your account is shielded with secondary authentication factors. Use the toggle above to manage deactivation.
+                  </p>
                 </div>
               </div>
             )}

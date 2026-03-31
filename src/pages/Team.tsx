@@ -4,6 +4,7 @@ import {
   Mail, Phone, Award, DollarSign, TrendingUp, Plus, X, Check,
   Shield, Eye, Crown, Copy, RefreshCw, UserMinus, ChevronDown,
   ListTodo, CheckCircle2, AlertTriangle, Users, Building2, ArrowRightLeft,
+  Target, CalendarDays, BarChart2, PieChart as PieChartIcon
 } from 'lucide-react';
 import { formatDistanceToNow, isPast, parseISO, isToday } from 'date-fns';
 import {
@@ -21,8 +22,12 @@ import {
   XAxis, YAxis,
   CartesianGrid,
   Tooltip,
-  AreaChart, Area
+  AreaChart, Area,
+  BarChart, Bar,
+  PieChart, Pie, Cell,
+  LineChart, Line
 } from 'recharts';
+import { toast } from 'react-hot-toast';
 
 const ROLE_ICONS: Record<TeamRole, React.ElementType> = { admin: Crown, member: Shield, viewer: Eye };
 
@@ -59,6 +64,39 @@ export default function Team() {
     name: '', role: '', email: '', phone: '',
     teamRole: 'member' as TeamRole,
   });
+
+  const [chartType, setChartType] = useState<'area' | 'bar' | 'line'>('area');
+  const [showAddGoal, setShowAddGoal] = useState(false);
+  const [newGoal, setNewGoal] = useState({
+    type: 'leads' as 'leads' | 'deals' | 'revenue',
+    target: 0,
+    deadline: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+  });
+
+  // Mocked goals (stored in teams.settings.goals eventually)
+  const defaultGoals = [
+    { type: 'leads', target: 50, current: leads.length, label: 'Lead Generation' },
+    { type: 'deals', target: 10, current: leads.filter(l => l.status === 'closed-won').length, label: 'Closed Deals' },
+    { type: 'revenue', target: 500000, current: leads.filter(l => l.status === 'closed-won').reduce((s, l) => s + (l.offerAmount || 0), 0), label: 'Revenue Target' }
+  ];
+
+  const [teamGoals, setTeamGoals] = useState(defaultGoals);
+
+  const handleAddGoal = () => {
+    if (newGoal.target <= 0) return;
+    const current = newGoal.type === 'leads' ? leads.length : 
+                  newGoal.type === 'deals' ? leads.filter(l => l.status === 'closed-won').length :
+                  leads.filter(l => l.status === 'closed-won').reduce((s, l) => s + (l.offerAmount || 0), 0);
+    
+    setTeamGoals(prev => [...prev, { 
+      type: newGoal.type, 
+      target: newGoal.target, 
+      current, 
+      label: `${newGoal.type.charAt(0).toUpperCase() + newGoal.type.slice(1)} Goal` 
+    }]);
+    setShowAddGoal(false);
+    toast.success('Team goal added!');
+  };
 
   const totalRevenue = leads
     .filter(l => l.status === 'closed-won')
@@ -673,36 +711,322 @@ export default function Team() {
         ))}
       </div>
 
-      {/* Team Performance Chart */}
-      <div className="rounded-2xl border p-6 space-y-4" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Team Performance History</h3>
-            <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Revenue and growth over the last 30 days</p>
+      {/* Team Goals Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 rounded-[2rem] border p-8 space-y-6 bg-[var(--t-surface)] border-[var(--t-border)] shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full -mr-16 -mt-16 blur-2xl" />
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Active Team Goals</h3>
+              <p className="text-xs text-[var(--t-text-muted)]">Track collective targets and milestone progress.</p>
+            </div>
+            <button 
+              onClick={() => setShowAddGoal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--t-primary-dim)] text-[var(--t-primary)] text-xs font-bold uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-white transition-all active:scale-95"
+            >
+              <Target size={14} /> Set New Goal
+            </button>
           </div>
-          <div className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest" style={{ backgroundColor: 'var(--t-success-dim)', color: 'var(--t-success)' }}>
-            +12% vs Lead Goal
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {teamGoals.map((goal, i) => {
+              const progress = Math.min(100, Math.round((goal.current / goal.target) * 100));
+              const isRevenue = goal.type === 'revenue';
+              const format = (v: number) => isRevenue ? `$${(v/1000).toFixed(0)}k` : v;
+              
+              return (
+                <div key={i} className="p-5 rounded-[1.5rem] bg-[var(--t-bg)] border border-[var(--t-border)] space-y-4 hover:border-purple-500/30 transition-all group">
+                  <div className="flex justify-between items-start">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">{goal.label}</div>
+                    <div className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${progress >= 100 ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                      {progress}%
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-end">
+                      <div className="text-2xl font-black text-[var(--t-text)]">{format(goal.current)}</div>
+                      <div className="text-[10px] font-bold text-[var(--t-text-muted)]">Target: {format(goal.target)}</div>
+                    </div>
+                    <div className="h-2 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-1000 ${progress >= 100 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-gradient-to-r from-blue-600 to-purple-600'}`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-        <div className="h-[200px] w-full min-w-0">
+
+        {/* Task Completion Statistics */}
+        <div className="rounded-[2rem] border p-8 space-y-6 bg-[var(--t-surface)] border-[var(--t-border)] shadow-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Task Velocity</h3>
+              <p className="text-xs text-[var(--t-text-muted)]">Overall completion rate vs pending load.</p>
+            </div>
+            <PieChartIcon size={20} className="text-[var(--t-primary)] opacity-40 shrink-0" />
+          </div>
+          
+          <div className="h-[180px] w-full relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Completed', value: tasks.filter(t => t.status === 'done').length, color: '#22c55e' },
+                    { name: 'Pending', value: tasks.filter(t => t.status === 'todo').length, color: '#3b82f6' },
+                    { name: 'In Progress', value: tasks.filter(t => t.status === 'in-progress').length, color: '#a855f7' }
+                  ]}
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {[0,1,2].map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={['#22c55e', '#3b82f6', '#a855f7'][index]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                   contentStyle={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '12px' }}
+                   itemStyle={{ fontSize: '10px', fontWeight: 'bold' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+               <span className="text-2xl font-black text-[var(--t-text)]">
+                 {tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'done').length / tasks.length) * 100) : 0}%
+               </span>
+               <span className="text-[8px] font-black uppercase text-[var(--t-text-muted)]">Success</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+             {[
+               { label: 'Done', count: tasks.filter(t => t.status === 'done').length, color: 'bg-green-500' },
+               { label: 'Todo', count: tasks.filter(t => t.status === 'todo').length, color: 'bg-blue-500' },
+               { label: 'Ongoing', count: tasks.filter(t => t.status === 'in-progress').length, color: 'bg-purple-500' }
+             ].map((item, i) => (
+               <div key={i} className="flex items-center justify-between">
+                 <div className="flex items-center gap-2">
+                   <div className={`w-2 h-2 rounded-full ${item.color}`} />
+                   <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">{item.label}</span>
+                 </div>
+                 <span className="text-xs font-black text-[var(--t-text)]">{item.count}</span>
+               </div>
+             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Performance Trends with Switcher */}
+      <div className="rounded-[2.5rem] border p-8 space-y-8 bg-[var(--t-surface)] border-[var(--t-border)] shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600" />
+        
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Team Performance Trend</h3>
+            <p className="text-xs text-[var(--t-text-muted)] flex items-center gap-2">
+               <CalendarDays size={12} className="text-[var(--t-primary)]" />
+               Revenue growth trajectory over the last 30 days
+            </p>
+          </div>
+
+          <div className="flex p-1.5 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
+             {(['area', 'bar', 'line'] as const).map(type => (
+               <button
+                 key={type}
+                 onClick={() => setChartType(type)}
+                 className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${chartType === type ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+               >
+                 {type}
+               </button>
+             ))}
+          </div>
+        </div>
+
+        <div className="h-[300px] w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={performanceTrend}>
-              <defs>
-                <linearGradient id="teamRev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--t-primary)" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="var(--t-primary)" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border-subtle)" vertical={false} />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10 }} />
-              <YAxis hide />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px', fontSize: '10px' }}
-                formatter={(val: any) => [`$${((val || 0)/1000).toFixed(1)}k`, 'Revenue']}
-              />
-              <Area type="monotone" dataKey="cumulative" stroke="var(--t-primary)" fillOpacity={1} fill="url(#teamRev)" strokeWidth={3} />
-            </AreaChart>
+            {chartType === 'area' ? (
+              <AreaChart data={performanceTrend}>
+                <defs>
+                  <linearGradient id="teamRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--t-primary)" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="var(--t-primary)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" vertical={false} opacity={0.1} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(v) => `$${v/1000}k`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)' }}
+                  itemStyle={{ color: 'var(--t-primary)', fontSize: '12px', fontWeight: 'bold' }}
+                  formatter={(val: any) => [`$${(val || 0).toLocaleString()}`, 'Cumulative Revenue']}
+                />
+                <Area type="monotone" dataKey="cumulative" stroke="var(--t-primary)" fillOpacity={1} fill="url(#teamRev)" strokeWidth={4} />
+              </AreaChart>
+            ) : chartType === 'bar' ? (
+              <BarChart data={performanceTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" vertical={false} opacity={0.1} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(v) => `$${v/1000}k`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '16px' }}
+                  cursor={{ fill: 'var(--t-primary-dim)' }}
+                />
+                <Bar dataKey="revenue" fill="var(--t-primary)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            ) : (
+              <LineChart data={performanceTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" vertical={false} opacity={0.1} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(v) => `$${v/1000}k`} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '16px' }} />
+                <Line type="monotone" dataKey="cumulative" stroke="var(--t-primary)" strokeWidth={4} dot={{ r: 4, fill: 'var(--t-primary)', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
+              </LineChart>
+            )}
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Add Goal Modal */}
+      {showAddGoal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="w-full max-w-md p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] shadow-2xl relative">
+            <button 
+              onClick={() => setShowAddGoal(false)}
+              className="absolute top-6 right-6 p-2 rounded-xl hover:bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="flex items-center gap-4 mb-8">
+               <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-500">
+                 <Target size={24} />
+               </div>
+               <div>
+                 <h3 className="text-xl font-bold text-[var(--t-text)]">New Team Goal</h3>
+                 <p className="text-xs text-[var(--t-text-muted)]">Set a target for the crew to aim for.</p>
+               </div>
+            </div>
+
+            <div className="space-y-6">
+               <div>
+                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Goal Type</label>
+                 <div className="grid grid-cols-3 gap-3">
+                   {(['leads', 'deals', 'revenue'] as const).map(type => (
+                     <button
+                       key={type}
+                       onClick={() => setNewGoal(prev => ({ ...prev, type }))}
+                       className={`py-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${newGoal.type === type ? 'bg-purple-600 border-purple-500 text-white shadow-lg' : 'bg-[var(--t-bg)] border-[var(--t-border)] text-[var(--t-text-muted)] hover:border-purple-500/50'}`}
+                     >
+                       {type}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+
+               <div>
+                 <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Target Value</label>
+                 <div className="relative">
+                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)] font-bold">
+                     {newGoal.type === 'revenue' ? '$' : '#'}
+                   </div>
+                   <input
+                     type="number"
+                     value={newGoal.target || ''}
+                     onChange={(e) => setNewGoal(prev => ({ ...prev, target: parseInt(e.target.value) || 0 }))}
+                     className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--t-bg)] border border-[var(--t-border)] text-[var(--t-text)] font-black outline-none focus:ring-2 focus:ring-purple-500/50"
+                     placeholder="e.g. 100000"
+                   />
+                 </div>
+               </div>
+
+               <div className="pt-4">
+                 <button 
+                  onClick={handleAddGoal}
+                  className="w-full py-4 rounded-2xl bg-purple-600 text-white font-black uppercase tracking-widest hover:bg-purple-700 transition-all shadow-xl shadow-purple-600/20 active:scale-95"
+                 >
+                   Launch Goal
+                 </button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Agent Comparison Chart */}
+        <div className="rounded-[2rem] border p-8 space-y-6 bg-[var(--t-surface)] border-[var(--t-border)] shadow-xl relative overflow-hidden">
+           <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Agent Performance</h3>
+                <p className="text-xs text-[var(--t-text-muted)]">Individual revenue contribution.</p>
+              </div>
+              <BarChart2 size={24} className="text-[var(--t-primary)] opacity-20" />
+           </div>
+
+           <div className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={team.map(m => {
+                  const mLeads = leads.filter(l => l.assignedTo === m.id && l.status === 'closed-won');
+                  return {
+                    name: m.name.split(' ')[0],
+                    revenue: mLeads.reduce((s, l) => s + (l.offerAmount || 0), 0)
+                  };
+                })}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" vertical={false} opacity={0.1} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(v) => `$${v/1000}k`} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '12px' }}
+                    itemStyle={{ color: 'var(--t-primary)', fontSize: '10px' }}
+                    formatter={(v: any) => [`$${v.toLocaleString()}`, 'Revenue']}
+                  />
+                  <Bar dataKey="revenue" fill="var(--t-primary)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+           </div>
+        </div>
+
+        {/* Task Efficiency Leaderboard */}
+        <div className="rounded-[2rem] border p-8 space-y-6 bg-[var(--t-surface)] border-[var(--t-border)] shadow-xl relative overflow-hidden">
+           <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Task Masters</h3>
+                <p className="text-xs text-[var(--t-text-muted)]">Top performers by volume.</p>
+              </div>
+              <CheckCircle2 size={24} className="text-[var(--t-success)] opacity-20" />
+           </div>
+
+           <div className="space-y-4">
+              {team.map(m => {
+                const mTasks = tasks.filter(t => t.assignedTo === m.id);
+                const done = mTasks.filter(t => t.status === 'done').length;
+                const total = mTasks.length;
+                const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                
+                return (
+                  <div key={m.id} className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs" style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}>
+                      {m.avatar}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex justify-between text-[10px] font-bold">
+                        <span style={{ color: 'var(--t-text)' }}>{m.name}</span>
+                        <span style={{ color: 'var(--t-text-muted)' }}>{done}/{total} done</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden">
+                         <div className="h-full bg-[var(--t-success)] rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-xs font-black text-[var(--t-success)] w-8 text-right">{pct}%</div>
+                  </div>
+                );
+              }).sort((a,b) => (b.props.children[2].props.children.props.children.props.children - a.props.children[2].props.children.props.children.props.children))}
+           </div>
         </div>
       </div>
 

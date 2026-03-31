@@ -720,7 +720,8 @@ export default function Contracts() {
         .pdf-content * { 
           border-color: #e5e7eb !important;
           background-color: transparent !important;
-          color: inherit !important;
+          color: #1a1a1a !important;
+          /* Force solid colors for any common tailwind classes that might use oklch */
           --t-primary: #3b82f6 !important;
           --t-primary-dim: rgba(59, 130, 246, 0.1) !important;
           --t-background: #ffffff !important;
@@ -735,13 +736,18 @@ export default function Contracts() {
           --t-warning: #f59e0b !important;
           --t-error: #ef4444 !important;
           --t-info: #3b82f6 !important;
-          /* Force solid colors for any common tailwind classes that might use oklch */
+          /* Important: Unset any oklch variables that might have leaked from Tailwind v4 */
+          --color-gray-800: #1f2937 !important;
+          --color-slate-100: #f1f5f9 !important;
           --tw-bg-opacity: 1 !important;
           --tw-text-opacity: 1 !important;
           --tw-border-opacity: 1 !important;
           background: none !important;
+          text-decoration: none !important;
+          box-shadow: none !important;
+          filter: none !important;
         }
-        .pdf-content strong, .pdf-content b { color: #000000 !important; }
+        .pdf-content strong, .pdf-content b { color: #000000 !important; font-weight: bold !important; }
       `;
       element.appendChild(style);
 
@@ -827,7 +833,7 @@ export default function Contracts() {
         .pdf-content * { 
           border-color: #e5e7eb !important;
           background-color: transparent !important;
-          color: inherit !important;
+          color: #1a1a1a !important;
           --t-primary: #3b82f6 !important;
           --t-primary-dim: rgba(59, 130, 246, 0.1) !important;
           --t-background: #ffffff !important;
@@ -842,12 +848,18 @@ export default function Contracts() {
           --t-warning: #f59e0b !important;
           --t-error: #ef4444 !important;
           --t-info: #3b82f6 !important;
+          /* Force solid colors for any common tailwind classes that might use oklch */
+          --color-gray-800: #1f2937 !important;
+          --color-slate-100: #f1f5f9 !important;
           --tw-bg-opacity: 1 !important;
           --tw-text-opacity: 1 !important;
           --tw-border-opacity: 1 !important;
           background: none !important;
+          text-decoration: none !important;
+          box-shadow: none !important;
+          filter: none !important;
         }
-        .pdf-content strong, .pdf-content b { color: #000000 !important; }
+        .pdf-content strong, .pdf-content b { color: #000000 !important; font-weight: bold !important; }
       `;
       element.appendChild(style);
 
@@ -1257,8 +1269,10 @@ export default function Contracts() {
           ) : (
             <div 
               ref={previewRef}
-              className="w-full max-w-[8.5in] bg-white shadow-2xl rounded-sm shrink-0 text-gray-800 transition-all doc-container relative"
+              className="w-full max-w-[8.5in] shadow-2xl rounded-sm shrink-0 transition-all doc-container relative"
               style={{ 
+                backgroundColor: '#ffffff',
+                color: '#1f2937',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
                 padding: '0.75in',
                 minHeight: '11in'
