@@ -22,7 +22,8 @@ export default function AdminEmailCampaigns() {
   const [newCampaign, setNewCampaign] = useState({
     name: '',
     template_id: '',
-    recipients: ''
+    recipients: '',
+    scheduled_at: ''
   });
 
   // Individual Email (Legacy Mode/Quick Send)
@@ -30,6 +31,8 @@ export default function AdminEmailCampaigns() {
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'draft' | 'scheduled' | 'completed'>('all');
+  const [previewMode, setPreviewMode] = useState<'edit' | 'preview'>('edit');
 
   useEffect(() => {
     loadData();
@@ -70,7 +73,7 @@ export default function AdminEmailCampaigns() {
     if (campaign) {
       setCampaigns([campaign, ...campaigns]);
       setShowNewModal(false);
-      setNewCampaign({ name: '', template_id: '', recipients: '' });
+      setNewCampaign({ name: '', template_id: '', recipients: '', scheduled_at: '' });
       toast.success('Campaign created');
     }
   };
@@ -165,48 +168,83 @@ export default function AdminEmailCampaigns() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Quick Send Section */}
         <div className="lg:col-span-2 p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] space-y-6 shadow-2xl">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-bold italic uppercase tracking-tighter flex items-center gap-2">
               <Mail className="text-purple-500" size={20} /> Quick Send
             </h3>
-          </div>
-
-          <div className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)]">Subject Line</label>
-              <input 
-                value={subject}
-                onChange={e => setSubject(e.target.value)}
-                placeholder="Important update..."
-                className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none transition-all"
-                style={{ color: 'var(--t-text)' }}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)]">Content (HTML)</label>
-              <textarea 
-                value={body}
-                onChange={e => setBody(e.target.value)}
-                placeholder="Hello {{name}}..."
-                className="w-full h-48 bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none resize-none transition-all"
-                style={{ color: 'var(--t-text)' }}
-              />
+            <div className="flex bg-[var(--t-bg)] p-1 rounded-xl border border-[var(--t-border)]">
+              <button 
+                onClick={() => setPreviewMode('edit')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${previewMode === 'edit' ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+              >
+                Edit
+              </button>
+              <button 
+                onClick={() => setPreviewMode('preview')}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${previewMode === 'preview' ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+              >
+                Preview
+              </button>
             </div>
           </div>
 
-          <div className="flex justify-between items-center pt-4">
-            <div className="flex items-center gap-2 text-xs text-[var(--t-text-muted)]">
-              <AlertTriangle size={14} className="text-yellow-500" /> Use <code>{"{{name}}"}</code> for personalized names.
+          {previewMode === 'edit' ? (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)]">Subject Line</label>
+                <input 
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  placeholder="Important update..."
+                  className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none transition-all"
+                  style={{ color: 'var(--t-text)' }}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)]">Content (HTML)</label>
+                <textarea 
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  placeholder="Hello {{name}}..."
+                  className="w-full h-48 bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none resize-none transition-all"
+                  style={{ color: 'var(--t-text)' }}
+                />
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <div className="flex items-center gap-2 text-xs text-[var(--t-text-muted)]">
+                  <AlertTriangle size={14} className="text-yellow-500" /> Use <code>{"{{name}}"}</code> for personalized names.
+                </div>
+                <button 
+                  onClick={handleQuickSend}
+                  disabled={sending || !subject || !body}
+                  className="px-8 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                >
+                  {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                  Launch Now
+                </button>
+              </div>
             </div>
-            <button 
-              onClick={handleQuickSend}
-              disabled={sending || !subject || !body}
-              className="px-8 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
-            >
-              {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-              Launch Now
-            </button>
-          </div>
+          ) : (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+               <div className="p-8 rounded-2xl bg-[var(--t-bg)] border border-[var(--t-border)] min-h-[300px] overflow-y-auto shadow-inner">
+                 <div className="mb-6 pb-4 border-b border-[var(--t-border)]">
+                   <div className="text-[10px] font-black uppercase text-[var(--t-text-muted)] mb-1">Subject</div>
+                   <div className="text-lg font-bold text-[var(--t-text)]">{subject || '(No Subject)'}</div>
+                 </div>
+                 <div className="prose prose-invert max-w-none text-[var(--t-text)]" dangerouslySetInnerHTML={{ __html: body.replace(/\{\{name\}\}/g, 'John Doe') || '<p class="text-[var(--t-text-muted)] italic">No content yet...</p>' }} />
+               </div>
+               <div className="flex justify-between items-center">
+                  <p className="text-[10px] text-[var(--t-text-muted)] font-bold italic uppercase tracking-tighter">This is a preview using "John Doe" as the recipient.</p>
+                  <button 
+                    onClick={() => setPreviewMode('edit')}
+                    className="px-6 py-2 rounded-xl border border-[var(--t-border)] text-[var(--t-text-muted)] font-bold text-sm hover:bg-white/5 transition-all"
+                  >
+                    Back to Editor
+                  </button>
+               </div>
+            </div>
+          )}
         </div>
 
         {/* Recent Campaigns Sidebar */}
@@ -222,25 +260,46 @@ export default function AdminEmailCampaigns() {
               </button>
             </div>
             
+            <div className="flex gap-2 p-1 bg-[var(--t-bg)] rounded-xl border border-[var(--t-border)] mb-4">
+              {(['all', 'draft', 'scheduled', 'completed'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeFilter === f ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+
             <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
               {loading ? (
                 <div className="flex justify-center p-4"><Loader2 className="animate-spin text-purple-500" /></div>
-              ) : campaigns.length === 0 ? (
-                <div className="text-center py-8 text-xs text-[var(--t-text-muted)] italic">No campaigns found</div>
-              ) : campaigns.map(c => (
+              ) : (campaigns.filter(c => activeFilter === 'all' || c.status === activeFilter)).length === 0 ? (
+                <div className="text-center py-8 text-xs text-[var(--t-text-muted)] italic">No {activeFilter !== 'all' ? activeFilter : ''} campaigns found</div>
+              ) : campaigns.filter(c => activeFilter === 'all' || c.status === activeFilter).map(c => (
                 <div key={c.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all group">
                   <div className="flex justify-between items-start mb-2">
                     <div className="text-sm font-bold text-[var(--t-text)] line-clamp-1">{c.name}</div>
                     <div className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
-                      c.status === 'completed' ? 'text-green-500 bg-green-500/10' : 'text-yellow-500 bg-yellow-500/10'
+                      c.status === 'completed' ? 'text-green-500 bg-green-500/10' : 
+                      c.status === 'scheduled' ? 'text-blue-500 bg-blue-500/10' :
+                      'text-yellow-500 bg-yellow-500/10'
                     }`}>
                       {c.status}
                     </div>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">
-                      {c.recipients.length} Recipients
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">
+                        {c.recipients.length} Recipients
+                      </span>
+                      {c.metadata?.scheduled_at && (
+                        <span className="text-[9px] text-purple-500 font-bold">
+                          {new Date(c.metadata.scheduled_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       {c.status !== 'completed' && (
                         <button onClick={() => handleSendCampaign(c)} className="text-green-500 hover:scale-110 transition-transform">
@@ -296,8 +355,18 @@ export default function AdminEmailCampaigns() {
                   value={newCampaign.recipients}
                   onChange={e => setNewCampaign({ ...newCampaign, recipients: e.target.value })}
                   placeholder="email1@example.com, email2@example.com"
-                  rows={4}
+                  rows={3}
                   className="w-full px-4 py-3 rounded-2xl border border-[var(--t-border)] bg-[var(--t-bg)] text-[var(--t-text)] outline-none focus:border-purple-500 transition-all resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2">Schedule Send (Optional)</label>
+                <input 
+                  type="datetime-local"
+                  value={newCampaign.scheduled_at}
+                  onChange={e => setNewCampaign({ ...newCampaign, scheduled_at: e.target.value })}
+                  className="w-full px-4 py-3 rounded-2xl border border-[var(--t-border)] bg-[var(--t-bg)] text-[var(--t-text)] outline-none focus:border-purple-500 transition-all [color-scheme:dark]"
                 />
               </div>
             </div>

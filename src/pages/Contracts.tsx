@@ -708,46 +708,36 @@ export default function Contracts() {
       // Create a style element for the print job to avoid oklch and modern CSS issues
       const style = document.createElement('style');
       style.innerHTML = `
-        .pdf-content { 
+        .pdf-content, .doc-container, .contract-content { 
           color: #1a1a1a !important; 
           background: #ffffff !important; 
-          font-family: Arial, sans-serif !important;
+          font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           line-height: 1.6 !important;
-          padding: 40px !important;
         }
-        .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #000000 !important; }
-        .pdf-content p { color: #333333 !important; }
-        .pdf-content * { 
+        .contract-content h1, .contract-content h2, .contract-content h3 { color: #000000 !important; }
+        .contract-content p, .contract-content span, .contract-content div { color: #333333 !important; }
+        * { 
           border-color: #e5e7eb !important;
-          background-color: transparent !important;
-          color: #1a1a1a !important;
-          /* Force solid colors for any common tailwind classes that might use oklch */
-          --t-primary: #3b82f6 !important;
-          --t-primary-dim: rgba(59, 130, 246, 0.1) !important;
-          --t-background: #ffffff !important;
-          --t-bg: #ffffff !important;
-          --t-surface: #ffffff !important;
-          --t-text: #1a1a1a !important;
-          --t-text-secondary: #4b5563 !important;
-          --t-text-muted: #9ca3af !important;
-          --t-border: #e5e7eb !important;
-          --t-border-light: #f3f4f6 !important;
-          --t-success: #10b981 !important;
-          --t-warning: #f59e0b !important;
-          --t-error: #ef4444 !important;
-          --t-info: #3b82f6 !important;
-          /* Important: Unset any oklch variables that might have leaked from Tailwind v4 */
-          --color-gray-800: #1f2937 !important;
-          --color-slate-100: #f1f5f9 !important;
-          --tw-bg-opacity: 1 !important;
-          --tw-text-opacity: 1 !important;
-          --tw-border-opacity: 1 !important;
-          background: none !important;
-          text-decoration: none !important;
-          box-shadow: none !important;
-          filter: none !important;
+          /* Strip modern CSS functions that break html2canvas */
+          background-image: none !important;
+          color-scheme: light !important;
+          -webkit-print-color-adjust: exact !important;
         }
-        .pdf-content strong, .pdf-content b { color: #000000 !important; font-weight: bold !important; }
+        /* Override variables with hex equivalents */
+        :root, body, .doc-container {
+          --t-primary: #3b82f6 !important;
+          --t-primary-dim: #eff6ff !important;
+          --t-success: #10b981 !important;
+          --t-text: #1a1a1a !important;
+          --t-text-muted: #6b7280 !important;
+          --t-border: #e5e7eb !important;
+        }
+        /* Direct replacement for oklch/oklab colors */
+        [style*="oklch"], [style*="oklab"], [style*="color-mix"] {
+          color: #1a1a1a !important;
+          background-color: #ffffff !important;
+          border-color: #e5e7eb !important;
+        }
       `;
       element.appendChild(style);
 
@@ -821,45 +811,25 @@ export default function Contracts() {
       // Inject safety styles for PDF generation
       const style = document.createElement('style');
       style.innerHTML = `
-        .pdf-content { 
+        .pdf-content, .doc-container, .contract-content { 
           color: #1a1a1a !important; 
           background: #ffffff !important; 
-          font-family: Arial, sans-serif !important;
+          font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
           line-height: 1.6 !important;
-          padding: 40px !important;
         }
-        .pdf-content h1, .pdf-content h2, .pdf-content h3 { color: #000000 !important; }
-        .pdf-content p { color: #333333 !important; }
-        .pdf-content * { 
+        * { 
           border-color: #e5e7eb !important;
-          background-color: transparent !important;
           color: #1a1a1a !important;
           --t-primary: #3b82f6 !important;
-          --t-primary-dim: rgba(59, 130, 246, 0.1) !important;
-          --t-background: #ffffff !important;
-          --t-bg: #ffffff !important;
-          --t-surface: #ffffff !important;
           --t-text: #1a1a1a !important;
-          --t-text-secondary: #4b5563 !important;
-          --t-text-muted: #9ca3af !important;
           --t-border: #e5e7eb !important;
-          --t-border-light: #f3f4f6 !important;
-          --t-success: #10b981 !important;
-          --t-warning: #f59e0b !important;
-          --t-error: #ef4444 !important;
-          --t-info: #3b82f6 !important;
-          /* Force solid colors for any common tailwind classes that might use oklch */
-          --color-gray-800: #1f2937 !important;
-          --color-slate-100: #f1f5f9 !important;
-          --tw-bg-opacity: 1 !important;
-          --tw-text-opacity: 1 !important;
-          --tw-border-opacity: 1 !important;
-          background: none !important;
-          text-decoration: none !important;
-          box-shadow: none !important;
-          filter: none !important;
+          background-image: none !important;
         }
-        .pdf-content strong, .pdf-content b { color: #000000 !important; font-weight: bold !important; }
+        [style*="oklch"], [style*="oklab"], [style*="color-mix"] {
+          color: #1a1a1a !important;
+          background-color: #ffffff !important;
+          border-color: #e5e7eb !important;
+        }
       `;
       element.appendChild(style);
 
@@ -1368,13 +1338,15 @@ export default function Contracts() {
 
       {/* Success Animation Overlay (Temporary) */}
       {sendStep === 'success' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--t-primary)]/10 backdrop-blur-xl animate-in fade-in zoom-in duration-500"
-             onAnimationEnd={() => setTimeout(() => { setSendStep('idle'); setIsSendingContract(false); }, 2000)}>
-          <div className="text-center space-y-4">
-            <div className="w-24 h-24 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto shadow-2xl shadow-green-500/40 scale-125 animate-bounce">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in zoom-in duration-500"
+             onAnimationEnd={() => setTimeout(() => { setSendStep('idle'); setIsSendingContract(false); }, 3000)}>
+          <div className="absolute inset-0 bg-[var(--t-bg)]/80 backdrop-blur-3xl" />
+          <div className="relative text-center space-y-4 reveal">
+            <div className="w-24 h-24 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto shadow-2xl shadow-green-500/40 transform scale-125 animate-bounce">
               <Check size={48} strokeWidth={4} />
             </div>
-            <h2 className="text-3xl font-black text-[var(--t-text)] uppercase tracking-tighter italic">Contract Sent!</h2>
+            <h2 className="text-4xl font-black text-[var(--t-text)] uppercase tracking-tighter italic">Contract Sent!</h2>
+            <p className="text-sm text-[var(--t-text-muted)] font-bold uppercase tracking-widest">The dashboard is ready for your next deal.</p>
           </div>
         </div>
       )}

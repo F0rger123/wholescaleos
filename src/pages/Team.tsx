@@ -745,13 +745,13 @@ export default function Team() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between items-end">
-                      <div className="text-2xl font-black text-[var(--t-text)]">{format(goal.current)}</div>
-                      <div className="text-[10px] font-bold text-[var(--t-text-muted)]">Target: {format(goal.target)}</div>
+                      <div className="text-2xl font-black text-[var(--t-text)]">{format(goal.current || 0)}</div>
+                      <div className="text-[10px] font-bold text-[var(--t-text-muted)]">Target: {format(goal.target || 1)}</div>
                     </div>
                     <div className="h-2 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden">
                       <div 
                         className={`h-full rounded-full transition-all duration-1000 ${progress >= 100 ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]' : 'bg-gradient-to-r from-blue-600 to-purple-600'}`}
-                        style={{ width: `${progress}%` }}
+                        style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
                       />
                     </div>
                   </div>
@@ -1001,9 +1001,13 @@ export default function Team() {
               <CheckCircle2 size={24} className="text-[var(--t-success)] opacity-20" />
            </div>
 
-           <div className="space-y-4">
-              {team.map(m => {
-                const mTasks = tasks.filter(t => t.assignedTo === m.id);
+            <div className="space-y-4">
+              {[...team].sort((a, b) => {
+                const aDone = tasks?.filter(t => t.assignedTo === a.id && t.status === 'done').length || 0;
+                const bDone = tasks?.filter(t => t.assignedTo === b.id && t.status === 'done').length || 0;
+                return bDone - aDone;
+              }).map(m => {
+                const mTasks = tasks?.filter(t => t.assignedTo === m.id) || [];
                 const done = mTasks.filter(t => t.status === 'done').length;
                 const total = mTasks.length;
                 const pct = total > 0 ? Math.round((done / total) * 100) : 0;
@@ -1025,8 +1029,8 @@ export default function Team() {
                     <div className="text-xs font-black text-[var(--t-success)] w-8 text-right">{pct}%</div>
                   </div>
                 );
-              }).sort((a,b) => (b.props.children[2].props.children.props.children.props.children - a.props.children[2].props.children.props.children.props.children))}
-           </div>
+              })}
+            </div>
         </div>
       </div>
 

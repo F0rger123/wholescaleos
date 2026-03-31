@@ -660,20 +660,25 @@ function SecurityTab() {
             {mfaStatus === 'loading' ? (
               <Loader2 size={16} className="animate-spin" style={{ color: 'var(--t-text-muted)' }} />
             ) : (
-              <label className="relative inline-flex items-center cursor-pointer group">
+            <label className="relative inline-flex items-center cursor-pointer group">
                 <input 
                   type="checkbox" 
                   className="sr-only peer"
-                  checked={mfaStatus === 'enabled'}
-                  onChange={() => {
-                    if (mfaStatus === 'enabled') handleDisable2FA();
-                    else handleEnroll2FA();
+                  checked={mfaStatus === 'enabled' || enrolling}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    if (checked) {
+                      if (mfaStatus === 'disabled') handleEnroll2FA();
+                    } else {
+                      if (mfaStatus === 'enabled') handleDisable2FA();
+                      else if (enrolling) cancelEnrollment();
+                    }
                   }}
                   disabled={mfaLoading}
                 />
                 <div className="w-11 h-6 bg-[var(--t-surface-dim)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--t-primary)]"></div>
                 <span className="ms-3 text-[10px] font-black uppercase tracking-widest" style={{ color: mfaStatus === 'enabled' ? 'var(--t-success)' : 'var(--t-text-muted)' }}>
-                  {mfaStatus === 'enabled' ? 'Enabled' : 'Disabled'}
+                  {mfaStatus === 'enabled' ? 'Enabled' : enrolling ? 'In Progress' : 'Disabled'}
                 </span>
               </label>
             )}
@@ -688,17 +693,14 @@ function SecurityTab() {
         )}
 
         {mfaStatus === 'disabled' && !enrolling && !mfaLoading && (
-          <div className="p-10 rounded-2xl text-center border border-dashed border-[var(--t-border)] bg-[var(--t-surface-dim)]">
-            <div className="w-16 h-16 rounded-full bg-[var(--t-primary-dim)] flex items-center justify-center mx-auto mb-6">
-              <Shield size={32} className="text-[var(--t-primary)] opacity-40" />
+          <div className="p-8 rounded-2xl text-center border border-dashed border-[var(--t-border)] bg-[var(--t-surface-dim)] animate-in fade-in duration-500">
+            <div className="w-12 h-12 rounded-full bg-[var(--t-primary-dim)] flex items-center justify-center mx-auto mb-4">
+              <Shield size={24} className="text-[var(--t-primary)] opacity-40" />
             </div>
-            <h3 className="text-xl font-black text-[var(--t-text)] mb-2">Secure Your Account</h3>
-            <p className="text-xs text-[var(--t-text-secondary)] max-w-xs mx-auto mb-8 leading-relaxed">
-              Use the toggle above to enable Two-Factor Authentication. Protect your data with an additional layer of verification.
+            <h3 className="text-lg font-bold text-[var(--t-text)] mb-2">Enhance Account Security</h3>
+            <p className="text-xs text-[var(--t-text-secondary)] max-w-xs mx-auto leading-relaxed">
+              Enable Two-Factor Authentication using the toggle above to protect your account from unauthorized access.
             </p>
-            <div className="flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[var(--t-primary)]">
-              <RefreshCw size={12} className="animate-spin-slow" /> Awaiting Activation
-            </div>
           </div>
         )}
 
