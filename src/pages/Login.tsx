@@ -64,26 +64,10 @@ export default function Login() {
         return;
       }
 
-      // 2. Check for AAL1 session (MFA Required)
-      if (isSupabaseConfigured && supabase) {
-        const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-        if (aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2') {
-          console.log('[Login] AAL1 detected on mount, triggering MFA challenge...');
-          
-          // Get the verified factor to prepare the form
-          const { data: factors } = await supabase.auth.mfa.listFactors();
-          const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
-          
-          if (verifiedFactor) {
-            setMfaFactorId(verifiedFactor.id);
-            setMode('mfa');
-            
-            // Try to find the user to show a personalized message
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) setPartialUser(user);
-          }
-          return;
-        }
+      // 2. Check for recovery mode
+      if (window.location.hash.includes('type=recovery') || window.location.search.includes('recovery=true')) {
+        setMode('forgot');
+        return;
       }
 
       // 3. Fallback to query params

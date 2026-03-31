@@ -195,11 +195,15 @@ export function App() {
                 const { data: factors } = await supabase.auth.mfa.listFactors();
                 const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
 
-                // If user HAS MFA but isn't at AAL2 yet, don't set as authenticated in store
+                // If user HAS MFA but isn't at AAL2 yet, block store authentication
                 if (verifiedFactor && aal?.currentLevel !== 'aal2') {
                   console.log('[App] MFA required but not reached (AAL1). Blocking store authentication.');
                   setIsMfaRequired(true);
-                  store.setAuthenticated(false);
+                  // Only clear authentication if it wasn't already set (prevents flicker/loops)
+                  if (store.isAuthenticated) {
+                    console.log('[App] Resetting store authentication due to AAL1 state');
+                    store.setAuthenticated(false);
+                  }
                   return;
                 }
 
