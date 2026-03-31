@@ -729,7 +729,7 @@ export function generateNextAction(lead: Lead): AISuggestion {
   const base = { id: uuidv4(), leadId: lead.id, createdAt: now };
 
   if (lead.status === 'closed-won') {
-    return { ...base, type: 'follow-up', title: 'Send thank-you & request referral', description: 'Deal is closed! Send a thank-you note and ask for referrals to build your pipeline.', priority: 'low', confidence: 85, actionLabel: 'Send Email' };
+    return { ...base, type: 'follow-up', title: 'Send thank-you & request Revenue Share', description: 'Deal is closed! Send a thank-you note and ask for Revenue Share partners to build your pipeline.', priority: 'low', confidence: 85, actionLabel: 'Send Email' };
   }
   if (lead.status === 'closed-lost') {
     return { ...base, type: 'email', title: 'Re-engage in 30 days', description: 'Set a reminder to reach out with new market data. Situations change â€” this lead could reactivate.', priority: 'low', confidence: 60, actionLabel: 'Schedule Reminder' };
@@ -784,12 +784,12 @@ const MOCK_TRANSCRIPTIONS: CallTranscription[] = [
     summary: 'Challenging call â€” seller has trust issues from a prior failed deal and unrealistic pricing expectations. Presented repair estimates but met with resistance. Recommend cooling off period of 30 days before re-engaging with a softer approach.',
   },
   {
-    text: "Great call with a referral lead. Very warm introduction â€” the referring attorney had already explained our process. The owner has an inherited property they don't want to manage. No emotional attachment to the property. They want a clean, simple transaction. Discussed our all-cash offer and 21-day closing timeline. They were pleased with both. Main question was about title clearing since there's a potential lien from a contractor. I assured them our title company handles that. Scheduling a walkthrough for this Thursday at 2pm. This one should move fast.",
+    text: "Great call with a Revenue Share lead. Very warm introduction â€” the referring attorney had already explained our process. The owner has an inherited property they don't want to manage. No emotional attachment to the property. They want a clean, simple transaction. Discussed our all-cash offer and 21-day closing timeline. They were pleased with both. Main question was about title clearing since there's a potential lien from a contractor. I assured them our title company handles that. Scheduling a walkthrough for this Thursday at 2pm. This one should move fast.",
     sentiment: 'positive',
     objections: ['Potential contractor lien on title', 'Questions about title clearing process'],
     nextSteps: ['Schedule walkthrough for Thursday 2pm', 'Order preliminary title search immediately', 'Prepare offer based on comparable sales', 'Send process overview document'],
-    keyPoints: ['Referral from attorney â€” warm lead', 'Inherited property, no emotional attachment', 'Wants clean, simple transaction', 'All-cash offer well-received', '21-day close acceptable', 'Possible contractor lien to resolve'],
-    summary: 'Excellent referral lead â€” inherited property with no emotional attachment. Owner wants simplicity. Cash offer and 21-day close were well received. Only concern is a possible contractor lien, which our title company will handle. Walkthrough scheduled for Thursday.',
+    keyPoints: ['Revenue Share from attorney â€” warm lead', 'Inherited property, no emotional attachment', 'Wants clean, simple transaction', 'All-cash offer well-received', '21-day close acceptable', 'Possible contractor lien to resolve'],
+    summary: 'Excellent Revenue Share lead â€” inherited property with no emotional attachment. Owner wants simplicity. Cash offer and 21-day close were well received. Only concern is a possible contractor lien, which our title company will handle. Walkthrough scheduled for Thursday.',
   },
 ];
 

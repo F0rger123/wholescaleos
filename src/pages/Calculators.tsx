@@ -305,7 +305,12 @@ export default function Calculators() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-6"
+    >
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>Real Estate Calculators</h1>
@@ -322,10 +327,12 @@ export default function Calculators() {
           { id: 'rental', label: 'Rental Property', icon: DollarSign },
           { id: 'brrrr', label: 'BRRRR Method', icon: RefreshCw },
         ].map(calc => (
-          <button
+          <motion.button
             key={calc.id}
+            whileHover={{ scale: 1.02, translateY: -2 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setActiveCalculator(calc.id as CalculatorType)}
-            className="p-4 rounded-xl border transition-all"
+            className="p-4 rounded-xl border transition-all shadow-sm hover:shadow-md"
             style={{
               backgroundColor: activeCalculator === calc.id ? 'var(--t-primary-dim)' : 'var(--t-surface)',
               borderColor: activeCalculator === calc.id ? 'var(--t-primary)' : 'var(--t-border)',
@@ -334,14 +341,20 @@ export default function Calculators() {
           >
             <calc.icon size={24} style={{ color: activeCalculator === calc.id ? 'var(--t-primary)' : 'var(--t-text-muted)' }} />
             <p className="text-sm font-medium mt-2">{calc.label}</p>
-          </button>
+          </motion.button>
         ))}
       </div>
 
       {/* Main Calculator Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Input Panel */}
-        <div className="rounded-2xl p-6 border" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="rounded-2xl p-6 border shadow-sm" 
+          style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+        >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
               {activeCalculator === 'wholesale' && <><TrendingUp style={{ color: 'var(--t-primary)' }} /> Wholesale Deal Inputs</>}
@@ -890,25 +903,19 @@ export default function Calculators() {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setShowSaveModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-[var(--t-primary-dim)]"
               style={{
                 backgroundColor: 'var(--t-primary)',
                 color: 'var(--t-on-primary)',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--t-primary-dim)';
-                e.currentTarget.style.color = 'var(--t-primary-text)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--t-primary)';
-                e.currentTarget.style.color = 'var(--t-on-primary)';
-              }}
             >
               <Save size={16} />
               {editingScenario ? 'Update Scenario' : 'Save Scenario'}
-            </button>
+            </motion.button>
             <button
               onClick={() => {
                 // Reset to defaults
@@ -973,10 +980,16 @@ export default function Calculators() {
               Reset
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Results Panel */}
-        <div className="rounded-2xl p-6 border" style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="rounded-2xl p-6 border shadow-sm" 
+          style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
+        >
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
             <PieChart style={{ color: 'var(--t-success)' }} />
             Results
@@ -1185,7 +1198,7 @@ export default function Calculators() {
               </div>
             </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Save/Edit Modal */}
@@ -1328,8 +1341,10 @@ export default function Calculators() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
-                  deleteCalculatorScenario(showDeleteConfirm);
-                  setShowDeleteConfirm(null);
+                  if (showDeleteConfirm) {
+                    deleteCalculatorScenario(showDeleteConfirm);
+                    setShowDeleteConfirm(null);
+                  }
                 }}
                 className="flex-1 px-4 py-2 rounded-lg font-medium transition-opacity"
                 style={{
@@ -1470,6 +1485,6 @@ export default function Calculators() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -79,6 +79,9 @@ export function Layout() {
         { to: '/calculators', label: 'Calculators', icon: Calculator },
         { to: '/settings', label: 'Settings', icon: Settings },
       ],
+      Network: [
+        { to: '/dashboard/billing?tab=referral', label: 'Revenue Share', icon: Trophy },
+      ],
       Team: [
         { to: '/team', label: 'Team Dashboard', icon: UserCog },
         { to: '/team-analytics', label: 'Team Analytics', icon: Trophy },
@@ -329,7 +332,7 @@ export function Layout() {
     <div className="flex h-full bg-[var(--t-bg)] text-[var(--t-text)] theme-transition">
       {/* Sidebar */}
       <aside
-        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-50`}
+        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-40`}
       >
         {/* Logo */}
         <Link
@@ -614,7 +617,7 @@ export function Layout() {
         <header
           className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-[var(--t-sidebar-border)] animate-astral-nav"
           style={{
-            zIndex: 2000,
+            zIndex: 40,
           }}
         >
           <div className="flex items-center gap-4">
@@ -670,7 +673,7 @@ export function Layout() {
 
               {/* Search Results Dropdown */}
               {showSearchResults && searchQuery && (
-                <div className="absolute top-full left-0 mt-2 w-96 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl overflow-hidden z-[6000]">
+                <div className="absolute top-full left-0 mt-2 w-96 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl overflow-hidden z-50">
                   <div className="max-h-[min(500px,70vh)] overflow-y-auto p-2 space-y-4">
                     {/* Leads Results */}
                     {searchResults.leads.length > 0 && (
@@ -893,7 +896,7 @@ export function Layout() {
 
       {/* Global Quick Notes Floating Notepad */}
       {showQuickNotes && !notesDocked && (
-        <div className={`fixed bottom-6 right-6 z-[8000] flex flex-col items-end gap-3 transition-all duration-300 ${showNotes ? 'w-80 md:w-96' : 'w-12 h-12'}`}>
+        <div className={`fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 transition-all duration-300 ${showNotes ? 'w-80 md:w-96' : 'w-12 h-12'}`}>
           {!showNotes ? (
             <button
               onClick={() => setShowNotes(true)}

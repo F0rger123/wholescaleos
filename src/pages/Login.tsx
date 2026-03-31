@@ -728,19 +728,22 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           });
           
           if (resetError) {
-            console.error('[Auth] Password reset critical failure:', {
+            console.error('[Auth] Password reset failure diagnostic:', {
               message: resetError.message,
               status: (resetError as any).status,
-              name: resetError.name
+              name: resetError.name,
+              stack: (resetError as any).stack
             });
 
             if (isEmailSendError(resetError.message) || (resetError as any).status === 500) {
               const baseMsg = resetError.message.includes('500') || (resetError as any).status === 500
-                ? 'Internal Server Error (500). This is usually a Supabase infrastructure issue.'
+                ? 'Internal Server Error (500). This is usually caused by unconfigured SMTP settings in Supabase or an authentication rate limit.'
                 : 'Failed to send reset email.';
               
-              setError(`${baseMsg} IMPORTANT: Ensure "${resetRedirect}" is added to "Redirect URLs" in Supabase Auth -> URL Configuration.`);
+              setError(`${baseMsg} IMPORTANT: Ensure "${resetRedirect}" is added to "Redirect URLs" in Supabase Auth -> URL Configuration. If the issue persists, wait 15 minutes for the rate limit to reset.`);
               setShowEmailFix(true);
+            } else if (resetError.message.includes('rate limit')) {
+              setError("Too many attempts. Please wait a few minutes before trying again.");
             } else {
               setError(resetError.message);
             }
@@ -1134,7 +1137,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                 </div>
 
                 <div className="space-y-2 mt-4">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Referral Code (Optional)</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest ml-1">Revenue Share Code (Optional)</label>
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-blue-500 transition-colors">
                       <Users size={16} />

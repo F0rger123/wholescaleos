@@ -350,7 +350,7 @@ export default function LeadManagement() {
                               <option value="personal-relations">Personal Relations</option>
                               <option value="pay-per-lead">Pay Per Lead</option>
                               <option value="doorknocking">Doorknocking</option>
-                              <option value="referral">Referral</option>
+                              <option value="referral">Revenue Share</option>
                               <option value="website">Website</option>
                               <option value="social-media">Social Media</option>
                               <option value="open-house">Open House</option>

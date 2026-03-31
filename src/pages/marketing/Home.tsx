@@ -12,7 +12,7 @@ import {
   BarChart3, Award, Trophy, Check
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { ReferralLeaderboard } from '../../components/ReferralLeaderboard';
+import { RevenueShareLeaderboard } from '../../components/ReferralLeaderboard';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -561,7 +561,7 @@ export default function Home() {
               
               <div className="space-y-6">
                 {[
-                  { title: '30% Lifetime Commissions', desc: 'Earn passive income on every user you refer, for as long as they stay subscribed.' },
+                  { title: '30% Lifetime Commissions', desc: 'Earn passive income on every user in your revenue share network, for as long as they stay subscribed.' },
                   { title: 'Exclusive Beta Access', desc: 'Test new protocols and features before the general market.’' },
                   { title: 'Direct Engineering Line', desc: 'Influence the product roadmap with prioritized feature requests.' }
                 ].map((item, i) => (
@@ -630,7 +630,7 @@ export default function Home() {
                 Elite Protocol
               </div>
               <h2 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter leading-[0.9] text-white">Dominance is <br/><span className="text-yellow-500">Inevitable.</span></h2>
-              <p className="text-xl text-[#a3aac4] leading-relaxed max-w-xl font-medium">Join the top 1% of acquisition agents. Our most successful partners are leveraging the Referral Protocol to build passive empires while they sleep.</p>
+              <p className="text-xl text-[#a3aac4] leading-relaxed max-w-xl font-medium">Join the top 1% of acquisition agents. Our most successful partners are leveraging the Revenue Share network to build passive empires while they sleep.</p>
               
               <div className="grid sm:grid-cols-2 gap-6 pt-4">
                 <div className="p-6 rounded-3xl bg-white/5 border border-white/5">
@@ -649,7 +649,7 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
             >
-              <ReferralLeaderboard />
+              <RevenueShareLeaderboard />
             </motion.div>
           </div>
         </div>

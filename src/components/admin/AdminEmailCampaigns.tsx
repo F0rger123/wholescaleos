@@ -130,21 +130,21 @@ const PREDEFINED_TEMPLATES = [
     `
   },
   {
-    id: 'tpl_referral',
-    name: 'Referral Request',
-    subject: 'Know anyone looking to sell? Get paid! 💸',
+    id: 'tpl_revenue_share',
+    name: 'Revenue Share Request',
+    subject: 'Join our Revenue Share network and earn! 💸',
     category: 'Marketing',
-    description: 'Ask for referrals from past clients or leads.',
+    description: 'Invite users to become revenue share partners.',
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #f8fafc; color: #0f172a; padding: 40px; border-radius: 24px; border: 1px dashed #cbd5e1; text-align: center;">
         <div style="font-size: 40px; margin-bottom: 20px;">🤝</div>
-        <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 15px;">Refer and Earn.</h2>
-        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">The best compliment we can receive is a referral. If you know a friend or family member looking to sell their property, send them our way and earn a commission on closing!</p>
+        <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 15px;">Revenue Share Program.</h2>
+        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">We believe in sharing the rewards of our growth. Join our revenue share network by bringing your contacts to the platform and earn a lifetime commission on their usage!</p>
         <div style="background: #ffffff; border-radius: 20px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 30px;">
-          <p style="margin: 0; font-weight: 800; font-size: 14px; color: #64748b; text-transform: uppercase;">Your Referral Link:</p>
-          <p style="margin: 10px 0 0 0; font-family: monospace; font-size: 18px; color: #3b82f6; font-weight: bold;">wholescaleos.io/ref/{{name}}</p>
+          <p style="margin: 0; font-weight: 800; font-size: 14px; color: #64748b; text-transform: uppercase;">Your Partner Link:</p>
+          <p style="margin: 10px 0 0 0; font-family: monospace; font-size: 18px; color: #3b82f6; font-weight: bold;">wholescaleos.io/share/{{name}}</p>
         </div>
-        <a href="https://wholescaleos.pages.dev/dashboard/billing?tab=referral" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Refer a Friend</a>
+        <a href="https://wholescaleos.pages.dev/dashboard/billing?tab=referral" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Become a Partner</a>
       </div>
     `
   },

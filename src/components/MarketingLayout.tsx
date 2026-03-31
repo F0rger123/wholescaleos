@@ -57,7 +57,7 @@ export const MarketingLayout: React.FC = () => {
     <div className="min-h-screen flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30">
       {/* Header */}
       <header 
-        className={`fixed top-0 left-0 right-0 z-[2000] transition-all duration-500 animate-astral-nav ${
+        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 animate-astral-nav ${
           isScrolled ? 'py-3 bg-[#0f1930]/80 backdrop-blur-2xl border-b border-indigo-500/10 shadow-2xl' : 'py-6 bg-transparent'
         }`}
       >
@@ -118,7 +118,7 @@ export const MarketingLayout: React.FC = () => {
                   {userMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-[2001]" onClick={() => setUserMenuOpen(false)} />
-                      <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-[#0f1930]/90 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl p-2 z-[2002] animate-in fade-in zoom-in-95 duration-200">
+                      <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-[#0f1930]/90 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-4 border-b border-white/5 mb-2">
                           <p className="text-[10px] font-black text-[#6d758c] uppercase tracking-[0.2em] mb-1">Signed in as</p>
                           <p className="text-sm font-black truncate text-white italic">{currentUser?.name}</p>
@@ -331,7 +331,7 @@ export const MarketingLayout: React.FC = () => {
 
       {/* Cookie Consent Banner */}
       {showCookieConsent && (
-        <div className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-[420px] z-[200] p-8 rounded-[2.5rem] bg-[#0f1930]/90 border border-indigo-500/20 shadow-2xl animate-in slide-in-from-bottom-10 lg:slide-in-from-right-10 duration-500 backdrop-blur-3xl hover-lift">
+        <div className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-[420px] z-50 p-8 rounded-[2.5rem] bg-[#0f1930]/90 border border-indigo-500/20 shadow-2xl animate-in slide-in-from-bottom-10 lg:slide-in-from-right-10 duration-500 backdrop-blur-3xl hover-lift">
            <div className="flex items-start gap-6">
               <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0 shadow-inner">
                  <Settings size={28} className="animate-spin-slow" />

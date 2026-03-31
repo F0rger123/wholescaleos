@@ -9,7 +9,7 @@ import {
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 
-type TabType = 'billing' | 'analytics' | 'referral' | 'profile';
+type TabType = 'billing' | 'analytics' | 'revenue-share' | 'profile';
 
 function PromoCodeInput() {
   const [code, setCode] = useState('');
@@ -124,15 +124,16 @@ export default function BillingProfile() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const tab = params.get('tab') as TabType;
-    if (tab && ['billing', 'analytics', 'referral', 'profile'].includes(tab)) {
-      setActiveTab(tab);
+    const tabParam = params.get('tab');
+    if (tabParam && (['billing', 'analytics', 'referral', 'profile'] as string[]).includes(tabParam)) {
+      setActiveTab(tabParam === 'referral' ? 'revenue-share' : tabParam as TabType);
     }
   }, [location.search]);
 
   const handleTabChange = (tab: TabType) => {
     setActiveTab(tab);
-    navigate(`/dashboard/billing?tab=${tab}`);
+    const urlTab = tab === 'revenue-share' ? 'referral' : tab;
+    navigate(`/dashboard/billing?tab=${urlTab}`);
   };
 
   const currentReferralCode = currentUser?.referralCode || `WHOLESCALE-${currentUser?.name?.split(' ')[0]?.toUpperCase() || 'AGENT'}`;
@@ -150,13 +151,13 @@ export default function BillingProfile() {
     try {
       const result = await applyReferralCode(refCodeInput.trim());
       if (result.success) {
-        alert('Referral code applied successfully!');
+        alert('Revenue Share code applied successfully!');
         setRefCodeInput('');
       } else {
-        alert(result.error || 'Failed to apply referral code');
+        alert(result.error || 'Failed to apply Revenue Share code');
       }
     } catch (err) {
-      alert('An error occurred while applying the referral code');
+      alert('An error occurred while applying the Revenue Share code');
     } finally {
       setIsApplyingRef(false);
     }
@@ -165,7 +166,7 @@ export default function BillingProfile() {
   const tabs: { id: TabType; label: string; icon: any }[] = [
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'referral', label: 'Referral', icon: Users },
+    { id: 'revenue-share', label: 'Revenue Share', icon: Users },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
@@ -174,7 +175,7 @@ export default function BillingProfile() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--t-border)] pb-8">
         <div>
           <h1 className="text-3xl font-black italic tracking-tight uppercase">Account Management</h1>
-          <p className="text-gray-500 text-sm">Manage your subscription, view analytics, and track referrals.</p>
+          <p className="text-gray-500 text-sm">Manage your subscription, view analytics, and track revenue share.</p>
         </div>
         
         <div className="flex bg-[var(--t-surface-dim)] p-1 rounded-2xl border border-[var(--t-border)]">
@@ -198,8 +199,8 @@ export default function BillingProfile() {
       <div className="min-h-[60vh]">
         {activeTab === 'billing' && <BillingTab />}
         {activeTab === 'analytics' && <AnalyticsTab />}
-        {activeTab === 'referral' && (
-          <ReferralTab 
+        {activeTab === 'revenue-share' && (
+          <RevenueShareTab 
             code={currentReferralCode} 
             onCopy={copyToClipboard} 
             copied={copied}
@@ -461,7 +462,7 @@ function BillingTab() {
 
       <div className="space-y-8">
         <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-6">
-          <h3 className="text-lg font-bold">Referral Balance</h3>
+          <h3 className="text-lg font-bold">Revenue Share Balance</h3>
           <div className="p-6 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-center space-y-2">
             <div className="text-3xl font-black text-indigo-400 font-mono">
               ${(currentUser?.availableEarnings || 0).toFixed(2)}
@@ -472,7 +473,7 @@ function BillingTab() {
             Apply to Next Invoice
           </button>
           <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-500/5 border border-orange-500/10 text-orange-500 text-[10px] font-medium">
-            <AlertCircle size={14} /> Auto-apply is active for all referrals
+            <AlertCircle size={14} /> Auto-apply is active for all revenue share partners
           </div>
         </div>
 
@@ -608,7 +609,7 @@ function AnalyticsTab() {
   );
 }
 
-function ReferralTab({ 
+function RevenueShareTab({ 
   code, 
   onCopy, 
   copied,
@@ -719,7 +720,7 @@ function ReferralTab({
               </div>
             </div>
 
-            <h2 className="text-4xl md:text-5xl font-black leading-none">Share the OS, <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Get Paid.</span></h2>
+            <h2 className="text-4xl md:text-5xl font-black leading-none">Share the OS, <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Earn Profit.</span></h2>
             
             {/* Tier Progress */}
             {nextTier && (
@@ -732,7 +733,7 @@ function ReferralTab({
                   <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressToNext}%`, backgroundColor: currentTier.color }} />
                 </div>
                 <p className="text-[10px] font-bold text-center" style={{ color: 'var(--t-text-muted)' }}>
-                  {referralsNeeded} more referral{referralsNeeded !== 1 ? 's' : ''} to reach {nextTier.name}
+                  {referralsNeeded} more partner{referralsNeeded !== 1 ? 's' : ''} to reach {nextTier.name} Rewards
                 </p>
               </div>
             )}
@@ -766,7 +767,7 @@ function ReferralTab({
               <div className="text-2xl font-black font-mono text-orange-400">${pendingEarnings.toFixed(2)}</div>
            </div>
            <div className="p-6 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)] space-y-2">
-              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Referrals</div>
+              <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Total Share Partners</div>
               <div className="text-2xl font-black font-mono" style={{ color: currentTier.color }}>{referralCount}</div>
            </div>
         </div>
@@ -774,7 +775,7 @@ function ReferralTab({
         {/* Referred Users */}
         <div className="p-8 rounded-3xl bg-[var(--t-surface)] border border-[var(--t-border)]">
            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold italic">Referred Users</h3>
+              <h3 className="text-xl font-bold italic">Share Partners</h3>
               <div className="text-xs text-gray-500 font-bold uppercase">Status</div>
            </div>
            <div className="space-y-4">
@@ -783,7 +784,15 @@ function ReferralTab({
                   {[1, 2].map(i => <div key={i} className="h-20 bg-white/5 rounded-2xl" />)}
                 </div>
               ) : referrals.length === 0 ? (
-                <p className="text-center py-8 text-sm text-[var(--t-text-muted)]">No referrals yet. Start sharing your link!</p>
+                <div className="flex flex-col items-center justify-center py-12 px-6 rounded-3xl bg-[var(--t-surface-dim)] border border-dashed border-[var(--t-border)] text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)]">
+                    <Users size={24} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-[var(--t-text)]">No revenue share partners yet</p>
+                    <p className="text-[10px] text-[var(--t-text-muted)] mt-1">Start sharing your unique link to earn commissions.</p>
+                  </div>
+                </div>
               ) : (
                 referrals.map((ref, idx) => (
                   <div key={idx} className="flex items-center justify-between p-5 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">

@@ -708,6 +708,7 @@ export default function Contracts() {
     
     setIsSendingContract(true);
     setSendStep('generating');
+    setGeneratingPdf(true);
     
     try {
       const element = previewRef.current;
