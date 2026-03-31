@@ -76,15 +76,64 @@ const PREDEFINED_TEMPLATES = [
         <a href="#" style="display: inline-block; padding: 18px 40px; background: #ffffff; color: #4f46e5; text-decoration: none; border-radius: 99px; font-weight: 900; text-transform: uppercase; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">Claim Discount</a>
       </div>
     `
+  },
+  {
+    id: 'tpl_deal_closed',
+    name: 'Deal Closed',
+    subject: 'Congratulations! Deal Closed: {{address}} 🏆',
+    category: 'Operations',
+    description: 'Celebrate a successful transaction with the team.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #065f46; color: #ffffff; padding: 40px; border-radius: 24px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 20px;">🏆</div>
+        <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">DEAL CLOSED</h2>
+        <p style="font-size: 18px; margin-bottom: 30px; opacity: 0.9;">The property at <strong>{{address}}</strong> has been successfully closed!</p>
+        <div style="background: rgba(255,255,255,0.1); padding: 24px; border-radius: 16px; margin-bottom: 30px; text-align: left;">
+          <p style="margin: 0 0 10px 0; font-size: 14px; color: #a7f3d0;">"Big shoutout to the whole team for making this happen. Another one for the books!"</p>
+        </div>
+        <a href="#" style="display: inline-block; padding: 16px 32px; background: #ffffff; color: #065f46; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">View Deal Details</a>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_new_lead',
+    name: 'New High-Score Lead',
+    subject: 'Action Required: High-Score Lead Assigned! 🔥',
+    category: 'Sales',
+    description: 'Urgent notification for sales agents.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #000000; padding: 40px; border-radius: 24px; border: 1px solid #e5e7eb;">
+        <div style="display: inline-block; padding: 4px 12px; background: #fee2e2; color: #dc2626; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px;">Priority 1</div>
+        <h2 style="font-size: 28px; font-weight: 900; margin: 0 0 10px 0;">New Lead Assigned</h2>
+        <p style="color: #4b5563; margin-bottom: 30px;">A high-priority lead has been assigned to you. Strike while the iron is hot!</p>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 24px; border-radius: 16px; margin-bottom: 30px;">
+          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 900; color: #9ca3af; text-transform: uppercase;">Lead Name</p>
+          <p style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700;">{{name}}</p>
+          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 900; color: #9ca3af; text-transform: uppercase;">Property Address</p>
+          <p style="margin: 0; font-size: 16px;">{{address}}</p>
+        </div>
+        <a href="#" style="display: block; width: 100%; padding: 16px; background: #dc2626; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Claim Lead Now</a>
+      </div>
+    `
   }
 ];
+
+export interface EmailLog {
+  id: string;
+  to_email: string;
+  subject: string;
+  sent_at: string;
+  status: string;
+}
 
 export default function AdminEmailCampaigns() {
   const [templates, setTemplates] = useState<dbEmailTemplate[]>([]);
   const [campaigns, setCampaigns] = useState<dbEmailCampaign[]>([]);
+  const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'sent'>('campaigns');
   
   // Create Campaign State
   const [newCampaign, setNewCampaign] = useState({
@@ -115,12 +164,42 @@ export default function AdminEmailCampaigns() {
       ]);
       setTemplates(tps);
       setCampaigns(cps);
+
+      // Load logs
+      if (supabase) {
+        const { data: logsData } = await supabase
+          .from('email_logs')
+          .select('*')
+          .order('sent_at', { ascending: false })
+          .limit(50);
+        if (logsData) setLogs(logsData);
+      }
     } catch (err) {
       toast.error('Failed to load email data');
     } finally {
       setLoading(false);
     }
   }
+
+  const logEmail = async (to_email: string, subject: string, template_id?: string) => {
+    if (!supabase) return;
+    try {
+      const { data: logEntry } = await supabase
+        .from('email_logs')
+        .insert({
+          to_email,
+          subject,
+          template_id: template_id?.startsWith('tpl_') ? null : template_id, // exclude predefined string IDs
+          status: 'sent'
+        })
+        .select()
+        .single();
+      
+      if (logEntry) setLogs(prev => [logEntry, ...prev]);
+    } catch (err) {
+      console.warn('Failed to log email:', err);
+    }
+  };
 
   const handleCreateCampaign = async () => {
     if (!newCampaign.name || !newCampaign.template_id || !newCampaign.recipients) {
@@ -165,9 +244,13 @@ export default function AdminEmailCampaigns() {
           to: recipient,
           subject: template.subject,
           html: template.body.replace(/\{\{name\}\}/g, recipient.split('@')[0]),
+          mode: 'system' // Branded sender
         });
 
-        if (result.success) successCount++;
+        if (result.success) {
+          successCount++;
+          await logEmail(recipient, template.subject, template.id);
+        }
         else failCount++;
       } catch (err) {
         failCount++;
@@ -207,8 +290,12 @@ export default function AdminEmailCampaigns() {
           to: user.email as string,
           subject: subject,
           html: body.replace(/\{\{name\}\}/g, user.full_name || 'User'),
+          mode: 'system' // Branded sender
         });
-        if (result.success) success++;
+        if (result.success) {
+          success++;
+          await logEmail(user.email as string, subject);
+        }
       }
 
       toast.success(`Sent to ${success} users`, { id: 'quick-send' });
@@ -341,60 +428,96 @@ export default function AdminEmailCampaigns() {
               </button>
             </div>
             
-            <div className="flex gap-2 p-1 bg-[var(--t-bg)] rounded-xl border border-[var(--t-border)] mb-4">
-              {(['all', 'draft', 'scheduled', 'completed'] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeFilter === f ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
-                >
-                  {f}
-                </button>
-              ))}
+            <div className="flex bg-[var(--t-bg)] p-1 rounded-xl border border-[var(--t-border)] mb-4">
+              <button
+                onClick={() => setActiveTab('campaigns')}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeTab === 'campaigns' ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+              >
+                Campaigns
+              </button>
+              <button
+                onClick={() => setActiveTab('sent')}
+                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeTab === 'sent' ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+              >
+                Sent
+              </button>
             </div>
 
-            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
-              {loading ? (
-                <div className="flex justify-center p-4"><Loader2 className="animate-spin text-purple-500" /></div>
-              ) : (campaigns.filter(c => activeFilter === 'all' || c.status === activeFilter)).length === 0 ? (
-                <div className="text-center py-8 text-xs text-[var(--t-text-muted)] italic">No {activeFilter !== 'all' ? activeFilter : ''} campaigns found</div>
-              ) : campaigns.filter(c => activeFilter === 'all' || c.status === activeFilter).map(c => (
-                <div key={c.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all group">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="text-sm font-bold text-[var(--t-text)] line-clamp-1">{c.name}</div>
-                    <div className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
-                      c.status === 'completed' ? 'text-green-500 bg-green-500/10' : 
-                      c.status === 'scheduled' ? 'text-blue-500 bg-blue-500/10' :
-                      'text-yellow-500 bg-yellow-500/10'
-                    }`}>
-                      {c.status}
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">
-                        {c.recipients.length} Recipients
-                      </span>
-                      {c.metadata?.scheduled_at && (
-                        <span className="text-[9px] text-purple-500 font-bold">
-                          {new Date(c.metadata.scheduled_at).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {c.status !== 'completed' && (
-                        <button onClick={() => handleSendCampaign(c)} className="text-green-500 hover:scale-110 transition-transform">
-                          <Play size={14} fill="currentColor" />
-                        </button>
-                      )}
-                      <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:scale-110 transition-transform">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
+            {activeTab === 'campaigns' ? (
+              <>
+                <div className="flex gap-2 p-1 bg-[var(--t-bg)] rounded-xl border border-[var(--t-border)] mb-4">
+                  {(['all', 'draft', 'scheduled', 'completed'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setActiveFilter(f)}
+                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${activeFilter === f ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
+
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+                  {loading ? (
+                    <div className="flex justify-center p-4"><Loader2 className="animate-spin text-purple-500" /></div>
+                  ) : (campaigns.filter(c => activeFilter === 'all' || c.status === activeFilter)).length === 0 ? (
+                    <div className="text-center py-8 text-xs text-[var(--t-text-muted)] italic">No {activeFilter !== 'all' ? activeFilter : ''} campaigns found</div>
+                  ) : campaigns.filter(c => activeFilter === 'all' || c.status === activeFilter).map(c => (
+                    <div key={c.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/30 transition-all group">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="text-sm font-bold text-[var(--t-text)] line-clamp-1">{c.name}</div>
+                        <div className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                          c.status === 'completed' ? 'text-green-500 bg-green-500/10' : 
+                          c.status === 'scheduled' ? 'text-blue-500 bg-blue-500/10' :
+                          'text-yellow-500 bg-yellow-500/10'
+                        }`}>
+                          {c.status}
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">
+                            {c.recipients.length} Recipients
+                          </span>
+                          {c.metadata?.scheduled_at && (
+                            <span className="text-[9px] text-purple-500 font-bold">
+                              {new Date(c.metadata.scheduled_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {c.status !== 'completed' && (
+                            <button onClick={() => handleSendCampaign(c)} className="text-green-500 hover:scale-110 transition-transform">
+                              <Play size={14} fill="currentColor" />
+                            </button>
+                          )}
+                          <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:scale-110 transition-transform">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
+                {logs.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-[var(--t-text-muted)] italic">No sent emails found</div>
+                ) : logs.map(log => (
+                  <div key={log.id} className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="text-[11px] font-bold text-[var(--t-text)] line-clamp-1">{log.subject}</div>
+                      <span className="text-[8px] font-black text-green-500 uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded">Sent</span>
+                    </div>
+                    <div className="text-[10px] text-[var(--t-text-muted)] mb-2 font-medium">{log.to_email}</div>
+                    <div className="text-[9px] text-[var(--t-text-muted)] italic font-bold">
+                      {new Date(log.sent_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

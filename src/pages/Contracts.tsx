@@ -1293,7 +1293,7 @@ export default function Contracts() {
       )}
       
       {isSendingContract && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300">
           <div className="w-full max-w-sm p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] shadow-2xl text-center space-y-6">
             <div className="relative mx-auto w-20 h-20">
               <div className="absolute inset-0 rounded-full border-4 border-[var(--t-primary-dim)]"></div>

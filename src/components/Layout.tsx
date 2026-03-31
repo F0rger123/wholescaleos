@@ -39,7 +39,7 @@ export function Layout() {
     activeLeadModalId,
     setActiveLeadModalId,
     undo, redo, history, future,
-    manualSave, saveStatus
+    manualSave, saveStatus, isSyncing
   } = useStore();
 
   // Auto-save loop (every 5 minutes)
@@ -757,6 +757,17 @@ export function Layout() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {/* Cloud Sync Indicator */}
+            {isSyncing && (
+              <div 
+                className="flex items-center gap-2 px-2 py-1 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary-dim)] animate-in fade-in zoom-in duration-300"
+                title="Background sync in progress"
+              >
+                <CloudCheck size={14} className="text-[var(--t-primary)] animate-pulse" />
+                <span className="text-[10px] font-bold text-[var(--t-primary)] uppercase tracking-tight hidden sm:inline">Syncing</span>
+              </div>
+            )}
+
             {/* Undo / Redo */}
             <div className="flex items-center gap-1 mr-2 px-2 py-1 rounded-lg bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
               <button

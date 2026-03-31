@@ -42,6 +42,7 @@ export interface EmailPayload {
   from?: string;
   replyTo?: string;
   threadId?: string;
+  mode?: 'user' | 'system';
 }
 
 export interface EmailThread {
@@ -298,6 +299,7 @@ export function welcomeEmailTemplate(userName: string, dashboardUrl: string): Em
     to: '', // filled by caller
     subject: `Welcome to WholeScale OS, ${firstName}! 🏗️`,
     html: emailLayout(body, `${firstName}, your real estate CRM is ready to go!`),
+    mode: 'system',
   };
 }
 
@@ -329,6 +331,7 @@ export function verificationEmailTemplate(userName: string, verifyUrl: string): 
     to: '',
     subject: 'Verify your WholeScale OS email',
     html: emailLayout(body, `${firstName}, verify your email to get started`),
+    mode: 'system',
   };
 }
 
@@ -357,6 +360,7 @@ export function passwordResetTemplate(resetUrl: string): EmailPayload {
     to: '',
     subject: 'Reset your WholeScale OS password',
     html: emailLayout(body, 'Password reset requested for your account'),
+    mode: 'system',
   };
 }
 
@@ -413,6 +417,7 @@ export function dealAlertTemplate(
     to: '',
     subject: `🔥 Hot Deal: ${leadName} — Score ${dealScore}/100`,
     html: emailLayout(body, `${firstName}, ${leadName} scored ${dealScore}/100!`),
+    mode: 'system',
   };
 }
 
@@ -468,6 +473,7 @@ export function taskAssignedTemplate(
     to: '',
     subject: `📋 Task assigned: ${taskTitle}`,
     html: emailLayout(body, `${assignedBy} assigned you: ${taskTitle}`),
+    mode: 'system',
   };
 }
 
@@ -508,6 +514,7 @@ export function teamInviteTemplate(
     to: '',
     subject: `${inviterName} invited you to ${teamName} on WholeScale OS`,
     html: emailLayout(body, `Join ${teamName} on WholeScale OS`),
+    mode: 'system',
   };
 }
 
@@ -583,6 +590,7 @@ export function weeklyDigestTemplate(
     to: '',
     subject: `📊 Your weekly recap: ${stats.dealsClosed} deals closed, $${(stats.revenue / 1000).toFixed(0)}k revenue`,
     html: emailLayout(body, `${firstName}, ${stats.dealsClosed} deals closed this week!`),
+    mode: 'system',
   };
 }
 
@@ -617,6 +625,7 @@ export function mentionTemplate(
     to: '',
     subject: `💬 ${mentionedBy} mentioned you in #${channelName}`,
     html: emailLayout(body, `${mentionedBy}: "${messagePreview.slice(0, 60)}..."`),
+    mode: 'system',
   };
 }
 
@@ -646,6 +655,7 @@ export interface EmailPayload {
   from?: string;
   replyTo?: string;
   threadId?: string;
+  mode?: 'user' | 'system';
   attachments?: EmailAttachment[];
 }
 
@@ -697,11 +707,36 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
 
+  // 1. Check for System Emails (Branded)
+  if (payload.mode === 'system' && isSupabaseConfigured && supabase) {
+    try {
+      console.log('📧 Sending System Email via Resend...', { to: payload.to, subject: payload.subject });
+      const { data, error: functionError } = await supabase.functions.invoke('resend-email', {
+        body: {
+          to: payload.to,
+          subject: payload.subject,
+          html: payload.html,
+          text: payload.text,
+          from: payload.from || 'WholeScale OS <noreply@wholescaleos.com>'
+        }
+      });
+
+      if (functionError) throw functionError;
+      return { success: true, messageId: data?.id };
+    } catch (err) {
+      console.error('System email failed, falling back or failing:', err);
+      // If system email fails, continue to Gmail if it's NOT a forced system email
+      if (payload.from) return { success: false, error: err instanceof Error ? err.message : 'System email failed' };
+    }
+  }
+
+  // 2. Handle User Emails (Gmail) or Development Mock
   if (!isSupabaseConfigured || !supabase || !userId) {
     console.log('📧 [DEV] Email would be sent:', {
       to: payload.to,
       subject: payload.subject,
       attachments: payload.attachments?.length || 0,
+      mode: payload.mode || 'user'
     });
     return { success: true, messageId: `dev-${Date.now()}` };
   }
@@ -715,18 +750,24 @@ export async function sendEmail(payload: EmailPayload): Promise<EmailResult> {
     const fromEmail = payload.from || store.currentUser?.email || 'me';
     const boundary = `-------314159265358979323846`;
     
+    // Helper to base64 encode UTF-8 strings for MIME parts
+    const base64UTF8 = (str: string) => {
+      const bytes = new TextEncoder().encode(str);
+      return btoa(String.fromCharCode(...bytes));
+    };
+
     let emailContent = [
       `MIME-Version: 1.0`,
       `From: <${fromEmail}>`,
       `To: ${payload.to}`,
-      `Subject: ${payload.subject}`,
+      `Subject: =?UTF-8?B?${base64UTF8(payload.subject)}?=`,
       `Content-Type: multipart/mixed; boundary="${boundary}"`,
       '',
       `--${boundary}`,
       `Content-Type: ${payload.html ? 'text/html' : 'text/plain'}; charset="UTF-8"`,
-      `Content-Transfer-Encoding: 7bit`,
+      `Content-Transfer-Encoding: base64`,
       '',
-      payload.html || payload.text || '',
+      base64UTF8(payload.html || payload.text || ''),
       ''
     ];
 

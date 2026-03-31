@@ -1417,6 +1417,7 @@ interface AppState {
   // Sync
   teamId: string | null;
   dataLoaded: boolean;
+  isSyncing: boolean;
   setTeamId: (id: string | null) => void;
   setDataLoaded: (loaded: boolean) => void;
   setBulkData: (data: Record<string, unknown>) => void;
@@ -2192,7 +2193,7 @@ export const useStore = create<AppState>((set, get) => ({
     const { saveStatus, teamId, loadLeads } = get();
     if (saveStatus === 'saving') return;
 
-    set({ saveStatus: 'saving' });
+    set({ saveStatus: 'saving', isSyncing: true });
     console.log('🔄 manualSave: Starting full sync...');
     
     try {
@@ -2211,13 +2212,13 @@ export const useStore = create<AppState>((set, get) => ({
       if (typeof window !== 'undefined') {
         localStorage.setItem('wholescale-last-autosave', now);
       }
-      set({ saveStatus: 'success', lastAutoSave: now });
+      set({ saveStatus: 'success', lastAutoSave: now, isSyncing: false });
       
       // Reset status after a few seconds
       setTimeout(() => set({ saveStatus: 'idle' }), 3000);
     } catch (error) {
       console.error('❌ manualSave failed:', error);
-      set({ saveStatus: 'error' });
+      set({ saveStatus: 'error', isSyncing: false });
       setTimeout(() => set({ saveStatus: 'idle' }), 5000);
     }
   },
@@ -2364,6 +2365,7 @@ export const useStore = create<AppState>((set, get) => ({
   // —— Sync ——————————————————————————————————————————————————
   teamId: null,
   dataLoaded: false,
+  isSyncing: false,
   setTeamId: (teamId: string | null) => {
     console.log('DEBUG: setTeamId called with:', teamId);
     if (teamId && typeof window !== 'undefined') {
@@ -2533,11 +2535,14 @@ export const useStore = create<AppState>((set, get) => ({
       sanitizedUpdates.status = ensureStringStatus(updates.status);
     }
     
+    // 1. Immediate UI Update
     set((s) => ({
       leads: s.leads.map((l) => (l.id === id ? { ...l, ...sanitizedUpdates, updatedAt: now } : l)),
     }));
-
+    
+    // 2. Background Sync
     if (isSupabaseConfigured && supabase) {
+      set({ isSyncing: true });
       const dbUpdates: any = { updated_at: now };
       if (updates.name !== undefined) dbUpdates.name = updates.name;
       if (updates.email !== undefined) dbUpdates.email = updates.email;
@@ -2572,15 +2577,18 @@ export const useStore = create<AppState>((set, get) => ({
       if (updates.lastSoldDate !== undefined) dbUpdates.last_sold_date = updates.lastSoldDate;
       if (updates.estimatedEquity !== undefined) dbUpdates.estimated_equity = updates.estimatedEquity;
       
-      try {
-        const result = await leadsService.update(id, dbUpdates);
-        console.log('✅ Lead updated in Supabase:', id, 'Result:', result);
-        return { success: true };
-      } catch (error) {
-        console.error('❌ Failed to update lead in Supabase:', error);
-        return { success: false, error };
-      }
+      // Perform sync in the background
+      leadsService.update(id, dbUpdates)
+        .then(() => {
+          console.log('✅ Background: Lead updated in Supabase:', id);
+          set({ isSyncing: false });
+        })
+        .catch((error) => {
+          console.error('❌ Background: Failed to update lead in Supabase:', error);
+          set({ isSyncing: false });
+        });
     }
+    
     return { success: true };
   },
 

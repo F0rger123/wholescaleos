@@ -715,18 +715,25 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           }
         } else {
           // Forgot password
-          const resetRedirect = window.location.origin + window.location.pathname + '#/email-confirmed';
+          const resetRedirect = window.location.origin + window.location.pathname + (window.location.pathname.endsWith('/') ? '' : '/') + '#/email-confirmed';
+          console.log('[Auth] Password reset requested for:', form.email, 'Redirecting to:', resetRedirect);
+          
           const { error: resetError } = await supabase.auth.resetPasswordForEmail(form.email, {
             redirectTo: resetRedirect,
           });
+          
           if (resetError) {
+            console.error('[Auth] Password reset error:', resetError);
             if (isEmailSendError(resetError.message)) {
-              setError('Failed to send reset email — email rate limit reached.');
+              setError('Failed to send reset email. This is often due to Supabase SMTP limits or domain verification. Please check your Supabase Email settings.');
               setShowEmailFix(true);
+            } else if (resetError.status === 500) {
+              setError('Internal Server Error (500) from Supabase. This usually means the Redirect URL is not in your allow list or SMTP is misconfigured.');
             } else {
               setError(resetError.message);
             }
           } else {
+            console.log('[Auth] Password reset email sent successfully');
             setForgotSent(true);
           }
           setLoading(false);
