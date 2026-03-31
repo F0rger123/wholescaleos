@@ -715,7 +715,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           }
         } else {
           // Forgot password
-          const resetRedirect = window.location.origin + window.location.pathname + (window.location.pathname.endsWith('/') ? '' : '/') + '#/email-confirmed';
+          const resetRedirect = 'https://wholescaleos.pages.dev/login';
           console.log('[Auth] Password reset requested for:', form.email, 'Redirecting to:', resetRedirect);
           
           const { error: resetError } = await supabase.auth.resetPasswordForEmail(form.email, {
@@ -727,8 +727,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             if (isEmailSendError(resetError.message)) {
               setError('Failed to send reset email. This is often due to Supabase SMTP limits or domain verification. Please check your Supabase Email settings.');
               setShowEmailFix(true);
-            } else if (resetError.status === 500) {
-              setError('Internal Server Error (500) from Supabase. This usually means the Redirect URL is not in your allow list or SMTP is misconfigured.');
+              setError('Internal Server Error (500) from Supabase. IMPORTANT: Ensure "https://wholescaleos.pages.dev/login" is added to your Supabase Auth -> Redirect URLs allow list.');
             } else {
               setError(resetError.message);
             }

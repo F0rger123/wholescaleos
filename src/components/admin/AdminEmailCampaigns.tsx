@@ -34,7 +34,7 @@ const PREDEFINED_TEMPLATES = [
             <li style="margin-bottom: 12px;">Link your Stripe account for effortless billing</li>
           </ul>
         </div>
-        <a href="#" style="display: block; width: 100%; padding: 16px; background: #8b5cf6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Launch Dashboard</a>
+        <a href="https://wholescaleos.pages.dev/dashboard" style="display: block; width: 100%; padding: 16px; background: #8b5cf6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Launch Dashboard</a>
         <p style="text-align: center; color: #52525b; font-size: 12px; margin-top: 40px;">© 2026 WholeScale OS. All rights reserved.</p>
       </div>
     `
@@ -55,7 +55,7 @@ const PREDEFINED_TEMPLATES = [
           <p style="font-weight: 700; margin: 0;">"The AI import saved our team 20+ hours in the first week alone."</p>
           <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">— Sarah Jenkins, Pro Agency User</p>
         </div>
-        <a href="#" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Explore Feature</a>
+        <a href="https://wholescaleos.pages.dev/imports" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Explore Feature</a>
       </div>
     `
   },
@@ -73,46 +73,122 @@ const PREDEFINED_TEMPLATES = [
         <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; backdrop-filter: blur(10px); margin-bottom: 30px;">
           <p style="margin: 0; font-weight: 700;">Use Code: <span style="background: #ffffff; color: #4f46e5; padding: 4px 10px; border-radius: 4px;">GROWTH2024</span></p>
         </div>
-        <a href="#" style="display: inline-block; padding: 18px 40px; background: #ffffff; color: #4f46e5; text-decoration: none; border-radius: 99px; font-weight: 900; text-transform: uppercase; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">Claim Discount</a>
+        <a href="https://wholescaleos.pages.dev/pricing" style="display: inline-block; padding: 18px 40px; background: #ffffff; color: #4f46e5; text-decoration: none; border-radius: 99px; font-weight: 900; text-transform: uppercase; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">Claim Discount</a>
       </div>
     `
   },
   {
-    id: 'tpl_deal_closed',
-    name: 'Deal Closed',
-    subject: 'Congratulations! Deal Closed: {{address}} 🏆',
-    category: 'Operations',
-    description: 'Celebrate a successful transaction with the team.',
-    html: `
-      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #065f46; color: #ffffff; padding: 40px; border-radius: 24px; text-align: center;">
-        <div style="font-size: 48px; margin-bottom: 20px;">🏆</div>
-        <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">DEAL CLOSED</h2>
-        <p style="font-size: 18px; margin-bottom: 30px; opacity: 0.9;">The property at <strong>{{address}}</strong> has been successfully closed!</p>
-        <div style="background: rgba(255,255,255,0.1); padding: 24px; border-radius: 16px; margin-bottom: 30px; text-align: left;">
-          <p style="margin: 0 0 10px 0; font-size: 14px; color: #a7f3d0;">"Big shoutout to the whole team for making this happen. Another one for the books!"</p>
-        </div>
-        <a href="#" style="display: inline-block; padding: 16px 32px; background: #ffffff; color: #065f46; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">View Deal Details</a>
-      </div>
-    `
-  },
-  {
-    id: 'tpl_new_lead',
-    name: 'New High-Score Lead',
-    subject: 'Action Required: High-Score Lead Assigned! 🔥',
+    id: 'tpl_abandoned_lead',
+    name: 'Abandoned Lead Follow-up',
+    subject: 'Still interested in {{address}}? 🤔',
     category: 'Sales',
-    description: 'Urgent notification for sales agents.',
+    description: 'Re-engage leads that haven\'t been contacted recently.',
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #000000; padding: 40px; border-radius: 24px; border: 1px solid #e5e7eb;">
-        <div style="display: inline-block; padding: 4px 12px; background: #fee2e2; color: #dc2626; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px;">Priority 1</div>
-        <h2 style="font-size: 28px; font-weight: 900; margin: 0 0 10px 0;">New Lead Assigned</h2>
-        <p style="color: #4b5563; margin-bottom: 30px;">A high-priority lead has been assigned to you. Strike while the iron is hot!</p>
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 24px; border-radius: 16px; margin-bottom: 30px;">
-          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 900; color: #9ca3af; text-transform: uppercase;">Lead Name</p>
-          <p style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700;">{{name}}</p>
-          <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 900; color: #9ca3af; text-transform: uppercase;">Property Address</p>
-          <p style="margin: 0; font-size: 16px;">{{address}}</p>
+        <h2 style="font-size: 28px; font-weight: 900; margin-bottom: 20px;">Checking in...</h2>
+        <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">Hi {{name}}, I noticed we haven't connected in a while regarding the property at <strong>{{address}}</strong>. Are you still looking to sell or move forward with an offer?</p>
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 16px; margin: 30px 0;">
+          <p style="margin: 0; font-size: 14px; font-weight: 700;">Market Alert:</p>
+          <p style="margin: 5px 0 0 0; font-size: 14px; color: #6b7280;">Inventory is currently low in your area, meaning now is a prime time to get a competitive value for your property.</p>
         </div>
-        <a href="#" style="display: block; width: 100%; padding: 16px; background: #dc2626; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Claim Lead Now</a>
+        <a href="https://wholescaleos.pages.dev/leads" style="display: block; width: 100%; padding: 16px; background: #4f46e5; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Reply to Message</a>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_open_house',
+    name: 'Open House Invitation',
+    subject: 'You\'re Invited: Open House at {{address}} 🏠',
+    category: 'Marketing',
+    description: 'Promote upcoming open houses to your lead list.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #0f172a; color: #ffffff; padding: 40px; border-radius: 24px; text-align: center;">
+        <div style="display: inline-block; padding: 4px 12px; background: #3b82f6; color: #ffffff; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px;">VIP Invitation</div>
+        <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 10px;">Open House Alert</h2>
+        <p style="color: #94a3b8; margin-bottom: 30px;">Join us this weekend for an exclusive tour of this incredible property.</p>
+        <div style="background: #1e293b; padding: 30px; border-radius: 24px; margin-bottom: 30px; border: 1px solid #334155;">
+          <h3 style="font-size: 20px; font-weight: 800; margin: 0 0 10px 0;">{{address}}</h3>
+          <p style="color: #3b82f6; font-weight: 900; font-size: 18px; margin: 0;">Saturday 12pm - 4pm</p>
+        </div>
+        <a href="https://wholescaleos.pages.dev/calendar" style="display: block; width: 100%; padding: 16px; background: #ffffff; color: #0f172a; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">RSVP Now</a>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_survey',
+    name: 'Client Survey',
+    subject: 'How did we do? Tell us your feedback! ⭐',
+    category: 'Operations',
+    description: 'Post-closing feedback request.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #000000; padding: 40px; border-radius: 32px; border: 1px solid #e2e8f0; text-align: center;">
+        <h2 style="font-size: 28px; font-weight: 900; margin-bottom: 20px;">Your opinion matters.</h2>
+        <p style="color: #64748b; line-height: 1.6; font-size: 16px;">We recently closed the deal on <strong>{{address}}</strong> and we'd love to know how your experience was working with WholeScale OS.</p>
+        <div style="margin: 40px 0; font-size: 30px; letter-spacing: 10px;">⭐ ⭐ ⭐ ⭐ ⭐</div>
+        <a href="https://wholescaleos.pages.dev/settings" style="display: block; width: 100%; padding: 18px; background: #0f172a; color: #ffffff; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900; text-transform: uppercase;">Take 2-Min Survey</a>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_referral',
+    name: 'Referral Request',
+    subject: 'Know anyone looking to sell? Get paid! 💸',
+    category: 'Marketing',
+    description: 'Ask for referrals from past clients or leads.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #f8fafc; color: #0f172a; padding: 40px; border-radius: 24px; border: 1px dashed #cbd5e1; text-align: center;">
+        <div style="font-size: 40px; margin-bottom: 20px;">🤝</div>
+        <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 15px;">Refer and Earn.</h2>
+        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">The best compliment we can receive is a referral. If you know a friend or family member looking to sell their property, send them our way and earn a commission on closing!</p>
+        <div style="background: #ffffff; border-radius: 20px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 30px;">
+          <p style="margin: 0; font-weight: 800; font-size: 14px; color: #64748b; text-transform: uppercase;">Your Referral Link:</p>
+          <p style="margin: 10px 0 0 0; font-family: monospace; font-size: 18px; color: #3b82f6; font-weight: bold;">wholescaleos.io/ref/{{name}}</p>
+        </div>
+        <a href="https://wholescaleos.pages.dev/settings?tab=referrals" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Refer a Friend</a>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_market_update',
+    name: 'Market Update',
+    subject: 'Monthly Market Trends: What\'s your home worth? 📈',
+    category: 'Marketing',
+    description: 'Provide value to leads with market insights.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #000000; padding: 40px; border-radius: 24px; border: 1px solid #e5e7eb;">
+        <h2 style="font-size: 24px; font-weight: 900; margin-bottom: 20px;">Market Trend Report: {{name}}</h2>
+        <p style="color: #4b5563; margin-bottom: 30px;">The real estate market is shifting. Here's a quick update on current trends in your area to help you make informed decisions.</p>
+        <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+          <div style="background: #f9fafb; padding: 15px; border-radius: 12px; text-align: center;">
+            <p style="margin: 0; font-size: 10px; font-weight: 900; color: #6b7280; text-transform: uppercase;">Avg Sale Price</p>
+            <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: 800; color: #059669;">+4.2% ↑</p>
+          </div>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 12px; text-align: center;">
+            <p style="margin: 0; font-size: 10px; font-weight: 900; color: #6b7280; text-transform: uppercase;">Inventory</p>
+            <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: 800; color: #dc2626;">-12.5% ↓</p>
+          </div>
+        </div>
+        <a href="https://wholescaleos.pages.dev/map" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">View Local Heatmap</a>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_new_listing',
+    name: 'New Listing Alert',
+    subject: 'Just Listed: New Investment Property! 🔥 {{address}}',
+    category: 'Sales',
+    description: 'Alert buyers or sellers about new listings.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #000000; padding: 0; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <img src="https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=800&h=450" style="width: 100%; display: block;" />
+        <div style="padding: 30px;">
+          <div style="display: inline-block; padding: 4px 10px; background: #dcfce7; color: #166534; border-radius: 8px; font-size: 10px; font-weight: 900; text-transform: uppercase; margin-bottom: 15px;">New Listing</div>
+          <h2 style="font-size: 24px; font-weight: 900; margin: 0 0 10px 0;">{{address}}</h2>
+          <p style="font-size: 20px; font-weight: 900; color: #3b82f6; margin: 0 0 20px 0;">Asking: $245,000</p>
+          <div style="height: 1px; background: #f1f5f9; margin: 20px 0;"></div>
+          <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 30px 0;">Incredible off-market opportunity with high equity potential. Motivated seller. Needs minor cosmetic updates. ARV estimated at $380,000.</p>
+          <a href="https://wholescaleos.pages.dev/leads" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Review Full Deal Package</a>
+        </div>
       </div>
     `
   }
@@ -244,7 +320,7 @@ export default function AdminEmailCampaigns() {
           to: recipient,
           subject: template.subject,
           html: template.body.replace(/\{\{name\}\}/g, recipient.split('@')[0]),
-          mode: 'system' // Branded sender
+          from: 'noreply@wholescaleos.com' // System branded sender
         });
 
         if (result.success) {

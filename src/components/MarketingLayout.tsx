@@ -47,7 +47,6 @@ export const MarketingLayout: React.FC = () => {
 
   const navLinks = [
     { name: 'Home', href: '/' },
-    { name: 'Features', href: '/features' },
     { name: 'Pricing', href: '/pricing' },
     { name: 'Blog', href: '/blog' },
     { name: 'Compare', href: '/compare' },
@@ -301,7 +300,6 @@ export const MarketingLayout: React.FC = () => {
           <div>
             <h4 className="font-black mb-8 text-[10px] uppercase tracking-[0.2em] text-[#6d758c]">Platform</h4>
             <ul className="space-y-4 text-xs font-black uppercase tracking-widest text-[#a3aac4]">
-              <li><Link to="/features" className="hover:text-indigo-400 transition-colors">Features</Link></li>
               <li><Link to="/pricing" className="hover:text-indigo-400 transition-colors">Pricing</Link></li>
               <li><Link to="/integrations" className="hover:text-indigo-400 transition-colors">Integrations</Link></li>
             </ul>

@@ -688,129 +688,7 @@ export default function Contracts() {
     return text;
   };
 
-  const handlePreviewPdf = async () => {
-    if (!previewRef.current) {
-      console.error('[PDF] Preview ref is null — no document to generate from');
-      alert('No document to generate. Please select a template and ensured it\'s rendered first.');
-      return;
-    }
-    setGeneratingPdf(true);
-    console.log('[PDF] Starting PDF generation for template:', activeTemplate.name);
-    
-    try {
-      const element = previewRef.current;
-      if (!element) return;
-      
-      // 1. Create a clone to avoid visual flicker on the live document
-      const clone = element.cloneNode(true) as HTMLElement;
-      clone.style.position = 'absolute';
-      clone.style.left = '-9999px';
-      clone.style.top = '0';
-      clone.style.width = '8.5in';
-      clone.style.backgroundColor = '#ffffff';
-      document.body.appendChild(clone);
-      
-      console.log('[PDF] Using off-screen clone for generation');
-      
-      // 1. Create a deep-cleaning function for modern CSS
-      const sanitizeStyles = (node: HTMLElement) => {
-        const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT, null);
-        
-        let currentNode = walker.currentNode as HTMLElement;
-        while (currentNode) {
-          const style = window.getComputedStyle(currentNode);
-          
-          // Check color, background-color, border-color
-          ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
-            const val = (style as any)[prop];
-            if (val && (val.includes('oklch') || val.includes('oklab') || val.includes('color-mix'))) {
-              // Forced replacement for PDF consistency
-              if (prop === 'color') currentNode.style.color = '#1a1a1a';
-              if (prop === 'backgroundColor' && val.includes('transparent')) {
-                 // keep transparent
-              } else if (prop === 'backgroundColor') {
-                 currentNode.style.backgroundColor = '#ffffff';
-              }
-              if (prop === 'borderColor') currentNode.style.borderColor = '#e5e7eb';
-            }
-          });
-          
-          currentNode = walker.nextNode() as HTMLElement;
-        }
-      };
 
-      // 2. Create the temporary style element
-      const styleStore = document.createElement('style');
-      styleStore.id = 'pdf-override-style';
-      styleStore.innerHTML = `
-        .pdf-content, .doc-container, .contract-content { 
-          color: #1a1a1a !important; 
-          background: #ffffff !important; 
-          font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
-          line-height: 1.6 !important;
-        }
-        .contract-content h1, .contract-content h2, .contract-content h3 { color: #000000 !important; }
-        .contract-content p, .contract-content span, .contract-content div { color: #333333 !important; }
-        * { 
-          border-color: #e5e7eb !important;
-          background-image: none !important;
-          color-scheme: light !important;
-          -webkit-print-color-adjust: exact !important;
-        }
-        :root, body, .doc-container {
-          --t-primary: #3b82f6 !important;
-          --t-primary-dim: #eff6ff !important;
-          --t-success: #10b981 !important;
-          --t-text: #1a1a1a !important;
-          --t-text-muted: #6b7280 !important;
-          --t-border: #e5e7eb !important;
-        }
-      `;
-      document.head.appendChild(styleStore);
-      
-      // Run the dynamic sanitizer on the CLONE
-      sanitizeStyles(clone);
-
-      const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
-        filename: `${activeTemplate.name.replace(/\s+/g, '_')}_${selectedLead?.name?.replace(/\s+/g, '_') || 'Draft'}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          letterRendering: true,
-          logging: false,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
-      };
-
-      console.log('[PDF] Process starting...');
-      await html2pdf().from(clone).set(opt).save();
-      
-      // 3. CLEAN UP - Remove the clone
-      console.log('[PDF] Removing clone');
-      document.body.removeChild(clone);
-      document.getElementById('pdf-override-style')?.remove();
-      
-      // No need to reset inline styles on the live element as we used a clone
-
-      console.log('[PDF] Generation complete');
-      
-      // Ensure element is visible in the DOM
-      if (element.offsetParent === null) {
-        element.style.position = 'absolute';
-        element.style.left = '-9999px';
-        document.body.appendChild(element);
-      }
-      
-    } catch (error: any) {
-      console.error('[PDF] Generation Error:', error);
-      alert(`Failed to generate PDF: ${error?.message || 'Unknown error'}.`);
-    } finally {
-      setGeneratingPdf(false);
-    }
-  };
 
   const handleEmailLead = async () => {
     if (!previewRef.current) {
@@ -874,12 +752,6 @@ export default function Contracts() {
 
   const handleToggleEdit = () => {
     if (isEditing) {
-      const updatedTemplate = { ...activeTemplate, content: editedContent };
-      if (activeTemplate.isCustom) {
-        setCustomTemplates(prev => prev.map(t => t.id === activeTemplate.id ? updatedTemplate : t));
-      }
-      setActiveTemplate(updatedTemplate);
-      setIsEditing(false);
     } else {
       setEditedContent(activeTemplate.content);
       setIsEditing(true);
@@ -1173,23 +1045,6 @@ export default function Contracts() {
               )}
             </button>
             <button 
-              onClick={handlePreviewPdf}
-              disabled={generatingPdf}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-surface-subtle)] text-[var(--t-text)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] disabled:opacity-70 disabled:cursor-wait"
-            >
-              {generatingPdf ? (
-                <>
-                  <Loader2 size={16} className="animate-spin text-[var(--t-primary)]" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <Shield size={16} className="text-[var(--t-primary)]" />
-                  <span>Preview PDF</span>
-                </>
-              )}
-            </button>
-            <button 
               onClick={handleEmailLead}
               disabled={generatingPdf}
               className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-wait"
@@ -1293,7 +1148,7 @@ export default function Contracts() {
       )}
       
       {isSendingContract && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/60 backdrop-blur-[40px] animate-in fade-in duration-300">
           <div className="w-full max-w-sm p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] shadow-2xl text-center space-y-6">
             <div className="relative mx-auto w-20 h-20">
               <div className="absolute inset-0 rounded-full border-4 border-[var(--t-primary-dim)]"></div>
@@ -1325,8 +1180,8 @@ export default function Contracts() {
       )}
 
       {success && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-8">
-          <div className="absolute inset-0 backdrop-blur-md bg-black/40 animate-in fade-in duration-500" />
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-8">
+          <div className="absolute inset-0 backdrop-blur-[60px] bg-black/60 animate-in fade-in duration-500" />
           <div 
             className="relative bg-[var(--t-surface)] border border-[var(--t-success)]/30 p-12 rounded-[3.5rem] shadow-2xl flex flex-col items-center text-center animate-in zoom-in slide-in-from-bottom-20 duration-700 pointer-events-auto"
             style={{

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
+import { toast } from 'react-hot-toast';
 
 interface UserTeam {
   teamId: string;
@@ -792,11 +793,28 @@ export function Layout() {
 
             {/* Manual Save Button */}
             <button
-              onClick={() => manualSave()}
-              disabled={saveStatus === 'saving'}
-              className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 rounded-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+              type="button"
+              onClick={async (e) => {
+                e.preventDefault();
+                try {
+                  await manualSave();
+                  toast.success('Your session is fully synced to cloud', {
+                    icon: '☁️',
+                    style: {
+                      background: 'var(--t-surface)',
+                      color: 'var(--t-text)',
+                      border: '1px solid var(--t-border)',
+                      borderRadius: '1rem',
+                      fontSize: '13px',
+                      fontWeight: '700'
+                    }
+                  });
+                } catch (err) {
+                  toast.error('Sync failed. Please check connection.');
+                }
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all duration-300 ${saveStatus === 'success' ? 'bg-[var(--t-success-dim)]' : 'hover:bg-[var(--t-surface-hover)]'}`}
               style={{ 
-                backgroundColor: saveStatus === 'success' ? 'var(--t-success-dim)' : 'var(--t-surface-dim)',
                 border: `1px solid ${saveStatus === 'success' ? 'var(--t-success)' : 'var(--t-border)'}`,
                 color: saveStatus === 'success' ? 'var(--t-success)' : 'var(--t-text)'
               }}

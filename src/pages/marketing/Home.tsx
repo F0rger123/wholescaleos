@@ -9,8 +9,9 @@ import {
 import {
   ArrowRight, Shield, Users, MessageSquare,
   LayoutDashboard, Map, Sparkles, TrendingUp, Clock, 
-  PlayCircle, BarChart3, Award, Trophy
+  BarChart3, Award, Trophy, Check
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -151,10 +152,10 @@ export default function Home() {
               <motion.button 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })}
                 className="w-full sm:w-72 h-20 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-black transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle shadow-xl text-white"
               >
-                <PlayCircle size={20} /> Watch Demo
+                <BarChart3 size={20} /> View Comparisons
               </motion.button>
             </div>
           </motion.div>
@@ -445,13 +446,15 @@ export default function Home() {
                 {[
                   { name: 'Marcus Sterling', deals: 42, volume: '$12.4M', color: 'text-indigo-400' },
                   { name: 'Sarah Vanguard', deals: 38, volume: '$9.1M', color: 'text-gray-400' },
-                  { name: 'Elite Real Estate', deals: 31, volume: '$7.8M', color: 'text-gray-500' }
+                  { name: 'Elite Real Estate', deals: 31, volume: '$7.8M', color: 'text-gray-500' },
+                  { name: 'Quantum Holdings', deals: 27, volume: '$6.2M', color: 'text-gray-500' },
+                  { name: 'Legacy Partners', deals: 24, volume: '$5.5M', color: 'text-gray-600' }
                 ].map((user, i) => (
                   <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-default">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center font-black ${i === 0 ? 'text-indigo-400' : 'text-gray-600'}`}>0{i + 1}</div>
                       <div>
-                        <div className="font-black italic uppercase tracking-tight">{user.name}</div>
+                        <div className="font-black italic uppercase tracking-tight text-white">{user.name}</div>
                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{user.deals} Deals Closed</div>
                       </div>
                     </div>
@@ -535,6 +538,80 @@ export default function Home() {
               </motion.div>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* Ambassador Program Section */}
+      <section className="py-32 bg-[#0a1225] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            <motion.div 
+               initial={{ opacity: 0, x: -30 }}
+               whileInView={{ opacity: 1, x: 0 }}
+               viewport={{ once: true }}
+               className="space-y-10"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                Partner Protocol
+              </div>
+              <h2 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter leading-[0.9] text-white">Become a <br/> <span className="text-indigo-500">WholeScale</span> <br/> Ambassador.</h2>
+              <p className="text-xl text-[#a3aac4] leading-relaxed max-w-xl font-medium">Build your influence while building your recurring revenue. Get exclusive access, zero-cost seat overrides, and 30% lifetime commissions.</p>
+              
+              <div className="space-y-6">
+                {[
+                  { title: '30% Lifetime Commissions', desc: 'Earn passive income on every user you refer, for as long as they stay subscribed.' },
+                  { title: 'Exclusive Beta Access', desc: 'Test new protocols and features before the general market.’' },
+                  { title: 'Direct Engineering Line', desc: 'Influence the product roadmap with prioritized feature requests.' }
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4">
+                    <div className="shrink-0 w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                      <Check size={14} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white uppercase italic tracking-tight">{item.title}</h4>
+                      <p className="text-sm text-[#6d758c] mt-1">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div 
+               initial={{ opacity: 0, scale: 0.95 }}
+               whileInView={{ opacity: 1, scale: 1 }}
+               viewport={{ once: true }}
+               className="relative"
+            >
+              <div className="absolute inset-0 bg-indigo-500/10 blur-[100px] opacity-30" />
+              <div className="relative bg-[#121a2d] border border-white/5 p-10 rounded-[3rem] shadow-2xl">
+                 <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); toast.success('Application received. Our team will review shortly.'); }}>
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#6d758c]">Full Name</label>
+                        <input className="w-full h-14 rounded-xl bg-white/5 border border-white/5 px-4 text-sm outline-none focus:border-indigo-500 transition-colors text-white" placeholder="Marcus Sterling" required />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#6d758c]">Work Email</label>
+                        <input type="email" className="w-full h-14 rounded-xl bg-white/5 border border-white/5 px-4 text-sm outline-none focus:border-indigo-500 transition-colors text-white" placeholder="marcus@agency.com" required />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#6d758c]">Social Profile / Website</label>
+                      <input className="w-full h-14 rounded-xl bg-white/5 border border-white/5 px-4 text-sm outline-none focus:border-indigo-500 transition-colors text-white" placeholder="linkedin.com/in/username" required />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[#6d758c]">Why do you want to partner?</label>
+                      <textarea className="w-full h-32 rounded-xl bg-white/5 border border-white/5 p-4 text-sm outline-none focus:border-indigo-500 transition-colors resize-none text-white" placeholder="Tell us about your audience and experience..." required />
+                    </div>
+                    <button type="submit" className="w-full py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.2em] text-xs transition-all shadow-xl shadow-indigo-600/20 hover-glow hover-lift">
+                      Send Application
+                    </button>
+                    <p className="text-[10px] text-center text-[#6d758c] font-medium">By applying, you agree to our Partnership Protocol & Privacy Terms.</p>
+                 </form>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </section>
 

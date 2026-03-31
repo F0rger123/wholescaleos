@@ -268,6 +268,68 @@ export default function Pricing() {
         ))}
       </div>
 
+      {/* Deep Dive Features Section (Migrated from Features.tsx) */}
+      <section className="mt-40 max-w-7xl mx-auto px-6 space-y-40">
+        <div className="text-center mb-24">
+          <h2 className="text-4xl md:text-7xl font-black mb-6 leading-tight uppercase italic tracking-tighter text-white">
+            The Infrastructure <br/>
+            <span className="text-blue-500">of Supremacy.</span>
+          </h2>
+          <p className="text-gray-400 max-w-2xl mx-auto text-lg font-medium">Every tier is engineered for maximum leverage. No fluff, only performance.</p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-12">
+          {[
+            {
+              title: 'AI Automation',
+              icon: Sparkles,
+              features: [
+                'Multimodal SMS Analysis',
+                'Smart Context Replies',
+                'Automated Lead Triage',
+                'Voice-to-Task AI'
+              ]
+            },
+            {
+              title: 'Operations',
+              icon: Shield,
+              features: [
+                'Geospatial Mapping',
+                'Advanced Deal Logic',
+                'Unified CRM Protocol',
+                'Global Import Engine'
+              ]
+            },
+            {
+              title: 'Team Sync',
+              icon: Users,
+              features: [
+                'Encrypted Channels',
+                'RBAC Permissions',
+                'Unified Schedules',
+                'Enterprise Email Relay'
+              ]
+            }
+          ].map((sec, i) => (
+            <div key={i} className="p-10 rounded-[3rem] bg-[#121a2d] border border-white/5 hover:border-blue-500/30 transition-all group relative overflow-hidden">
+              <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-8 font-black group-hover:scale-110 transition-transform">
+                <sec.icon size={32} />
+              </div>
+              <h3 className="text-2xl font-black mb-6 uppercase italic tracking-tight text-white relative z-10">{sec.title}</h3>
+              <ul className="space-y-4 relative z-10">
+                {sec.features.map((f, fi) => (
+                  <li key={fi} className="flex items-center gap-3 text-gray-400 text-sm font-medium hover:text-white transition-colors">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Feature Comparison Table */}
       <section className="mt-32 max-w-7xl mx-auto px-6 overflow-x-auto">
         <div className="text-center mb-16">
@@ -334,8 +396,8 @@ export default function Pricing() {
             <Link to="/contact" className="px-8 py-4 rounded-xl bg-white text-[#0f172a] font-bold transition-all hover:scale-105">
               Talk to an Expert
             </Link>
-            <Link to="/features" className="px-8 py-4 rounded-xl bg-white/5 hover:bg-white/10 font-bold border border-white/10 transition-all">
-              Compare Features
+            <Link to="/login?signup=true" className="px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all hover:scale-105">
+              Get Started Free
             </Link>
           </div>
         </div>

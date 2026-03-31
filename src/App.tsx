@@ -38,7 +38,6 @@ import { CursorEffects } from './components/CursorEffects';
 import { MarketingLayout } from './components/MarketingLayout';
 import { DeepSpaceLoader } from './components/DeepSpaceLoader';
 import Home from './pages/marketing/Home';
-import Features from './pages/marketing/Features';
 import Pricing from './pages/marketing/Pricing';
 import About from './pages/marketing/About';
 import Privacy from './pages/marketing/Privacy';
@@ -244,7 +243,6 @@ export function App() {
         {/* Marketing Site */}
         <Route element={<MarketingLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/features" element={<Features />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/about" element={<About />} />
           <Route path="/privacy" element={<Privacy />} />
