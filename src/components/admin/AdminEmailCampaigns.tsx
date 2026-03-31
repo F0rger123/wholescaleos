@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
-  Plus, Mail, Send, 
-  Trash2, Play, Loader2,
-  AlertTriangle, CheckCircle
+  Plus, Mail, Send, X, Trash2, Play, Loader2,
+  AlertTriangle, CheckCircle, Layout, Sparkles,
+  Copy
 } from 'lucide-react';
 import { 
   dbEmailTemplate, dbEmailCampaign, fetchEmailTemplates, 
@@ -11,12 +11,80 @@ import {
 } from '../../lib/email';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import RichTextEditor from './RichTextEditor';
+
+const PREDEFINED_TEMPLATES = [
+  {
+    id: 'tpl_welcome',
+    name: 'Branded Welcome',
+    subject: 'Welcome to WholeScale OS, {{name}}! 🚀',
+    category: 'Onboarding',
+    description: 'A premium welcome email with platform highlights.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #0a0a0c; color: #ffffff; padding: 40px; border-radius: 24px; border: 1px solid #1f1f23;">
+        <div style="text-align: center; margin-bottom: 40px;">
+          <h1 style="font-size: 24px; font-weight: 900; letter-spacing: -1px; font-style: italic; text-transform: uppercase; margin: 0;">WholeScale <span style="color: #8b5cf6;">OS</span></h1>
+        </div>
+        <h2 style="font-size: 32px; font-weight: 900; margin-bottom: 20px;">Welcome aboard, {{name}}!</h2>
+        <p style="color: #a1a1aa; line-height: 1.6; font-size: 16px;">We're thrilled to have you join the most powerful property acquisition platform in the game. Here's how to get started:</p>
+        <div style="background: #161618; padding: 24px; border-radius: 16px; margin: 30px 0;">
+          <ul style="margin: 0; padding-left: 20px; color: #d4d4d8;">
+            <li style="margin-bottom: 12px;">Import your first leads via URL or PDF</li>
+            <li style="margin-bottom: 12px;">Setup your Team Hub and invite collaborators</li>
+            <li style="margin-bottom: 12px;">Link your Stripe account for effortless billing</li>
+          </ul>
+        </div>
+        <a href="#" style="display: block; width: 100%; padding: 16px; background: #8b5cf6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Launch Dashboard</a>
+        <p style="text-align: center; color: #52525b; font-size: 12px; margin-top: 40px;">© 2026 WholeScale OS. All rights reserved.</p>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_feature',
+    name: 'Feature Update',
+    subject: 'New Feature: AI Lead Scraping is Here! ✨',
+    category: 'Product',
+    description: 'Highlight new platform capabilities.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #000000; padding: 40px; border-radius: 24px;">
+        <div style="display: inline-block; padding: 4px 12px; background: #ede9fe; color: #8b5cf6; border-radius: 20px; font-size: 10px; font-weight: 900; text-transform: uppercase; margin-bottom: 20px;">New Release</div>
+        <h2 style="font-size: 36px; font-weight: 900; letter-spacing: -2px; margin: 0 0 20px 0;">AI Scraping has arrived.</h2>
+        <p style="color: #4b5563; line-height: 1.6; font-size: 16px;">Stop wasting time on manual entry. Our new AI engine can now extract property data directly from any URL or PDF document with 99% accuracy.</p>
+        <img src="https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=800&h=400" style="width: 100%; border-radius: 16px; margin: 30px 0;" />
+        <div style="border-left: 4px solid #8b5cf6; padding-left: 20px; margin: 30px 0;">
+          <p style="font-weight: 700; margin: 0;">"The AI import saved our team 20+ hours in the first week alone."</p>
+          <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">— Sarah Jenkins, Pro Agency User</p>
+        </div>
+        <a href="#" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Explore Feature</a>
+      </div>
+    `
+  },
+  {
+    id: 'tpl_promo',
+    name: 'Flash Sale',
+    subject: 'Flash Sale: 40% OFF Pro & Team Tiers 💸',
+    category: 'Marketing',
+    description: 'High-conversion sales template.',
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: linear-gradient(135deg, #4f46e5, #9333ea); color: #ffffff; padding: 50px; border-radius: 24px; text-align: center;">
+        <h3 style="text-transform: uppercase; letter-spacing: 3px; font-size: 14px; font-weight: 900; margin-bottom: 20px;">Limited Time Offer</h3>
+        <h1 style="font-size: 64px; font-weight: 900; margin: 0; line-height: 0.8;">40% OFF</h1>
+        <p style="font-size: 18px; margin: 30px 0; opacity: 0.9;">Upgrade to Pro or Team this week and lock in our lowest price ever.</p>
+        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; backdrop-filter: blur(10px); margin-bottom: 30px;">
+          <p style="margin: 0; font-weight: 700;">Use Code: <span style="background: #ffffff; color: #4f46e5; padding: 4px 10px; border-radius: 4px;">GROWTH2024</span></p>
+        </div>
+        <a href="#" style="display: inline-block; padding: 18px 40px; background: #ffffff; color: #4f46e5; text-decoration: none; border-radius: 99px; font-weight: 900; text-transform: uppercase; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">Claim Discount</a>
+      </div>
+    `
+  }
+];
 
 export default function AdminEmailCampaigns() {
   const [templates, setTemplates] = useState<dbEmailTemplate[]>([]);
   const [campaigns, setCampaigns] = useState<dbEmailCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewModal, setShowNewModal] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   
   // Create Campaign State
   const [newCampaign, setNewCampaign] = useState({
@@ -163,6 +231,13 @@ export default function AdminEmailCampaigns() {
     }
   };
 
+  const applyLibraryTemplate = (tpl: typeof PREDEFINED_TEMPLATES[0]) => {
+    setSubject(tpl.subject);
+    setBody(tpl.html);
+    setShowLibrary(false);
+    toast.success('Template applied!');
+  };
+
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -174,14 +249,21 @@ export default function AdminEmailCampaigns() {
             </h3>
             <div className="flex bg-[var(--t-bg)] p-1 rounded-xl border border-[var(--t-border)]">
               <button 
+                onClick={() => setShowLibrary(true)}
+                className="px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all flex items-center gap-2 hover:bg-[var(--t-surface-dim)] text-[var(--t-primary)]"
+              >
+                <Layout size={14} /> Templates
+              </button>
+              <div className="w-[1px] bg-[var(--t-border)] mx-1 self-stretch" />
+              <button 
                 onClick={() => setPreviewMode('edit')}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${previewMode === 'edit' ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${previewMode === 'edit' ? 'bg-purple-600 text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
               >
                 Edit
               </button>
               <button 
                 onClick={() => setPreviewMode('preview')}
-                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${previewMode === 'preview' ? 'bg-purple-600 text-white' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+                className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${previewMode === 'preview' ? 'bg-purple-600 text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
               >
                 Preview
               </button>
@@ -202,12 +284,11 @@ export default function AdminEmailCampaigns() {
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)]">Content (HTML)</label>
-                <textarea 
+                <RichTextEditor 
                   value={body}
-                  onChange={e => setBody(e.target.value)}
-                  placeholder="Hello {{name}}..."
-                  className="w-full h-48 bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-sm focus:border-purple-500 outline-none resize-none transition-all"
-                  style={{ color: 'var(--t-text)' }}
+                  onChange={setBody}
+                  placeholder="Hello {{name}}, launch your message here..."
+                  minHeight="280px"
                 />
               </div>
 
@@ -385,6 +466,60 @@ export default function AdminEmailCampaigns() {
                 Create Campaign
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showLibrary && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-4xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[3rem] shadow-2xl p-8 max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95">
+             <div className="flex justify-between items-center mb-8 shrink-0">
+               <div>
+                 <h3 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--t-text)] flex items-center gap-3">
+                   <Sparkles className="text-purple-500" /> Template Library
+                 </h3>
+                 <p className="text-[10px] text-[var(--t-text-muted)] font-black uppercase tracking-widest mt-1">Pre-built high-conversion layouts</p>
+               </div>
+               <button onClick={() => setShowLibrary(false)} className="p-3 rounded-2xl hover:bg-[var(--t-surface-dim)]">
+                 <X size={24} />
+               </button>
+             </div>
+
+             <div className="flex-1 overflow-y-auto pr-4 space-y-6 scrollbar-hide">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                   {PREDEFINED_TEMPLATES.map((tpl) => (
+                     <div key={tpl.id} className="group relative rounded-3xl border border-[var(--t-border)] bg-[var(--t-surface-dim)] overflow-hidden hover:border-purple-500/50 transition-all flex flex-col">
+                        <div className="aspect-[4/5] bg-white overflow-hidden relative">
+                           <iframe 
+                             srcDoc={tpl.html} 
+                             className="w-full h-full border-none pointer-events-none scale-[0.4] origin-top"
+                             title={tpl.name}
+                           />
+                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <button 
+                                onClick={() => applyLibraryTemplate(tpl)}
+                                className="px-6 py-2.5 rounded-full bg-white text-black font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95"
+                              >
+                                Apply Design
+                              </button>
+                           </div>
+                        </div>
+                        <div className="p-5 space-y-2">
+                           <div className="flex items-center justify-between">
+                             <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">
+                               {tpl.category}
+                             </span>
+                             <div className="flex gap-1">
+                               <button onClick={() => applyLibraryTemplate(tpl)} className="p-1.5 rounded-lg bg-[var(--t-surface)] text-[var(--t-text-muted)] hover:text-purple-500"><Copy size={14} /></button>
+                             </div>
+                           </div>
+                           <h4 className="font-bold text-[var(--t-text)]">{tpl.name}</h4>
+                           <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-2 italic">{tpl.description}</p>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+             </div>
           </div>
         </div>
       )}

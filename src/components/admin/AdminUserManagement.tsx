@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { 
   Search, Edit2, UserPlus, X, Mail, User, 
-  Activity, Loader2, Save
+  Activity, Loader2, Save, Key, ShieldCheck, 
+  AlertTriangle, Info, ChevronDown, Filter
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -38,9 +39,24 @@ export default function AdminUserManagement() {
   });
   const [addingUser, setAddingUser] = useState(false);
 
-  // User Activity Modal
+   // User Activity Modal
   const [selectedUserLogs, setSelectedUserLogs] = useState<any[] | null>(null);
+  const [logFilter, setLogFilter] = useState<'all' | 'error' | 'warning' | 'info'>('all');
   const [logsLoading, setLogsLoading] = useState(false);
+  const [resetingId, setResetingId] = useState<string | null>(null);
+
+  // Edit User Modal
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editUserData, setEditUserData] = useState({
+    email: '',
+    full_name: '',
+    role: 'member',
+    subscription_tier: 'Solo',
+    subscription_status: 'active',
+    newPassword: ''
+  });
+  const [savingUser, setSavingUser] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -135,7 +151,7 @@ export default function AdminUserManagement() {
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20); // Show more logs
       
       if (error) throw error;
       setSelectedUserLogs(data || []);
@@ -144,6 +160,82 @@ export default function AdminUserManagement() {
       toast.error('Failed to fetch activity');
     } finally {
       setLogsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (userEmail: string, userId: string) => {
+    if (!supabase) return;
+    setResetingId(userId);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast.success('Password reset email sent!');
+    } catch (err: any) {
+      toast.error(`Reset failed: ${err.message}`);
+    } finally {
+      setResetingId(null);
+    }
+  };
+
+  const openEditModal = (user: UserProfile) => {
+    setEditingUser(user);
+    setEditUserData({
+      email: user.email || '',
+      full_name: user.full_name || '',
+      role: user.role || 'member',
+      subscription_tier: user.subscription_tier || 'Solo',
+      subscription_status: user.subscription_status || 'active',
+      newPassword: ''
+    });
+    setShowEditUserModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!supabase || !editingUser) return;
+    setSavingUser(true);
+    try {
+      // 1. Update Auth if email or password changed
+      const authUpdates: any = {};
+      if (editUserData.email !== editingUser.email) authUpdates.email = editUserData.email;
+      if (editUserData.newPassword) authUpdates.password = editUserData.newPassword;
+
+      if (Object.keys(authUpdates).length > 0) {
+        const { data: authData, error: authError } = await supabase.functions.invoke('admin-actions', {
+          body: {
+            action: 'update_user_auth',
+            userId: editingUser.id,
+            updates: authUpdates
+          }
+        });
+
+        if (authError || authData?.error) throw new Error(authError?.message || authData?.error);
+        toast.success(editUserData.newPassword ? 'Auth & Password updated' : 'Authentication updated');
+      }
+
+      // 2. Update Profile metadata
+      const profileUpdates = {
+        full_name: editUserData.full_name,
+        role: editUserData.role,
+        subscription_tier: editUserData.subscription_tier,
+        subscription_status: editUserData.subscription_status
+      };
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update(profileUpdates)
+        .eq('id', editingUser.id);
+
+      if (profileError) throw profileError;
+
+      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...profileUpdates, email: editUserData.email } : u));
+      toast.success('Profile updated successfully');
+      setShowEditUserModal(false);
+    } catch (err: any) {
+      toast.error(`Edit failed: ${err.message}`);
+    } finally {
+      setSavingUser(false);
     }
   };
 
@@ -308,13 +400,25 @@ export default function AdminUserManagement() {
                 <td className="px-6 py-5 text-right">
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                     <button 
+                      onClick={() => handleResetPassword(user.email, user.id)}
+                      disabled={resetingId === user.id}
+                      className="p-2 rounded-lg hover:bg-amber-500/10 text-[var(--t-text-muted)] hover:text-amber-500 transition-colors"
+                      title="Send Reset Email"
+                    >
+                      {resetingId === user.id ? <Loader2 size={16} className="animate-spin" /> : <Key size={16} />}
+                    </button>
+                    <button 
                       onClick={() => fetchUserLogs(user.id)}
                       className="p-2 rounded-lg hover:bg-purple-500/10 text-[var(--t-text-muted)] hover:text-purple-500 transition-colors"
                       title="View Activity"
                     >
                       <Activity size={16} />
                     </button>
-                    <button className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                    <button 
+                      onClick={() => openEditModal(user)}
+                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                      title="Edit User"
+                    >
                       <Edit2 size={16} className="text-[var(--t-text-muted)]" />
                     </button>
                   </div>
@@ -324,6 +428,134 @@ export default function AdminUserManagement() {
           </tbody>
         </table>
       </div>
+
+      {/* Edit User Modal */}
+      {showEditUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] shadow-2xl p-8 space-y-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Edit User</h3>
+                <p className="text-[10px] text-[var(--t-text-muted)] uppercase font-black tracking-widest mt-1">ID: {editingUser?.id.slice(0, 8)}...</p>
+              </div>
+              <button 
+                onClick={() => setShowEditUserModal(false)}
+                className="p-2 rounded-xl hover:bg-[var(--t-surface-dim)] text-[var(--t-text-muted)]"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Full Name</label>
+                  <div className="relative">
+                    <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)]" />
+                    <input
+                      type="text"
+                      value={editUserData.full_name}
+                      onChange={e => setEditUserData({ ...editUserData, full_name: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-[var(--t-bg)] outline-none focus:border-[var(--t-primary)] transition-all text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Email Address</label>
+                  <div className="relative">
+                    <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)]" />
+                    <input
+                      type="email"
+                      value={editUserData.email}
+                      onChange={e => setEditUserData({ ...editUserData, email: e.target.value })}
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-[var(--t-bg)] outline-none focus:border-[var(--t-primary)] transition-all text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Role</label>
+                    <select
+                      value={editUserData.role}
+                      onChange={e => setEditUserData({ ...editUserData, role: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border bg-[var(--t-bg)] outline-none text-sm"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Status</label>
+                    <select
+                      value={editUserData.subscription_status}
+                      onChange={e => setEditUserData({ ...editUserData, subscription_status: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border bg-[var(--t-bg)] outline-none text-sm"
+                    >
+                      <option value="active">Active</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 p-5 rounded-3xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <Key size={14} className="text-amber-500" />
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-600">Manual Password Change</h4>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">New Password</label>
+                  <input
+                    type="password"
+                    value={editUserData.newPassword}
+                    onChange={e => setEditUserData({ ...editUserData, newPassword: e.target.value })}
+                    placeholder="Leave blank to keep current"
+                    className="w-full px-4 py-2.5 rounded-xl border bg-[var(--t-surface)] outline-none focus:border-amber-500 transition-all text-sm"
+                  />
+                  <p className="text-[8px] text-amber-600/70 italic leading-tight">Setting this will immediately update the user's login credentials via administrative override.</p>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Subscription Tier</label>
+                  <select
+                    value={editUserData.subscription_tier}
+                    onChange={e => setEditUserData({ ...editUserData, subscription_tier: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border bg-[var(--t-surface)] outline-none text-sm font-bold text-[var(--t-primary)]"
+                  >
+                    <option value="Free">Free</option>
+                    <option value="Solo">Solo</option>
+                    <option value="Pro">Pro</option>
+                    <option value="Team">Team</option>
+                    <option value="Agency">Agency</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                onClick={() => setShowEditUserModal(false)}
+                className="flex-1 py-3.5 rounded-2xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] font-black uppercase tracking-widest text-[10px] border border-[var(--t-border)] hover:bg-[var(--t-border)] transition-all"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveEdit}
+                disabled={savingUser}
+                className="flex-[2] py-3.5 rounded-2xl bg-[var(--t-primary)] text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-xl shadow-[var(--t-primary-dim)] active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {savingUser ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {savingUser ? 'Saving Changes...' : 'Update User Profile'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add User Modal */}
       {showAddUserModal && (
@@ -419,14 +651,28 @@ export default function AdminUserManagement() {
             <div className="p-8 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface-dim)]">
               <div>
                 <h3 className="text-xl font-bold text-[var(--t-text)]">Recent Activity</h3>
-                <p className="text-xs text-[var(--t-text-muted)]">Last 10 system interactions</p>
+                <p className="text-xs text-[var(--t-text-muted)]">Last 20 system interactions</p>
               </div>
-              <button 
-                onClick={() => setSelectedUserLogs(null)}
-                className="p-2 rounded-xl hover:bg-white/5"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="relative group/filter">
+                  <button className="p-2 rounded-xl border border-[var(--t-border)] hover:bg-[var(--t-surface)] transition-all flex items-center gap-2 uppercase text-[10px] font-black tracking-widest text-[var(--t-text-muted)]">
+                    <Filter size={14} /> {logFilter}
+                  </button>
+                  <div className="absolute right-0 top-full mt-2 w-32 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl opacity-0 invisible group-hover/filter:opacity-100 group-hover/filter:visible transition-all shadow-xl z-50 p-1">
+                    {(['all', 'error', 'warning', 'info'] as const).map(f => (
+                      <button key={f} onClick={() => setLogFilter(f)} className="w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-[var(--t-bg)] capitalize">
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setSelectedUserLogs(null)}
+                  className="p-2 rounded-xl hover:bg-white/5"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -435,19 +681,20 @@ export default function AdminUserManagement() {
                   <Loader2 size={32} className="animate-spin" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Fetching Logs...</span>
                 </div>
-              ) : selectedUserLogs.length === 0 ? (
+              ) : selectedUserLogs.filter(l => logFilter === 'all' || l.level?.toLowerCase() === logFilter).length === 0 ? (
                 <div className="text-center py-20">
                   <Activity size={48} className="mx-auto opacity-10 mb-4" />
-                  <p className="text-sm text-[var(--t-text-muted)] italic">No recent activity found for this user.</p>
+                  <p className="text-sm text-[var(--t-text-muted)] italic">No {logFilter !== 'all' ? logFilter : ''} activity found for this user.</p>
                 </div>
               ) : (
-                selectedUserLogs.map((log: any) => (
-                  <div key={log.id} className="p-4 rounded-2xl border border-[var(--t-border)] bg-[var(--t-bg)] space-y-2 group hover:border-purple-500/30 transition-all">
+                selectedUserLogs.filter(l => logFilter === 'all' || l.level?.toLowerCase() === logFilter).map((log: any) => (
+                  <div key={log.id} className="p-4 rounded-2xl border border-[var(--t-border)] bg-[var(--t-bg)] space-y-2 group hover:border-[var(--t-primary)] transition-all">
                     <div className="flex items-center justify-between">
-                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                      <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1 ${
                         log.level === 'error' ? 'bg-red-500/10 text-red-500' : 
                         log.level === 'warning' ? 'bg-yellow-500/10 text-yellow-500' : 'bg-blue-500/10 text-blue-500'
                       }`}>
+                        {log.level === 'error' ? <AlertTriangle size={8} /> : log.level === 'warning' ? <Info size={8} /> : <ShieldCheck size={8} />}
                         {log.level}
                       </span>
                       <span className="text-[9px] text-[var(--t-text-muted)] font-mono">
@@ -455,12 +702,20 @@ export default function AdminUserManagement() {
                       </span>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[var(--t-text)]">{log.action}</p>
-                      <p className="text-[10px] text-[var(--t-text-muted)] italic">{log.component}</p>
+                      <p className="text-sm font-black text-[var(--t-text)] capitalize">{log.action?.replace(/-/g, ' ')}</p>
+                      <p className="text-[10px] text-[var(--t-primary)] font-bold italic">{log.component}</p>
                     </div>
-                    <pre className="text-[8px] bg-black/20 p-2 rounded-lg text-[var(--t-text-muted)] overflow-hidden">
-                      {JSON.stringify(log.details, null, 2)}
-                    </pre>
+                    {log.details && (
+                      <details className="text-[8px] bg-black/20 p-2 rounded-lg text-[var(--t-text-muted)] overflow-hidden cursor-pointer group-hover:bg-black/40 transition-colors">
+                        <summary className="font-mono list-none flex items-center justify-between">
+                          <span>Payload JSON</span>
+                          <ChevronDown size={10} />
+                        </summary>
+                        <pre className="mt-2 whitespace-pre-wrap">
+                          {JSON.stringify(log.details, null, 2)}
+                        </pre>
+                      </details>
+                    )}
                   </div>
                 ))
               )}

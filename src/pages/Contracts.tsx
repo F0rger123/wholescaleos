@@ -1,15 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
-import { useStore, Lead } from '../store/useStore';
-import html2pdf from 'html2pdf.js';
-import { format } from 'date-fns';
-import { supabase } from '../lib/supabase';
-import EmailComposeModal from '../components/EmailComposeModal';
 import { 
   FileText, Mail, Plus, Search, 
   ChevronDown, User, FileSignature, Loader2, Shield,
-  Check, Edit3, Send
+  Check, Edit3, Send, X
 } from 'lucide-react';
+import { useStore, Lead } from '../store/useStore';
+import { supabase } from '../lib/supabase';
+import html2pdf from 'html2pdf.js';
+import { format } from 'date-fns';
+import EmailComposeModal from '../components/EmailComposeModal';
 
 interface ContractTemplate {
   id: string;
@@ -458,6 +457,7 @@ export default function Contracts() {
   const [newFolderName, setNewFolderName] = useState('');
   const [isSendingContract, setIsSendingContract] = useState(false);
   const [sendStep, setSendStep] = useState<'idle' | 'generating' | 'sending' | 'success'>('idle');
+  const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
@@ -698,16 +698,51 @@ export default function Contracts() {
     console.log('[PDF] Starting PDF generation for template:', activeTemplate.name);
     
     try {
-      if (isEditing) {
-        console.warn('[PDF] Warning: User is still in editing mode while generating PDF');
-      }
-
       const element = previewRef.current;
-      console.log('[PDF] Element dimensions:', element.offsetWidth, 'x', element.offsetHeight);
+      if (!element) return;
       
-      // Create a style element for the print job to avoid oklch and modern CSS issues
-      const style = document.createElement('style');
-      style.innerHTML = `
+      // 1. Create a clone to avoid visual flicker on the live document
+      const clone = element.cloneNode(true) as HTMLElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      clone.style.width = '8.5in';
+      clone.style.backgroundColor = '#ffffff';
+      document.body.appendChild(clone);
+      
+      console.log('[PDF] Using off-screen clone for generation');
+      
+      // 1. Create a deep-cleaning function for modern CSS
+      const sanitizeStyles = (node: HTMLElement) => {
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT, null);
+        
+        let currentNode = walker.currentNode as HTMLElement;
+        while (currentNode) {
+          const style = window.getComputedStyle(currentNode);
+          
+          // Check color, background-color, border-color
+          ['color', 'backgroundColor', 'borderColor'].forEach(prop => {
+            const val = (style as any)[prop];
+            if (val && (val.includes('oklch') || val.includes('oklab') || val.includes('color-mix'))) {
+              // Forced replacement for PDF consistency
+              if (prop === 'color') currentNode.style.color = '#1a1a1a';
+              if (prop === 'backgroundColor' && val.includes('transparent')) {
+                 // keep transparent
+              } else if (prop === 'backgroundColor') {
+                 currentNode.style.backgroundColor = '#ffffff';
+              }
+              if (prop === 'borderColor') currentNode.style.borderColor = '#e5e7eb';
+            }
+          });
+          
+          currentNode = walker.nextNode() as HTMLElement;
+        }
+      };
+
+      // 2. Create the temporary style element
+      const styleStore = document.createElement('style');
+      styleStore.id = 'pdf-override-style';
+      styleStore.innerHTML = `
         .pdf-content, .doc-container, .contract-content { 
           color: #1a1a1a !important; 
           background: #ffffff !important; 
@@ -718,12 +753,10 @@ export default function Contracts() {
         .contract-content p, .contract-content span, .contract-content div { color: #333333 !important; }
         * { 
           border-color: #e5e7eb !important;
-          /* Strip modern CSS functions that break html2canvas */
           background-image: none !important;
           color-scheme: light !important;
           -webkit-print-color-adjust: exact !important;
         }
-        /* Override variables with hex equivalents */
         :root, body, .doc-container {
           --t-primary: #3b82f6 !important;
           --t-primary-dim: #eff6ff !important;
@@ -732,14 +765,11 @@ export default function Contracts() {
           --t-text-muted: #6b7280 !important;
           --t-border: #e5e7eb !important;
         }
-        /* Direct replacement for oklch/oklab colors */
-        [style*="oklch"], [style*="oklab"], [style*="color-mix"] {
-          color: #1a1a1a !important;
-          background-color: #ffffff !important;
-          border-color: #e5e7eb !important;
-        }
       `;
-      element.appendChild(style);
+      document.head.appendChild(styleStore);
+      
+      // Run the dynamic sanitizer on the CLONE
+      sanitizeStyles(clone);
 
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
@@ -749,13 +779,23 @@ export default function Contracts() {
           scale: 2, 
           useCORS: true, 
           letterRendering: true,
-          logging: true,
+          logging: false,
           backgroundColor: '#ffffff'
         },
         jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
-      console.log('[PDF] Initializing html2pdf generation process...');
+      console.log('[PDF] Process starting...');
+      await html2pdf().from(clone).set(opt).save();
+      
+      // 3. CLEAN UP - Remove the clone
+      console.log('[PDF] Removing clone');
+      document.body.removeChild(clone);
+      document.getElementById('pdf-override-style')?.remove();
+      
+      // No need to reset inline styles on the live element as we used a clone
+
+      console.log('[PDF] Generation complete');
       
       // Ensure element is visible in the DOM
       if (element.offsetParent === null) {
@@ -763,20 +803,10 @@ export default function Contracts() {
         element.style.left = '-9999px';
         document.body.appendChild(element);
       }
-
-      await html2pdf().from(element).set(opt).save();
       
-      // Cleanup
-      element.removeChild(style);
-      if (element.style.position === 'absolute') {
-        document.body.removeChild(element);
-      }
-      
-      console.log('[PDF] PDF generated successfully');
     } catch (error: any) {
       console.error('[PDF] Generation Error:', error);
-      console.error('[PDF] Error stack:', error?.stack);
-      alert(`Failed to generate PDF: ${error?.message || 'Unknown error'}. Please check if the document contains images from blocked domains.`);
+      alert(`Failed to generate PDF: ${error?.message || 'Unknown error'}.`);
     } finally {
       setGeneratingPdf(false);
     }
@@ -790,20 +820,16 @@ export default function Contracts() {
     }
     
     if (!selectedLead && leads.length > 0) {
-      // Auto-select first lead if none selected
-      console.log('[PDF] Auto-selecting first lead for email context');
       const firstLead = leads[0];
       setSelectedLead(firstLead);
       setSelectedLeadId(firstLead.id);
     } else if (!selectedLead) {
-      console.error('[PDF] No lead available for email context');
       alert('You must have at least one lead to send a contract.');
       return;
     }
     
     setIsSendingContract(true);
     setSendStep('generating');
-    console.log('[PDF] Generating PDF for email context:', selectedLead?.email);
     
     try {
       const element = previewRef.current;
@@ -811,58 +837,26 @@ export default function Contracts() {
       // Inject safety styles for PDF generation
       const style = document.createElement('style');
       style.innerHTML = `
-        .pdf-content, .doc-container, .contract-content { 
-          color: #1a1a1a !important; 
-          background: #ffffff !important; 
-          font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
-          line-height: 1.6 !important;
-        }
-        * { 
-          border-color: #e5e7eb !important;
-          color: #1a1a1a !important;
-          --t-primary: #3b82f6 !important;
-          --t-text: #1a1a1a !important;
-          --t-border: #e5e7eb !important;
-          background-image: none !important;
-        }
-        [style*="oklch"], [style*="oklab"], [style*="color-mix"] {
-          color: #1a1a1a !important;
-          background-color: #ffffff !important;
-          border-color: #e5e7eb !important;
-        }
+        .pdf-content, .doc-container, .contract-content { color: #1a1a1a !important; background: #ffffff !important; font-family: Arial, sans-serif !important; }
+        * { border-color: #e5e7eb !important; color: #1a1a1a !important; background-image: none !important; }
       `;
       element.appendChild(style);
 
       const opt = {
         margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
         image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          letterRendering: true,
-          backgroundColor: '#ffffff'
-        },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'in' as const, format: 'letter' as const, orientation: 'portrait' as const }
       };
 
-      console.log('[PDF] Generating base64 string for attachment...');
-      
-      const pdfBase64 = await html2pdf()
-        .from(element)
-        .set(opt)
-        .outputPdf('datauristring');
-      
-      // Cleanup
+      const pdfBase64 = await html2pdf().from(element).set(opt).outputPdf('datauristring');
       element.removeChild(style);
 
       if (!pdfBase64) throw new Error('PDF output returned empty data');
       
-      const base64Content = pdfBase64.split(',')[1];
-      console.log('[PDF] Email PDF ready, length:', base64Content.length);
-
       setEmailAttachment({
         filename: `${activeTemplate.name.replace(/\s+/g, '_')}.pdf`,
-        content: base64Content,
+        content: pdfBase64.split(',')[1],
         contentType: 'application/pdf'
       });
       
@@ -871,7 +865,6 @@ export default function Contracts() {
       setSendStep('idle');
     } catch (error: any) {
       console.error('[PDF] Email PDF Generation Error:', error);
-      toast.error(`Failed to prepare document for email: ${error?.message || 'Unknown error'}`);
       setIsSendingContract(false);
       setSendStep('idle');
     } finally {
@@ -944,7 +937,6 @@ export default function Contracts() {
       const fileName = templateId.split('/').pop();
       const newPath = `${currentUser.id}/${destFolder === 'Main' ? '' : destFolder + '/'}${fileName}`;
       
-      // Supabase storage doesn't have "move", so we copy and remove
       const { error: copyError } = await supabase.storage.from('contract_templates').copy(templateId, newPath);
       if (copyError) throw copyError;
 
@@ -984,7 +976,6 @@ export default function Contracts() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {/* Default Categories */}
           {['Acquisitions', 'Dispositions', 'Creative Finance', 'Property Management'].map(category => {
             const temps = PREBUILT_TEMPLATES.filter(t => t.category === category && t.name.toLowerCase().includes(searchQuery.toLowerCase()));
             if (temps.length === 0) return null;
@@ -1019,7 +1010,6 @@ export default function Contracts() {
             );
           })}
 
-          {/* Folders & Custom Templates */}
           <div className="pt-4 border-t border-[var(--t-border)]">
             <div className="flex items-center justify-between px-2 mb-4">
               <h3 className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)]">Custom Templates</h3>
@@ -1210,7 +1200,6 @@ export default function Contracts() {
           </div>
         </div>
 
-        {/* Document Viewer / Editor */}
         <div className="flex-1 overflow-y-auto p-4 md:p-12 flex justify-center items-start pb-24" style={{ 
           backgroundImage: 'radial-gradient(circle at center, var(--t-border) 1px, transparent 1px)',
           backgroundSize: '24px 24px',
@@ -1276,7 +1265,6 @@ export default function Contracts() {
         </div>
       </div>
       
-      {/* Global styles for the injected HTML content */}
       <style>{`
         .contract-content h1 { text-align: center; font-size: 16pt; margin-bottom: 1.5rem; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
         .contract-content h2 { font-size: 12pt; margin-top: 1.5rem; margin-bottom: 0.5rem; text-transform: uppercase; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
@@ -1298,12 +1286,12 @@ export default function Contracts() {
           attachment={emailAttachment}
           isAttachmentLoading={generatingPdf}
           onSuccess={() => {
-            setSendStep('success');
-            setIsSendingContract(true);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
           }}
         />
       )}
-      {/* Send Contract Loading Modal */}
+      
       {isSendingContract && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="w-full max-w-sm p-8 rounded-[2.5rem] bg-[var(--t-surface)] border border-[var(--t-border)] shadow-2xl text-center space-y-6">
@@ -1336,17 +1324,38 @@ export default function Contracts() {
         </div>
       )}
 
-      {/* Success Animation Overlay (Temporary) */}
-      {sendStep === 'success' && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in zoom-in duration-500"
-             onAnimationEnd={() => setTimeout(() => { setSendStep('idle'); setIsSendingContract(false); }, 3000)}>
-          <div className="absolute inset-0 bg-[var(--t-bg)]/80 backdrop-blur-3xl" />
-          <div className="relative text-center space-y-4 reveal">
-            <div className="w-24 h-24 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto shadow-2xl shadow-green-500/40 transform scale-125 animate-bounce">
-              <Check size={48} strokeWidth={4} />
+      {success && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-8">
+          <div className="absolute inset-0 backdrop-blur-md bg-black/40 animate-in fade-in duration-500" />
+          <div 
+            className="relative bg-[var(--t-surface)] border border-[var(--t-success)]/30 p-12 rounded-[3.5rem] shadow-2xl flex flex-col items-center text-center animate-in zoom-in slide-in-from-bottom-20 duration-700 pointer-events-auto"
+            style={{
+              // @ts-expect-error custom prop
+              '--tw-shadow-color': 'rgba(34, 197, 94, 0.1)'
+            }}
+          >
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setSuccess(false);
+              }}
+              className="absolute top-8 right-8 p-3 rounded-full bg-white/5 border border-white/10 text-[var(--t-text-muted)] hover:text-white hover:bg-white/10 transition-all z-[60] shadow-xl active:scale-95"
+              title="Close Success Message"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="w-24 h-24 rounded-full bg-[var(--t-success-dim)] flex items-center justify-center mb-8 relative">
+                <div className="absolute inset-0 rounded-full bg-[var(--t-success)]/20 animate-ping" />
+                <Check size={48} className="text-[var(--t-success)] relative z-10" />
             </div>
-            <h2 className="text-4xl font-black text-[var(--t-text)] uppercase tracking-tighter italic">Contract Sent!</h2>
-            <p className="text-sm text-[var(--t-text-muted)] font-bold uppercase tracking-widest">The dashboard is ready for your next deal.</p>
+            <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-4">Contract Delivered!</h2>
+            <p className="text-[var(--t-text-muted)] max-w-sm font-medium">
+              The contract has been securely delivered to <span className="text-[var(--t-text)] font-bold">{selectedLead?.email || 'the recipient'}</span>.
+            </p>
+            <div className="mt-8 pt-8 border-t border-[var(--t-border)] w-full">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--t-text-muted)] italic">Closing in 3 seconds...</p>
+            </div>
           </div>
         </div>
       )}

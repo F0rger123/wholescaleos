@@ -32,8 +32,6 @@ import EmailInbox from './pages/EmailInbox';
 import AgentProfile from './pages/AgentProfile';
 import LeadManagement from './pages/LeadManagement';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
-import TeamAnalytics from './pages/TeamAnalytics';
-import TeamCalendar from './pages/TeamCalendar';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminPromos from './pages/AdminPromos';
 import { CursorEffects } from './components/CursorEffects';
@@ -288,8 +286,8 @@ export function App() {
             <Route path="/map" element={<MapView />} />
             <Route path="/team" element={<Team />} />
             <Route path="/team/members" element={<Team />} />
-            <Route path="/team-calendar" element={<TeamCalendar />} />
-            <Route path="/team-analytics" element={<TeamAnalytics />} />
+            <Route path="/team/calendar" element={<Team />} />
+            <Route path="/team/analytics" element={<Team />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/promos" element={<AdminPromos />} />
             <Route path="/tasks" element={<Tasks />} />
