@@ -715,24 +715,37 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           }
         } else {
           // Forgot password
-          const resetRedirect = 'https://wholescaleos.pages.dev/login';
-          console.log('[Auth] Password reset requested for:', form.email, 'Redirecting to:', resetRedirect);
+          const resetRedirect = window.location.origin + '/login';
+          console.log('[Auth] Password reset process started:', {
+            email: form.email,
+            redirect: resetRedirect,
+            origin: window.location.origin,
+            timestamp: new Date().toISOString()
+          });
           
           const { error: resetError } = await supabase.auth.resetPasswordForEmail(form.email, {
             redirectTo: resetRedirect,
           });
           
           if (resetError) {
-            console.error('[Auth] Password reset error:', resetError);
-            if (isEmailSendError(resetError.message)) {
-              setError('Failed to send reset email. This is often due to Supabase SMTP limits or domain verification. Please check your Supabase Email settings.');
+            console.error('[Auth] Password reset critical failure:', {
+              message: resetError.message,
+              status: (resetError as any).status,
+              name: resetError.name
+            });
+
+            if (isEmailSendError(resetError.message) || (resetError as any).status === 500) {
+              const baseMsg = resetError.message.includes('500') || (resetError as any).status === 500
+                ? 'Internal Server Error (500). This is usually a Supabase infrastructure issue.'
+                : 'Failed to send reset email.';
+              
+              setError(`${baseMsg} IMPORTANT: Ensure "${resetRedirect}" is added to "Redirect URLs" in Supabase Auth -> URL Configuration.`);
               setShowEmailFix(true);
-              setError('Internal Server Error (500) from Supabase. IMPORTANT: Ensure "https://wholescaleos.pages.dev/login" is added to your Supabase Auth -> Redirect URLs allow list.');
             } else {
               setError(resetError.message);
             }
           } else {
-            console.log('[Auth] Password reset email sent successfully');
+            console.log('[Auth] Password reset email dispatched successfully to:', form.email);
             setForgotSent(true);
           }
           setLoading(false);

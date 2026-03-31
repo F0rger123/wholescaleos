@@ -1047,10 +1047,10 @@ export default function Contracts() {
             <button 
               onClick={handleEmailLead}
               disabled={generatingPdf}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-wait"
+              className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-wait ${generatingPdf ? 'animate-pulse' : ''}`}
             >
               {generatingPdf ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
-              {generatingPdf ? 'Preparing...' : 'Send Contract'}
+              {generatingPdf ? 'Preparing document...' : 'Send Contract'}
             </button>
           </div>
         </div>

@@ -356,8 +356,13 @@ export default function Pricing() {
                 { label: 'Team Members', values: ['1', '1', '5', '20', 'Unlimited'] },
                 { label: 'Lead Management', values: ['Basic', 'Pro', 'Elite', 'Elite', 'Custom'] },
                 { label: 'Integrated SMS', values: ['Gateways', 'Direct', 'Direct', 'Direct', 'API Priority'] },
+                { label: 'Contract E-Sign', values: ['Basic', 'Standard', 'Unlimited', 'Unlimited', 'Custom'] },
+                { label: 'CRM Sync', values: ['Manual', 'Auto-Basic', 'Real-time', 'Real-time', 'Priority Relay'] },
                 { label: 'Agent Profiles', values: ['No', 'Yes', 'Yes', 'Custom', 'Full White Label'] },
                 { label: 'White Labeling', values: ['No', 'No', 'No', 'Partial', 'Full Branding'] },
+                { label: 'Custom Domain', values: ['No', 'No', 'No', 'No', 'Included'] },
+                { label: 'API Access', values: ['No', 'No', 'Standard', 'High-Rate', 'Unlimited'] },
+                { label: 'Security Tier', values: ['Standard', 'Standard', 'Advanced', 'Enterprise', 'Quantum Ready'] },
                 { label: 'Support Tier', values: ['Email', 'Standard', 'Priority', 'Dedicated', 'SLA & Training'] },
               ].map((row, rIdx) => (
                 <tr key={rIdx} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">

@@ -1,11 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { motion, Variants } from 'framer-motion';
 import { 
   Home, TrendingUp, DollarSign, PieChart, 
   RefreshCw, Save, ChevronDown, ChevronUp, Download,
-  Edit2, Trash2, Link2, X
+  Edit2, Trash2, Link2, X, Target
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import type { CalculatorType, CalculatorScenario } from '../store/useStore';
+
+function StatCounter({ value, prefix = '', suffix = '', decimals = 0 }: { value: number, prefix?: string, suffix?: string, decimals?: number }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let startTime: number | null = null;
+    const duration = 800; // ms
+    const startValue = 0;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      
+      // Easing function (outQuart)
+      const easedProgress = 1 - Math.pow(1 - progress, 4);
+      const current = startValue + (value - startValue) * easedProgress;
+      
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayValue(value);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return (
+    <span>
+      {prefix}
+      {displayValue.toLocaleString(undefined, { 
+        minimumFractionDigits: decimals, 
+        maximumFractionDigits: decimals 
+      })}
+      {suffix}
+    </span>
+  );
+}
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: "easeOut"
+    }
+  }
+};
 
 export default function Calculators() {
   const { 
@@ -73,12 +136,12 @@ export default function Calculators() {
     const roi = (desiredProfit / (maxOffer + repairs + holdingCosts + closingCosts)) * 100;
     
     return {
-      maxOffer: maxOffer.toFixed(0),
-      roi: roi.toFixed(1),
-      arv: arv.toLocaleString(),
-      repairs: repairs.toLocaleString(),
-      profit: desiredProfit.toLocaleString(),
-      totalCosts: (repairs + holdingCosts + closingCosts).toLocaleString(),
+      maxOfferValue: maxOffer,
+      roiValue: roi,
+      arvValue: arv,
+      repairsValue: repairs,
+      profitValue: desiredProfit,
+      totalCostsValue: (repairs + holdingCosts + closingCosts),
     };
   };
 
@@ -90,11 +153,11 @@ export default function Calculators() {
     const cashOnCash = (netProfit / (purchasePrice * 0.2)) * 100;
     
     return {
-      netProfit: netProfit.toFixed(0),
-      roi: roi.toFixed(1),
-      cashOnCash: cashOnCash.toFixed(1),
-      totalInvestment: totalInvestment.toLocaleString(),
-      arv: arv.toLocaleString(),
+      netProfitValue: netProfit,
+      roiValue: roi,
+      cashOnCashValue: cashOnCash,
+      totalInvestmentValue: totalInvestment,
+      arvValue: arv,
     };
   };
 
@@ -126,12 +189,12 @@ export default function Calculators() {
     const capRate = (annualCashFlow / purchasePrice) * 100;
     
     return {
-      monthlyCashFlow: monthlyCashFlow.toFixed(0),
-      annualCashFlow: annualCashFlow.toFixed(0),
-      cashOnCashROI: cashOnCashROI.toFixed(1),
-      capRate: capRate.toFixed(1),
-      mortgagePayment: mortgagePayment.toFixed(0),
-      downPayment: downPayment.toLocaleString(),
+      monthlyCashFlowValue: monthlyCashFlow,
+      annualCashFlowValue: annualCashFlow,
+      cashOnCashROIValue: cashOnCashROI,
+      capRateValue: capRate,
+      mortgagePaymentValue: mortgagePayment,
+      downPaymentValue: downPayment,
     };
   };
 
@@ -154,12 +217,12 @@ export default function Calculators() {
     const cocROI = cashOut > 0 ? (annualCashFlow / cashOut) * 100 : 0;
     
     return {
-      cashOut: cashOut.toFixed(0),
-      newLoanAmount: refiLoanAmount.toLocaleString(),
-      newMortgagePayment: newMortgagePayment.toFixed(0),
-      monthlyCashFlow: monthlyCashFlow.toFixed(0),
-      cocROI: cocROI.toFixed(1),
-      totalInvestment: totalInvestment.toLocaleString(),
+      cashOutValue: cashOut,
+      newLoanAmountValue: refiLoanAmount,
+      newMortgagePaymentValue: newMortgagePayment,
+      monthlyCashFlowValue: monthlyCashFlow,
+      cocROIValue: cocROI,
+      totalInvestmentValue: totalInvestment,
     };
   };
 
@@ -920,131 +983,207 @@ export default function Calculators() {
           </h2>
 
           {activeCalculator === 'wholesale' && (
-            <div className="space-y-6">
-              <div className="rounded-xl p-6 border" style={{
-                background: 'linear-gradient(135deg, var(--t-primary-dim) 0%, var(--t-surface) 100%)',
-                borderColor: 'var(--t-primary)',
-              }}>
-                <p className="text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Maximum Offer Price</p>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>${wholesaleResult.maxOffer}</p>
-                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>Based on ARV - Repairs - Profit - Costs</p>
-              </div>
+            <motion.div 
+              key="wholesale-results"
+              initial="hidden"
+              animate="visible"
+              variants={containerVariants}
+              className="space-y-6"
+            >
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-primary/10" 
+                style={{
+                  background: 'linear-gradient(135deg, var(--t-primary-dim) 0%, var(--t-surface) 100%)',
+                  borderColor: 'var(--t-primary)',
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Maximum Allowable Offer</p>
+                  <Target size={16} style={{ color: 'var(--t-primary)' }} />
+                </div>
+                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
+                  <StatCounter value={wholesaleResult.maxOfferValue} prefix="$" />
+                </p>
+                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>ARV - Repairs - Profit - Holding - Closing</p>
+              </motion.div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>ARV</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${wholesaleResult.arv}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Repairs</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${wholesaleResult.repairs}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Target Profit</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${wholesaleResult.profit}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>ROI</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-success)' }}>{wholesaleResult.roi}%</p>
-                </div>
+                {[
+                  { label: 'ARV', value: wholesaleResult.arvValue, prefix: '$' },
+                  { label: 'Repairs', value: wholesaleResult.repairsValue, prefix: '$' },
+                  { label: 'Target Profit', value: wholesaleResult.profitValue, prefix: '$' },
+                  { label: 'ROI', value: wholesaleResult.roiValue, suffix: '%', decimals: 1, color: 'var(--t-success)' },
+                ].map((stat, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.02 }}
+                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
+                    style={{ backgroundColor: 'var(--t-bg)' }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
+                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
+                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
+                    </p>
+                  </motion.div>
+                ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {activeCalculator === 'fixnflip' && (
-            <div className="space-y-6">
-              <div className="rounded-xl p-6 border" style={{
-                background: 'linear-gradient(135deg, var(--t-success-dim) 0%, var(--t-surface) 100%)',
-                borderColor: 'var(--t-success)',
-              }}>
-                <p className="text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Net Profit</p>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>${flipResult.netProfit}</p>
+            <motion.div 
+              key="flip-results"
+              initial="hidden"
+              animate="visible"
+              variants={containerVariants}
+              className="space-y-6"
+            >
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ y: -5 }}
+                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-success/10" 
+                style={{
+                  background: 'linear-gradient(135deg, var(--t-success-dim) 0%, var(--t-surface) 100%)',
+                  borderColor: 'var(--t-success)',
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Net Profit</p>
+                  <TrendingUp size={16} style={{ color: 'var(--t-success)' }} />
+                </div>
+                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
+                  <StatCounter value={flipResult.netProfitValue} prefix="$" />
+                </p>
                 <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>ARV - Total Investment - Selling Costs</p>
-              </div>
+              </motion.div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Total Investment</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${flipResult.totalInvestment}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>ARV</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${flipResult.arv}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>ROI</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-success)' }}>{flipResult.roi}%</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Cash-on-Cash</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-warning)' }}>{flipResult.cashOnCash}%</p>
-                </div>
+                {[
+                  { label: 'Total Investment', value: flipResult.totalInvestmentValue, prefix: '$' },
+                  { label: 'ARV', value: flipResult.arvValue, prefix: '$' },
+                  { label: 'ROI', value: flipResult.roiValue, suffix: '%', decimals: 1, color: 'var(--t-success)' },
+                  { label: 'Cash-on-Cash', value: flipResult.cashOnCashValue, suffix: '%', decimals: 1, color: 'var(--t-warning)' },
+                ].map((stat, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.02 }}
+                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
+                    style={{ backgroundColor: 'var(--t-bg)' }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
+                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
+                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
+                    </p>
+                  </motion.div>
+                ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {activeCalculator === 'rental' && (
-            <div className="space-y-6">
-              <div className="rounded-xl p-6 border" style={{
-                background: 'linear-gradient(135deg, var(--t-accent-dim) 0%, var(--t-surface) 100%)',
-                borderColor: 'var(--t-accent)',
-              }}>
-                <p className="text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Monthly Cash Flow</p>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>${rentalResult.monthlyCashFlow}</p>
+            <motion.div 
+              key="rental-results"
+              initial="hidden"
+              animate="visible"
+              variants={containerVariants}
+              className="space-y-6"
+            >
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ y: -5 }}
+                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-accent/10" 
+                style={{
+                  background: 'linear-gradient(135deg, var(--t-accent-dim) 0%, var(--t-surface) 100%)',
+                  borderColor: 'var(--t-accent)',
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Monthly Cash Flow</p>
+                  <DollarSign size={16} style={{ color: 'var(--t-accent)' }} />
+                </div>
+                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
+                  <StatCounter value={rentalResult.monthlyCashFlowValue} prefix="$" />
+                </p>
                 <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>Rent - Mortgage - Expenses</p>
-              </div>
+              </motion.div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Annual Cash Flow</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${rentalResult.annualCashFlow}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Mortgage Payment</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${rentalResult.mortgagePayment}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>CoC ROI</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-success)' }}>{rentalResult.cashOnCashROI}%</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Cap Rate</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-warning)' }}>{rentalResult.capRate}%</p>
-                </div>
+                {[
+                  { label: 'Annual Cash Flow', value: rentalResult.annualCashFlowValue, prefix: '$' },
+                  { label: 'Mortgage Payment', value: rentalResult.mortgagePaymentValue, prefix: '$' },
+                  { label: 'CoC ROI', value: rentalResult.cashOnCashROIValue, suffix: '%', decimals: 1, color: 'var(--t-success)' },
+                  { label: 'Cap Rate', value: rentalResult.capRateValue, suffix: '%', decimals: 1, color: 'var(--t-warning)' },
+                ].map((stat, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.02 }}
+                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
+                    style={{ backgroundColor: 'var(--t-bg)' }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
+                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
+                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
+                    </p>
+                  </motion.div>
+                ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
           {activeCalculator === 'brrrr' && (
-            <div className="space-y-6">
-              <div className="rounded-xl p-6 border" style={{
-                background: 'linear-gradient(135deg, var(--t-warning-dim) 0%, var(--t-surface) 100%)',
-                borderColor: 'var(--t-warning)',
-              }}>
-                <p className="text-sm mb-1" style={{ color: 'var(--t-text-muted)' }}>Cash-Out at Refi</p>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>${brrrrResult.cashOut}</p>
+            <motion.div 
+              key="brrrr-results"
+              initial="hidden"
+              animate="visible"
+              variants={containerVariants}
+              className="space-y-6"
+            >
+              <motion.div 
+                variants={itemVariants}
+                whileHover={{ y: -5 }}
+                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-warning/10" 
+                style={{
+                  background: 'linear-gradient(135deg, var(--t-warning-dim) 0%, var(--t-surface) 100%)',
+                  borderColor: 'var(--t-warning)',
+                }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Cash-Out at Refi</p>
+                  <RefreshCw size={16} style={{ color: 'var(--t-warning)' }} />
+                </div>
+                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
+                  <StatCounter value={brrrrResult.cashOutValue} prefix="$" />
+                </p>
                 <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>New Loan Amount - Total Investment</p>
-              </div>
+              </motion.div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>New Loan</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${brrrrResult.newLoanAmount}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>New Mortgage</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>${brrrrResult.newMortgagePayment}/mo</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Monthly Cash Flow</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-success)' }}>${brrrrResult.monthlyCashFlow}</p>
-                </div>
-                <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--t-bg)' }}>
-                  <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>CoC ROI</p>
-                  <p className="text-lg font-semibold" style={{ color: 'var(--t-warning)' }}>{brrrrResult.cocROI}%</p>
-                </div>
+                {[
+                  { label: 'New Loan', value: brrrrResult.newLoanAmountValue, prefix: '$' },
+                  { label: 'New Mortgage', value: brrrrResult.newMortgagePaymentValue, prefix: '$', suffix: '/mo' },
+                  { label: 'Monthly Cash Flow', value: brrrrResult.monthlyCashFlowValue, prefix: '$', color: 'var(--t-success)' },
+                  { label: 'CoC ROI', value: brrrrResult.cocROIValue, suffix: '%', decimals: 1, color: 'var(--t-warning)' },
+                ].map((stat, i) => (
+                  <motion.div 
+                    key={i}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.02 }}
+                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
+                    style={{ backgroundColor: 'var(--t-bg)' }}
+                  >
+                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
+                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
+                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
+                    </p>
+                  </motion.div>
+                ))}
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>

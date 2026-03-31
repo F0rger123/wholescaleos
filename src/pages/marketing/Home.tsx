@@ -12,6 +12,7 @@ import {
   BarChart3, Award, Trophy, Check
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { ReferralLeaderboard } from '../../components/ReferralLeaderboard';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -610,6 +611,45 @@ export default function Home() {
                     <p className="text-[10px] text-center text-[#6d758c] font-medium">By applying, you agree to our Partnership Protocol & Privacy Terms.</p>
                  </form>
               </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Alpha Network Section */}
+      <section className="py-32 bg-[#060e20] relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-20 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="space-y-8"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em]">
+                Elite Protocol
+              </div>
+              <h2 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter leading-[0.9] text-white">Dominance is <br/><span className="text-yellow-500">Inevitable.</span></h2>
+              <p className="text-xl text-[#a3aac4] leading-relaxed max-w-xl font-medium">Join the top 1% of acquisition agents. Our most successful partners are leveraging the Referral Protocol to build passive empires while they sleep.</p>
+              
+              <div className="grid sm:grid-cols-2 gap-6 pt-4">
+                <div className="p-6 rounded-3xl bg-white/5 border border-white/5">
+                  <div className="text-3xl font-black text-white mb-1">30%</div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Lifetime Commission</div>
+                </div>
+                <div className="p-6 rounded-3xl bg-white/5 border border-white/5">
+                  <div className="text-3xl font-black text-white mb-1">24H</div>
+                  <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Payout Processing</div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <ReferralLeaderboard />
             </motion.div>
           </div>
         </div>

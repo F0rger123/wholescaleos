@@ -144,7 +144,7 @@ const PREDEFINED_TEMPLATES = [
           <p style="margin: 0; font-weight: 800; font-size: 14px; color: #64748b; text-transform: uppercase;">Your Referral Link:</p>
           <p style="margin: 10px 0 0 0; font-family: monospace; font-size: 18px; color: #3b82f6; font-weight: bold;">wholescaleos.io/ref/{{name}}</p>
         </div>
-        <a href="https://wholescaleos.pages.dev/settings?tab=referrals" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Refer a Friend</a>
+        <a href="https://wholescaleos.pages.dev/dashboard/billing?tab=referral" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Refer a Friend</a>
       </div>
     `
   },
