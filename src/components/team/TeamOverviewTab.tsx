@@ -36,7 +36,7 @@ export function TeamOverviewTab() {
   const {
     team, leads, tasks, teamConfig, currentUser,
     addTeamMember, removeTeamMember,
-    updateTeamConfig,
+    updateTeamConfig, transferTeamOwnership,
     canAddMember
   } = useStore();
 
@@ -130,8 +130,6 @@ export function TeamOverviewTab() {
     setShowAddMember(false);
   };
 
-
-
   return (
     <div className="space-y-6">
       {/* Team Header — Current Team + Switcher */}
@@ -168,7 +166,7 @@ export function TeamOverviewTab() {
                 )}
               </div>
               <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
-                {team.length} member{team.length !== 1 ? 's' : ''} · {onlineCount} online
+                {team.length} member{team.length !== 1 ? 's' : ''} · {onlineCount} online · <span className="font-bold text-[var(--t-primary)]">{team.length} of {teamConfig.maxSeats || 5} seats used</span>
               </p>
             </div>
           </div>
@@ -457,13 +455,13 @@ export function TeamOverviewTab() {
                              <Cell fill="var(--t-surface-dim)" />
                            </Pie>
                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'var(--t-surface)', 
-                                borderColor: 'var(--t-border)',
-                                borderRadius: '12px',
-                                fontSize: '11px',
-                                fontWeight: 'bold'
-                              }}
+                               contentStyle={{ 
+                                 backgroundColor: 'var(--t-surface)', 
+                                 borderColor: 'var(--t-border)',
+                                 borderRadius: '12px',
+                                 fontSize: '11px',
+                                 fontWeight: 'bold'
+                               }}
                            />
                          </PieChart>
                        </ResponsiveContainer>
@@ -516,7 +514,7 @@ export function TeamOverviewTab() {
               </div>
            </div>
 
-           <div className="rounded-[2rem] border p-6 bg-[var(--t-surface)] border-[var(--t-border)] shadow-lg flex flex-col">
+           <div className="rounded-[2rem] border p-6 bg-[var(--t-surface)] border(--t-border)] shadow-lg flex flex-col">
               <div className="flex items-center justify-between mb-6">
                  <h3 className="text-lg font-black italic uppercase tracking-tighter flex items-center gap-2">
                    <MessageSquare size={18} className="text-indigo-500" />
@@ -580,15 +578,33 @@ export function TeamOverviewTab() {
                           <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">Deals</p>
                           <p className="text-lg font-black">{leads.filter(l => l.assignedTo === member.id && l.status === 'closed-won').length}</p>
                        </div>
+                       <div className="p-4 rounded-xl bg-[var(--t-surface)]">
+                          <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">Tasks</p>
+                          <p className="text-lg font-black">{tasks.filter(t => t.assignedTo === member.id && t.status === 'done').length}</p>
+                       </div>
+                       <div className="p-4 rounded-xl bg-[var(--t-surface)]">
+                          <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">Efficiency</p>
+                          <p className="text-lg font-black">{Math.round((tasks.filter(t => t.assignedTo === member.id && t.status === 'done').length / Math.max(1, tasks.filter(t => t.assignedTo === member.id).length)) * 100)}%</p>
+                       </div>
                     </div>
-                    {/* Simplified status editor */}
-                    <div className="pt-4 border-t border-[var(--t-border)]">
-                       <button 
-                         onClick={() => { if (confirm(`Remove ${member.name}?`)) removeTeamMember(member.id); }}
-                         className="text-xs text-[var(--t-error)] flex items-center gap-1"
-                       >
-                         <UserMinus size={14} /> Remove from team
-                       </button>
+                    {/* Member Actions */}
+                    <div className="pt-4 border-t border-[var(--t-border)] flex items-center gap-4">
+                       {currentUser?.id !== member.id && (
+                         <button 
+                           onClick={() => { if (confirm(`Remove ${member.name}?`)) removeTeamMember(member.id); }}
+                           className="text-xs text-[var(--t-error)] font-bold flex items-center gap-1 hover:opacity-80 transition-opacity"
+                         >
+                           <UserMinus size={14} /> Remove Member
+                         </button>
+                       )}
+                       {teamConfig.createdBy === currentUser?.id && currentUser?.id !== member.id && (
+                         <button 
+                           onClick={() => { if (confirm(`Transfer team ownership to ${member.name}? This cannot be undone.`)) transferTeamOwnership(member.id); }}
+                           className="text-xs text-[var(--t-primary)] font-bold flex items-center gap-1 hover:opacity-80 transition-opacity"
+                         >
+                           <ArrowRightLeft size={14} /> Transfer Ownership
+                         </button>
+                       )}
                     </div>
                  </div>
                )}

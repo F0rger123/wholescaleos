@@ -17,7 +17,7 @@ import { useStore, STATUS_LABELS } from '../store/useStore';
 import { BarChart3, TrendingUp, Layers } from 'lucide-react';
 
 type ChartType = 'bar' | 'line' | 'area';
-type ChartTimeRange = '7d' | '30d' | '90d' | '1y';
+type ChartTimeRange = '7d' | '30d' | '90d' | '1y' | 'all';
 type MetricType = 'leads' | 'deals' | 'revenue' | 'conversion';
 
 const COLORS: Record<string, string> = {
@@ -27,6 +27,7 @@ const COLORS: Record<string, string> = {
   negotiating: '#ec4899', 
   'closed-won': 'var(--t-success)',
   'closed-lost': 'var(--t-error)',
+  'other': 'var(--t-text-muted)',
 };
 
 export function PipelineChart() {
@@ -37,6 +38,8 @@ export function PipelineChart() {
 
   const filteredLeads = useMemo(() => {
     if (!leads || !Array.isArray(leads)) return [];
+    if (timeRange === 'all') return leads;
+    
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
@@ -44,28 +47,28 @@ export function PipelineChart() {
   }, [leads, timeRange]);
 
   const data = useMemo(() => {
-    const statuses = ['new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost'];
+    const statuses = ['new', 'contacted', 'qualified', 'negotiating', 'follow-up', 'not-interested', 'closed-won', 'closed-lost', 'other'];
     const counts: Record<string, number> = {};
     statuses.forEach(s => counts[s] = 0);
 
     filteredLeads.forEach(l => {
       if (!l) return;
-      const status = String(l.status);
-      if (counts[status] !== undefined) {
-        if (metric === 'revenue') {
-          counts[status] += (l.estimatedValue || 0);
-        } else if (metric === 'deals') {
-          if (['qualified', 'negotiating', 'closed-won'].includes(status)) {
-            counts[status]++;
-          }
-        } else if (metric === 'conversion') {
-          // This is a bit tricky for conversion rate per status, 
-          // usually it's % of previous status. 
-          // For now let's just show count and update tooltip.
-          counts[l.status]++;
-        } else {
-          counts[l.status]++;
+      let status = String(l.status).toLowerCase();
+      
+      // Map to 'other' if status not in list
+      if (!statuses.includes(status)) {
+        status = 'other';
+      }
+
+      if (metric === 'revenue') {
+        counts[status] += (l.estimatedValue || 0);
+      } else if (metric === 'deals') {
+        // Count active deals (anything not lost, new or other)
+        if (!['closed-lost', 'new', 'other'].includes(status)) {
+          counts[status]++;
         }
+      } else {
+        counts[status]++;
       }
     });
 
@@ -118,6 +121,7 @@ export function PipelineChart() {
     { range: '30d', label: '30D' },
     { range: '90d', label: '90D' },
     { range: '1y', label: '1Y' },
+    { range: 'all', label: 'ALL' },
   ];
 
   // Chart render helper

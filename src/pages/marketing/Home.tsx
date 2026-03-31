@@ -144,10 +144,10 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-72">
                 <Link
-                  to="/pricing"
+                  to="/login?signup=true"
                   className="w-full h-20 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift text-white"
                 >
-                  Get Started Free <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  Sign Up <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
               </motion.div>
               <motion.button 
@@ -674,7 +674,7 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link to="/login?signup=true" className="block px-12 py-6 rounded-2xl bg-white text-indigo-600 text-xl font-black shadow-[0_20px_60px_rgba(0,0,0,0.3)] hover-glow">
-                Start Free Trial
+                Sign Up Now
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

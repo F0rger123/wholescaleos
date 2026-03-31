@@ -1079,8 +1079,8 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                 <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--t-success)' }} />
                 <p className="text-sm font-bold" style={{ color: 'var(--t-success)' }}>Password reset link sent!</p>
               </div>
-              <p className="text-xs ml-6" style={{ color: 'var(--t-success)', opacity: 0.8 }}>
-                Check your email (and spam folder) for the reset link.
+              <p className="text-xs ml-6" style={{ color: 'var(--t-success)', opacity: 0.9 }}>
+                Check your email for the reset link. <strong>Don't forget to check your spam folder</strong> if you don't see it within a few minutes.
               </p>
             </div>
           )}

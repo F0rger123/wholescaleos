@@ -344,15 +344,15 @@ export default function Leads() {
             <div className="flex gap-2">
               <button 
                 onClick={() => setShowBulkEmail(true)} 
-                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity hover:opacity-90"
-                style={{ backgroundColor: 'var(--t-primary)' }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-opacity hover:opacity-90"
+                style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
               >
                 <Mail className="w-4 h-4" /> Bulk Email ({selectedLeads.size})
               </button>
               <button 
                 onClick={handleBulkDelete} 
-                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--t-error)' }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--t-error)', color: 'var(--t-on-primary)' }}
                 disabled={bulkDeleting}
               >
                 {bulkDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />}
@@ -396,8 +396,8 @@ export default function Leads() {
 
           <button 
             onClick={openAdd} 
-            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg"
-            style={{ background: 'var(--t-primary)' }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg"
+            style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
           >
             <Plus className="w-4 h-4" /> Add Lead
           </button>
@@ -419,7 +419,7 @@ export default function Leads() {
         <select 
           value={statusFilter} 
           onChange={e => setStatusFilter(e.target.value)} 
-          className="px-3 py-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg text-white text-sm"
+          className="px-3 py-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)] text-sm"
         >
           <option value="all">All Statuses</option>
           <option value="new">New</option>
@@ -432,7 +432,7 @@ export default function Leads() {
         <select 
           value={priorityFilter} 
           onChange={e => setPriorityFilter(e.target.value)} 
-          className="px-3 py-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg text-white text-sm"
+          className="px-3 py-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg text-[var(--t-text)] text-sm"
         >
           <option value="all">All Priorities</option>
           <option value="high">🔴 High</option>
@@ -457,7 +457,7 @@ export default function Leads() {
       <div className="flex gap-2 overflow-x-auto pb-4 mb-2">
         <button 
           onClick={() => setActiveFolder(null)} 
-          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!activeFolder ? 'bg-[var(--t-primary)] text-white shadow-md' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 hover:text-white'}`}
+          className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!activeFolder ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] shadow-md' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 hover:text-[var(--t-text)]'}`}
         >
           All Leads
         </button>
@@ -475,9 +475,9 @@ export default function Leads() {
                 }
               }}
               onClick={() => setActiveFolder(fName)}
-              className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeFolder === fName ? 'bg-[var(--t-primary)] text-white shadow-md' : 'bg-[var(--t-surface)] text-[var(--t-text)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50'}`}
+              className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeFolder === fName ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] shadow-md' : 'bg-[var(--t-surface)] text-[var(--t-text)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50'}`}
             >
-              <Folder className="w-3.5 h-3.5" style={{ color: activeFolder === fName ? 'white' : 'var(--t-primary)' }} />
+              <Folder className="w-3.5 h-3.5" style={{ color: activeFolder === fName ? 'var(--t-on-primary)' : 'var(--t-primary)' }} />
               {fName} 
               <span className="text-xs opacity-70">({fIds.length})</span>
             </button>
@@ -490,7 +490,8 @@ export default function Leads() {
                      if (activeFolder === fName) setActiveFolder(null); // Return to default map when currently sorting
                  }
               }}
-              className="absolute -top-1 -right-1 hidden group-hover:flex w-4 h-4 rounded-full bg-[var(--t-error)] text-white items-center justify-center text-[10px]"
+              className="absolute -top-1 -right-1 hidden group-hover:flex w-4 h-4 rounded-full items-center justify-center text-[10px]"
+              style={{ backgroundColor: 'var(--t-error)', color: 'var(--t-on-primary)' }}
             >
               <X className="w-2 h-2" />
             </button>
@@ -503,7 +504,8 @@ export default function Leads() {
                value={newFolderName}
                onChange={e => setNewFolderName(e.target.value)}
                placeholder="Folder name..."
-               className="bg-transparent text-sm text-white w-24 outline-none px-1 py-1"
+               className="bg-transparent text-sm w-24 outline-none px-1 py-1"
+               style={{ color: 'var(--t-text)' }}
                autoFocus
                onKeyDown={e => {
                   if (e.key === 'Enter' && newFolderName.trim()) {
@@ -577,8 +579,8 @@ export default function Leads() {
             <p className="text-[var(--t-text-muted)] text-lg">No leads found</p>
             <button 
               onClick={openAdd} 
-              className="mt-4 px-4 py-2 text-white rounded-lg"
-              style={{ background: 'var(--t-primary)' }}
+              className="mt-4 px-4 py-2 rounded-lg"
+              style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
             >
               Add Your First Lead
             </button>

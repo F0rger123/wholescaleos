@@ -33,81 +33,7 @@ const TABS = [
   { id: 'data', label: 'Data', icon: Database },
 ];
 
-export default function SettingsPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('general');
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    if (tab && TABS.some(t => t.id === tab)) {
-      setActiveTab(tab);
-    }
-  }, [location.search]);
-
-  const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
-    navigate(`/settings?tab=${tabId}`, { replace: true });
-  };
-
-  return (
-    <div className="p-6 max-w-6xl mx-auto" style={{ backgroundColor: 'var(--t-bg)' }}>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>Settings</h1>
-        <p style={{ color: 'var(--t-text-secondary)' }}>Manage your workspace preferences</p>
-      </div>
-
-      <div className="flex gap-6">
-        {/* Sidebar */}
-        <div className="w-56 flex-shrink-0">
-          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left"
-                style={{
-                  backgroundColor: activeTab === tab.id ? 'var(--t-primary)' : 'transparent',
-                  color: activeTab === tab.id ? 'var(--t-on-primary)' : 'var(--t-text-secondary)',
-                }}
-                onMouseEnter={(e) => {
-                  if (activeTab !== tab.id) {
-                    e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (activeTab !== tab.id) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {activeTab === 'general' && <GeneralTab />}
-          {activeTab === 'profile' && <ProfileTab />}
-          {activeTab === 'notifications' && <NotificationsTab />}
-          {activeTab === 'security' && <SecurityTab />}
-          {activeTab === 'appearance' && <AppearanceTab />}
-          {activeTab === 'team' && <TeamTab />}
-          {activeTab === 'email' && <EmailTab />}
-          {activeTab === 'ai' && <AISettings hideHeader />}
-          {activeTab === 'sms' && <SMSSettings />}
-          {activeTab === 'shortcuts' && <ShortcutSettings />}
-          {activeTab === 'backup' && <BackupTab />}
-          {activeTab === 'data' && <DataTab />}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ============================================================
    GENERAL TAB - WITH DIRECT SUPABASE SAVE
@@ -1178,7 +1104,9 @@ function AppearanceTab() {
   const { 
     currentTheme, setTheme, 
     showQuickNotes, setShowQuickNotes,
-    cursorSettings, setCursorSettings
+    cursorSettings, setCursorSettings,
+    themePresets, saveThemePreset, deleteThemePreset, applyThemePreset,
+    resetCustomColors
   } = useStore();
   const [themeSaved, setThemeSaved] = useState(false);
 
@@ -1230,12 +1158,25 @@ const user = data?.user;
             <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>Theme</h2>
             <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Choose your workspace appearance</p>
           </div>
-          {themeSaved && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--t-success-dim)', border: '1px solid var(--t-success)' }}>
-              <Check size={14} style={{ color: 'var(--t-success)' }} />
-              <span className="text-sm" style={{ color: 'var(--t-success)' }}>Theme saved!</span>
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => {
+                resetCustomColors();
+                setThemeSaved(true);
+                setTimeout(() => setThemeSaved(false), 3000);
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-[var(--t-surface-hover)]"
+              style={{ color: 'var(--t-text-muted)', border: '1px solid var(--t-border)' }}
+            >
+              <RefreshCw size={14} /> Reset Colors
+            </button>
+            {themeSaved && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'var(--t-success-dim)', border: '1px solid var(--t-success)' }}>
+                <Check size={14} style={{ color: 'var(--t-success)' }} />
+                <span className="text-sm" style={{ color: 'var(--t-success)' }}>Updated!</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
@@ -1378,6 +1319,83 @@ const user = data?.user;
               )}
             </div>
           </div>
+        </div>
+
+        {/* Custom Presets */}
+        <div className="mt-8 pt-8 border-t" style={{ borderColor: 'var(--t-border)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>Custom Presets</h2>
+              <p className="text-sm" style={{ color: 'var(--t-text-secondary)' }}>Save and switch between your custom appearance configurations</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input 
+                type="text" 
+                placeholder="Preset Name"
+                className="px-3 py-1.5 rounded-lg text-sm bg-[var(--t-bg)] border border-[var(--t-border)] text-[var(--t-text)]"
+                id="new-preset-name"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const val = (e.target as HTMLInputElement).value;
+                    if (val) {
+                      saveThemePreset(val);
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }
+                }}
+              />
+              <button 
+                onClick={() => {
+                  const input = document.getElementById('new-preset-name') as HTMLInputElement;
+                  if (input.value) {
+                    saveThemePreset(input.value);
+                    input.value = '';
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[var(--t-primary)] text-white text-sm font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+              >
+                <Plus size={16} /> Save New
+              </button>
+            </div>
+          </div>
+
+          {themePresets && themePresets.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {themePresets.map((preset) => (
+                <div 
+                  key={preset.id}
+                  className="group relative p-4 rounded-xl border transition-all hover:shadow-md"
+                  style={{ backgroundColor: 'var(--t-bg)', borderColor: 'var(--t-border)' }}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-bold text-sm" style={{ color: 'var(--t-text)' }}>{preset.name}</span>
+                    <button 
+                      onClick={() => deleteThemePreset(preset.id)}
+                      className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--t-surface-dim)] text-[var(--t-text-muted)]">
+                      Base: {themes[preset.themeId]?.name || 'Unknown'}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => applyThemePreset(preset)}
+                    className="w-full py-2 rounded-lg border border-[var(--t-primary)] text-[var(--t-primary)] text-xs font-black uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-white transition-all active:scale-95"
+                  >
+                    Apply Preset
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-8 rounded-xl border border-dashed text-center" style={{ borderColor: 'var(--t-border)' }}>
+              <Palette size={32} className="text-[var(--t-text-muted)] mb-3 opacity-20" />
+              <p className="text-sm text-[var(--t-text-muted)]">No custom presets saved yet. Customize your colors and save them as a preset!</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1856,6 +1874,85 @@ function DataTab() {
           <button className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2" style={{ color: 'var(--t-error)', border: '1px solid var(--t-error-dim)', backgroundColor: 'transparent' }}>
             <AlertTriangle size={14} /> Reset Workspace
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   MAIN SETTINGS PAGE COMPONENT
+   ============================================================ */
+export default function SettingsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('general');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab && TABS.some(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
+
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    navigate(`/settings?tab=${tabId}`, { replace: true });
+  };
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto" style={{ backgroundColor: 'var(--t-bg)' }}>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>Settings</h1>
+        <p style={{ color: 'var(--t-text-secondary)' }}>Manage your workspace preferences</p>
+      </div>
+
+      <div className="flex gap-6">
+        {/* Sidebar */}
+        <div className="w-56 flex-shrink-0">
+          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors text-left"
+                style={{
+                  backgroundColor: activeTab === tab.id ? 'var(--t-primary)' : 'transparent',
+                  color: activeTab === tab.id ? 'var(--t-on-primary)' : 'var(--t-text-secondary)',
+                }}
+                onMouseEnter={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (activeTab !== tab.id) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+              >
+                <tab.icon size={16} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {activeTab === 'general' && <GeneralTab />}
+          {activeTab === 'profile' && <ProfileTab />}
+          {activeTab === 'notifications' && <NotificationsTab />}
+          {activeTab === 'security' && <SecurityTab />}
+          {activeTab === 'appearance' && <AppearanceTab />}
+          {activeTab === 'team' && <TeamTab />}
+          {activeTab === 'email' && <EmailTab />}
+          {activeTab === 'ai' && <AISettings hideHeader />}
+          {activeTab === 'sms' && <SMSSettings />}
+          {activeTab === 'shortcuts' && <ShortcutSettings />}
+          {activeTab === 'backup' && <BackupTab />}
+          {activeTab === 'data' && <DataTab />}
         </div>
       </div>
     </div>

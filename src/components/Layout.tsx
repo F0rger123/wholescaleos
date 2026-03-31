@@ -555,11 +555,12 @@ export function Layout() {
 
                           {badge > 0 && sidebarOpen && (
                             <span
-                              className="text-[9px] font-black text-white px-1.5 py-0.5 rounded-lg min-w-[20px] text-center shadow-lg animate-in zoom-in-50 duration-500"
+                              className="text-[9px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center shadow-lg animate-in zoom-in-50 duration-500"
                               style={{
                                 background: label === 'Tasks' ? 'var(--t-warning)' :
                                             label === 'Team Chat' ? 'var(--t-primary)' :
                                             'var(--t-success)',
+                                color: 'var(--t-on-primary)'
                               }}
                             >
                               {badge}

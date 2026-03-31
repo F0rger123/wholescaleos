@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { notificationsService } from './supabase-service';
 
 import { ALL_GATEWAY_DOMAINS } from './sms-gateways';
+import { analyzeSMSConversation } from './sms-analysis-service';
 
 
 // Gmail API query — use broad carrier domain matching
@@ -93,11 +94,14 @@ async function sendGmail(accessToken: string, to: string, body: string) {
 }
 
 // ── AI Auto-reply generation (calls Gemini API directly) ──────────────────
-async function generateAutoReply(_incomingMessage: string, _senderPhone: string): Promise<string> {
+async function generateAutoReply(incomingMessage: string): Promise<string> {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+
   let fallback = "I'm sorry, I'm currently with a client or away from my desk. I'll get back to you as soon as possible!";
+  
+  // 1. Get fallback message from preferences
   try {
-    const store = useStore.getState();
-    const userId = store.currentUser?.id;
     if (userId && isSupabaseConfigured && supabase) {
       const { data } = await supabase.from('agent_preferences').select('sms_auto_reply_message').eq('user_id', userId).maybeSingle();
       if (data?.sms_auto_reply_message) fallback = data.sms_auto_reply_message;
@@ -108,6 +112,51 @@ async function generateAutoReply(_incomingMessage: string, _senderPhone: string)
   } catch (err) {
     console.error('[SMS Auto-Reply] Failed to load custom message:', err);
   }
+
+  // 2. Simple bot loop prevention: check if message looks like an auto-reply
+  const lowerMsg = incomingMessage.toLowerCase();
+  if (
+    lowerMsg.includes("away from my desk") || 
+    lowerMsg.includes("auto-reply") || 
+    lowerMsg.includes("automated message") ||
+    lowerMsg.includes("out of the office")
+  ) {
+    console.log('[SMS Auto-Reply] Potential bot loop detected, skipping.');
+    return ""; // Empty string = don't send
+  }
+
+  // 3. AI Analysis & Smart Response Generation
+  try {
+    // We only pass the latest message for the background auto-reply to keep it fast
+    const analysis = await analyzeSMSConversation([{ role: 'user', content: incomingMessage }]);
+    
+    if (analysis) {
+      const { intent, suggestedReplies, summary } = analysis;
+      console.log(`[SMS Auto-Reply] Detected intent: ${intent} for message: "${summary}"`);
+
+      // Handle specific intents
+      if (intent === 'stop') {
+        // Log that we received a stop request
+        return "Understood. You have been unsubscribed and I will no longer contact you from this number. Have a great day!";
+      }
+
+      if (intent === 'scheduling' && suggestedReplies?.[0]) {
+        return suggestedReplies[0];
+      }
+
+      if (intent === 'interest' && suggestedReplies?.[0]) {
+        return suggestedReplies[0];
+      }
+
+      // If we have suggested replies, use the first one as it's typically the "best" default
+      if (suggestedReplies && suggestedReplies.length > 0) {
+        return suggestedReplies[0];
+      }
+    }
+  } catch (err) {
+    console.error('[SMS Auto-Reply] AI generation failed, falling back:', err);
+  }
+
   return fallback;
 }
 
@@ -152,25 +201,33 @@ function decodeGmailBody(data: string): string {
 function extractTextContent(payload: any): string {
   if (!payload) return '';
   
+  let rawContent = '';
+
   // 1. Direct body data
   if (payload.mimeType === 'text/plain' && payload.body?.data) {
-    return decodeGmailBody(payload.body.data);
+    rawContent = decodeGmailBody(payload.body.data);
   }
   
-  // 2. Recursive search in parts
-  if (payload.parts && Array.isArray(payload.parts)) {
+  // 2. Recursive search in parts (if not found yet)
+  if (!rawContent.trim() && payload.parts && Array.isArray(payload.parts)) {
     for (const part of payload.parts) {
       const text = extractTextContent(part);
-      if (text.trim()) return text;
+      if (text.trim()) {
+        rawContent = text;
+        break;
+      }
     }
   }
   
   // 3. Last resort: check if there's any data at the top level body
-  if (payload.body?.data) {
-    return decodeGmailBody(payload.body.data);
+  if (!rawContent.trim() && payload.body?.data) {
+    rawContent = decodeGmailBody(payload.body.data);
   }
-  
-  return '';
+
+  // ── ID Prefix Removal Logic ──
+  // Carriers like Verizon/T-Mobile sometimes prefix SMS via Gmail with "/ id:1234 "
+  // We strip this for a cleaner UI experience.
+  return rawContent.replace(/^\/\s*id:\d+\s*/i, '').trim();
 }
 
 // ── Determine the gateway email to reply-to from the From header ───────────
@@ -456,7 +513,7 @@ export async function pollSMSMessages() {
             lastAutoReplyTime.set(phoneNumber, now);
 
             // Generate AI response based on message content
-            const autoReplyText = await generateAutoReply(content, phoneNumber);
+            const autoReplyText = await generateAutoReply(content);
 
             await sendGmail(accessToken, replyGateway, autoReplyText);
 

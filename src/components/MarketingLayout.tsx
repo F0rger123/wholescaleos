@@ -162,7 +162,7 @@ export const MarketingLayout: React.FC = () => {
                   to="/login?signup=true" 
                   className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-black uppercase tracking-[0.2em] transition-all hover:shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 flex items-center gap-2 hover-glow hover-lift"
                 >
-                  Join the Empire <ArrowRight size={16} />
+                  Sign Up <ArrowRight size={16} />
                 </Link>
               </>
             )}
@@ -262,7 +262,7 @@ export const MarketingLayout: React.FC = () => {
                       className="block w-full py-4 rounded-xl bg-indigo-600 text-center font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition-all hover:scale-[1.02]"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      Get Started
+                      Sign Up
                     </Link>
                   </motion.div>
                 )}

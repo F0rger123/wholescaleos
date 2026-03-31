@@ -16,6 +16,11 @@ export function TeamChatPreview() {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  const stripSmsPrefix = (text: string) => {
+    if (!text) return text;
+    return text.replace(/\/ id:\d+/g, '').trim();
+  };
+
   useEffect(() => {
     async function fetchRecentChat() {
       if (!isSupabaseConfigured || !supabase) {
@@ -64,7 +69,7 @@ export function TeamChatPreview() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-bold text-[var(--t-text)] truncate">{m.sender_name}</p>
-                  <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{m.content}</p>
+                  <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{stripSmsPrefix(m.content)}</p>
                 </div>
               </div>
             ))}

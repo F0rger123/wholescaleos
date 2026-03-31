@@ -72,7 +72,7 @@ export default function Pricing() {
         '1 team member',
         'Standard Support'
       ],
-      cta: 'Get Started',
+      cta: 'Sign Up',
       popular: false,
       color: 'gray'
     },
@@ -88,7 +88,7 @@ export default function Pricing() {
         'Email Templates',
         'Lead Scoring Engine'
       ],
-      cta: 'Start Solo Trial',
+      cta: 'Sign Up Solo',
       popular: false,
       color: 'blue'
     },
@@ -104,7 +104,7 @@ export default function Pricing() {
         'API Access',
         'Priority Support'
       ],
-      cta: 'Go Pro Now',
+      cta: 'Sign Up Pro',
       popular: true,
       color: 'indigo'
     },
@@ -120,7 +120,7 @@ export default function Pricing() {
         'White Labeling (Partial)',
         'Dedicated Account Manager'
       ],
-      cta: 'Scale Your Team',
+      cta: 'Sign Up Team',
       popular: false,
       color: 'purple'
     },
@@ -136,7 +136,7 @@ export default function Pricing() {
         'API Priority & SLA',
         'Custom Training & Onboarding'
       ],
-      cta: 'Go Enterprise',
+      cta: 'Sign Up Agency',
       popular: false,
       color: 'green',
       detailedFeatures: [
@@ -402,7 +402,7 @@ export default function Pricing() {
               Talk to an Expert
             </Link>
             <Link to="/login?signup=true" className="px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all hover:scale-105">
-              Get Started Free
+              Sign Up Free
             </Link>
           </div>
         </div>

@@ -230,40 +230,35 @@
 
 /* ===== MOONLIGHT ===== */
 [data-theme="moon"] {
-  --t-primary: #ffffff;
-  --t-primary-dim: rgba(255, 255, 255, 0.15);
-  --t-primary-text: #ffffff;
-  --t-on-primary: #000000;
-  --t-text-on-primary: #000000;
-  --t-secondary: #9ca3af;
-  --t-accent: #ffffff;
-  --t-bg: #000000;
-  --t-background: var(--t-bg);
-  --t-surface: #080808;
-  --t-surface-hover: #111111;
-  --t-surface-active: #181818;
-  --t-text: #ffffff;
-  --t-text-secondary: #9ca3af;
-  --t-text-muted: #6b7280;
-  --t-border: rgba(255, 255, 255, 0.1);
+  --t-background: #020617; /* Deep Slate 950 */
+  --t-surface: #0f172a;    /* Slate 900 */
+  --t-surface-hover: #1e293b;
+  --t-surface-active: #334155;
+  --t-primary: #818cf8;    /* Indigo 400 — High contrast vs dark */
+  --t-primary-hover: #6366f1;
+  --t-on-primary: #ffffff;
+  --t-text: #f8fafc;       /* Slate 50 */
+  --t-text-secondary: #94a3b8;
+  --t-text-muted: #64748b;
+  --t-border: #1e293b;
   --t-border-light: rgba(255, 255, 255, 0.05);
-  --t-success: #3b82f6;
-  --t-warning: #a855f7;
-  --t-error: #ff4444;
-  --t-sidebar-bg: #000000;
-  --t-sidebar-border: rgba(255, 255, 255, 0.05);
-  --t-sidebar-hover: #080808;
+  --t-success: #10b981;
+  --t-warning: #f59e0b;
+  --t-error: #ef4444;
+  --t-sidebar-bg: #020617;
+  --t-sidebar-border: #1e293b;
+  --t-sidebar-hover: #0f172a;
 }
 
 [data-theme="moon"] .astral-glass {
-  background: #080808;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+  background: var(--t-surface);
+  border: 1px solid var(--t-border-light);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="moon"] .hover-glow:hover {
-  box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.15);
+  border-color: var(--t-primary);
 }
 
 .moon-accent-gradient {

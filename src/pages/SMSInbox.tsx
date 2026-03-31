@@ -106,6 +106,12 @@ export default function SMSInbox() {
     return raw.length === 11 && raw.startsWith('1') ? raw.slice(1) : raw;
   };
 
+  const stripSmsPrefix = (text: string) => {
+    if (!text) return text;
+    // Specifically removing the "/ id:XXXX" footprint from certain SMS gateways
+    return text.replace(/\/ id:\d+/g, '').trim();
+  };
+
   // Sync carrierMap from leads state on load
   useEffect(() => {
     const mapFromLeads: Record<string, string> = { ...carrierMap };
@@ -630,7 +636,7 @@ export default function SMSInbox() {
                   </span>
                 </div>
                 <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'font-medium' : ''}`} style={{ color: conv.unreadCount > 0 ? 'var(--t-text)' : 'var(--t-text-muted)' }}>
-                  {conv.lastMessage}
+                  {stripSmsPrefix(conv.lastMessage)}
                 </p>
               </div>
               {conv.unreadCount > 0 && (
@@ -1108,7 +1114,7 @@ export default function SMSInbox() {
                         : { backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
                       }
                       >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{stripSmsPrefix(msg.content)}</p>
                         <div className={`flex items-center gap-1 mt-1 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
                           <span className="text-[9px] opacity-60">
                             {format(new Date(msg.created_at), 'h:mm a')}

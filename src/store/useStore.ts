@@ -293,6 +293,7 @@ export interface TeamConfig {
   inviteCode: string;
   createdAt: string;
   createdBy: string;
+  maxSeats: number;
 }
 
 export interface CoverageArea {
@@ -1393,7 +1394,16 @@ const defaultTeamConfig: TeamConfig = {
   inviteCode: 'WS-000000',
   createdAt: '2024-01-01T00:00:00Z',
   createdBy: defaultUser.id,
+  maxSeats: 5,
 };
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  themeId: string;
+  customColors: Record<string, string>;
+  createdAt: string;
+}
 
 // â”€â”€â”€ Store â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -1440,6 +1450,7 @@ interface AppState {
   removeTeamMember: (id: string) => void;
   regenerateInviteCode: () => void;
   updateTeamConfig: (updates: Partial<TeamConfig>) => void;
+  transferTeamOwnership: (memberId: string) => void;
 
   // Tasks
   tasks: Task[];
@@ -1535,6 +1546,10 @@ interface AppState {
   setCustomColor: (property: string, color: string) => void;
   resetCustomColors: () => void;
   getCurrentColors: () => Record<string, string>;
+  themePresets: ThemePreset[];
+  saveThemePreset: (name: string) => void;
+  deleteThemePreset: (id: string) => void;
+  applyThemePreset: (preset: ThemePreset) => void;
 
   // Notifications
   notifications: AppNotification[];
@@ -1731,8 +1746,8 @@ export const useStore = create<AppState>((set, get) => ({
 
   // —— AI State ——————————————————————————————————————————————
   aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
-  aiModel: 'gemini-2.0-flash',
-  aiPersonality: 'Professional, efficient, and proactive real estate assistant.',
+  aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'gemini-2.0-flash',
+  aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
   aiUsage: (() => {
     try {
       if (typeof window !== 'undefined') {
@@ -3576,6 +3591,56 @@ export const useStore = create<AppState>((set, get) => ({
                                                     }
                                                   })(),
 
+                                                    themePresets: (() => {
+                                                      try {
+                                                        if (typeof window !== 'undefined') {
+                                                          return JSON.parse(localStorage.getItem('wholescale-theme-presets') || '[]');
+                                                        }
+                                                        return [];
+                                                      } catch {
+                                                        return [];
+                                                      }
+                                                    })(),
+
+                                                    saveThemePreset: (name) => {
+                                                      const { currentTheme, customColors } = get();
+                                                      const newPreset: ThemePreset = {
+                                                        id: uuidv4(),
+                                                        name,
+                                                        themeId: currentTheme,
+                                                        customColors: { ...customColors },
+                                                        createdAt: new Date().toISOString()
+                                                      };
+                                                      set((s) => {
+                                                        const next = [...s.themePresets, newPreset];
+                                                        if (typeof window !== 'undefined') {
+                                                          localStorage.setItem('wholescale-theme-presets', JSON.stringify(next));
+                                                        }
+                                                        return { themePresets: next };
+                                                      });
+                                                    },
+
+                                                    deleteThemePreset: (id) => {
+                                                      set((s) => {
+                                                        const next = s.themePresets.filter(p => p.id !== id);
+                                                        if (typeof window !== 'undefined') {
+                                                          localStorage.setItem('wholescale-theme-presets', JSON.stringify(next));
+                                                        }
+                                                        return { themePresets: next };
+                                                      });
+                                                    },
+
+                                                    applyThemePreset: (preset) => {
+                                                      const { setTheme } = get();
+                                                      // First, set custom colors in store and localStorage
+                                                      set({ customColors: { ...preset.customColors } });
+                                                      if (typeof window !== 'undefined') {
+                                                        localStorage.setItem('wholescale-custom-colors', JSON.stringify(preset.customColors));
+                                                      }
+                                                      // Then, apply the theme which will pick up the new custom colors
+                                                      setTheme(preset.themeId);
+                                                    },
+
                                                     setCustomColor: (property, color) => {
                                                       set((state) => {
                                                         const newColors = { ...state.customColors, [property]: color };
@@ -4156,8 +4221,18 @@ export const useStore = create<AppState>((set, get) => ({
     }
     set({ aiName: name });
   },
-  setAiModel: (model: string) => set({ aiModel: model }),
-  setAiPersonality: (personality: string) => set({ aiPersonality: personality }),
+  setAiModel: (model: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-ai-model', model);
+    }
+    set({ aiModel: model });
+  },
+  setAiPersonality: (personality: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-ai-personality', personality);
+    }
+    set({ aiPersonality: personality });
+  },
 
   setDashboardLayout: (layout: any[]) => {
     if (typeof window !== 'undefined') {
@@ -4168,5 +4243,13 @@ export const useStore = create<AppState>((set, get) => ({
 
   setCursorSettings: (settings: Partial<CursorSettings>) => {
     set((s: any) => ({ cursorSettings: { ...s.cursorSettings, ...settings } }));
+  },
+
+  transferTeamOwnership: (memberId: string) => {
+    const { teamConfig } = get();
+    if (teamConfig) {
+      set({ teamConfig: { ...teamConfig, createdBy: memberId } });
+      // In a real app, we would also update the database here via teamService
+    }
   },
 }));

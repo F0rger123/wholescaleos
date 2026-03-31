@@ -24,31 +24,58 @@ export function TeamAnalyticsTab() {
   const { team, leads } = useStore();
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
 
-  // KPI Calculations
-  const totalRevenue = leads.filter(l => l.status === 'closed-won').reduce((sum, l) => sum + (l.offerAmount || 0), 0);
-  const totalDeals = leads.filter(l => l.status === 'closed-won').length;
-  const avgDealValue = totalDeals > 0 ? totalRevenue / totalDeals : 0;
-  const leadConvRate = leads.length > 0 ? (totalDeals / leads.length) * 100 : 0;
+  // ── Data Filtering Logic ──────────────────────────────────────────────────
+  const now = new Date();
+  const getStartDate = () => {
+    switch (timeRange) {
+      case '7d': return subDays(now, 6);
+      case '30d': return subDays(now, 29);
+      case '90d': return subDays(now, 89);
+      case 'all': return new Date(Math.min(...leads.map(l => new Date(l.createdAt).getTime())));
+    }
+  };
 
-  // Performance Data Generation
-  const last30Days = eachDayOfInterval({
-    start: subDays(new Date(), 29),
-    end: new Date(),
+  const startDate = getStartDate();
+  const filteredLeads = timeRange === 'all' ? leads : leads.filter(l => new Date(l.createdAt) >= startDate);
+  const wonLeads = filteredLeads.filter(l => l.status === 'closed-won');
+
+  // KPI Calculations (Now filtered!)
+  const totalRevenue = wonLeads.reduce((sum, l) => sum + (l.offerAmount || 0), 0);
+  const totalDeals = wonLeads.length;
+  const avgDealValue = totalDeals > 0 ? totalRevenue / totalDeals : 0;
+  const leadConvRate = filteredLeads.length > 0 ? (totalDeals / filteredLeads.length) * 100 : 0;
+
+  // Metric Toggles
+  const [visibleMetrics, setVisibleMetrics] = useState({
+    leads: true,
+    deals: true,
+    revenue: true,
+    profit: false,
+    conversion: false
   });
 
-  const dailyPerformance = last30Days.map(date => {
+  // Performance Data Generation
+  const days = eachDayOfInterval({
+    start: startDate,
+    end: now,
+  });
+
+  const dailyPerformance = days.map(date => {
     const dayLeads = leads.filter(l => isSameDay(new Date(l.createdAt), date));
     const dayDeals = leads.filter(l => l.status === 'closed-won' && isSameDay(new Date(l.updatedAt), date));
+    const dayRevenue = dayDeals.reduce((sum, l) => sum + (l.offerAmount || 0), 0);
     return {
-      name: format(date, 'MMM dd'),
+      name: format(date, timeRange === 'all' ? 'MMM yyyy' : 'MMM dd'),
       leads: dayLeads.length,
       deals: dayDeals.length,
-      revenue: dayDeals.reduce((sum, l) => sum + (l.offerAmount || 0), 0)
+      revenue: dayRevenue,
+      conversion: dayLeads.length > 0 ? (dayDeals.length / dayLeads.length) * 100 : 0,
+      profit: dayRevenue * 0.2 // Simulated 20% profit margin as default if no data
     };
   });
 
   const memberPerformance = team.map(member => {
-    const memberLeads = leads.filter(l => l.assignedTo === member.id);
+    const memberLeads = filteredLeads.filter(l => l.assignedTo === member.id);
     const memberDeals = memberLeads.filter(l => l.status === 'closed-won');
     const memberRevenue = memberDeals.reduce((sum, l) => sum + (l.offerAmount || 0), 0);
     return {
@@ -61,12 +88,12 @@ export function TeamAnalyticsTab() {
   }).sort((a, b) => b.revenue - a.revenue);
 
   const stageDistribution = [
-    { name: 'New', value: leads.filter(l => l.status === 'new').length },
-    { name: 'Contacted', value: leads.filter(l => l.status === 'contacted').length },
-    { name: 'Qualified', value: leads.filter(l => l.status === 'qualified').length },
-    { name: 'Negotiating', value: leads.filter(l => l.status === 'negotiating').length },
-    { name: 'Won', value: leads.filter(l => l.status === 'closed-won').length },
-    { name: 'Lost', value: leads.filter(l => l.status === 'closed-lost').length },
+    { name: 'New', value: filteredLeads.filter(l => l.status === 'new').length },
+    { name: 'Contacted', value: filteredLeads.filter(l => l.status === 'contacted').length },
+    { name: 'Qualified', value: filteredLeads.filter(l => l.status === 'qualified').length },
+    { name: 'Negotiating', value: filteredLeads.filter(l => l.status === 'negotiating').length },
+    { name: 'Won', value: wonLeads.length },
+    { name: 'Lost', value: filteredLeads.filter(l => l.status === 'closed-lost').length },
   ];
 
   return (
@@ -121,13 +148,34 @@ export function TeamAnalyticsTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Revenue Performance Chart */}
         <div className="lg:col-span-2 rounded-[2.5rem] p-8 bg-[var(--t-surface)] border border-[var(--t-border)] shadow-xl space-y-8">
-           <div className="flex items-center justify-between">
+           <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                 <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Revenue & Deals Velocity</h3>
-                 <p className="text-xs text-[var(--t-text-muted)]">Daily trend across the selected period.</p>
+                 <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Performance Velocity</h3>
+                 <p className="text-xs text-[var(--t-text-muted)]">Dynamic trend analysis across the team.</p>
               </div>
-              <div className="p-3 rounded-2xl bg-[var(--t-surface-dim)]">
-                 <Activity size={20} className="text-[var(--t-primary)]" />
+              <div className="flex items-center gap-3 flex-wrap">
+                 {[
+                   { key: 'revenue', label: 'Rev', color: 'var(--t-primary)' },
+                   { key: 'profit', label: 'Profit', color: 'var(--t-success)' },
+                   { key: 'deals', label: 'Deals', color: 'var(--t-accent)' },
+                   { key: 'leads', label: 'Leads', color: 'var(--t-info)' },
+                   { key: 'conversion', label: 'Conv', color: 'var(--t-warning)' },
+                 ].map(({ key, label, color }) => (
+                   <label key={key} className="flex items-center gap-2 cursor-pointer group">
+                      <input 
+                        type="checkbox" 
+                        checked={visibleMetrics[key as keyof typeof visibleMetrics]} 
+                        onChange={() => setVisibleMetrics(v => ({ ...v, [key]: !v[key as keyof typeof v] }))}
+                        className="accent-[var(--t-primary)] scale-90"
+                      />
+                      <span className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] group-hover:text-[var(--t-text)] transition-colors" style={{ color: visibleMetrics[key as keyof typeof visibleMetrics] ? color : undefined }}>
+                        {label}
+                      </span>
+                   </label>
+                 ))}
+                 <div className="p-2 ml-2 rounded-xl bg-[var(--t-surface-dim)]">
+                    <Activity size={18} className="text-[var(--t-primary)]" />
+                 </div>
               </div>
            </div>
 
@@ -139,17 +187,34 @@ export function TeamAnalyticsTab() {
                           <stop offset="5%" stopColor="var(--t-primary)" stopOpacity={0.3}/>
                           <stop offset="95%" stopColor="var(--t-primary)" stopOpacity={0}/>
                        </linearGradient>
+                       <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--t-success)" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="var(--t-success)" stopOpacity={0}/>
+                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" vertical={false} opacity={0.1} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
-                    <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(v) => `$${v/1000}k`} />
+                    <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
                     <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
                     <Tooltip 
                       contentStyle={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
                       cursor={{ stroke: 'var(--t-primary)', strokeWidth: 1, strokeDasharray: '4 4' }}
                     />
-                    <Area yAxisId="left" type="monotone" dataKey="revenue" fill="url(#revGrad)" stroke="var(--t-primary)" strokeWidth={3} />
-                    <Bar yAxisId="right" dataKey="deals" fill="var(--t-accent)" radius={[4, 4, 0, 0]} barSize={20} />
+                    {visibleMetrics.revenue && (
+                      <Area yAxisId="left" type="monotone" dataKey="revenue" fill="url(#revGrad)" stroke="var(--t-primary)" strokeWidth={3} />
+                    )}
+                    {visibleMetrics.profit && (
+                      <Area yAxisId="left" type="monotone" dataKey="profit" fill="url(#profitGrad)" stroke="#10b981" strokeWidth={2} strokeDasharray="5 5" />
+                    )}
+                    {visibleMetrics.leads && (
+                      <Bar yAxisId="right" dataKey="leads" fill="#0ea5e9" opacity={0.4} radius={[4, 4, 0, 0]} barSize={20} />
+                    )}
+                    {visibleMetrics.deals && (
+                      <Bar yAxisId="right" dataKey="deals" fill="var(--t-accent)" radius={[4, 4, 0, 0]} barSize={20} />
+                    )}
+                    {visibleMetrics.conversion && (
+                      <Area yAxisId="right" type="monotone" dataKey="conversion" stroke="#f59e0b" strokeWidth={2} fill="transparent" />
+                    )}
                  </ComposedChart>
               </ResponsiveContainer>
            </div>
@@ -243,7 +308,7 @@ export function TeamAnalyticsTab() {
 
            <div className="h-[250px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                 <BarChart data={dailyPerformance.slice(-7)}>
+                 <BarChart data={dailyPerformance}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--t-border)" vertical={false} opacity={0.1} />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--t-text-muted)', fontSize: 10, fontWeight: 'bold' }} />
