@@ -1070,7 +1070,7 @@ function ProfileTab({ user }: { user: any }) {
                </div>
             </div>
             <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
-               Enabling this allows agents and leads to view your public profile at <span className="text-blue-500 underline">wholescaleos.pages.dev/agent/{user?.name?.toLowerCase()?.replace(/\s+/g, '-')}</span>
+               Enabling this allows agents and leads to view your public profile at <span className="text-blue-500 underline">wholescaleos.com/agent/{user?.name?.toLowerCase()?.replace(/\s+/g, '-')}</span>
             </p>
          </div>
 

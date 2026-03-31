@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { 
   dbEmailTemplate, dbEmailCampaign, fetchEmailTemplates, 
+  saveEmailTemplate, deleteEmailTemplate,
   fetchEmailCampaigns, saveEmailCampaign, deleteEmailCampaign,
   updateEmailCampaign, sendEmail
 } from '../../lib/email';
@@ -34,7 +35,7 @@ const PREDEFINED_TEMPLATES = [
             <li style="margin-bottom: 12px;">Link your Stripe account for effortless billing</li>
           </ul>
         </div>
-        <a href="https://wholescaleos.pages.dev/dashboard" style="display: block; width: 100%; padding: 16px; background: #8b5cf6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Launch Dashboard</a>
+        <a href="https://wholescaleos.com/dashboard" style="display: block; width: 100%; padding: 16px; background: #8b5cf6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Launch Dashboard</a>
         <p style="text-align: center; color: #52525b; font-size: 12px; margin-top: 40px;">© 2026 WholeScale OS. All rights reserved.</p>
       </div>
     `
@@ -55,7 +56,7 @@ const PREDEFINED_TEMPLATES = [
           <p style="font-weight: 700; margin: 0;">"The AI import saved our team 20+ hours in the first week alone."</p>
           <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0;">— Sarah Jenkins, Pro Agency User</p>
         </div>
-        <a href="https://wholescaleos.pages.dev/imports" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Explore Feature</a>
+        <a href="https://wholescaleos.com/imports" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Explore Feature</a>
       </div>
     `
   },
@@ -73,7 +74,7 @@ const PREDEFINED_TEMPLATES = [
         <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 16px; backdrop-filter: blur(10px); margin-bottom: 30px;">
           <p style="margin: 0; font-weight: 700;">Use Code: <span style="background: #ffffff; color: #4f46e5; padding: 4px 10px; border-radius: 4px;">GROWTH2024</span></p>
         </div>
-        <a href="https://wholescaleos.pages.dev/pricing" style="display: inline-block; padding: 18px 40px; background: #ffffff; color: #4f46e5; text-decoration: none; border-radius: 99px; font-weight: 900; text-transform: uppercase; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">Claim Discount</a>
+        <a href="https://wholescaleos.com/pricing" style="display: inline-block; padding: 18px 40px; background: #ffffff; color: #4f46e5; text-decoration: none; border-radius: 99px; font-weight: 900; text-transform: uppercase; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">Claim Discount</a>
       </div>
     `
   },
@@ -91,7 +92,7 @@ const PREDEFINED_TEMPLATES = [
           <p style="margin: 0; font-size: 14px; font-weight: 700;">Market Alert:</p>
           <p style="margin: 5px 0 0 0; font-size: 14px; color: #6b7280;">Inventory is currently low in your area, meaning now is a prime time to get a competitive value for your property.</p>
         </div>
-        <a href="https://wholescaleos.pages.dev/leads" style="display: block; width: 100%; padding: 16px; background: #4f46e5; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Reply to Message</a>
+        <a href="https://wholescaleos.com/leads" style="display: block; width: 100%; padding: 16px; background: #4f46e5; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Reply to Message</a>
       </div>
     `
   },
@@ -110,7 +111,7 @@ const PREDEFINED_TEMPLATES = [
           <h3 style="font-size: 20px; font-weight: 800; margin: 0 0 10px 0;">{{address}}</h3>
           <p style="color: #3b82f6; font-weight: 900; font-size: 18px; margin: 0;">Saturday 12pm - 4pm</p>
         </div>
-        <a href="https://wholescaleos.pages.dev/calendar" style="display: block; width: 100%; padding: 16px; background: #ffffff; color: #0f172a; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">RSVP Now</a>
+        <a href="https://wholescaleos.com/calendar" style="display: block; width: 100%; padding: 16px; background: #ffffff; color: #0f172a; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">RSVP Now</a>
       </div>
     `
   },
@@ -125,7 +126,7 @@ const PREDEFINED_TEMPLATES = [
         <h2 style="font-size: 28px; font-weight: 900; margin-bottom: 20px;">Your opinion matters.</h2>
         <p style="color: #64748b; line-height: 1.6; font-size: 16px;">We recently closed the deal on <strong>{{address}}</strong> and we'd love to know how your experience was working with WholeScale OS.</p>
         <div style="margin: 40px 0; font-size: 30px; letter-spacing: 10px;">⭐ ⭐ ⭐ ⭐ ⭐</div>
-        <a href="https://wholescaleos.pages.dev/settings" style="display: block; width: 100%; padding: 18px; background: #0f172a; color: #ffffff; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900; text-transform: uppercase;">Take 2-Min Survey</a>
+        <a href="https://wholescaleos.com/settings" style="display: block; width: 100%; padding: 18px; background: #0f172a; color: #ffffff; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900; text-transform: uppercase;">Take 2-Min Survey</a>
       </div>
     `
   },
@@ -142,9 +143,9 @@ const PREDEFINED_TEMPLATES = [
         <p style="color: #475569; font-size: 16px; line-height: 1.6; margin-bottom: 30px;">We believe in sharing the rewards of our growth. Join our revenue share network by bringing your contacts to the platform and earn a lifetime commission on their usage!</p>
         <div style="background: #ffffff; border-radius: 20px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 30px;">
           <p style="margin: 0; font-weight: 800; font-size: 14px; color: #64748b; text-transform: uppercase;">Your Partner Link:</p>
-          <p style="margin: 10px 0 0 0; font-family: monospace; font-size: 18px; color: #3b82f6; font-weight: bold;">wholescaleos.io/share/{{name}}</p>
+          <p style="margin: 10px 0 0 0; font-family: monospace; font-size: 18px; color: #3b82f6; font-weight: bold;">wholescaleos.com/share/{{name}}</p>
         </div>
-        <a href="https://wholescaleos.pages.dev/dashboard/billing?tab=referral" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Become a Partner</a>
+        <a href="https://wholescaleos.com/dashboard/billing?tab=revenue-share" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Become a Partner</a>
       </div>
     `
   },
@@ -168,7 +169,7 @@ const PREDEFINED_TEMPLATES = [
             <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: 800; color: #dc2626;">-12.5% ↓</p>
           </div>
         </div>
-        <a href="https://wholescaleos.pages.dev/map" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">View Local Heatmap</a>
+        <a href="https://wholescaleos.com/map" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">View Local Heatmap</a>
       </div>
     `
   },
@@ -187,7 +188,7 @@ const PREDEFINED_TEMPLATES = [
           <p style="font-size: 20px; font-weight: 900; color: #3b82f6; margin: 0 0 20px 0;">Asking: $245,000</p>
           <div style="height: 1px; background: #f1f5f9; margin: 20px 0;"></div>
           <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 30px 0;">Incredible off-market opportunity with high equity potential. Motivated seller. Needs minor cosmetic updates. ARV estimated at $380,000.</p>
-          <a href="https://wholescaleos.pages.dev/leads" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Review Full Deal Package</a>
+          <a href="https://wholescaleos.com/leads" style="display: block; width: 100%; padding: 16px; background: #3b82f6; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Review Full Deal Package</a>
         </div>
       </div>
     `
@@ -210,7 +211,6 @@ export default function AdminEmailCampaigns() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [showLibrary, setShowLibrary] = useState(false);
   const [activeTab, setActiveTab] = useState<'campaigns' | 'sent'>('campaigns');
-  
   // Create Campaign State
   const [newCampaign, setNewCampaign] = useState({
     name: '',
@@ -227,9 +227,87 @@ export default function AdminEmailCampaigns() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'draft' | 'scheduled' | 'completed'>('all');
   const [previewMode, setPreviewMode] = useState<'edit' | 'preview'>('edit');
 
+  // Audience Filtering State
+  const [filters, setFilters] = useState({
+    plan: 'all',
+    signupAfter: '',
+    lastActiveAfter: ''
+  });
+  const [recipientCount, setRecipientCount] = useState(0);
+  const [calculatingCount, setCalculatingCount] = useState(false);
+
+  // Template Management State
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    updateRecipientCount();
+  }, [filters]);
+
+  async function updateRecipientCount() {
+    if (!supabase) return;
+    setCalculatingCount(true);
+    try {
+      let query = supabase.from('profiles').select('*', { count: 'exact', head: true });
+      
+      if (filters.plan !== 'all') {
+        query = query.eq('plan', filters.plan);
+      }
+      if (filters.signupAfter) {
+        query = query.gte('created_at', filters.signupAfter);
+      }
+      if (filters.lastActiveAfter) {
+        query = query.gte('updated_at', filters.lastActiveAfter);
+      }
+
+      const { count, error } = await query;
+      if (error) throw error;
+      setRecipientCount(count || 0);
+    } catch (err) {
+      console.error('Failed to update recipient count:', err);
+    } finally {
+      setCalculatingCount(false);
+    }
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!newTemplateName || !body) {
+      toast.error('Please enter a template name and content');
+      return;
+    }
+
+    setSavingTemplate(true);
+    try {
+      const template = await saveEmailTemplate({
+        name: newTemplateName,
+        subject: subject || 'No Subject',
+        body: body
+      });
+
+      if (template) {
+        setTemplates([template, ...templates]);
+        setShowSaveTemplateModal(false);
+        setNewTemplateName('');
+        toast.success('Template saved to library');
+      }
+    } catch (err) {
+      toast.error('Failed to save template');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const deleteTemplate = async (id: string) => {
+    if (await deleteEmailTemplate(id)) {
+      setTemplates(templates.filter(t => t.id !== id));
+      toast.success('Template deleted');
+    }
+  };
 
   async function loadData() {
     setLoading(true);
@@ -348,16 +426,26 @@ export default function AdminEmailCampaigns() {
     if (!subject || !body || !supabase) return;
     setSending(true);
     try {
-      const { data: users } = await supabase
-        .from('profiles')
-        .select('email, full_name');
+      let query = supabase.from('profiles').select('email, full_name');
+      
+      if (filters.plan !== 'all') {
+        query = query.eq('plan', filters.plan);
+      }
+      if (filters.signupAfter) {
+        query = query.gte('created_at', filters.signupAfter);
+      }
+      if (filters.lastActiveAfter) {
+        query = query.gte('updated_at', filters.lastActiveAfter);
+      }
+
+      const { data: users, error } = await query;
         
-      if (!users?.length) {
+      if (error || !users?.length) {
         toast.error('No users found in segment');
         return;
       }
 
-      toast.loading('Launching quick campaign...', { id: 'quick-send' });
+      toast.loading(`Launching campaign to ${users.length} users...`, { id: 'quick-send' });
 
       let success = 0;
       for (const user of users) {
@@ -374,7 +462,7 @@ export default function AdminEmailCampaigns() {
         }
       }
 
-      toast.success(`Sent to ${success} users`, { id: 'quick-send' });
+      toast.success(`Success! Sent to ${success} users`, { id: 'quick-send' });
       setMessage(`Success! Sent to ${success} users.`);
       setSubject('');
       setBody('');
@@ -455,18 +543,73 @@ export default function AdminEmailCampaigns() {
                 />
               </div>
 
-              <div className="flex justify-between items-center pt-4">
-                <div className="flex items-center gap-2 text-xs text-[var(--t-text-muted)]">
-                  <AlertTriangle size={14} className="text-yellow-500" /> Use <code>{"{{name}}"}</code> for personalized names.
+              <div className="p-6 rounded-2xl bg-[var(--t-bg)] border border-[var(--t-border)] space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="text-[10px] font-black uppercase text-[var(--t-text-muted)] flex items-center gap-2">
+                    <Sparkles size={12} className="text-purple-500" /> Audience Selection
+                  </h4>
+                  <div className="px-3 py-1 rounded-full bg-purple-600/10 text-purple-400 text-[10px] font-black">
+                    {calculatingCount ? <Loader2 size={10} className="animate-spin" /> : `${recipientCount} Active Users`}
+                  </div>
                 </div>
-                <button 
-                  onClick={handleQuickSend}
-                  disabled={sending || !subject || !body}
-                  className="px-8 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
-                >
-                  {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-                  Launch Now
-                </button>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black uppercase text-[var(--t-text-muted)]">Plan Type</label>
+                    <select 
+                      value={filters.plan}
+                      onChange={e => setFilters({ ...filters, plan: e.target.value })}
+                      className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-[11px] outline-none transition-all text-[var(--t-text)]"
+                    >
+                      <option value="all">All Plans</option>
+                      <option value="free">Free Tier</option>
+                      <option value="pro">Pro Tier</option>
+                      <option value="team">Team Tier</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black uppercase text-[var(--t-text-muted)]">Signup Date After</label>
+                    <input 
+                      type="date"
+                      value={filters.signupAfter}
+                      onChange={e => setFilters({ ...filters, signupAfter: e.target.value })}
+                      className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-[11px] outline-none transition-all text-[var(--t-text)] [color-scheme:dark]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black uppercase text-[var(--t-text-muted)]">Last Active After</label>
+                    <input 
+                      type="date"
+                      value={filters.lastActiveAfter}
+                      onChange={e => setFilters({ ...filters, lastActiveAfter: e.target.value })}
+                      className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-lg px-3 py-2 text-[11px] outline-none transition-all text-[var(--t-text)] [color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <div className="flex items-center gap-4 text-xs text-[var(--t-text-muted)]">
+                  <span className="flex items-center gap-2">
+                    <AlertTriangle size={14} className="text-yellow-500" /> Use <code>{"{{name}}"}</code> for personalized names.
+                  </span>
+                </div>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowSaveTemplateModal(true)}
+                    className="px-6 py-3 rounded-xl border border-[var(--t-border)] text-[var(--t-text)] font-black text-sm flex items-center gap-2 hover:bg-white/5 transition-all"
+                  >
+                    <Copy size={18} /> Save as Template
+                  </button>
+                  <button 
+                    onClick={handleQuickSend}
+                    disabled={sending || !subject || !body || recipientCount === 0}
+                    className="px-8 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                  >
+                    {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                    Launch Now
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -598,6 +741,42 @@ export default function AdminEmailCampaigns() {
         </div>
       </div>
 
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2.5rem] shadow-2xl p-8">
+            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)] mb-6 truncate max-w-[300px]">Save Template</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] mb-2">Template Name</label>
+                <input 
+                  type="text"
+                  value={newTemplateName}
+                  onChange={e => setNewTemplateName(e.target.value)}
+                  placeholder="e.g., Monthly Newsletter"
+                  className="w-full px-4 py-3 rounded-2xl border border-[var(--t-border)] bg-[var(--t-bg)] text-[var(--t-text)] outline-none focus:border-purple-500 transition-all"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-8">
+              <button 
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="flex-1 py-4 rounded-2xl border border-[var(--t-border)] text-[var(--t-text-muted)] font-bold hover:bg-white/5 transition-all text-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleSaveTemplate}
+                disabled={savingTemplate || !newTemplateName}
+                className="flex-[2] py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+              >
+                {savingTemplate ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                Save to Library
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showNewModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2.5rem] shadow-2xl p-8">
@@ -686,37 +865,43 @@ export default function AdminEmailCampaigns() {
 
              <div className="flex-1 overflow-y-auto pr-4 space-y-6 scrollbar-hide">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                   {PREDEFINED_TEMPLATES.map((tpl) => (
-                     <div key={tpl.id} className="group relative rounded-3xl border border-[var(--t-border)] bg-[var(--t-surface-dim)] overflow-hidden hover:border-purple-500/50 transition-all flex flex-col">
-                        <div className="aspect-[4/5] bg-white overflow-hidden relative">
-                           <iframe 
-                             srcDoc={tpl.html} 
-                             className="w-full h-full border-none pointer-events-none scale-[0.4] origin-top"
-                             title={tpl.name}
-                           />
-                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                              <button 
-                                onClick={() => applyLibraryTemplate(tpl)}
-                                className="px-6 py-2.5 rounded-full bg-white text-black font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95"
-                              >
-                                Apply Design
-                              </button>
-                           </div>
+                    {[...PREDEFINED_TEMPLATES, ...templates].map((tpl) => {
+                      const isCustom = 'user_id' in tpl;
+                      return (
+                        <div key={tpl.id} className={`group relative rounded-3xl border border-[var(--t-border)] bg-[var(--t-surface-dim)] overflow-hidden hover:border-purple-500/50 transition-all flex flex-col ${isCustom ? 'border-purple-500/20' : ''}`}>
+                            <div className="aspect-[4/5] bg-white overflow-hidden relative">
+                              <iframe 
+                                srcDoc={'body' in tpl ? tpl.body : tpl.html} 
+                                className="w-full h-full border-none pointer-events-none scale-[0.4] origin-top"
+                                title={tpl.name}
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                  <button 
+                                    onClick={() => 'body' in tpl ? applyLibraryTemplate({ ...tpl, html: tpl.body, category: 'Custom', description: '' }) : applyLibraryTemplate(tpl)}
+                                    className="px-6 py-2.5 rounded-full bg-white text-black font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95"
+                                  >
+                                    Apply Design
+                                  </button>
+                              </div>
+                            </div>
+                            <div className="p-5 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className={`${isCustom ? 'bg-indigo-500/10 text-indigo-400' : 'bg-purple-500/10 text-purple-500'} text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full`}>
+                                  {isCustom ? 'Custom' : (tpl as any).category}
+                                </span>
+                                <div className="flex gap-1">
+                                  {isCustom && (
+                                    <button onClick={() => deleteTemplate(tpl.id)} className="p-1.5 rounded-lg bg-[var(--t-surface)] text-red-400 hover:bg-red-500/10 transition-colors"><Trash2 size={14} /></button>
+                                  )}
+                                  <button onClick={() => 'body' in tpl ? applyLibraryTemplate({ ...tpl, html: tpl.body, category: 'Custom', description: '' }) : applyLibraryTemplate(tpl)} className="p-1.5 rounded-lg bg-[var(--t-surface)] text-[var(--t-text-muted)] hover:text-purple-500"><Copy size={14} /></button>
+                                </div>
+                              </div>
+                              <h4 className="font-bold text-[var(--t-text)]">{tpl.name}</h4>
+                              <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-2 italic">{'description' in tpl ? tpl.description : 'Custom user-saved template'}</p>
+                            </div>
                         </div>
-                        <div className="p-5 space-y-2">
-                           <div className="flex items-center justify-between">
-                             <span className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">
-                               {tpl.category}
-                             </span>
-                             <div className="flex gap-1">
-                               <button onClick={() => applyLibraryTemplate(tpl)} className="p-1.5 rounded-lg bg-[var(--t-surface)] text-[var(--t-text-muted)] hover:text-purple-500"><Copy size={14} /></button>
-                             </div>
-                           </div>
-                           <h4 className="font-bold text-[var(--t-text)]">{tpl.name}</h4>
-                           <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-2 italic">{tpl.description}</p>
-                        </div>
-                     </div>
-                   ))}
+                      );
+                    })}
                 </div>
              </div>
           </div>

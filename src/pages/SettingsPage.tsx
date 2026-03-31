@@ -894,7 +894,7 @@ function ProfileTab() {
   };
 
   const nameSlug = currentUser?.name.toLowerCase().replace(/\s+/g, '-') || 'agent';
-  const publicUrl = `https://wholescaleos.pages.dev/agent/${nameSlug}`;
+  const publicUrl = `https://wholescaleos.com/agent/${nameSlug}`;
 
   return (
     <div className="space-y-6">

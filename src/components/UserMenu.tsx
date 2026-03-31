@@ -4,10 +4,20 @@ import { useStore } from '../store/useStore';
 import { LogOut, Settings, ChevronDown, User, Home, Globe, CreditCard, Users } from 'lucide-react';
 
 
-export function UserMenu() {
+interface UserMenuProps {
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function UserMenu({ onOpenChange }: UserMenuProps) {
   const { currentUser } = useStore();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+
+  const toggleOpen = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    onOpenChange?.(next);
+  };
 
   if (!currentUser) return null;
 
@@ -24,7 +34,7 @@ export function UserMenu() {
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         className="flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-300 hover-lift astral-glass border border-white/10 group"
       >
         <div
@@ -44,7 +54,10 @@ export function UserMenu() {
         <>
           <div
             className="fixed inset-0 z-[2001]"
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false);
+              onOpenChange?.(false);
+            }}
           />
           <div
             className="absolute right-0 mt-4 w-64 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[9999] border border-white/10 overflow-hidden astral-glass backdrop-blur-3xl p-1 animate-astral-fade-up"
@@ -65,6 +78,7 @@ export function UserMenu() {
                 onClick={() => {
                   navigate('/');
                   setIsOpen(false);
+                  onOpenChange?.(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{ color: 'var(--t-text-secondary)' }}
@@ -85,6 +99,7 @@ export function UserMenu() {
                 onClick={() => {
                   navigate('/settings');
                   setIsOpen(false);
+                  onOpenChange?.(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
@@ -107,6 +122,7 @@ export function UserMenu() {
                 onClick={() => {
                   navigate('/dashboard/billing');
                   setIsOpen(false);
+                  onOpenChange?.(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
@@ -129,6 +145,7 @@ export function UserMenu() {
                 onClick={() => {
                   navigate('/dashboard/billing?tab=referral');
                   setIsOpen(false);
+                  onOpenChange?.(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
@@ -151,6 +168,7 @@ export function UserMenu() {
                 onClick={() => {
                   navigate('/dashboard/billing?tab=profile');
                   setIsOpen(false);
+                  onOpenChange?.(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
@@ -175,6 +193,7 @@ export function UserMenu() {
                 onClick={() => {
                   window.open('/', '_self');
                   setIsOpen(false);
+                  onOpenChange?.(false);
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-[10px] uppercase tracking-wider font-bold rounded-lg transition-colors"
                 style={{ color: 'var(--t-text-muted)' }}
@@ -197,6 +216,7 @@ export function UserMenu() {
                 onClick={async () => {
                   await useStore.getState().logout();
                   setIsOpen(false);
+                  onOpenChange?.(false);
                   navigate('/login');
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"

@@ -506,13 +506,13 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       
       if (provider === 'gemini') {
         apiKey = localStorage.getItem('user_gemini_api_key') || '';
-        if (!model) model = 'gemini-1.5-flash';
+        if (!model) model = 'gemini-2.0-flash';
       } else if (provider === 'openai') {
         apiKey = localStorage.getItem('user_openai_api_key') || '';
         if (!model) model = 'gpt-4o';
       } else if (provider === 'anthropic') {
         apiKey = localStorage.getItem('user_anthropic_api_key') || '';
-        if (!model) model = 'claude-3-5-sonnet';
+        if (!model) model = 'claude-3-5-sonnet-latest';
       }
     }
   }
@@ -659,7 +659,7 @@ Time: ${context.currentTime || new Date().toISOString()}`;
     let textData = '';
 
     if (provider === 'gemini') {
-      const apiVersion = (model.includes('2.0') || model.includes('2.5') || model.includes('3.') || model.includes('exp')) ? 'v1beta' : 'v1';
+      const apiVersion = (model.includes('1.5') || model.includes('2.0') || model.includes('2.5') || model.includes('exp')) ? 'v1beta' : 'v1';
       const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

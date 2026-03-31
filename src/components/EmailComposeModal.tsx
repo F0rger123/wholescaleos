@@ -335,7 +335,7 @@ export default function EmailComposeModal({
                     <div className="flex gap-2">
                       <button 
                         onClick={handlePreviewPDF}
-                        className="p-2 hover:bg-[var(--t-primary)] hover:text-white text-[var(--t-primary)] rounded-lg transition-all flex items-center gap-2"
+                        className="p-2 hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] text-[var(--t-primary)] rounded-lg transition-all flex items-center gap-2"
                         title="Preview PDF"
                       >
                         <Eye size={16} />
@@ -434,7 +434,7 @@ export default function EmailComposeModal({
               <button 
                 onClick={handleSend}
                 disabled={isSending}
-                className="flex items-center gap-2 px-8 py-3 bg-[var(--t-success)] hover:bg-[var(--t-success-hover)] disabled:opacity-50 text-white rounded-xl font-bold shadow-lg shadow-[var(--t-success-dim)] transition-all hover:scale-[1.05] active:scale-[0.95]"
+                className="flex items-center gap-2 px-8 py-3 bg-[var(--t-success)] hover:bg-[var(--t-success-hover)] disabled:opacity-50 text-[var(--t-on-success)] rounded-xl font-bold shadow-lg shadow-[var(--t-success-dim)] transition-all hover:scale-[1.05] active:scale-[0.95]"
               >
                 {isSending ? (
                   <>
@@ -452,7 +452,7 @@ export default function EmailComposeModal({
               <button 
                 onClick={() => setShowConfirm(true)}
                 disabled={isSending}
-                className="flex items-center gap-2 px-6 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] disabled:opacity-50 text-white rounded-xl font-bold shadow-lg shadow-[var(--t-primary-dim)] transition-all"
+                className="flex items-center gap-2 px-6 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] disabled:opacity-50 text-[var(--t-on-primary)] rounded-xl font-bold shadow-lg shadow-[var(--t-primary-dim)] transition-all"
               >
                 <Eye size={18} />
                 Preview & Confirm

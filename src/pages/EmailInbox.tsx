@@ -152,7 +152,7 @@ export default function EmailInbox() {
         <div className="p-4 mb-2">
           <button 
             onClick={() => setIsComposeOpen(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-white rounded-xl font-bold shadow-lg shadow-[var(--t-primary-dim)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold shadow-lg shadow-[var(--t-primary-dim)] transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             <Plus size={18} />
             Compose
@@ -174,7 +174,7 @@ export default function EmailInbox() {
 
         <div className="p-4 border-t border-[var(--t-border)]">
           <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-colors cursor-pointer group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--t-primary)] to-[var(--t-primary-dim)] flex items-center justify-center text-white text-xs font-bold">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--t-primary)] to-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-on-primary)] text-xs font-bold">
               {currentUser?.name?.[0] || 'U'}
             </div>
             <div className="flex-1 min-w-0">
@@ -327,12 +327,12 @@ function SidebarItem({ active, icon, label, onClick, badge }: { active: boolean,
   return (
     <button 
       onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${active ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] hover:text-[var(--t-text)]'}`}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group ${active ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] shadow-md' : 'text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] hover:text-[var(--t-text)]'}`}
     >
-      <span className={active ? 'text-white' : 'text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)] transition-colors'}>{icon}</span>
+      <span className={active ? 'text-[var(--t-on-primary)]' : 'text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)] transition-colors'}>{icon}</span>
       <span className="flex-1 text-sm font-medium text-left">{label}</span>
       {badge && (
-        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-[var(--t-primary-dim)] text-[var(--t-primary)]'}`}>
+        <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold ${active ? 'bg-[var(--t-on-primary)]/20 text-[var(--t-on-primary)]' : 'bg-[var(--t-primary-dim)] text-[var(--t-primary)]'}`}>
           {badge}
         </span>
       )}
@@ -571,7 +571,7 @@ function TemplateModal({ template, onClose, onSave }: { template: dbEmailTemplat
           <button 
             onClick={handleSave} 
             disabled={isSaving || !name}
-            className="flex items-center gap-2 px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-white rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-50"
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
             Save Template
@@ -767,7 +767,7 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
               <button 
                 onClick={() => setStep(s => s + 1)}
                 disabled={(step === 1 && (!name || !selectedTemplate)) || (step === 2 && selectedRecipientIds.length === 0)}
-                className="px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-white rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-30"
+                className="px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-30"
               >
                 Continue
               </button>
@@ -775,7 +775,7 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
               <button 
                 onClick={handleCreate}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-white rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all"
+                className="flex items-center gap-2 px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all"
               >
                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 Launch Campaign
@@ -868,7 +868,7 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
              <button 
                onClick={handleSendReply}
                disabled={!replyText.trim() || isSending}
-               className="flex items-center gap-2 px-5 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-white rounded-xl font-bold text-xs shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-50"
+               className="flex items-center gap-2 px-5 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-xs shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-50"
              >
                {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                Send Reply

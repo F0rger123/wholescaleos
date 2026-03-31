@@ -32,7 +32,7 @@ export function BulkEmailModal({ isOpen, onClose, selectedLeads }: BulkEmailModa
 
       try {
         // Simple 1x1 tracking pixel mock
-        const trackingPixel = `<img src="https://wholescaleos.pages.dev/api/track/open?leadId=${lead.id}&campaign=bulk-${Date.now()}" width="1" height="1" style="display:none;" />`;
+        const trackingPixel = `<img src="https://wholescaleos.com/api/track/open?leadId=${lead.id}&campaign=bulk-${Date.now()}" width="1" height="1" style="display:none;" />`;
         const fullBody = body + '\n\n' + trackingPixel;
 
         await sendEmail({

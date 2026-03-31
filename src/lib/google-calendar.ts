@@ -38,7 +38,7 @@ export class GoogleCalendarService {
 
   getAuthUrl(): string {
     const clientId = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
-    const redirectUri = "https://wholescaleos.pages.dev/auth/callback";
+    const redirectUri = "https://wholescaleos.com/auth/callback";
     
     const params = {
       client_id: clientId,
@@ -138,7 +138,7 @@ export class GoogleCalendarService {
           code: code,
           client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
           client_secret: "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",
-          redirect_uri: "https://wholescaleos.pages.dev/auth/callback",
+          redirect_uri: "https://wholescaleos.com/auth/callback",
           grant_type: 'authorization_code',
         }),
       });

@@ -292,7 +292,7 @@ export default function Dashboard() {
     <DashboardErrorBoundary>
       <div className="space-y-8 p-6 lg:p-12 min-h-screen bg-[var(--t-bg)] text-[var(--t-text)]">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav relative z-[300]">
+        <div className="flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav relative z-[10]">
           <div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic uppercase" style={{ color: 'var(--t-text)' }}>Dashboard</h1>
             <p className="text-[#6d758c] text-sm font-black uppercase tracking-[0.2em] mt-2 opacity-80 italic">Real-time Performance Metrics</p>
@@ -306,7 +306,7 @@ export default function Dashboard() {
                 <LayoutGrid size={16} /> Presets <ChevronDown size={14} className={`transition-transform ${showPresets ? 'rotate-180' : ''}`} />
               </button>
               {showPresets && (
-                <div className="absolute right-0 mt-3 w-64 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl shadow-2xl z-[500] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 mt-3 w-64 bg-[var(--t-surface)] border border-[var(--t-border-subtle)] rounded-2xl shadow-2xl z-[150] overflow-hidden backdrop-blur-3xl animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200">
                   {Object.entries(PRESETS).map(([key, preset]) => (
                     <button key={key} onClick={() => { setDashboardLayout(preset.layout); setShowPresets(false); }}
                       className={`w-full flex items-center gap-4 px-6 py-4 text-xs font-black uppercase tracking-widest transition-colors text-left ${

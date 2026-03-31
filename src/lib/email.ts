@@ -101,13 +101,13 @@ export interface dbEmailCampaign {
 
 const BRAND = {
   name: 'WholeScale OS',
-  color: '#3b82f6',
-  colorDark: '#1e40af',
-  bgDark: '#0f172a',
-  bgCard: '#1e293b',
+  color: '#6366f1',
+  colorDark: '#4f46e5',
+  bgDark: '#060e20',
+  bgCard: '#0f172a',
   textLight: '#94a3b8',
   textWhite: '#f8fafc',
-  logo: '🏗️',
+  logo: 'https://wholescaleos.com/logo.png', // Assuming logo.png after deployment
   year: new Date().getFullYear(),
 };
 
@@ -149,18 +149,20 @@ function emailLayout(body: string, preheader?: string): string {
           <!-- Logo Header -->
           <tr>
             <td align="center" style="padding-bottom: 32px;">
-              <table cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="background: linear-gradient(135deg, ${BRAND.color}, ${BRAND.colorDark}); border-radius: 16px; padding: 14px 16px; vertical-align: middle;">
-                    <span style="font-size: 24px; line-height: 1;">${BRAND.logo}</span>
-                  </td>
-                  <td style="padding-left: 14px; vertical-align: middle;">
-                    <span style="font-size: 22px; font-weight: 700; color: ${BRAND.textWhite}; letter-spacing: -0.5px;">WholeScale</span>
-                    <br/>
-                    <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: ${BRAND.color}; font-weight: 600;">OS</span>
-                  </td>
-                </tr>
-              </table>
+              <a href="https://wholescaleos.com" style="text-decoration: none;">
+                <table cellpadding="0" cellspacing="0" border="0" style="display: inline-block;">
+                  <tr>
+                    <td style="vertical-align: middle;">
+                      <img src="${BRAND.logo}" alt="${BRAND.name} Logo" width="48" height="48" style="display: block; border-radius: 12px; border: 0;" />
+                    </td>
+                    <td style="padding-left: 14px; vertical-align: middle; text-align: left;">
+                      <span style="font-size: 22px; font-weight: 900; color: ${BRAND.textWhite}; letter-spacing: -1px; font-style: italic; text-transform: uppercase;">WholeScale</span>
+                      <br/>
+                      <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 4px; color: ${BRAND.color}; font-weight: 900;">OS</span>
+                    </td>
+                  </tr>
+                </table>
+              </a>
             </td>
           </tr>
           

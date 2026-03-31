@@ -61,7 +61,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 setGeminiKey(conn.refresh_token || '');
                 // Only set model if it's the active provider
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
-                  setModel(conn.access_token || 'gemini-2.5-flash-lite');
+                  setModel(conn.access_token || 'gemini-2.0-flash');
                 }
               } else if (conn.provider === 'openai') {
                 setOpenaiKey(conn.refresh_token || '');
@@ -146,7 +146,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
     try {
       if (provider === 'gemini') {
-        const apiVersion = (model.includes('2.0') || model.includes('exp')) ? 'v1beta' : 'v1';
+        const apiVersion = (model.includes('1.5') || model.includes('2.0') || model.includes('exp')) ? 'v1beta' : 'v1';
         const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${key}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -287,9 +287,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             key={p.id}
             onClick={() => {
               setProvider(p.id as any);
-              if (p.id === 'gemini') setModel('gemini-2.5-flash-lite');
+              if (p.id === 'gemini') setModel('gemini-2.0-flash');
               else if (p.id === 'openai') setModel('gpt-4o');
-              else if (p.id === 'anthropic') setModel('claude-3-5-sonnet');
+              else if (p.id === 'anthropic') setModel('claude-3-5-sonnet-latest');
               setTestResult(null);
             }}
             className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
@@ -339,10 +339,10 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred {provider.charAt(0).toUpperCase() + provider.slice(1)} Model</label>
           <div className="grid grid-cols-1 gap-3">
             {provider === 'gemini' && [
-              { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite', desc: 'Higher daily limits, best for continuous testing.' },
-              { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast performance, but very low daily limits (20 RPD).' },
-              { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Powerful advanced reasoning model.' },
-              { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', desc: 'Balanced performance with better availability.' }
+              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Fast, state-of-the-art performance. Best for most tasks.' },
+              { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', desc: 'Optimized for speed and efficiency.' },
+              { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Reliable and fast performance.' },
+              { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Highly capable reasoning model for complex logic.' }
             ].map((m) => (
               <button
                 key={m.id}

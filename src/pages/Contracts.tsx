@@ -1082,39 +1082,49 @@ export default function Contracts() {
               </div>
             </div>
           ) : (
-            <div 
-              ref={previewRef}
-              className="w-full max-w-[8.5in] shadow-2xl rounded-sm shrink-0 transition-all doc-container relative"
-              style={{ 
-                backgroundColor: '#ffffff',
-                color: '#1f2937',
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
-                padding: '0.75in',
-                minHeight: '11in'
-              }}
-            >
+            <div className="relative w-full max-w-[8.5in] shrink-0">
               {generatingPdf && (
-                <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-50 flex flex-col items-center justify-center gap-4">
-                  <div className="p-4 bg-[var(--t-primary-dim)] rounded-full text-[var(--t-primary)] animate-pulse">
-                    <Loader2 size={32} className="animate-spin" />
+                <div className="fixed inset-0 bg-[#060e20]/80 backdrop-blur-md z-[9999] flex flex-col items-center justify-center gap-6">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/20 animate-bounce">
+                      <FileText size={40} className="text-white" />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[var(--t-surface)] border-4 border-[#060e20] flex items-center justify-center">
+                      <Loader2 size={16} className="text-[var(--t-primary)] animate-spin" />
+                    </div>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-[var(--t-text)]">Generating Document</p>
-                    <p className="text-sm text-[var(--t-text-muted)]">Preparing your PDF...</p>
+                    <h2 className="text-2xl font-black italic uppercase tracking-tighter text-white mb-2">Preparing Contract</h2>
+                    <p className="text-[var(--t-text-muted)] font-medium">Generating secure PDF document...</p>
+                  </div>
+                  <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden mt-4">
+                    <div className="h-full bg-gradient-to-right from-indigo-500 to-purple-600 w-1/3 animate-[shimmer_2s_infinite]" />
                   </div>
                 </div>
               )}
               <div 
-                ref={documentRef}
-                className="contract-content whitespace-pre-wrap"
-                style={{
-                  fontFamily: '"Times New Roman", Times, serif',
-                  lineHeight: '1.6',
-                  fontSize: '11pt',
-                  wordBreak: 'break-word'
+                ref={previewRef}
+                className="w-full shadow-2xl rounded-sm transition-all doc-container relative"
+                style={{ 
+                  backgroundColor: '#ffffff',
+                  color: '#1f2937',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.05)',
+                  padding: '0.75in',
+                  minHeight: '11in'
                 }}
               >
-                {renderTemplateContent(activeTemplate.content, selectedLead || undefined)}
+                <div 
+                  ref={documentRef}
+                  className="contract-content whitespace-pre-wrap"
+                  style={{
+                    fontFamily: '"Times New Roman", Times, serif',
+                    lineHeight: '1.6',
+                    fontSize: '11pt',
+                    wordBreak: 'break-word'
+                  }}
+                >
+                  {renderTemplateContent(activeTemplate.content, selectedLead || undefined)}
+                </div>
               </div>
             </div>
           )}

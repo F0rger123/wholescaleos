@@ -15,7 +15,7 @@ import {
   Calculator, Calendar, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
-  Trophy, Shield
+  Shield
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -80,12 +80,11 @@ export function Layout() {
         { to: '/settings', label: 'Settings', icon: Settings },
       ],
       Network: [
-        { to: '/dashboard/billing?tab=referral', label: 'Revenue Share', icon: Trophy },
+        // Consolidated into Billing Profile
       ],
       Team: [
         { to: '/team', label: 'Team Dashboard', icon: UserCog },
-        { to: '/team-analytics', label: 'Team Analytics', icon: Trophy },
-        { to: '/team-calendar', label: 'Team Calendar', icon: Calendar },
+        { to: '/team', label: 'Team Calendar', icon: Calendar },
       ],
     };
 
@@ -93,7 +92,15 @@ export function Layout() {
       sections.Tools.push({ to: '/admin', label: 'Admin', icon: Shield });
     }
 
-    return sections;
+    // Filter out empty sections
+    const activeSections: Record<string, { to: string; label: string; icon: any }[]> = {};
+    Object.entries(sections).forEach(([name, items]) => {
+      if (items.length > 0) {
+        activeSections[name] = items;
+      }
+    });
+
+    return activeSections;
   }, [isAdmin, aiName]);
 
   const onlineCount = (team || []).filter(m => m.presenceStatus === 'online').length;
@@ -129,6 +136,7 @@ export function Layout() {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Load Preferences
@@ -332,7 +340,7 @@ export function Layout() {
     <div className="flex h-full bg-[var(--t-bg)] text-[var(--t-text)] theme-transition">
       {/* Sidebar */}
       <aside
-        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-40`}
+        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-[100]`}
       >
         {/* Logo */}
         <Link
@@ -617,7 +625,7 @@ export function Layout() {
         <header
           className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-[var(--t-sidebar-border)] animate-astral-nav"
           style={{
-            zIndex: 40,
+            zIndex: (isUserMenuOpen || showSearchResults) ? 200 : 100,
           }}
         >
           <div className="flex items-center gap-4">
@@ -870,7 +878,7 @@ export function Layout() {
             <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
             <NotificationPanel />
             <div className="w-px h-6" style={{ background: 'var(--t-border)' }} />
-            <UserMenu />
+            <UserMenu onOpenChange={setIsUserMenuOpen} />
           </div>
         </header>
 
