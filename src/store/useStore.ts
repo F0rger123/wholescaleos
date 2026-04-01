@@ -184,6 +184,7 @@ export interface Lead {
   documents: LeadDocument[];
   timeline: TimelineEntry[];
   statusHistory: StatusHistoryEntry[];
+  dealScore?: number;
 }
 
 export interface TeamMember {
@@ -1700,6 +1701,37 @@ interface AppState {
   canAddMember: () => { can: boolean; reason?: string };
 }
 
+const calculateSmartLeadScore = (lead: any): number => {
+  let score = 50; // Base score
+
+  // 1. Timeline Urgency (High Weight: +25)
+  if (lead.timelineUrgency === 'high' || lead.timeline_urgency === 'high') score += 25;
+  if (lead.timelineUrgency === 'medium' || lead.timeline_urgency === 'medium') score += 10;
+  if (lead.timelineUrgency === 'low' || lead.timeline_urgency === 'low') score -= 5;
+
+  // 2. Engagement Level (Medium Weight: +15)
+  if (lead.engagementLevel === 'high' || lead.engagement_level === 'high') score += 15;
+  if (lead.engagementLevel === 'medium' || lead.engagement_level === 'medium') score += 5;
+
+  // 3. Last Contact (Dynamic decay: -1 per day up to -20)
+  const lastContact = lead.last_contact || lead.lastContact || lead.updated_at || lead.updatedAt;
+  if (lastContact) {
+    const daysSince = Math.floor((Date.now() - new Date(lastContact).getTime()) / (1000 * 60 * 60 * 24));
+    score -= Math.min(daysSince, 20);
+  }
+
+  // 4. Property Value / Profit Potential (+10 if high value)
+  const val = Number(lead.property_value || lead.estimatedValue || 0);
+  if (val > 500000) score += 10;
+
+  // 5. Missing Data Penalty (-5 per vital missing field)
+  if (!lead.email) score -= 5;
+  if (!lead.phone) score -= 5;
+  if (!lead.address && !lead.propertyAddress) score -= 10;
+
+  return Math.min(Math.max(score, 0), 100); // Clamp between 0-100
+};
+
 export const useStore = create<AppState>((set, get) => ({
   // —— Auth ——————————————————————————————————————————————————
   isAuthenticated: false,
@@ -2092,7 +2124,8 @@ export const useStore = create<AppState>((set, get) => ({
           toStatus: h.to_status || h.toStatus,
           timestamp: h.changed_at || h.timestamp,
           changedBy: h.changed_by || h.changedBy
-        }))
+        })),
+        dealScore: calculateSmartLeadScore(l)
       }));
 
       const mappedTasks: Task[] = (tasks || []).map((t: any) => ({
@@ -2475,6 +2508,7 @@ export const useStore = create<AppState>((set, get) => ({
       documents: (lead as any).documents || [],
       timeline: [{ id: uuidv4(), type: 'note', content: 'Lead created.', timestamp: now, user: 'System' }],
       statusHistory: [{ fromStatus: null, toStatus: lead.status, timestamp: now, changedBy: 'System' }],
+      dealScore: calculateSmartLeadScore(lead),
     };
     
     set((s) => ({ leads: [...s.leads, newLead] }));
@@ -2581,7 +2615,14 @@ export const useStore = create<AppState>((set, get) => ({
     
     // 1. Immediate UI Update
     set((s) => ({
-      leads: s.leads.map((l) => (l.id === id ? { ...l, ...sanitizedUpdates, updatedAt: now } : l)),
+      leads: s.leads.map((l) => {
+        if (l.id === id) {
+          const updatedLead = { ...l, ...sanitizedUpdates, updatedAt: now };
+          updatedLead.dealScore = calculateSmartLeadScore(updatedLead);
+          return updatedLead;
+        }
+        return l;
+      }),
     }));
     
     // 2. Background Sync

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import {
-  Shield, Users, Mail, Settings, Ticket, BarChart3, Terminal
+  Shield, Users, Mail, Settings, Ticket, BarChart3, Terminal, CloudCheck, Bot
 } from 'lucide-react';
 import AdminPromos from './AdminPromos';
 import AdminUserManagement from '../components/admin/AdminUserManagement';
@@ -9,10 +9,12 @@ import AdminPlatformAnalytics from '../components/admin/AdminPlatformAnalytics';
 import AdminSystemSettings from '../components/admin/AdminSystemSettings';
 import AdminEmailCampaigns from '../components/admin/AdminEmailCampaigns';
 import AdminSystemLogs from '../components/admin/AdminSystemLogs';
+import AdminExternalServices from '../components/admin/AdminExternalServices';
+import AdminAITraining from '../components/admin/AdminAITraining';
 
 export default function AdminDashboard() {
   const { currentUser } = useStore();
-  const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'promos' | 'settings' | 'analytics' | 'logs'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'emails' | 'promos' | 'settings' | 'analytics' | 'logs' | 'external-services' | 'ai-studio'>('users');
 
   const isAdmin = currentUser?.email?.toLowerCase() === 'drummerforger@gmail.com' || 
                   currentUser?.id === '9e5845b7-b4af-4a12-9d9e-5eb2f9b88f3d';
@@ -35,6 +37,8 @@ export default function AdminDashboard() {
     { id: 'emails', label: 'Email Campaigns', icon: Mail },
     { id: 'promos', label: 'Promo Codes', icon: Ticket },
     { id: 'analytics', label: 'Platform Analytics', icon: BarChart3 },
+    { id: 'external-services', label: 'External Services', icon: CloudCheck },
+    { id: 'ai-studio', label: 'AI Training Studio', icon: Bot },
     { id: 'logs', label: 'System Logs', icon: Terminal },
     { id: 'settings', label: 'System Settings', icon: Settings },
   ] as const;
@@ -78,9 +82,14 @@ export default function AdminDashboard() {
              <AdminPromos />
           </div>
         )}
+        {/* Analytics & Settings */}
         {activeTab === 'analytics' && <AdminPlatformAnalytics />}
         {activeTab === 'logs' && <AdminSystemLogs />}
         {activeTab === 'settings' && <AdminSystemSettings />}
+        
+        {/* New Feature Tabs */}
+        {activeTab === 'external-services' && <AdminExternalServices />}
+        {activeTab === 'ai-studio' && <AdminAITraining />}
       </div>
     </div>
   );

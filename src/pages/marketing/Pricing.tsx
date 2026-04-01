@@ -12,12 +12,12 @@ export default function Pricing() {
 
   const handleCheckout = async (planName: string) => {
     if (planName === 'Free') {
-      window.location.href = '/login?signup=true&plan=Free';
+      window.location.href = '/signup?plan=Free';
       return;
     }
 
     if (!currentUser) {
-      window.location.href = `/login?signup=true&plan=${planName}`;
+      window.location.href = `/signup?plan=${planName}`;
       return;
     }
 
@@ -160,12 +160,12 @@ export default function Pricing() {
   };
 
   return (
-    <div className="pb-32 bg-[#0f172a]">
+    <div className="pb-32 bg-black">
       {/* Hero Section */}
       <section className="pt-20 pb-16 text-center px-6 relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
-        <h1 className="text-5xl md:text-7xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white via-blue-100 to-indigo-100">
-          Built for <span className="text-blue-500">Every Stage</span> of Growth.
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
+        <h1 className="text-5xl md:text-7xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-purple-100">
+          Built for <span className="text-indigo-500">Every Stage</span> of Growth.
         </h1>
         <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
           Choose the infrastructure that scales with your empire. Transparent pricing, no hidden fees.
@@ -176,9 +176,9 @@ export default function Pricing() {
           <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-gray-500'}`}>Monthly</span>
           <button
             onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'annual' : 'monthly')}
-            className="w-14 h-7 rounded-full bg-blue-600/20 border border-blue-500/30 p-1 relative transition-colors hover:border-blue-500"
+            className="w-14 h-7 rounded-full bg-indigo-600/20 border border-indigo-500/30 p-1 relative transition-colors hover:border-indigo-500"
           >
-            <div className={`w-5 h-5 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50 transition-all duration-300 ${billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-0'}`} />
+            <div className={`w-5 h-5 rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/50 transition-all duration-300 ${billingCycle === 'annual' ? 'translate-x-7' : 'translate-x-0'}`} />
           </button>
           <div className="flex items-center gap-2">
             <span className={`text-sm font-medium ${billingCycle === 'annual' ? 'text-white' : 'text-gray-500'}`}>Annual</span>
@@ -196,26 +196,26 @@ export default function Pricing() {
             key={idx}
             className={`relative flex flex-col p-8 rounded-[2.5rem] border transition-all duration-500 hover:-translate-y-2 ${
               (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
-                ? 'bg-blue-600/10 border-blue-500 shadow-2xl shadow-blue-500/20 z-10'
+                ? 'bg-indigo-600/10 border-indigo-500 shadow-2xl shadow-indigo-500/20 z-10'
                 : plan.popular
-                  ? 'bg-[#1e293b] border-blue-500/50 shadow-xl z-5'
-                  : 'bg-[#121a2d] border-white/5 hover:border-white/10'
+                  ? 'bg-[#0a0a0a] border-indigo-500/50 shadow-xl z-5'
+                  : 'bg-black border-white/5 hover:border-white/10'
             }`}
           >
             {(currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase() && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest shadow-xl border border-blue-400">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest shadow-xl border border-indigo-400/20">
                 Current Plan
               </div>
             )}
             {plan.popular && (currentUser?.subscriptionTier || 'Free').toLowerCase() !== plan.name.toLowerCase() && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-[10px] font-black uppercase tracking-widest shadow-xl">
                 Most Popular
               </div>
             )}
             
             <button 
               onClick={() => setSelectedPlan(plan)}
-              className="absolute top-6 right-6 p-1.5 rounded-lg text-gray-600 hover:text-blue-400 transition-colors"
+              className="absolute top-6 right-6 p-1.5 rounded-lg text-gray-600 hover:text-indigo-400 transition-colors"
               title="View Detailed Features"
             >
               <Info size={16} />
@@ -251,7 +251,7 @@ export default function Pricing() {
                 (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
                   ? 'bg-white/5 text-gray-500 cursor-default border-transparent'
                   : plan.popular || (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
-                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30'
+                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-500/30'
                     : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
               } ${loading === plan.name ? 'opacity-50 cursor-wait' : ''}`}
             >
@@ -273,7 +273,7 @@ export default function Pricing() {
         <div className="text-center mb-24">
           <h2 className="text-4xl md:text-7xl font-black mb-6 leading-tight uppercase italic tracking-tighter text-white">
             The Infrastructure <br/>
-            <span className="text-blue-500">of Supremacy.</span>
+            <span className="text-indigo-500">of Supremacy.</span>
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto text-lg font-medium">Every tier is engineered for maximum leverage. No fluff, only performance.</p>
         </div>
@@ -311,16 +311,16 @@ export default function Pricing() {
               ]
             }
           ].map((sec, i) => (
-            <div key={i} className="p-10 rounded-[3rem] bg-[#121a2d] border border-white/5 hover:border-blue-500/30 transition-all group relative overflow-hidden">
-              <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-8 font-black group-hover:scale-110 transition-transform">
+            <div key={i} className="p-10 rounded-[3rem] bg-black border border-white/5 hover:border-indigo-500/30 transition-all group relative overflow-hidden">
+              <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500 mb-8 font-black group-hover:scale-110 transition-transform">
                 <sec.icon size={32} />
               </div>
               <h3 className="text-2xl font-black mb-6 uppercase italic tracking-tight text-white relative z-10">{sec.title}</h3>
               <ul className="space-y-4 relative z-10">
                 {sec.features.map((f, fi) => (
                   <li key={fi} className="flex items-center gap-3 text-gray-400 text-sm font-medium hover:text-white transition-colors">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500/40" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/40" />
                     {f}
                   </li>
                 ))}
@@ -345,7 +345,7 @@ export default function Pricing() {
                 {plans.map((p, i) => (
                   <th key={i} className="py-6 px-4 text-center">
                     <div className="text-sm font-bold text-white mb-1">{p.name}</div>
-                    <div className="text-[10px] text-blue-500 font-black">${calculatePrice(p.price)}/mo</div>
+                    <div className="text-[10px] text-indigo-500 font-black">${calculatePrice(p.price)}/mo</div>
                   </th>
                 ))}
               </tr>
@@ -401,7 +401,7 @@ export default function Pricing() {
             <Link to="/contact" className="px-8 py-4 rounded-xl bg-white text-[#0f172a] font-bold transition-all hover:scale-105">
               Talk to an Expert
             </Link>
-            <Link to="/login?signup=true" className="px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all hover:scale-105">
+            <Link to="/signup" className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all hover:scale-105">
               Sign Up Free
             </Link>
           </div>
@@ -425,8 +425,8 @@ export default function Pricing() {
 function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice, handleCheckout }: any) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={onClose}>
-      <div className="w-full max-w-2xl bg-[#121a2d] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-6 md:p-8 border-b border-white/5 bg-[#0f172a]/50">
+      <div className="w-full max-w-2xl bg-black border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-6 md:p-8 border-b border-white/5 bg-black/50">
           <div>
             <h3 className="text-2xl md:text-3xl font-black italic text-white flex items-center gap-3 text-wrap">
               {plan.name} <span className="text-sm font-bold text-blue-500 not-italic uppercase tracking-widest block md:inline">Protocol</span>
@@ -439,9 +439,9 @@ function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice, handleCh
         </div>
         
         <div className="p-6 md:p-8 max-h-[60vh] md:max-h-[70vh] overflow-y-auto custom-scrollbar space-y-10">
-          <div className="flex items-center justify-between p-6 rounded-3xl bg-blue-600/10 border border-blue-500/20">
+          <div className="flex items-center justify-between p-6 rounded-3xl bg-indigo-600/10 border border-indigo-500/20">
             <div>
-              <p className="text-xs font-black uppercase tracking-widest text-blue-400 mb-1">Price ({billingCycle})</p>
+              <p className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-1">Price ({billingCycle})</p>
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-black text-white">${calculatePrice(plan.price)}</span>
                 <span className="text-gray-500 font-bold">/ month</span>
@@ -449,7 +449,7 @@ function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice, handleCh
             </div>
             <button 
               onClick={() => handleCheckout(plan.name)}
-              className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-blue-600/20"
+              className="px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-indigo-600/20"
             >
               Initialize Plan
             </button>
@@ -472,7 +472,7 @@ function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice, handleCh
           </div>
         </div>
 
-        <div className="p-8 bg-[#0f172a]/50 border-t border-white/5 flex items-center justify-between">
+        <div className="p-8 bg-black/50 border-t border-white/5 flex items-center justify-between">
            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest italic">Built for Sovereignty.</p>
            <button onClick={onClose} className="text-sm font-bold text-gray-400 hover:text-white transition-colors">Close Overview</button>
         </div>

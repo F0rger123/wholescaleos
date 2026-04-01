@@ -29,10 +29,12 @@ export const supabase = isSupabaseConfigured
         persistSession: true,
         detectSessionInUrl: true,
         storageKey: 'wholescale-auth',
+        flowType: 'pkce',
+        debug: true, // Enable debug for auth issues
       },
       global: {
         headers: {
-          'X-Client-Info': 'supabase-js-web',
+          'X-Client-Info': 'wholescale-os-web/1.0.0',
         },
       },
       realtime: {

@@ -8,6 +8,10 @@ import { referralService } from '../lib/referral-service';
 
 type AuthMode = 'login' | 'signup' | 'forgot' | 'mfa';
 
+interface LoginProps {
+  defaultMode?: AuthMode;
+}
+
 // Detect database setup errors
 function isDatabaseSetupError(msg: string): boolean {
   const patterns = [
@@ -24,10 +28,10 @@ function isDatabaseSetupError(msg: string): boolean {
   return patterns.some(p => lower.includes(p));
 }
 
-export default function Login() {
+export default function Login({ defaultMode = 'login' }: LoginProps) {
   const navigate = useNavigate();
   const { login, signup, clearAuthError } = useStore();
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<AuthMode>(defaultMode);
   const [showPassword, setShowPassword] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -72,7 +76,7 @@ export default function Login() {
 
       // 3. Fallback to query params
       const params = new URLSearchParams(window.location.search);
-      if (params.get('signup') === 'true') {
+      if (params.get('signup') === 'true' || defaultMode === 'signup') {
         setMode('signup');
       } else if (params.get('mode') === 'forgot') {
         setMode('forgot');
@@ -80,7 +84,7 @@ export default function Login() {
     };
 
     handleUrlState();
-  }, []);
+  }, [defaultMode]);
 
   const switchMode = (m: AuthMode) => {
     setMode(m);

@@ -21,7 +21,7 @@ export const LeadHoverCard: React.FC<LeadHoverCardProps> = ({ lead }) => {
     .slice(0, 3);
 
   return (
-    <div className="relative w-80 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 z-[3000]">
+    <div className="relative w-80 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl p-4 animate-in fade-in zoom-in duration-200 z-[var(--z-popover)]">
       {/* Arrow */}
       <div 
         className="absolute w-3 h-3 bg-[var(--t-surface)] border-l border-t border-[var(--t-border)] z-[-1]"

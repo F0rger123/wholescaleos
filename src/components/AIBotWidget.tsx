@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Bot, X, Send, 
-  User, Key, Mic,
+  User, Key, Mic, Volume2, VolumeX,
   Layout as LayoutIcon, Loader2
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
@@ -41,6 +41,10 @@ export function AIBotWidget() {
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiName, aiModel, setAiModel 
   } = useStore();
+  const [speechEnabled, setSpeechEnabled] = useState(() => {
+    return localStorage.getItem('ai_speech_enabled') !== 'false';
+  });
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isDocked, setIsDocked] = useState(() => {
     return localStorage.getItem('ai_widget_docked') === 'true';
   });
@@ -199,12 +203,22 @@ export function AIBotWidget() {
     window.addEventListener('clear-ai-chat', handleClear);
     window.addEventListener('undock-ai-widget', handleUndock);
     window.addEventListener('dock-ai-widget', handleDock);
+
+    // Ctrl+Shift+V shortcut
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        setIsOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
     
     return () => {
       window.removeEventListener('toggle-ai-widget', handleToggle);
       window.removeEventListener('clear-ai-chat', handleClear);
       window.removeEventListener('undock-ai-widget', handleUndock);
       window.removeEventListener('dock-ai-widget', handleDock);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -238,6 +252,39 @@ export function AIBotWidget() {
       setIsRecording(true);
     }
   };
+
+  const speak = (text: string) => {
+    if (!speechEnabled || !window.speechSynthesis) return;
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Try to find a good premium-sounding voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => 
+      (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Natural')) && 
+      v.lang.startsWith('en')
+    ) || voices.find(v => v.lang.startsWith('en'));
+
+    if (preferredVoice) utterance.voice = preferredVoice;
+    
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  useEffect(() => {
+    localStorage.setItem('ai_speech_enabled', speechEnabled.toString());
+    if (!speechEnabled) window.speechSynthesis.cancel();
+  }, [speechEnabled]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -476,6 +523,7 @@ export function AIBotWidget() {
           data: response.data,
           systemLog: "✨ Gemini AI"
         }]);
+        speak(response.response);
 
         if (response.intent === 'navigate' && response.data?.path) {
           navigate(response.data.path);
@@ -551,6 +599,11 @@ export function AIBotWidget() {
         timestamp: new Date().toISOString(),
         intent: intent
       }]);
+      
+      const speechText = result 
+        ? (result.success ? result.message : `Error. ${result.message}`)
+        : 'Action completed.';
+      speak(speechText);
     } catch (err: any) {
       console.error('Widget action failed:', err);
       setLoading(false);
@@ -568,7 +621,7 @@ export function AIBotWidget() {
   if (hasKey === false && isOpen) {
     return (
       <div 
-        className="fixed z-[2000] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
+        className="fixed z-[var(--z-loader)] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
         style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
       >
         <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6 shadow-2xl max-w-sm text-center pointer-events-auto relative">
@@ -594,7 +647,7 @@ export function AIBotWidget() {
 
   return (
     <div 
-      className="fixed z-[99999] flex flex-col items-end pointer-events-none"
+      className="fixed z-[var(--z-loader)] flex flex-col items-end pointer-events-none"
       style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
     >
       
@@ -631,6 +684,17 @@ export function AIBotWidget() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setSpeechEnabled(!speechEnabled)}
+                className={`p-1.5 rounded-lg transition-colors group ${speechEnabled ? 'text-[var(--t-primary)]' : 'text-[var(--t-text-muted)]'}`}
+                title={speechEnabled ? "Mute AI Voice" : "Enable AI Voice"}
+              >
+                {speechEnabled ? (
+                  <Volume2 size={16} className={isSpeaking ? 'animate-pulse' : ''} />
+                ) : (
+                  <VolumeX size={16} />
+                )}
+              </button>
               <button 
                 onClick={() => {
                   setIsDocked(true);

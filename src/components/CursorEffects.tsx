@@ -80,7 +80,7 @@ export const CursorEffects: React.FC = () => {
   if (!cursorSettings.enabled || cursorSettings.type === 'none') return null;
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[9999]" style={{ mixBlendMode: 'screen' }}>
+    <div className="fixed inset-0 pointer-events-none z-[var(--z-cursor)]" style={{ mixBlendMode: 'screen' }}>
       {/* Glow Effect */}
       {cursorSettings.type === 'glow' && (
         <div 

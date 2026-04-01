@@ -104,8 +104,8 @@ const BRAND = {
   name: 'WholeScale OS',
   color: '#6366f1',
   colorDark: '#4f46e5',
-  bgDark: '#060e20',
-  bgCard: '#0f172a',
+  bgDark: '#000000',
+  bgCard: '#0a0a0a',
   textLight: '#94a3b8',
   textWhite: '#f8fafc',
   logo: 'https://wholescaleos.com/logo.png', // Assuming logo.png after deployment
@@ -389,7 +389,7 @@ export function dealAlertTemplate(
       Hey ${firstName}, a lead has been flagged as high priority!
     </p>
 
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #0f172a; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #0a0a0a; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
       <!-- Deal Score Header -->
       <tr>
         <td colspan="2" style="padding: 20px 20px 16px; border-bottom: 1px solid #1e293b;">
@@ -497,7 +497,7 @@ export function teamInviteTemplate(
       <strong style="color: ${BRAND.textWhite};">${teamName}</strong> on WholeScale OS.
     </p>
 
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #0f172a; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #0a0a0a; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
       <tr>
         <td align="center" style="padding: 28px;">
           <p style="font-size: 12px; color: ${BRAND.textLight}; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 2px;">Your invite code</p>
@@ -549,13 +549,13 @@ export function weeklyDigestTemplate(
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 28px;">
       <tr>
         <td width="50%" style="padding: 4px;">
-          <div style="background: #0f172a; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="background: #0a0a0a; border-radius: 12px; padding: 20px; text-align: center;">
             <p style="font-size: 28px; font-weight: 800; color: ${BRAND.color};">${stats.newLeads}</p>
             <p style="font-size: 11px; color: ${BRAND.textLight}; text-transform: uppercase; letter-spacing: 1px;">New Leads</p>
           </div>
         </td>
         <td width="50%" style="padding: 4px;">
-          <div style="background: #0f172a; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="background: #0a0a0a; border-radius: 12px; padding: 20px; text-align: center;">
             <p style="font-size: 28px; font-weight: 800; color: #10b981;">${stats.dealsClosed}</p>
             <p style="font-size: 11px; color: ${BRAND.textLight}; text-transform: uppercase; letter-spacing: 1px;">Deals Closed</p>
           </div>
@@ -563,13 +563,13 @@ export function weeklyDigestTemplate(
       </tr>
       <tr>
         <td width="50%" style="padding: 4px;">
-          <div style="background: #0f172a; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="background: #0a0a0a; border-radius: 12px; padding: 20px; text-align: center;">
             <p style="font-size: 28px; font-weight: 800; color: #f59e0b;">$${(stats.revenue / 1000).toFixed(0)}k</p>
             <p style="font-size: 11px; color: ${BRAND.textLight}; text-transform: uppercase; letter-spacing: 1px;">Revenue</p>
           </div>
         </td>
         <td width="50%" style="padding: 4px;">
-          <div style="background: #0f172a; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="background: #0a0a0a; border-radius: 12px; padding: 20px; text-align: center;">
             <p style="font-size: 28px; font-weight: 800; color: #a78bfa;">${stats.tasksCompleted}</p>
             <p style="font-size: 11px; color: ${BRAND.textLight}; text-transform: uppercase; letter-spacing: 1px;">Tasks Done</p>
           </div>
@@ -617,7 +617,7 @@ export function mentionTemplate(
       <strong style="color: ${BRAND.color};">#${channelName}</strong>
     </p>
 
-    <div style="background: #0f172a; border-radius: 12px; border-left: 4px solid ${BRAND.color}; padding: 16px 20px; margin-bottom: 24px;">
+    <div style="background: #0a0a0a; border-radius: 12px; border-left: 4px solid ${BRAND.color}; padding: 16px 20px; margin-bottom: 24px;">
       <p style="font-size: 14px; color: ${BRAND.textWhite}; line-height: 1.6; font-style: italic;">"${messagePreview}"</p>
     </div>
 
@@ -659,7 +659,7 @@ export function teamEventTemplate(
       Hey ${firstName}, you've been added to a new team event by <strong style="color: ${BRAND.textWhite};">${createdBy}</strong>.
     </p>
  
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #0f172a; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #0a0a0a; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
       <tr>
         <td style="padding: 24px;">
           <h2 style="font-size: 18px; font-weight: 700; color: ${BRAND.textWhite}; margin-bottom: 4px;">${eventTitle}</h2>

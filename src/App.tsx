@@ -19,6 +19,7 @@ import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
 import EmailConfirmed from './pages/EmailConfirmed';
 import TeamSelection from './pages/TeamSelection';
+import AutomationsHub from './pages/AutomationsHub';
 import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
@@ -49,6 +50,7 @@ import LeadShareEditor from './pages/LeadShareEditor';
 import CRMCompare from './pages/marketing/CRMCompare';
 import Integrations from './pages/marketing/Integrations';
 import ScrollToTop from './components/ScrollToTop';
+import AITrainingStudio from './pages/AITrainingStudio';
 
 function ProtectedRoute({ children, checking, isMfaRequired }: { children: React.ReactNode, checking?: boolean, isMfaRequired: boolean }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
@@ -105,9 +107,27 @@ function DataSyncWrapper() {
 // SupabaseSync will handle the branded loading experience.
 
 export function App() {
-  const [checking, setChecking] = useState(true);
+  const [isChecking, setIsChecking] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const [isMfaRequired, setIsMfaRequired] = useState(false);
   const { login, updateProfile, incrementLoginStreak, loadLeads } = useStore();
+
+  const checking = isChecking || (isSupabaseConfigured && !authReady);
+
+  useEffect(() => {
+    // Force a strict 4s loading experience to match the static loader and branding
+    const timer = setTimeout(() => {
+      setIsChecking(false);
+      // Ensure the static loader is removed if it's still there
+      const staticLoader = document.getElementById('initial-loader');
+      if (staticLoader) {
+        staticLoader.style.opacity = '0';
+        staticLoader.style.transition = 'opacity 0.8s ease-out';
+        setTimeout(() => staticLoader.remove(), 800);
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const updateMfaStatus = async () => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -160,7 +180,7 @@ export function App() {
           console.error('[App] Session check failed:', err);
         }
       }
-      setChecking(false);
+      setAuthReady(true);
     }
     checkSession();
 
@@ -259,6 +279,7 @@ export function App() {
 
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><Login /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><Login defaultMode="signup" /></PublicRoute>} />
 
         {/* Email confirmation — accessible with or without auth */}
         <Route path="/email-confirmed" element={<EmailConfirmed />} />
@@ -288,12 +309,15 @@ export function App() {
             <Route path="/team/analytics" element={<Team />} />
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/promos" element={<AdminPromos />} />
+            <Route path="/ai-training" element={<AITrainingStudio />} />
+            <Route path="/automations" element={<AutomationsHub />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/imports" element={<Imports />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
             <Route path="/calculators" element={<Calculators />} />
+            <Route path="/automations" element={<AutomationsHub />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/ai" element={<AISettings />} />
             <Route path="/settings/sms" element={<SMSSettings />} />

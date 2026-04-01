@@ -47,7 +47,7 @@ export function RevenueShareLeaderboard() {
 
   if (loading) {
     return (
-      <div className="p-8 rounded-[2.5rem] bg-[#0f172a] border border-white/5 shadow-2xl">
+      <div className="p-8 rounded-[2.5rem] bg-black border border-white/5 shadow-2xl">
         <div className="animate-pulse space-y-4">
           <div className="h-6 w-1/3 bg-white/5 rounded"></div>
           <div className="h-16 bg-white/5 rounded-2xl"></div>
@@ -59,7 +59,7 @@ export function RevenueShareLeaderboard() {
   }
 
   return (
-    <div className="p-8 rounded-[3rem] bg-[#121a2d] border border-white/5 relative overflow-hidden shadow-2xl">
+    <div className="p-8 rounded-[3rem] bg-black border border-white/5 relative overflow-hidden shadow-2xl">
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 blur-[80px] rounded-full" />
       <div className="relative z-10">
         <div className="flex items-center gap-3 mb-8">
@@ -85,7 +85,7 @@ export function RevenueShareLeaderboard() {
                       i === 0 ? 'bg-yellow-400 text-yellow-900' :
                       i === 1 ? 'bg-gray-300 text-gray-800' :
                       i === 2 ? 'bg-amber-600 text-white' :
-                      'bg-[#060e20] text-gray-400'
+                      'bg-black text-gray-400'
                     }`}>
                       {i + 1}
                     </div>

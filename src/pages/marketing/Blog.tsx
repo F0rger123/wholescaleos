@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { 
-  Calendar, Clock, ArrowRight, User, Tag, Search,
+  Calendar, Clock, ArrowRight, Search,
   TrendingUp, Zap, BarChart3, Shield, Sparkles
 } from 'lucide-react';
 
@@ -119,7 +118,7 @@ function FeaturedPost({ post }: { post: BlogPost }) {
     >
       <div className="astral-glass rounded-[2.5rem] border border-white/5 overflow-hidden hover:border-indigo-500/30 transition-all duration-500 hover-lift">
         <div className="aspect-[21/9] bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent relative flex items-center justify-center">
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0f1930] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
           <div className="relative z-10 text-center p-12">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
               <Sparkles size={12} className="animate-pulse" /> Featured
@@ -167,7 +166,7 @@ function BlogCard({ post, index }: { post: BlogPost; index: number }) {
       className="group"
     >
       <div className="astral-glass rounded-[2rem] border border-white/5 overflow-hidden hover:border-indigo-500/20 transition-all duration-500 hover-lift h-full flex flex-col">
-        <div className="aspect-[16/9] bg-gradient-to-br from-[#1e293b] to-[#0f1930] relative flex items-center justify-center overflow-hidden">
+        <div className="aspect-[16/9] bg-gradient-to-br from-[#1e293b] to-black relative flex items-center justify-center overflow-hidden">
           <CatIcon size={48} className="text-white/5 group-hover:text-indigo-500/20 transition-colors duration-500" />
         </div>
         <div className="p-6 flex-1 flex flex-col">
@@ -216,7 +215,7 @@ export default function Blog() {
   const regularPosts = filteredPosts.filter(p => !p.featured);
 
   return (
-    <div className="bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30 min-h-screen">
+    <div className="bg-black text-[#dee5ff] selection:bg-indigo-500/30 min-h-screen">
       {/* Hero */}
       <section className="pt-32 pb-16 text-center px-6 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />

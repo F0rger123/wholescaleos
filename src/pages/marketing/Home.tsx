@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { RevenueShareLeaderboard } from '../../components/ReferralLeaderboard';
+import { useAuth } from '../../hooks/useAuth';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -62,6 +63,7 @@ export default function Home() {
   const [timeframe] = useState(90);
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('area');
   const [isPageReady, setIsPageReady] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     // Resolve initial scroll lag by waiting for hero assets and giving the browser a moment to settle
@@ -114,7 +116,7 @@ export default function Home() {
   }, [leadsPerMonth, dealValue, timeframe]);
 
   return (
-    <div className={`flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30 transition-opacity duration-1000 ${isPageReady ? 'opacity-100' : 'opacity-0'}`}>
+    <div className={`flex flex-col bg-black text-[#dee5ff] selection:bg-indigo-500/30 transition-opacity duration-1000 ${isPageReady ? 'opacity-100' : 'opacity-0'}`}>
       {/* CSS blob animations – replaces infinite Framer Motion JS animations for GPU perf */}
       <style>{`
         @keyframes heroBlob1 {
@@ -162,10 +164,10 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <div className="w-full sm:w-72">
                   <Link
-                    to="/login?signup=true"
+                    to={isAuthenticated ? "/dashboard" : "/signup"}
                     className="w-full h-20 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift text-white"
                   >
-                    Sign Up <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                    {isAuthenticated ? 'Go to CRM' : 'Get Started'} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
                 <button 
@@ -185,8 +187,8 @@ export default function Home() {
             className="relative max-w-6xl mx-auto mt-24"
           >
             <div className="absolute inset-0 bg-indigo-500/10 blur-[120px] opacity-20" />
-            <div className="relative rounded-[2.5rem] border border-white/10 bg-[#0f1930]/60 backdrop-blur-3xl p-3 shadow-[0_40px_100px_rgba(0,0,0,0.6)] overflow-hidden">
-              <div className="bg-[#060e20] rounded-[2rem] border border-white/5 aspect-[16/9] flex overflow-hidden">
+            <div className="relative rounded-[2.5rem] border border-white/10 bg-black/60 backdrop-blur-3xl p-3 shadow-[0_40px_100px_rgba(0,0,0,0.6)] overflow-hidden">
+              <div className="bg-black rounded-[2rem] border border-white/5 aspect-[16/9] flex overflow-hidden">
                 <div className="w-20 border-r border-white/5 flex flex-col items-center py-6 gap-6">
                   <div className="w-10 h-10 rounded-xl bg-blue-600/20 flex items-center justify-center text-blue-500"><LayoutDashboard size={20} /></div>
                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-600"><Users size={20} /></div>
@@ -221,7 +223,7 @@ export default function Home() {
                 </div>
               </div>
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                <div className="text-center p-8 rounded-3xl bg-[#0f172a]/90 border border-white/10 shadow-2xl">
+                <div className="text-center p-8 rounded-3xl bg-black/90 border border-white/10 shadow-2xl">
                   <h3 className="text-xl font-bold mb-2">[Dashboard Preview - Coming Soon]</h3>
                   <p className="text-gray-500 text-sm">We're updating our platform with new features.</p>
                 </div>
@@ -232,7 +234,7 @@ export default function Home() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-32 bg-[#060e20] relative">
+      <section className="py-32 bg-black relative">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-24 items-center">
             <motion.div 
@@ -291,7 +293,7 @@ export default function Home() {
                 <div className="aspect-square rounded-[2rem] bg-[#0f1930] border border-white/5" />
               </div>
               <div className="space-y-4">
-                 <div className="aspect-square rounded-[2rem] bg-[#0f1930] border border-white/5" />
+                 <div className="aspect-square rounded-[2rem] bg-black border border-white/5" />
                  <motion.div 
                   whileHover={{ y: -10 }}
                   className="aspect-square rounded-[2rem] bg-purple-600 p-8 flex flex-col justify-end shadow-[0_20px_40px_rgba(168,85,247,0.2)]"
@@ -308,7 +310,7 @@ export default function Home() {
       </section>
 
       {/* ROI Calculator Section */}
-      <section className="py-32 bg-[#060e20] relative">
+      <section className="py-32 bg-black relative">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -409,7 +411,7 @@ export default function Home() {
                     <XAxis dataKey="name" stroke="#6d758c" fontSize={10} axisLine={false} tickLine={false} dy={10} />
                     <YAxis stroke="#6d758c" fontSize={10} axisLine={false} tickLine={false} dx={-10} tickFormatter={v => `$${v}`} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #ffffff10', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+                      contentStyle={{ backgroundColor: '#000000', border: '1px solid #ffffff10', borderRadius: '16px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
                       itemStyle={{ color: '#6366f1', fontWeight: 'bold' }}
                     />
                     <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
@@ -429,7 +431,7 @@ export default function Home() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                     <XAxis dataKey="name" stroke="#6d758c" fontSize={10} axisLine={false} tickLine={false} />
                     <YAxis stroke="#6d758c" fontSize={10} axisLine={false} tickLine={false} tickFormatter={v => `$${v}`} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '16px' }} />
+                    <Tooltip contentStyle={{ backgroundColor: '#000000', border: 'none', borderRadius: '16px' }} />
                     <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={4} dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 8 }} />
                     <Line type="monotone" dataKey="traditional" stroke="#6d758c" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                   </LineChart>
@@ -446,7 +448,7 @@ export default function Home() {
       </section>
 
       {/* Leaderboard Section */}
-      <section className="py-32 bg-[#060e20] relative">
+      <section className="py-32 bg-black relative">
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
@@ -455,7 +457,7 @@ export default function Home() {
             className="space-y-8"
           >
             <h2 className="text-4xl md:text-6xl font-black leading-[0.9] italic tracking-tighter uppercase mb-8">Dominance <br /> is Inevitable.</h2>
-            <div className="bg-[#0f1930]/80 backdrop-blur-3xl rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative overflow-hidden group">
+            <div className="bg-black/80 backdrop-blur-3xl rounded-[2.5rem] border border-white/5 p-8 shadow-2xl relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-8 text-indigo-500/20 group-hover:text-indigo-500/40 transition-colors">
                 <Trophy size={120} />
               </div>
@@ -514,7 +516,7 @@ export default function Home() {
       </section>
 
       {/* Feature Showcase Grid */}
-      <section id="features" className="py-32 bg-[#060e20]">
+      <section id="features" className="py-32 bg-black">
         <div className="max-w-7xl mx-auto px-6">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -559,7 +561,7 @@ export default function Home() {
       </section>
 
       {/* Ambassador Program Section */}
-      <section className="py-32 bg-[#0a1225] relative overflow-hidden">
+      <section className="py-32 bg-black relative overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none" />
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
@@ -601,7 +603,7 @@ export default function Home() {
                className="relative"
             >
               <div className="absolute inset-0 bg-indigo-500/10 blur-[100px] opacity-30" />
-              <div className="relative bg-[#121a2d] border border-white/5 p-10 rounded-[3rem] shadow-2xl">
+              <div className="relative bg-black border border-white/5 p-10 rounded-[3rem] shadow-2xl">
                  <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); toast.success('Application received. Our team will review shortly.'); }}>
                     <div className="grid sm:grid-cols-2 gap-6">
                       <div className="space-y-2">
@@ -633,7 +635,7 @@ export default function Home() {
       </section>
 
       {/* Alpha Network Section */}
-      <section className="py-32 bg-[#060e20] relative overflow-hidden">
+      <section className="py-32 bg-black relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <motion.div
@@ -689,8 +691,8 @@ export default function Home() {
           <h2 className="text-6xl md:text-8xl font-black mb-12 text-white tracking-tighter italic leading-[0.9]">Ready to <br />Own the Market?</h2>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <div>
-              <Link to="/login?signup=true" className="block px-12 py-6 rounded-2xl bg-white text-indigo-600 text-xl font-black shadow-[0_20px_60px_rgba(0,0,0,0.3)] hover-glow">
-                Sign Up Now
+              <Link to={isAuthenticated ? "/dashboard" : "/signup"} className="block px-12 py-6 rounded-2xl bg-white text-indigo-600 text-xl font-black shadow-[0_20px_60px_rgba(0,0,0,0.3)] hover-glow">
+                {isAuthenticated ? 'Go to CRM' : 'Get Started Now'}
               </Link>
             </div>
             <div>

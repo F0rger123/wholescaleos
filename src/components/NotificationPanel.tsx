@@ -77,7 +77,7 @@ export function NotificationPanel() {
       {/* Panel */}
       {open && (
         <div
-          className="absolute right-0 top-12 w-96 max-h-[32rem] rounded-xl border shadow-2xl z-[9999] flex flex-col overflow-hidden"
+          className="absolute right-0 top-12 w-96 max-h-[32rem] rounded-xl border shadow-2xl z-[var(--z-toast)] flex flex-col overflow-hidden"
           style={{
             backgroundColor: 'var(--t-surface)',
             borderColor: 'var(--t-border)',

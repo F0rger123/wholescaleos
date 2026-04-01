@@ -24,7 +24,7 @@ export function RateLimitModal({ isOpen, onClose, currentModel, onSwitchModel }:
   ];
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 pointer-events-auto">
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 pointer-events-auto">
       <div 
         className="w-full max-w-md border rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}

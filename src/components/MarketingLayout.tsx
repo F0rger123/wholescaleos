@@ -54,11 +54,11 @@ export const MarketingLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30">
+    <div className="min-h-screen flex flex-col bg-black text-[#dee5ff] selection:bg-indigo-500/30">
       {/* Header */}
       <header 
         className={`fixed top-0 left-0 right-0 z-40 transition-all duration-500 animate-astral-nav ${
-          isScrolled ? 'py-3 bg-[#0f1930]/80 backdrop-blur-2xl border-b border-indigo-500/10 shadow-2xl' : 'py-6 bg-transparent'
+          isScrolled ? 'py-3 bg-black/80 backdrop-blur-2xl border-b border-indigo-500/10 shadow-2xl' : 'py-6 bg-transparent'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
@@ -118,7 +118,7 @@ export const MarketingLayout: React.FC = () => {
                   {userMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-[2001]" onClick={() => setUserMenuOpen(false)} />
-                      <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-[#0f1930]/90 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-black/95 backdrop-blur-3xl border border-indigo-500/20 shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-4 border-b border-white/5 mb-2">
                           <p className="text-[10px] font-black text-[#6d758c] uppercase tracking-[0.2em] mb-1">Signed in as</p>
                           <p className="text-sm font-black truncate text-white italic">{currentUser?.name}</p>
@@ -159,7 +159,7 @@ export const MarketingLayout: React.FC = () => {
                   Log in
                 </Link>
                 <Link 
-                  to="/login?signup=true" 
+                  to="/signup" 
                   className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-black uppercase tracking-[0.2em] transition-all hover:shadow-[0_10px_30px_rgba(99,102,241,0.3)] hover:scale-105 active:scale-95 flex items-center gap-2 hover-glow hover-lift"
                 >
                   Sign Up <ArrowRight size={16} />
@@ -185,7 +185,7 @@ export const MarketingLayout: React.FC = () => {
               animate={{ opacity: 1, height: 'auto', y: 0 }}
               exit={{ opacity: 0, height: 0, y: -20 }}
               transition={{ duration: 0.3, ease: "circOut" }}
-              className="md:hidden absolute top-full left-0 right-0 bg-[#0f1930] border-b border-indigo-500/10 p-6 space-y-4 overflow-hidden shadow-2xl z-[90]"
+              className="md:hidden absolute top-full left-0 right-0 bg-black border-b border-indigo-500/10 p-6 space-y-4 overflow-hidden shadow-2xl z-[90]"
             >
               <div className="flex flex-col gap-4">
                 {navLinks.map((link, i) => (
@@ -258,7 +258,7 @@ export const MarketingLayout: React.FC = () => {
                       Log in
                     </Link>
                     <Link 
-                      to="/login?signup=true" 
+                      to="/signup" 
                       className="block w-full py-4 rounded-xl bg-indigo-600 text-center font-black uppercase tracking-widest text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-500 transition-all hover:scale-[1.02]"
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -278,7 +278,7 @@ export const MarketingLayout: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-[#060e20] border-t border-indigo-500/10 py-32 px-6">
+      <footer className="bg-black border-t border-indigo-500/10 py-32 px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-3 mb-8">
@@ -331,7 +331,7 @@ export const MarketingLayout: React.FC = () => {
 
       {/* Cookie Consent Banner */}
       {showCookieConsent && (
-        <div className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-[420px] z-50 p-8 rounded-[2.5rem] bg-[#0f1930]/90 border border-indigo-500/20 shadow-2xl animate-in slide-in-from-bottom-10 lg:slide-in-from-right-10 duration-500 backdrop-blur-3xl hover-lift">
+        <div className="fixed bottom-8 left-8 right-8 md:left-auto md:right-8 md:w-[420px] z-50 p-8 rounded-[2.5rem] bg-black/95 border border-indigo-500/20 shadow-2xl animate-in slide-in-from-bottom-10 lg:slide-in-from-right-10 duration-500 backdrop-blur-3xl hover-lift">
            <div className="flex items-start gap-6">
               <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 shrink-0 shadow-inner">
                  <Settings size={28} className="animate-spin-slow" />
@@ -353,7 +353,7 @@ export const MarketingLayout: React.FC = () => {
                     >
                       Accept Protocol
                     </button>
-                    <Link to="/privacy" className="text-[10px] font-black text-[#5b21b6] uppercase tracking-[0.2em] hover:text-white transition-colors">Learn More</Link>
+                    <Link to="/privacy" className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] hover:text-white transition-colors">Learn More</Link>
                  </div>
               </div>
            </div>

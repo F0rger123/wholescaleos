@@ -1,46 +1,108 @@
-import React from 'react';
-import { Building2, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const DeepSpaceLoader: React.FC = () => {
-  return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#060e20] text-[#dee5ff]">
-      {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-500/10 blur-[80px] rounded-full pointer-events-none" />
+  const [progress, setProgress] = useState(0);
 
+  useEffect(() => {
+    const duration = 4000; // 4 seconds
+    const interval = 40; // update every 40ms
+    const step = 100 / (duration / interval);
+
+    const timer = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(timer);
+          return 100;
+        }
+        return prev + step;
+      });
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.8, ease: "easeInOut" }}
+      className="fixed inset-0 z-[var(--z-system)] flex flex-col items-center justify-center overflow-hidden bg-black"
+    >
+      {/* Dynamic Background Elements */}
+      <motion.div 
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3] 
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-radial from-indigo-500/20 via-transparent to-transparent blur-[120px] rounded-full pointer-events-none" 
+      />
+      
       <div className="relative flex flex-col items-center">
-        {/* Logo Container */}
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30 mb-8 animate-astral-hero">
-          <Building2 size={40} className="text-white" />
-        </div>
+        {/* Logo Container with enhanced animation */}
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.4)] mb-10 overflow-hidden"
+        >
+          <Building2 size={48} className="text-white" />
+          <motion.div 
+            animate={{ x: ['-100%', '200%'] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+          />
+        </motion.div>
 
         {/* Text Area */}
-        <div className="text-center animate-astral-fade-up">
-          <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-2">
-            WholeScale <span className="text-indigo-400">OS</span>
-          </h2>
-          <div className="flex items-center justify-center gap-3 text-indigo-400/60 font-black uppercase tracking-[0.2em] text-[10px]">
-            <Loader2 size={12} className="animate-spin" />
-            Initializing Foundation
-          </div>
+        <div className="text-center space-y-4">
+          <motion.h2 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.8 }}
+            className="text-4xl font-black italic uppercase tracking-tighter"
+            style={{ color: 'white' }}
+          >
+            WholeScale <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">OS</span>
+          </motion.h2>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1, duration: 0.8 }}
+            className="flex flex-col items-center gap-2"
+          >
+            <div className="flex items-center gap-3 text-indigo-400/80 font-black uppercase tracking-[0.4em] text-[10px]">
+              Initializing Foundation
+            </div>
+            <div className="text-2xl font-mono font-bold text-white/40 tabular-nums">
+              {Math.min(100, Math.round(progress))}%
+            </div>
+          </motion.div>
         </div>
 
-        {/* Progress Bar (Visual Only) */}
-        <div className="w-48 h-1 bg-white/5 rounded-full mt-10 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-1/3 animate-loading-shimmer" />
+        {/* Progress Bar Container */}
+        <div className="w-64 h-1.5 bg-white/5 rounded-full mt-12 overflow-hidden relative border border-white/5">
+          <motion.div 
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-[0_0_15px_rgba(99,102,241,0.5)]"
+            initial={{ width: "0%" }}
+            animate={{ width: `${progress}%` }}
+            transition={{ ease: "linear" }}
+          />
         </div>
       </div>
 
-      <style>{`
-        @keyframes loadingShimmer {
-          0% { transform: translateX(-100%); width: 30%; }
-          50% { width: 60%; }
-          100% { transform: translateX(400%); width: 30%; }
-        }
-        .animate-loading-shimmer {
-          animation: loadingShimmer 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-      `}</style>
-    </div>
+      {/* Decorative text */}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.2 }}
+        transition={{ delay: 2, duration: 2 }}
+        className="absolute bottom-12 text-[10px] uppercase tracking-[0.8em] font-bold text-indigo-400"
+      >
+        Universal Operating System for Real Estate
+      </motion.div>
+    </motion.div>
   );
 };
+

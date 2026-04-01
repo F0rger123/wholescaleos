@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=JetBrains+Mono:wght@400;700&display=swap');
 
 /* @theme - Tailwind CSS directive */
 @theme {
@@ -24,18 +25,18 @@
 /* ─── Theme CSS Variables (defaults = dark theme) ───────────────────────── */
 
 :root {
-  --t-primary: #3b82f6; /* Midnight Blue */
-  --t-primary-dim: rgba(59, 130, 246, 0.2);
-  --t-primary-text: #60a5fa;
+  --t-primary: #6366f1; /* Indigo 500 */
+  --t-primary-dim: rgba(99, 102, 241, 0.2);
+  --t-primary-text: #818cf8;
   --t-on-primary: #ffffff;
   --t-text-on-primary: #ffffff;
   --t-secondary: #6b7280;
   --t-accent: #8b5cf6;
-  --t-bg: #060e20;
+  --t-bg: #000000; /* Pure Black for Elite Branding */
   --t-background: var(--t-bg);
-  --t-surface: #0f1930;
-  --t-surface-hover: #141f38;
-  --t-surface-active: #192540;
+  --t-surface: #0a0a0a;
+  --t-surface-hover: #121212;
+  --t-surface-active: #1a1a1a;
   --t-text: #dee5ff;
   --t-text-secondary: #a3aac4;
   --t-text-muted: #6d758c;
@@ -45,9 +46,9 @@
   --t-warning: #f59e0b;
   --t-error: #ef4444;
   --t-info: #3b82f6;
-  --t-sidebar-bg: #060e20;
-  --t-sidebar-border: #0f1930;
-  --t-sidebar-hover: #0f1930;
+  --t-sidebar-bg: #000000;
+  --t-sidebar-border: #0a0a0a;
+  --t-sidebar-hover: #121212;
   --t-input-bg: #000000;
   --t-input-border: #192540;
   --t-input-focus: #3b82f6;
@@ -59,6 +60,19 @@
   --t-glow-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   --t-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
   --t-backdrop-blur: blur(20px);
+
+  /* ─── Standardized Z-Indexes ─── */
+  --z-base: 0;
+  --z-sidebar: 100;
+  --z-header: 110;
+  --z-dropdown: 500;
+  --z-modal-backdrop: 1000;
+  --z-modal: 1100;
+  --z-popover: 2000;
+  --z-toast: 9000;
+  --z-loader: 9999;
+  --z-system: 10000;
+  --z-cursor: 99999;
 }
 
 /* ─── Shared Theme Animations & Components ────────────────────────────── */
@@ -236,15 +250,16 @@
   --t-surface-active: #334155;
   --t-primary: #818cf8;    /* Indigo 400 — High contrast vs dark */
   --t-primary-hover: #6366f1;
-  --t-on-primary: #000000;
+  --t-primary-dim: rgba(129, 140, 248, 0.15);
+  --t-on-primary: #ffffff;
   --t-text: #f8fafc;       /* Slate 50 */
   --t-text-secondary: #94a3b8;
   --t-text-muted: #64748b;
   --t-border: #1e293b;
-  --t-border-light: rgba(255, 255, 255, 0.05);
-  --t-success: #10b981;
-  --t-warning: #f59e0b;
-  --t-error: #ef4444;
+  --t-border-light: rgba(255, 255, 255, 0.1);
+  --t-success: #34d399;    /* Bright green for dark theme */
+  --t-warning: #fbbf24;    /* Bright amber */
+  --t-error: #f87171;      /* Bright red */
   --t-sidebar-bg: #020617;
   --t-sidebar-border: #1e293b;
   --t-sidebar-hover: #0f172a;
@@ -322,6 +337,17 @@ html, body, #root {
   margin: 0;
   background: var(--t-bg);
   color: var(--t-text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ─── Custom marker overrides ───────────────────────────────────────────── */

@@ -55,7 +55,7 @@ export function SaveLeadModal({ isOpen, onClose, phone }: SaveLeadModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-4 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface-hover)]">
           <h3 className="text-lg font-bold text-white flex items-center gap-2">

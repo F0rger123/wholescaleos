@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { GoogleCalendarService } from '../lib/google-calendar';
+import { toast } from 'react-hot-toast';
 import { useStore } from '../store/useStore';
 import { Key, Loader2, Check, AlertCircle, Save, Sparkles, Layout, ExternalLink } from 'lucide-react';
 import { getEnabledPrebuiltRules } from '../lib/prebuilt-rules';
@@ -274,19 +276,15 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   };
 
   const handleReconnectGoogle = () => {
-    // Trigger fresh OAuth redirect
-    if (isSupabaseConfigured && supabase) {
-      supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.href,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          },
-          scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/contacts https://www.googleapis.com/auth/tasks'
-        }
-      });
+    // Use the native Google OAuth service instead of Supabase Auth to avoid dashboard configuration errors.
+    // This allows the ecosystem to connect even if "Google" is not enabled as a primary login method.
+    try {
+      const url = GoogleCalendarService.getInstance().getAuthUrl();
+      if (!url) throw new Error('Could not generate Google Auth URL');
+      window.location.assign(url);
+    } catch (err) {
+      console.error('[AISettings] Reconnect failed:', err);
+      toast.error('Could not initiate Google connection.');
     }
   };
 

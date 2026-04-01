@@ -15,12 +15,13 @@ import {
   Calculator, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
-  Shield, BarChart3
+  Shield, BarChart3, Workflow
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
 import { toast } from 'react-hot-toast';
 import { AIModelSelectionDialog } from './AIModelSelectionDialog';
+import { VoiceAssistant } from './VoiceAssistant';
 
 interface UserTeam {
   teamId: string;
@@ -75,7 +76,9 @@ export function Layout() {
         { to: '/ai-test', label: aiName || 'OS Bot', icon: Bot },
       ],
       Tools: [
+        { to: '/automations', label: 'Automations Hub', icon: Workflow },
         { to: '/imports', label: 'Imports', icon: Download },
+        { to: '/ai-training', label: 'AI Training Studio', icon: Bot },
         { to: '/contracts', label: 'Contracts', icon: FileText },
         { to: '/calculators', label: 'Calculators', icon: Calculator },
         { to: '/settings', label: 'Settings', icon: Settings },
@@ -340,7 +343,7 @@ export function Layout() {
     <div className="flex h-full bg-[var(--t-bg)] text-[var(--t-text)] theme-transition">
       {/* Sidebar */}
       <aside
-        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-[100]`}
+        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-[var(--z-sidebar)]`}
       >
         {/* Logo */}
         <Link
@@ -994,6 +997,9 @@ export function Layout() {
           )}
         </div>
       )}
+      
+      {/* Voice Assistant */}
+      <VoiceAssistant />
     </div>
   );
 }

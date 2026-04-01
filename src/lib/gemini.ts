@@ -418,7 +418,11 @@ export async function processPrompt(prompt: string, context: Record<string, any>
         { trigger: 'best lead', action: 'show_hot_leads' },
         { trigger: 'my task', action: 'navigate_tasks' },
         { trigger: 'sms setting', action: 'navigate_settings_sms' },
-        { trigger: 'text setting', action: 'navigate_settings_sms' }
+        { trigger: 'text setting', action: 'navigate_settings_sms' },
+        { trigger: 'analytics', action: 'navigate_analytics' },
+        { trigger: 'summary', action: 'show_summary' },
+        { trigger: 'performance', action: 'navigate_analytics' },
+        { trigger: 'report', action: 'navigate_analytics' }
       );
 
       for (const cmd of commands) {
@@ -448,6 +452,15 @@ export async function processPrompt(prompt: string, context: Record<string, any>
             matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening Leads.', data: { path: '/leads' } });
           } else if (matchedRule.action === 'navigate_sms') {
             matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening SMS Inbox.', data: { path: '/sms' } });
+          } else if (matchedRule.action === 'navigate_analytics') {
+            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening Analytics Dashboard.', data: { path: '/analytics' } });
+          } else if (matchedRule.action === 'show_summary') {
+            const lc = store.leads?.length || 0;
+            const tc = store.tasks?.filter(t => t.status === 'todo').length || 0;
+            matchedActions.push({ 
+              intent: 'general_response', 
+              response: `[⚡ Local Rules] You have ${lc} total leads and ${tc} pending tasks. I recommend checking your hot leads in the pipeline.` 
+            });
           } else if (matchedRule.action === 'show_hot_leads') {
             const hl = store.leads?.filter((l:any) => {
               const s = String(l.status);
@@ -618,7 +631,8 @@ Choose the most appropriate intent:
 - **update_lead** — update a field on an existing lead
 - **update_status** — change a lead's CRM status
 - **delete_lead** — remove a lead (always requires confirmation)
-- **navigate** — user wants to go to a page
+- **navigate** — user wants to go to a page (e.g., "/analytics", "/leads", "/tasks")
+- **get_analytics** — user wants a summary or deep dive into pipeline performance
 - **ask_question** — you need more info before proceeding
 - **ask_save_contact** — you want to ask the user if they want to save a new number as a contact
 - **redirect_setup** — user needs to configure something first

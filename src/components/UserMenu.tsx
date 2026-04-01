@@ -53,14 +53,14 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-[2001]"
+            className="fixed inset-0 z-[var(--z-popover)]"
             onClick={() => {
               setIsOpen(false);
               onOpenChange?.(false);
             }}
           />
           <div
-            className="absolute right-0 mt-4 w-64 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[9999] border border-white/10 overflow-hidden astral-glass backdrop-blur-3xl p-1 animate-astral-fade-up"
+            className="absolute right-0 mt-4 w-64 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[var(--z-toast)] border border-white/10 overflow-hidden astral-glass backdrop-blur-3xl p-1 animate-astral-fade-up"
           >
             {/* User info */}
             <div className="p-5 border-b border-white/5 mb-1">
