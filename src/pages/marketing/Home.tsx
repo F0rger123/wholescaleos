@@ -61,6 +61,24 @@ export default function Home() {
   const [dealValue, setDealValue] = useState(15000);
   const [timeframe] = useState(90);
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area'>('area');
+  const [isPageReady, setIsPageReady] = useState(false);
+
+  useEffect(() => {
+    // Resolve initial scroll lag by waiting for hero assets and giving the browser a moment to settle
+    const timer = setTimeout(() => {
+      setIsPageReady(true);
+      // Remove the static loader if it exists
+      const loader = document.getElementById('initial-loader');
+      if (loader) {
+        loader.style.transition = 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        loader.style.opacity = '0';
+        setTimeout(() => loader?.remove(), 800);
+      }
+      // Force scroll to top on first load for consistency
+      window.scrollTo(0, 0);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   const calculateTimeSaved = () => {
     const savedPerWeek = adminHours * 0.2;
@@ -96,7 +114,7 @@ export default function Home() {
   }, [leadsPerMonth, dealValue, timeframe]);
 
   return (
-    <div className="flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30">
+    <div className={`flex flex-col bg-[#060e20] text-[#dee5ff] selection:bg-indigo-500/30 transition-opacity duration-1000 ${isPageReady ? 'opacity-100' : 'opacity-0'}`}>
       {/* CSS blob animations – replaces infinite Framer Motion JS animations for GPU perf */}
       <style>{`
         @keyframes heroBlob1 {
@@ -114,6 +132,11 @@ export default function Home() {
         .hero-blob-1 { animation: heroBlob1 8s ease-in-out infinite; will-change: transform, opacity; }
         .hero-blob-2 { animation: heroBlob2 10s ease-in-out 2s infinite; will-change: transform, opacity; }
         .cta-blob { animation: ctaBlob 10s linear infinite; will-change: transform, opacity; }
+        .glass-card { backface-visibility: hidden; transform: translateZ(0); }
+        .hero-section { will-change: transform, opacity; }
+        @media (prefers-reduced-motion: no-preference) {
+          html { scroll-behavior: smooth; }
+        }
       `}</style>
       
       {/* Hero Section */}
@@ -124,42 +147,35 @@ export default function Home() {
 
 
         <div className="max-w-7xl mx-auto px-6 relative">
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-center max-w-4xl mx-auto mb-20"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
-              <Sparkles size={12} className="animate-pulse" /> Elite Real estate Infrastructure
-            </div>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
-              Scale Your <span className="astral-gradient-text">Empire</span> <br />
-              <span className="astral-gradient-text">On Autopilot.</span>
-            </h1>
-            <p className="text-xl text-[#a3aac4] mb-12 leading-relaxed max-w-2xl mx-auto font-medium">
-              The Sovereign Operating System for high-volume real estate teams. 
-              Own your data. Automate your triage. Build your legacy.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-72">
-                <Link
-                  to="/login?signup=true"
-                  className="w-full h-20 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift text-white"
+            <div className="text-center max-w-4xl mx-auto mb-20 animate-fade-in-up">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
+                <Sparkles size={12} className="animate-pulse" /> Elite Real estate Infrastructure
+              </div>
+              <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
+                Scale Your <span className="astral-gradient-text">Empire</span> <br />
+                <span className="astral-gradient-text">On Autopilot.</span>
+              </h1>
+              <p className="text-xl text-[#a3aac4] mb-12 leading-relaxed max-w-2xl mx-auto font-medium">
+                The Sovereign Operating System for high-volume real estate teams. 
+                Own your data. Automate your triage. Build your legacy.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <div className="w-full sm:w-72">
+                  <Link
+                    to="/login?signup=true"
+                    className="w-full h-20 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift text-white"
+                  >
+                    Sign Up <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                </div>
+                <button 
+                  onClick={() => document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-full sm:w-72 h-20 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-black transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle shadow-xl text-white"
                 >
-                  Sign Up <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </motion.div>
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full sm:w-72 h-20 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-black transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle shadow-xl text-white"
-              >
-                <BarChart3 size={20} /> View Comparisons
-              </motion.button>
+                  <BarChart3 size={20} /> View Comparisons
+                </button>
+              </div>
             </div>
-          </motion.div>
 
           {/* Hero Visual */}
           <motion.div 
@@ -672,16 +688,16 @@ export default function Home() {
         >
           <h2 className="text-6xl md:text-8xl font-black mb-12 text-white tracking-tighter italic leading-[0.9]">Ready to <br />Own the Market?</h2>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <div>
               <Link to="/login?signup=true" className="block px-12 py-6 rounded-2xl bg-white text-indigo-600 text-xl font-black shadow-[0_20px_60px_rgba(0,0,0,0.3)] hover-glow">
                 Sign Up Now
               </Link>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            </div>
+            <div>
               <Link to="/pricing" className="block px-12 py-6 rounded-2xl bg-white/10 border border-white/20 text-white text-xl font-black hover:bg-white/20 transition-all">
                 View All Tiers
               </Link>
-            </motion.div>
+            </div>
           </div>
         </motion.div>
       </section>

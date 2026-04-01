@@ -31,6 +31,7 @@ export type EmailType =
   | 'lead-assigned'
   | 'weekly-digest'
   | 'team-invite'
+  | 'team-event'
   | 'mention'
   | 'custom';
 
@@ -622,11 +623,64 @@ export function mentionTemplate(
 
     ${emailButton('View Message →', chatUrl)}
   `;
-
+ 
   return {
     to: '',
     subject: `💬 ${mentionedBy} mentioned you in #${channelName}`,
     html: emailLayout(body, `${mentionedBy}: "${messagePreview.slice(0, 60)}..."`),
+    mode: 'system',
+  };
+}
+ 
+// ─── Team Event Template ──────────────────────────────────────────────────────
+ 
+export function teamEventTemplate(
+  userName: string,
+  eventTitle: string,
+  startTime: string,
+  location: string,
+  description: string,
+  createdBy: string,
+  dashboardUrl: string,
+): EmailPayload {
+  const firstName = userName.split(' ')[0];
+  const eventDate = new Date(startTime).toLocaleDateString('en-US', { 
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
+  });
+  const eventTime = new Date(startTime).toLocaleTimeString('en-US', { 
+    hour: 'numeric', minute: '2-digit'
+  });
+ 
+  const body = `
+    <h1 style="font-size: 24px; font-weight: 700; color: ${BRAND.textWhite}; margin-bottom: 8px;">
+      Tactical Event Briefing 📅
+    </h1>
+    <p style="font-size: 15px; color: ${BRAND.textLight}; line-height: 1.7; margin-bottom: 24px;">
+      Hey ${firstName}, you've been added to a new team event by <strong style="color: ${BRAND.textWhite};">${createdBy}</strong>.
+    </p>
+ 
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #0f172a; border-radius: 16px; overflow: hidden; margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 24px;">
+          <h2 style="font-size: 18px; font-weight: 700; color: ${BRAND.textWhite}; margin-bottom: 4px;">${eventTitle}</h2>
+          <p style="font-size: 14px; color: ${BRAND.textLight}; margin-bottom: 20px;">${description}</p>
+          
+          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            ${infoRow('Date', eventDate)}
+            ${infoRow('Time', eventTime)}
+            ${infoRow('Location', location)}
+          </table>
+        </td>
+      </tr>
+    </table>
+ 
+    ${emailButton('View Calendar →', dashboardUrl)}
+  `;
+ 
+  return {
+    to: '',
+    subject: `📅 Team Event: ${eventTitle}`,
+    html: emailLayout(body, `Briefing for ${eventTitle} on ${eventDate}`),
     mode: 'system',
   };
 }

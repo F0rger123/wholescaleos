@@ -25,6 +25,8 @@ const COLORS: Record<string, string> = {
   contacted: 'var(--t-secondary)',
   qualified: 'var(--t-accent)',
   negotiating: '#ec4899', 
+  'contract-in': 'var(--t-primary)',
+  'under-contract': 'var(--t-accent)',
   'closed-won': 'var(--t-success)',
   'closed-lost': 'var(--t-error)',
   'other': 'var(--t-text-muted)',
@@ -33,7 +35,7 @@ const COLORS: Record<string, string> = {
 export function PipelineChart() {
   const { leads } = useStore();
   const [chartType, setChartType] = useState<ChartType>('bar');
-  const [timeRange, setTimeRange] = useState<ChartTimeRange>('30d');
+  const [timeRange, setTimeRange] = useState<ChartTimeRange>('all');
   const [metric, setMetric] = useState<MetricType>('leads');
 
   const filteredLeads = useMemo(() => {
@@ -43,25 +45,34 @@ export function PipelineChart() {
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    return leads.filter(l => l && l.createdAt && new Date(l.createdAt) >= cutoff);
+    
+    return leads.filter(l => {
+      if (!l) return false;
+      if (!l.createdAt) return true; // Include leads without dates when 'all' is selected or for better visibility
+      return new Date(l.createdAt) >= cutoff;
+    });
   }, [leads, timeRange]);
 
   const data = useMemo(() => {
-    const statuses = ['new', 'contacted', 'qualified', 'negotiating', 'follow-up', 'not-interested', 'closed-won', 'closed-lost', 'other'];
+    const statuses = ['new', 'contacted', 'qualified', 'negotiating', 'contract-in', 'under-contract', 'follow-up', 'not-interested', 'closed-won', 'closed-lost', 'other'];
     const counts: Record<string, number> = {};
     statuses.forEach(s => counts[s] = 0);
 
     filteredLeads.forEach(l => {
       if (!l) return;
-      let status = String(l.status).toLowerCase();
+      let status = String(l.status || 'new').toLowerCase();
       
       // Map to 'other' if status not in list
       if (!statuses.includes(status)) {
-        status = 'other';
+        // Check if it's a common variant
+        if (status.includes('hot') || status.includes('interested')) status = 'negotiating';
+        else if (status.includes('dead') || status.includes('archive')) status = 'closed-lost';
+        else if (status.includes('follow')) status = 'follow-up';
+        else status = 'other';
       }
 
       if (metric === 'revenue') {
-        counts[status] += (l.estimatedValue || 0);
+        counts[status] += (Number(l.estimatedValue) || 0);
       } else if (metric === 'deals') {
         // Count active deals (anything not lost, new or other)
         if (!['closed-lost', 'new', 'other'].includes(status)) {
@@ -73,7 +84,7 @@ export function PipelineChart() {
     });
 
     return statuses.map(key => ({
-      name: STATUS_LABELS[key as keyof typeof STATUS_LABELS] || key,
+      name: STATUS_LABELS[key as keyof typeof STATUS_LABELS] || key.charAt(0).toUpperCase() + key.slice(1).replace('-', ' '),
       value: counts[key],
       key
     }));

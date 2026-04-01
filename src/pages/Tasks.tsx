@@ -314,10 +314,12 @@ export default function Tasks() {
           <button
             onClick={handleSyncTasks}
             disabled={syncingTasks}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all border"
             style={syncingTasks ? { 
-              borderColor: 'var(--t-primary)', color: 'var(--t-primary)' 
-            } : { borderColor: 'var(--t-border)', color: 'var(--t-text-muted)' }}
+              background: 'var(--t-primary)', color: 'var(--t-on-primary)', borderColor: 'var(--t-primary)'
+            } : { 
+              background: 'var(--t-surface-dim)', borderColor: 'var(--t-border)', color: 'var(--t-text)'
+            }}
           >
             <RefreshCw size={14} className={syncingTasks ? 'animate-spin' : ''} />
             Sync Google
@@ -325,20 +327,20 @@ export default function Tasks() {
           <div className="flex rounded-xl p-0.5" style={{ background: 'var(--t-surface)' }}>
             <button
               onClick={() => setViewMode('list')}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all"
               style={viewMode === 'list' ? { 
                 background: 'var(--t-primary)', 
-                color: '#fff' 
+                color: 'var(--t-on-primary)' 
               } : { color: 'var(--t-text-muted)' }}
             >
               List
             </button>
             <button
               onClick={() => setViewMode('board')}
-              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-colors"
+              className="px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all"
               style={viewMode === 'board' ? { 
                 background: 'var(--t-primary)', 
-                color: '#fff' 
+                color: 'var(--t-on-primary)' 
               } : { color: 'var(--t-text-muted)' }}
             >
               Board
@@ -346,8 +348,8 @@ export default function Tasks() {
           </div>
           <button
             onClick={() => { setShowAdd(true); setEditingId(null); setForm(emptyForm()); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-white text-sm font-medium rounded-xl transition-colors"
-            style={{ background: 'var(--t-primary)' }}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-[var(--t-primary-dim)]"
+            style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
           >
             <Plus size={16} /> New Task
           </button>
@@ -387,15 +389,15 @@ export default function Tasks() {
 
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-1.5 px-3 py-2.5 text-sm rounded-xl border transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest rounded-xl border transition-all"
           style={showFilters ? { 
             background: 'var(--t-primary-dim)', 
             borderColor: 'var(--t-primary)', 
             color: 'var(--t-primary)' 
           } : { 
-            background: '#1e293b', 
-            borderColor: '#334155', 
-            color: '#94a3b8' 
+            background: 'var(--t-surface)', 
+            borderColor: 'var(--t-border)', 
+            color: 'var(--t-text-muted)' 
           }}
         >
           <Filter size={14} /> Filters <ChevronDown size={12} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
@@ -510,12 +512,12 @@ export default function Tasks() {
           </div>
 
           <div className="flex gap-2">
-            <button onClick={handleSave} className="flex items-center gap-1 px-4 py-2 text-white text-sm rounded-xl font-medium"
-              style={{ background: 'var(--t-primary)' }}
+            <button onClick={handleSave} className="flex items-center gap-1 px-4 py-2 text-sm rounded-xl font-black uppercase tracking-widest transition-all"
+              style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
             >
               <CheckCircle2 size={14} /> {editingId ? 'Update Task' : 'Create Task'}
             </button>
-            <button onClick={() => { setShowAdd(false); setEditingId(null); }} className="px-4 py-2 transition-colors text-sm rounded-xl" style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}>Cancel</button>
+            <button onClick={() => { setShowAdd(false); setEditingId(null); }} className="px-4 py-2 transition-all text-[10px] font-black uppercase tracking-widest rounded-xl" style={{ background: 'var(--t-surface-dim)', color: 'var(--t-text-muted)' }}>Cancel</button>
           </div>
         </div>
       )}

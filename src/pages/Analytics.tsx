@@ -36,6 +36,9 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   'negotiating': 'Offer',
   'closed-won': 'Closed Won',
   'closed-lost': 'Closed Lost',
+  'contract-in': 'Contract In',
+  'under-contract': 'Under Contract',
+  'follow-up': 'Follow-up',
 };
 
 const STATUS_COLORS: Record<LeadStatus, string> = {
@@ -45,6 +48,9 @@ const STATUS_COLORS: Record<LeadStatus, string> = {
   'negotiating': '#f59e0b',
   'closed-won': '#22c55e',
   'closed-lost': '#ef4444',
+  'contract-in': '#10b981',
+  'under-contract': '#34d399',
+  'follow-up': '#3b82f6',
 };
 
 const FUNNEL_ORDER: LeadStatus[] = ['new', 'contacted', 'qualified', 'negotiating', 'closed-won'];
@@ -118,8 +124,8 @@ export default function Analytics() {
   // ─── KPI Calculations ──────────────────────────────────────────────────────
 
   const kpis = useMemo(() => {
-    const closedWon = filteredLeads.filter(l => l.status === 'closed-won');
-    const totalRevenue = closedWon.reduce((sum, l) => sum + (l.offerAmount || l.estimatedValue || 0), 0);
+    const closedWon = filteredLeads.filter(l => l.status === 'closed-won' || l.status === 'contract-in' || l.status === 'under-contract');
+    const totalRevenue = closedWon.reduce((sum, l) => sum + (Number(l.offerAmount) || Number(l.estimatedValue) || 0), 0);
     const conversionRate = filteredLeads.length > 0 ? (closedWon.length / filteredLeads.length) * 100 : 0;
     const avgDealValue = closedWon.length > 0 ? totalRevenue / closedWon.length : 0;
     const completedTasks = safeTasks.filter(t => t.status === 'done').length;

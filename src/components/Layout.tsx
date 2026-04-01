@@ -15,11 +15,12 @@ import {
   Calculator, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
-  Shield
+  Shield, BarChart3
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
 import { toast } from 'react-hot-toast';
+import { AIModelSelectionDialog } from './AIModelSelectionDialog';
 
 interface UserTeam {
   teamId: string;
@@ -64,6 +65,7 @@ export function Layout() {
         { to: '/map', label: 'Map', icon: Map },
         { to: '/leads', label: 'Leads', icon: Users },
         { to: '/tasks', label: 'Tasks', icon: ListTodo },
+        { to: '/analytics', label: 'Analytics', icon: BarChart3 },
       ],
       Messages: [
         { to: '/notifications', label: 'Notification Inbox', icon: Bell },
@@ -900,6 +902,7 @@ export function Layout() {
         leadId={activeLeadModalId} 
         onClose={() => setActiveLeadModalId(null)} 
       />
+      <AIModelSelectionDialog />
 
       {/* Global Quick Notes Floating Notepad */}
       {showQuickNotes && !notesDocked && (

@@ -236,7 +236,7 @@
   --t-surface-active: #334155;
   --t-primary: #818cf8;    /* Indigo 400 — High contrast vs dark */
   --t-primary-hover: #6366f1;
-  --t-on-primary: #ffffff;
+  --t-on-primary: #000000;
   --t-text: #f8fafc;       /* Slate 50 */
   --t-text-secondary: #94a3b8;
   --t-text-muted: #64748b;

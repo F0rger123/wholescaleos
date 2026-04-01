@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Award, DollarSign, TrendingUp, Plus, X, Check,
-  Shield, Eye, Crown, Copy, UserMinus, ChevronDown,
-  ListTodo, Users, Building2, ArrowRightLeft,
-  Target, Zap, MessageSquare, ArrowRight
+  DollarSign, Shield, Eye, Crown, Copy, UserMinus, ChevronDown,
+  Users, Building2, Zap, MessageSquare, 
+  Plus, Check, X
 } from 'lucide-react';
 import {
   useStore, type TeamRole,
 } from '../../store/useStore';
-import { StatusIndicator, StatusBadge } from '../StatusIndicator';
 import { JoinTeamModal } from '../JoinTeamModal';
 import { CreateTeamModal } from '../CreateTeamModal';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
@@ -19,8 +17,6 @@ import {
   Tooltip,
   PieChart, Pie, Cell,
 } from 'recharts';
-import { TeamActivityFeed } from './TeamActivityFeed';
-import { TeamChatPreview } from './TeamChatPreview';
 import { toast } from 'react-hot-toast';
 
 const ROLE_ICONS: Record<TeamRole, React.ElementType> = { admin: Crown, member: Shield, viewer: Eye };
@@ -34,10 +30,9 @@ interface UserTeam {
 
 export function TeamOverviewTab() {
   const {
-    team, leads, tasks, teamConfig, currentUser,
+    team, leads, teamConfig, milestones, currentUser,
     addTeamMember, removeTeamMember,
-    updateTeamConfig, transferTeamOwnership,
-    canAddMember
+    updateMilestone, addMilestone, deleteMilestone, canAddMember
   } = useStore();
 
   const navigate = useNavigate();
@@ -45,29 +40,74 @@ export function TeamOverviewTab() {
   const [showAddMember, setShowAddMember] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
-  const [teamName, setTeamName] = useState(teamConfig.name);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showTeamSwitcher, setShowTeamSwitcher] = useState(false);
+  const [showAddMilestone, setShowAddMilestone] = useState(false);
   const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
+ 
+  const [newMilestone, setNewMilestone] = useState({
+    label: '',
+    target: 0,
+    type: 'leads' as any,
+    current: 0
+  });
 
   const [newMember, setNewMember] = useState({
     name: '', role: '', email: '', phone: '',
     teamRole: 'member' as TeamRole,
   });
 
-  const totalRevenue = leads
-    .filter(l => l.status === 'closed-won')
-    .reduce((sum, l) => sum + (l.offerAmount || 0), 0);
-  
-  const totalDeals = leads.filter(l => l.status === 'closed-won').length;
-  const onlineCount = team.filter(t => t.presenceStatus === 'online').length;
+  const totalRevenue = milestones.find(m => m.type === 'revenue')?.current || 0;
+  const totalDeals = milestones.find(m => m.type === 'deals')?.current || 0;
 
-  const teamGoals = [
-    { type: 'leads', target: 50, current: leads.length, label: 'Lead Generation' },
-    { type: 'deals', target: 10, current: totalDeals, label: 'Closed Deals' },
-    { type: 'revenue', target: 500000, current: totalRevenue, label: 'Revenue Target' }
-  ];
+  const formatTarget = (val: number, type: string) => {
+    if (type !== 'revenue') return val;
+    if (val >= 1000000) return `$${(val/1000000).toFixed(1)}M`;
+    if (val >= 1000) return `$${(val/1000).toFixed(0)}k`;
+    return `$${val}`;
+  };
+
+
+  const contributionData = team.map(m => {
+    const memberDeals = leads.filter(l => 
+      (l.assignedTo === m.id || l.assignedTo === m.name) && 
+      ['closed-won', 'contract-in', 'under-contract'].includes(l.status)
+    );
+    const memberRev = memberDeals.reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0);
+    return { name: m.name, id: m.id, value: memberRev || 0.01, rawRev: memberRev };
+  }).sort((a, b) => b.value - a.value);
+
+  const COLORS = ['var(--t-primary)', 'var(--t-accent)', 'var(--t-info)', 'var(--t-warning)', 'var(--t-error)'];
+
+  const handleUpdateMilestone = (id: string) => {
+    const newVal = prompt("Enter new current value:");
+    if (newVal === null) return;
+    const val = parseInt(newVal);
+    if (isNaN(val)) return;
+    
+    updateMilestone(id, val);
+    toast.success('Milestone updated');
+  };
+ 
+  const handleAddMilestone = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMilestone.label || !newMilestone.target) {
+      toast.error('Label and Target are required');
+      return;
+    }
+    addMilestone(newMilestone);
+    setNewMilestone({ label: '', target: 0, type: 'leads', current: 0 });
+    setShowAddMilestone(false);
+    toast.success('Strategic goal added');
+  };
+ 
+  const handleDeleteMilestone = (id: string) => {
+    if (window.confirm('Decommission this objective?')) {
+      deleteMilestone(id);
+      toast.success('Strategic goal removed');
+    }
+  };
 
   useEffect(() => {
     async function fetchUserTeams() {
@@ -98,521 +138,556 @@ export function TeamOverviewTab() {
   const copyInviteCode = () => {
     navigator.clipboard.writeText(teamConfig.inviteCode);
     setCopiedCode(true);
+    toast.success('Invite code copied!');
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
-  const handleAddMember = () => {
-    const res = canAddMember();
-    if (!res.can) {
-      alert(res.reason);
-      if (res.reason?.includes('upgrade')) {
-        navigate('/billing');
-      }
+  const handleAddMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    const check = canAddMember();
+    if (!check.can) {
+      toast.error(check.reason || 'Team seat limit reached');
       return;
     }
 
-    if (!newMember.name.trim() || !newMember.email.trim()) return;
-    const initials = (newMember.name || 'Member').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    addTeamMember({
-      name: newMember.name.trim(),
-      role: newMember.role || 'Team Member',
-      email: newMember.email.trim(),
-      phone: newMember.phone,
-      avatar: initials,
-      dealsCount: 0,
-      revenue: 0,
-      presenceStatus: 'offline',
-      customStatus: '',
+    if (!newMember.name || !newMember.email) {
+      toast.error('Name and Email are required');
+      return;
+    }
+
+    addTeamMember({ 
+      ...newMember, 
+      presenceStatus: 'offline', 
       lastSeen: new Date().toISOString(),
-      teamRole: newMember.teamRole,
+      revenue: 0,
+      avatar: '',
+      dealsCount: 0,
+      customStatus: ''
     });
     setNewMember({ name: '', role: '', email: '', phone: '', teamRole: 'member' });
     setShowAddMember(false);
+    toast.success('Team member added');
+  };
+
+  const handleSwitchTeam = async (targetTeamId: string) => {
+    try {
+      switchToTeam(targetTeamId);
+      toast.success('Switched team successfully');
+      setShowTeamSwitcher(false);
+    } catch (err) {
+      toast.error('Failed to switch team');
+    }
+  };
+
+  const handleCreateTeam = () => {
+    setShowCreateModal(true);
+    setShowTeamSwitcher(false);
   };
 
   return (
-    <div className="space-y-6">
-      {/* Team Header — Current Team + Switcher */}
-      <div
-        className="rounded-2xl border p-5"
-        style={{
-          backgroundColor: 'var(--t-surface)',
-          borderColor: 'var(--t-border)',
-        }}
-      >
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: 'var(--t-primary-dim)' }}
-            >
-              <Building2 size={24} style={{ color: 'var(--t-primary)' }} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>
-                  {teamConfig.name}
-                </h2>
-                {userTeams.length > 1 && (
-                  <span
-                    className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor: 'var(--t-primary-dim)',
-                      color: 'var(--t-primary)',
-                    }}
-                  >
-                    {userTeams.length} teams
-                  </span>
-                )}
-              </div>
-              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
-                {team.length} member{team.length !== 1 ? 's' : ''} · {onlineCount} online · <span className="font-bold text-[var(--t-primary)]">{team.length} of {teamConfig.maxSeats || 5} seats used</span>
-              </p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Header & Team Info */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 rounded-[2rem] bg-[var(--t-primary)] flex items-center justify-center text-white shadow-2xl relative group">
+            <Building2 size={36} />
+            <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-[var(--t-surface)] border border-[var(--t-border)] flex items-center justify-center text-[var(--t-primary)]">
+              <Users size={16} />
             </div>
           </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {userTeams.length > 1 && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowTeamSwitcher(!showTeamSwitcher)}
-                  className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border transition-colors"
-                  style={{
-                    borderColor: 'var(--t-border)',
-                    color: 'var(--t-text-secondary)',
-                    backgroundColor: 'transparent',
-                  }}
-                >
-                  <ArrowRightLeft size={14} /> Switch Team
-                </button>
-
-                {showTeamSwitcher && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowTeamSwitcher(false)} />
-                    <div
-                      className="absolute right-0 top-full mt-2 w-64 rounded-xl border shadow-xl z-20 overflow-hidden"
-                      style={{
-                        backgroundColor: 'var(--t-surface)',
-                        borderColor: 'var(--t-border)',
-                      }}
-                    >
-                      <div className="p-2">
-                        {userTeams.map(t => (
-                          <button
-                            key={t.teamId}
-                            onClick={() => {
-                              if (!t.isCurrent) switchToTeam(t.teamId);
-                              setShowTeamSwitcher(false);
-                            }}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left hover:bg-[var(--t-surface-hover)]"
-                          >
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--t-primary-dim)]">
-                              <Building2 size={14} style={{ color: 'var(--t-primary)' }} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate" style={{ color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text)' }}>
-                                {t.teamName}
-                              </p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">{teamConfig.name}</h1>
+              <button 
+                onClick={() => setShowTeamSwitcher(!showTeamSwitcher)}
+                className="p-1.5 rounded-lg hover:bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] transition-colors"
+              >
+                <ChevronDown size={20} />
+              </button>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 py-1 px-3 rounded-full bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
+                <Users size={12} className="text-[var(--t-primary)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text)]">{team.length} / {teamConfig.maxSeats || 10} Seats</span>
               </div>
-            )}
-
-            <button
-              onClick={() => setShowJoinModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border border-[var(--t-border)] text-[var(--t-text-secondary)] hover:bg-[var(--t-surface-hover)] transition-colors"
-            >
-              <Users size={14} /> Join Team
-            </button>
-
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl font-medium bg-[var(--t-primary)] text-[var(--t-on-primary)] hover:bg-[var(--t-primary-dim)] hover:text-[var(--t-primary-text)] transition-colors"
-            >
-              <Plus size={14} /> Create Team
-            </button>
+            </div>
           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowInvite(true)}
+            className="px-6 py-3 bg-[var(--t-surface)] text-[var(--t-text)] font-black uppercase tracking-widest text-[10px] rounded-2xl border border-[var(--t-border)] hover:bg-[var(--t-surface-dim)] transition-all flex items-center gap-2"
+          >
+            <Users size={16} />
+            Invite Member
+          </button>
+          <button
+             onClick={() => navigate('/chat')}
+             className="px-6 py-3 bg-[var(--t-primary)] text-white font-black uppercase tracking-widest text-[10px] rounded-2xl border border-white/10 shadow-xl shadow-[var(--t-primary-dim)] hover:translate-y-[-2px] active:translate-y-[0] transition-all flex items-center gap-2"
+          >
+            <MessageSquare size={16} />
+            Team Chat
+          </button>
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>
-            Team Members
-          </h1>
+      {/* Team Switcher Dropdown */}
+      {showTeamSwitcher && (
+        <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl p-4 shadow-2xl animate-in zoom-in-95 duration-200 origin-top-left max-w-sm">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] px-3 mb-3">Your Teams</p>
+          <div className="space-y-1">
+            {userTeams.map((t) => (
+              <button
+                key={t.teamId}
+                onClick={() => !t.isCurrent && handleSwitchTeam(t.teamId)}
+                className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all ${t.isCurrent ? 'bg-[var(--t-primary)]/10 border border-[var(--t-primary)]' : 'hover:bg-[var(--t-surface-dim)] border border-transparent'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black ${t.isCurrent ? 'bg-[var(--t-primary)] text-white' : 'bg-[var(--t-surface-dim)] text-[var(--t-text-muted)]'}`}>
+                    {t.teamName[0].toUpperCase()}
+                  </div>
+                  <div className="text-left">
+                    <p className={`text-sm font-black ${t.isCurrent ? 'text-white' : 'text-[var(--t-text)]'}`}>{t.teamName}</p>
+                    <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-widest font-bold">{t.role}</p>
+                  </div>
+                </div>
+                {t.isCurrent && <Check size={16} className="text-[var(--t-primary)]" />}
+              </button>
+            ))}
+          </div>
+          <div className="mt-4 pt-4 border-t border-[var(--t-border)] grid grid-cols-2 gap-2">
+            <button
+               onClick={() => setShowJoinModal(true)}
+               className="p-3 rounded-2xl bg-[var(--t-surface-dim)] text-[10px] font-black uppercase tracking-widest text-[var(--t-text)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center justify-center gap-2"
+            >
+              <Zap size={14} className="text-[var(--t-primary)]" />
+              Join
+            </button>
+            <button
+               onClick={handleCreateTeam}
+               className="p-3 rounded-2xl bg-[var(--t-surface-dim)] text-[10px] font-black uppercase tracking-widest text-[var(--t-text)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center justify-center gap-2"
+            >
+              <Plus size={14} className="text-[var(--t-primary)]" />
+              Create
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowInvite(!showInvite)}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-xl border border-[var(--t-border)] text-[var(--t-text-secondary)] hover:bg-[var(--t-surface-hover)] transition-colors"
-          >
-            <Copy size={14} /> Invite Code
-          </button>
+      )}
+
+      {/* KPI & Milestones Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Performance Milestones */}
+        <div className="rounded-[2.5rem] p-8 bg-[var(--t-surface)] border border-[var(--t-border)] shadow-xl space-y-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Performance Milestones</h3>
+              <p className="text-xs text-[var(--t-text-muted)]">Active team development goals.</p>
+            </div>
+            <button 
+              onClick={() => setShowAddMilestone(true)}
+              className="p-2 rounded-xl bg-[var(--t-primary)]/10 text-[var(--t-primary)] border border-[var(--t-primary)]/20 hover:bg-[var(--t-primary)] hover:text-white transition-all shadow-lg shadow-[var(--t-primary-dim)]"
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-4 rounded-2xl bg-[var(--t-bg)] border border-[var(--t-border)]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Total Revenue</p>
+                <p className="text-xl font-black text-emerald-500">${(totalRevenue/1000).toFixed(1)}k</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-[var(--t-bg)] border border-[var(--t-border)]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Total Deals</p>
+                <p className="text-xl font-black text-blue-500">{totalDeals}</p>
+              </div>
+            </div>
+            {milestones.map((m) => {
+              const progress = Math.min(100, (m.current / m.target) * 100);
+              return (
+                <div key={m.id} className="space-y-3 group">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">{m.label}</p>
+                      <h4 className="text-lg font-black text-[var(--t-text)]">
+                        {formatTarget(m.current, m.type)} 
+                        <span className="text-[var(--t-text-muted)] font-medium mx-1">/</span> 
+                        {formatTarget(m.target, m.type)}
+                      </h4>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleUpdateMilestone(m.id)}
+                        className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] opacity-0 group-hover:opacity-100 transition-all hover:text-[var(--t-primary)]"
+                        title="Update Progress"
+                      >
+                        <Plus size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteMilestone(m.id)}
+                        className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-rose-500 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500 hover:text-white"
+                        title="Decommission Objective"
+                      >
+                        <UserMinus size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="h-3 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden p-0.5 border border-[var(--t-border)]">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[var(--t-primary)] to-[var(--t-accent)] rounded-full transition-all duration-1000 relative"
+                      style={{ width: `${progress}%` }}
+                    >
+                      {progress > 5 && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-white animate-pulse" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Revenue Mix */}
+        <div className="rounded-[2.5rem] p-8 bg-[var(--t-surface)] border border-[var(--t-border)] shadow-xl space-y-8">
+           <div className="flex items-center justify-between">
+              <div>
+                 <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Member Contributions</h3>
+                 <p className="text-xs text-[var(--t-text-muted)]">Relative performance split.</p>
+              </div>
+              <DollarSign size={24} className="text-emerald-500" />
+           </div>
+
+           <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="h-[200px] w-[200px]">
+                 <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                       <Pie
+                          data={contributionData.slice(0, 5)}
+                          cx="50%" cy="50%"
+                          innerRadius={60} outerRadius={80}
+                          paddingAngle={8}
+                          dataKey="value"
+                       >
+                          {contributionData.slice(0, 5).map((_, i) => (
+                             <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                       </Pie>
+                       <Tooltip 
+                         contentStyle={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '12px', color: 'var(--t-text)' }}
+                         itemStyle={{ color: 'var(--t-text)', fontWeight: 'bold' }}
+                       />
+                    </PieChart>
+                 </ResponsiveContainer>
+              </div>
+
+              <div className="flex-1 space-y-4">
+                 {contributionData.slice(0, 5).map((member, i) => (
+                    <div key={member.id} className="flex items-center justify-between">
+                       <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                          <span className="text-sm font-black text-[var(--t-text)]">{member.name}</span>
+                       </div>
+                       <span className="text-xs font-black text-emerald-500">${(member.rawRev/1000).toFixed(1)}k</span>
+                    </div>
+                 ))}
+              </div>
+           </div>
+        </div>
+      </div>
+
+      {/* Team Roster */}
+      <div className="rounded-[2.5rem] p-8 bg-[var(--t-surface)] border border-[var(--t-border)] shadow-xl space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Commanders & Operatives</h3>
+            <p className="text-xs text-[var(--t-text-muted)]">Active roster management.</p>
+          </div>
           <button
             onClick={() => setShowAddMember(true)}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-xl bg-[var(--t-primary)] text-[var(--t-on-primary)] hover:bg-[var(--t-primary-dim)] hover:text-[var(--t-primary-text)] transition-colors"
+            className="p-3 rounded-2xl bg-[var(--t-primary)]/10 text-[var(--t-primary)] border border-[var(--t-primary)]/20 hover:bg-[var(--t-primary)] hover:text-white transition-all shadow-lg shadow-[var(--t-primary-dim)]"
           >
-            <Plus size={16} /> Add Member
+            <Plus size={20} />
           </button>
         </div>
-      </div>
 
-      {/* Invite Code Panel */}
-      {showInvite && (
-        <div className="rounded-2xl border p-5 bg-[var(--t-surface)] border-[var(--t-border)]">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>Team Invite Code</h3>
-            <button onClick={() => setShowInvite(false)}><X size={16} /></button>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <div className="flex gap-2">
-                <input
-                  value={teamName}
-                  onChange={(e) => setTeamName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-input-border)] text-[var(--t-text)]"
-                />
-                <button
-                  onClick={() => updateTeamConfig({ name: teamName })}
-                  className="px-3 py-2 text-sm rounded-xl bg-[var(--t-primary)] text-white"
-                >
-                  <Check size={14} />
-                </button>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <div className="px-4 py-2 border rounded-xl text-sm font-mono tracking-wider bg-[var(--t-input-bg)] border-[var(--t-input-border)] text-[var(--t-primary)]">
-                {teamConfig.inviteCode}
-              </div>
-              <button onClick={copyInviteCode} className="px-3 py-2 rounded-xl border border-[var(--t-border)]">
-                {copiedCode ? <Check size={14} className="text-[var(--t-success)]" /> : <Copy size={14} />}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {team.map((member) => {
+            const RoleIcon = ROLE_ICONS[member.teamRole] || Shield;
+            const isExpanded = expandedMember === member.id;
 
-      {/* Add Member Form */}
-      {showAddMember && (
-         <div className="rounded-2xl border p-6 space-y-6 bg-[var(--t-surface)] border-[var(--t-border)] shadow-2xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold">Add Team Member</h3>
-                <p className="text-[10px] text-[var(--t-text-muted)] font-medium uppercase tracking-wider">Expand your organization</p>
-              </div>
-              <button 
-                onClick={() => setShowAddMember(false)}
-                className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"
+            return (
+              <div 
+                key={member.id} 
+                className={`p-6 rounded-[2rem] border transition-all duration-500 ${isExpanded ? 'bg-[var(--t-bg)] border-[var(--t-primary)] shadow-2xl scale-[1.02]' : 'bg-[var(--t-surface-dim)]/30 border-[var(--t-border)] hover:border-[var(--t-primary)]/30'}`}
               >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest pl-1">Full Name</label>
-                <input 
-                  placeholder="e.g. John Doe" 
-                  value={newMember.name} 
-                  onChange={e => setNewMember(f => ({ ...f, name: e.target.value }))}
-                  className="w-full px-4 py-3 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-input-border)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest pl-1">Email Address</label>
-                <input 
-                  placeholder="e.g. john@example.com" 
-                  value={newMember.email} 
-                  onChange={e => setNewMember(f => ({ ...f, email: e.target.value }))}
-                  className="w-full px-4 py-3 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-input-border)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest pl-1">Position / Role</label>
-                <input 
-                  placeholder="e.g. Sales Director" 
-                  value={newMember.role} 
-                  onChange={e => setNewMember(f => ({ ...f, role: e.target.value }))}
-                  className="w-full px-4 py-3 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-input-border)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest pl-1">Platform Role</label>
-                <select 
-                  value={newMember.teamRole}
-                  onChange={e => setNewMember(f => ({ ...f, teamRole: e.target.value as any }))}
-                  className="w-full px-4 py-3 text-sm rounded-xl bg-[var(--t-input-bg)] border border-[var(--t-input-border)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all"
-                >
-                  <option value="member">Member (Regular Access)</option>
-                  <option value="admin">Admin (Full Control)</option>
-                  <option value="viewer">Viewer (Read-Only)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button 
-                onClick={handleAddMember} 
-                className="flex-1 px-8 py-3 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all"
-              >
-                Send Invite
-              </button>
-              <button 
-                onClick={() => setShowAddMember(false)} 
-                className="px-8 py-3 border border-[var(--t-border)] text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] rounded-xl font-bold text-sm transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-         </div>
-      )}
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {[
-          { icon: Award, value: team.length, label: 'Members' },
-          { icon: Users, value: onlineCount, label: 'Online' },
-          { icon: DollarSign, value: `$${(totalRevenue / 1_000_000).toFixed(1)}M`, label: 'Revenue' },
-          { icon: TrendingUp, value: totalDeals, label: 'Deals' },
-        ].map(({ icon: Icon, value, label }) => (
-          <div key={label} className="rounded-2xl border p-5 text-center bg-[var(--t-surface)] border-[var(--t-border)]">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-3 bg-[var(--t-primary-dim)]">
-              <Icon size={22} style={{ color: 'var(--t-primary)' }} />
-            </div>
-            <p className="text-2xl font-bold">{value}</p>
-            <p className="text-sm text-[var(--t-text-muted)]">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Dashboard Section (Feed + Charts) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Main Stats Column */}
-        <div className="xl:col-span-2 space-y-6">
-           {/* Team Goals Section */}
-           <div className="rounded-[2rem] border p-8 space-y-8 bg-[var(--t-surface)] border-[var(--t-border)] shadow-xl relative overflow-hidden group">
-              {/* Background gradient hint */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--t-primary-dim)]/5 blur-[100px] -mr-32 -mt-32 rounded-full" />
-              
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <h3 className="text-2xl font-black italic uppercase tracking-tighter">Performance Milestones</h3>
-                  <p className="text-[10px] text-[var(--t-text-muted)] font-black uppercase tracking-[0.2em] mt-1">Q2 2026 Strategic Objectives</p>
-                </div>
-                <button onClick={() => toast.success('Goal wizard launched')} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--t-primary)] text-[var(--t-on-primary)] text-xs font-black uppercase tracking-widest shadow-lg shadow-[var(--t-primary-dim)] hover:scale-105 active:scale-95 transition-all">
-                  <Target size={16} /> Update Progress
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-                {teamGoals.map((goal, i) => {
-                  const progress = Math.min(100, Math.round((goal.current / goal.target) * 100));
-                  return (
-                    <div key={i} className="p-6 rounded-[1.5rem] bg-[var(--t-bg)] border border-[var(--t-border)] shadow-sm hover:shadow-md transition-shadow group/card">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] group-hover/card:text-[var(--t-primary)] transition-colors">{goal.label}</div>
-                        <div className="text-[10px] font-black text-[var(--t-primary)]">{progress}%</div>
+                <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="w-14 h-14 rounded-2xl bg-[var(--t-surface)] border border-[var(--t-border)] flex items-center justify-center text-xl font-black text-[var(--t-primary)] overflow-hidden shadow-xl">
+                        {member.avatar ? (
+                          <img src={member.avatar} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          member.name[0].toUpperCase()
+                        )}
                       </div>
-                      <div className="text-3xl font-black italic mb-4">
-                        {goal.type === 'revenue' ? `$${(goal.current/1000).toFixed(0)}k` : goal.current}
-                        <span className="text-sm font-bold text-[var(--t-text-muted)] ml-2 not-italic">/ {goal.type === 'revenue' ? `$${(goal.target/1000).toFixed(0)}k` : goal.target}</span>
-                      </div>
-                      <div className="h-2.5 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden shadow-inner">
-                        <div className="h-full bg-gradient-to-r from-[var(--t-primary)] to-[var(--t-primary-dim)] rounded-full group-hover/card:brightness-110 transition-all" style={{ width: `${progress}%` }} />
-                      </div>
+                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--t-surface)] ${member.presenceStatus === 'online' ? 'bg-emerald-500 ring-2 ring-emerald-500/20' : 'bg-[var(--t-text-muted)]'}`} />
                     </div>
-                  );
-                })}
-              </div>
-           </div>
-
-           {/* Task & Revenue Analysis Row */}
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="rounded-[2rem] border p-8 bg-[var(--t-surface)] border-[var(--t-border)] shadow-xl flex flex-col group">
-                 <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Task Velocity</h3>
-                    <div className="p-2 rounded-xl bg-[var(--t-primary-dim)] text-[var(--t-primary)]"><ListTodo size={18} /></div>
-                 </div>
-                 <div className="flex-1 flex items-center justify-center min-h-[220px]">
-                    <div className="relative w-full h-full">
-                       <ResponsiveContainer width="100%" height="100%">
-                         <PieChart>
-                           <Pie
-                             data={[
-                               { name: 'Completed', value: tasks.filter(t => t.status === 'done').length },
-                               { name: 'Pending', value: tasks.filter(t => t.status !== 'done').length }
-                             ]}
-                             innerRadius={70} outerRadius={90} paddingAngle={8} dataKey="value"
-                             stroke="none"
-                           >
-                             <Cell fill="var(--t-primary)" />
-                             <Cell fill="var(--t-surface-dim)" />
-                           </Pie>
-                           <Tooltip 
-                               contentStyle={{ 
-                                 backgroundColor: 'var(--t-surface)', 
-                                 borderColor: 'var(--t-border)',
-                                 borderRadius: '12px',
-                                 fontSize: '11px',
-                                 fontWeight: 'bold'
-                               }}
-                           />
-                         </PieChart>
-                       </ResponsiveContainer>
-                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <p className="text-3xl font-black italic">{Math.round((tasks.filter(t => t.status === 'done').length / Math.max(1, tasks.length)) * 100)}%</p>
-                          <p className="text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-widest">Efficiency</p>
-                       </div>
-                    </div>
-                 </div>
-              </div>
-
-              <div className="rounded-[2rem] border p-8 bg-[var(--t-surface)] border-[var(--t-border)] shadow-xl flex flex-col group">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xl font-black italic uppercase tracking-tighter">Revenue Split</h3>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500"><DollarSign size={18} /></div>
-                  </div>
-                  <div className="flex-1 space-y-6">
-                     {team.slice(0, 3).map((m, i) => {
-                        const mRev = leads.filter(l => l.assignedTo === m.id && l.status === 'closed-won').reduce((s,l) => s + (l.offerAmount || 0), 0);
-                        const revPercent = Math.round((mRev / Math.max(1, totalRevenue)) * 100);
-                        return (
-                          <div key={m.id} className="space-y-2">
-                             <div className="flex justify-between items-center text-[11px] font-bold">
-                                <span>{m.name}</span>
-                                <span className={i === 0 ? 'text-emerald-500' : 'text-[var(--t-text-muted)]'}>${(mRev/1000).toFixed(1)}k ({revPercent}%)</span>
-                             </div>
-                             <div className="h-1.5 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden">
-                                <div className={`h-full ${i === 0 ? 'bg-emerald-500' : 'bg-[var(--t-primary)]'}`} style={{ width: `${revPercent}%` }} />
-                             </div>
-                          </div>
-                        )
-                     })}
-                  </div>
-              </div>
-           </div>
-        </div>
-
-        {/* Live Activity Column */}
-        <div className="space-y-6">
-           <div className="rounded-[2rem] border p-6 bg-[var(--t-surface)] border-[var(--t-border)] shadow-lg flex flex-col h-[400px]">
-              <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-lg font-black italic uppercase tracking-tighter flex items-center gap-2">
-                   <Zap size={18} className="text-amber-500" />
-                   Team Pulse
-                 </h3>
-                 <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                 <TeamActivityFeed />
-              </div>
-           </div>
-
-           <div className="rounded-[2rem] border p-6 bg-[var(--t-surface)] border(--t-border)] shadow-lg flex flex-col">
-              <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-lg font-black italic uppercase tracking-tighter flex items-center gap-2">
-                   <MessageSquare size={18} className="text-indigo-500" />
-                   Chat Quickview
-                 </h3>
-                 <button onClick={() => navigate('/chat')} className="p-1.5 hover:bg-[var(--t-surface-hover)] rounded-lg transition-colors"><ArrowRight size={14} /></button>
-              </div>
-              <TeamChatPreview />
-           </div>
-        </div>
-      </div>
-
-      {/* Member Cards */}
-      <div className="space-y-4">
-        {team.map((member) => {
-          const isExpanded = expandedMember === member.id;
-          const RoleIcon = ROLE_ICONS[member.teamRole];
-
-          return (
-            <div key={member.id} className="rounded-2xl border bg-[var(--t-surface)] border-[var(--t-border)] overflow-hidden">
-               <div className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="relative shrink-0">
-                      <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-bold bg-gradient-to-br from-indigo-500 to-purple-500 text-white">
-                        {member.avatar}
+                    <div>
+                      <h4 className="text-lg font-black text-[var(--t-text)] leading-tight">{member.name}</h4>
+                      <div className="flex items-center gap-1.5">
+                        <RoleIcon size={12} className="text-[var(--t-primary)]" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">{member.teamRole}</span>
                       </div>
-                      <span className="absolute -bottom-1 -right-1">
-                        <StatusIndicator status={member.presenceStatus} size="md" />
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                       <div className="flex items-center gap-2">
-                         <h3 className="text-lg font-semibold">{member.name}</h3>
-                         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--t-primary-dim)] text-[var(--t-primary)] flex items-center gap-1">
-                           <RoleIcon size={10} /> {member.teamRole}
-                         </span>
-                       </div>
-                       <p className="text-sm font-medium text-[var(--t-primary)]">{member.role}</p>
-                       <div className="flex items-center gap-4 mt-2">
-                         <StatusBadge status={member.presenceStatus} customStatus={member.customStatus} />
-                       </div>
                     </div>
                   </div>
-                  
                   <button 
                     onClick={() => setExpandedMember(isExpanded ? null : member.id)}
-                    className="mt-4 flex items-center gap-2 text-xs text-[var(--t-text-muted)]"
+                    className="p-2 rounded-xl hover:bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] transition-colors"
                   >
-                    <ListTodo size={14} /> View Member Details <ChevronDown size={14} className={isExpanded ? 'rotate-180' : ''} />
+                    <ChevronDown size={20} className={`transition-transform duration-500 ${isExpanded ? 'rotate-180' : ''}`} />
                   </button>
-               </div>
+                </div>
 
-               {isExpanded && (
-                 <div className="p-6 bg-[var(--t-bg)] border-t border-[var(--t-border)]">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                       <div className="p-4 rounded-xl bg-[var(--t-surface)]">
-                          <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">Revenue</p>
-                          <p className="text-lg font-black">${(leads.filter(l => l.assignedTo === member.id && l.status === 'closed-won').reduce((s,l) => s + (l.offerAmount || 0), 0) / 1000).toFixed(1)}k</p>
+                <div className="grid grid-cols-3 gap-3 mb-6">
+                  <div className="bg-[var(--t-surface)] p-3 rounded-2xl border border-[var(--t-border)]">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Deals Won</p>
+                    <p className="text-lg font-black text-[var(--t-text)]">{leads.filter(l => l.assignedTo === member.id && l.status === 'closed-won').length}</p>
+                  </div>
+                  <div className="bg-[var(--t-surface)] p-3 rounded-2xl border border-[var(--t-border)]">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Revenue</p>
+                    <p className="text-lg font-black text-emerald-500">${(leads.filter(l => l.assignedTo === member.id && ['closed-won', 'contract-in', 'under-contract'].includes(l.status)).reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0) / 1000).toFixed(1)}k</p>
+                  </div>
+                  <div className="bg-[var(--t-surface)] p-3 rounded-2xl border border-[var(--t-border)]">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Open Leads</p>
+                    <p className="text-lg font-black text-[var(--t-text)]">{leads.filter(l => l.assignedTo === member.id && !['closed-won', 'closed-lost'].includes(l.status)).length}</p>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="space-y-4 animate-in slide-in-from-top-4 duration-500">
+                    <div className="space-y-2">
+                       <div className="flex items-center gap-1.5 text-[10px] text-[var(--t-text-muted)] font-bold uppercase">
+                          <Users size={12} />
+                          <span>{member.role || 'Operative'}</span>
                        </div>
-                       <div className="p-4 rounded-xl bg-[var(--t-surface)]">
-                          <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">Deals</p>
-                          <p className="text-lg font-black">{leads.filter(l => l.assignedTo === member.id && l.status === 'closed-won').length}</p>
-                       </div>
-                       <div className="p-4 rounded-xl bg-[var(--t-surface)]">
-                          <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">Tasks</p>
-                          <p className="text-lg font-black">{tasks.filter(t => t.assignedTo === member.id && t.status === 'done').length}</p>
-                       </div>
-                       <div className="p-4 rounded-xl bg-[var(--t-surface)]">
-                          <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase">Efficiency</p>
-                          <p className="text-lg font-black">{Math.round((tasks.filter(t => t.assignedTo === member.id && t.status === 'done').length / Math.max(1, tasks.filter(t => t.assignedTo === member.id).length)) * 100)}%</p>
+                       <div className="flex items-center gap-1.5 text-[10px] text-[var(--t-text-muted)] font-bold uppercase">
+                          <Plus size={12} />
+                          <span>Joined {new Date(member.lastSeen).toLocaleDateString()}</span>
                        </div>
                     </div>
-                    {/* Member Actions */}
-                    <div className="pt-4 border-t border-[var(--t-border)] flex items-center gap-4">
-                       {currentUser?.id !== member.id && (
-                         <button 
-                           onClick={() => { if (confirm(`Remove ${member.name}?`)) removeTeamMember(member.id); }}
-                           className="text-xs text-[var(--t-error)] font-bold flex items-center gap-1 hover:opacity-80 transition-opacity"
+                    {currentUser?.id !== member.id && (
+                      <div className="pt-4 border-t border-[var(--t-border)]">
+                         <button
+                           onClick={() => removeTeamMember(member.id)}
+                           className="w-full py-3 rounded-xl bg-rose-500/10 text-rose-500 text-[10px] font-black uppercase tracking-widest border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center gap-2"
                          >
-                           <UserMinus size={14} /> Remove Member
+                           <UserMinus size={14} />
+                           Release Member
                          </button>
-                       )}
-                       {teamConfig.createdBy === currentUser?.id && currentUser?.id !== member.id && (
-                         <button 
-                           onClick={() => { if (confirm(`Transfer team ownership to ${member.name}? This cannot be undone.`)) transferTeamOwnership(member.id); }}
-                           className="text-xs text-[var(--t-primary)] font-bold flex items-center gap-1 hover:opacity-80 transition-opacity"
-                         >
-                           <ArrowRightLeft size={14} /> Transfer Ownership
-                         </button>
-                       )}
-                    </div>
-                 </div>
-               )}
-            </div>
-          );
-        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
+      {/* Invite Modal */}
+      {showInvite && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Users size={120} />
+             </div>
+             
+             <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Invite Allies</h3>
+                  <p className="text-sm text-[var(--t-text-muted)]">Expand your tactical operations.</p>
+                </div>
+                <button 
+                   onClick={() => setShowInvite(false)}
+                   className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] hover:text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+             </div>
+
+             <div className="space-y-6">
+                <div className="p-6 rounded-3xl bg-[var(--t-bg)] border-2 border-dashed border-[var(--t-border)] text-center space-y-4">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Tactical Join Code</p>
+                   <p className="text-4xl font-black text-[var(--t-primary)] tracking-[0.2em]">{teamConfig.inviteCode}</p>
+                   <button
+                     onClick={copyInviteCode}
+                     className="mx-auto flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--t-primary)] text-white text-[10px] font-black uppercase tracking-widest hover:translate-y-[-2px] transition-all"
+                   >
+                     {copiedCode ? <Check size={14} /> : <Copy size={14} />}
+                     {copiedCode ? 'Copied!' : 'Copy Code'}
+                   </button>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+                   <p className="text-xs text-blue-400 leading-relaxed font-medium">
+                      Members can use this code in their <strong>Team Settings</strong> to request access to join your roster.
+                   </p>
+                </div>
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Member Modal */}
+      {showAddMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+              <div className="flex justify-between items-start mb-8">
+                 <div>
+                   <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Recruit Operative</h3>
+                   <p className="text-sm text-[var(--t-text-muted)]">Direct enlistment into your team.</p>
+                 </div>
+                 <button 
+                    onClick={() => setShowAddMember(false)}
+                    className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] hover:text-white transition-colors"
+                 >
+                   <X size={20} />
+                 </button>
+              </div>
+
+              <form onSubmit={handleAddMember} className="space-y-6">
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-2">Full Name</label>
+                       <input
+                         type="text"
+                         required
+                         value={newMember.name}
+                         onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                         className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl py-3 px-4 text-[var(--t-text)] outline-none focus:border-[var(--t-primary)] transition-all"
+                         placeholder="John Doe"
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-2">Email Address</label>
+                       <input
+                         type="email"
+                         required
+                         value={newMember.email}
+                         onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                         className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl py-3 px-4 text-[var(--t-text)] outline-none focus:border-[var(--t-primary)] transition-all"
+                         placeholder="john@example.com"
+                       />
+                    </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-2">Job Title</label>
+                       <input
+                         type="text"
+                         value={newMember.role}
+                         onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                         className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl py-3 px-4 text-[var(--t-text)] outline-none focus:border-[var(--t-primary)] transition-all"
+                         placeholder="Sales Ops"
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-2">System Role</label>
+                       <select
+                         value={newMember.teamRole}
+                         onChange={(e) => setNewMember({ ...newMember, teamRole: e.target.value as TeamRole })}
+                         className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl py-3 px-4 text-[var(--t-text)] outline-none focus:border-[var(--t-primary)] transition-all appearance-none"
+                       >
+                          <option value="member">Operative (Member)</option>
+                          <option value="admin">Commander (Admin)</option>
+                          <option value="viewer">Observer (Viewer)</option>
+                       </select>
+                    </div>
+                 </div>
+
+                 <button
+                   type="submit"
+                   className="w-full py-4 bg-[var(--t-primary)] text-white font-black uppercase tracking-widest text-[12px] rounded-2xl shadow-xl shadow-[var(--t-primary-dim)] hover:translate-y-[-2px] transition-all"
+                 >
+                    Confirm Recruitment
+                 </button>
+              </form>
+           </div>
+        </div>
+      )}
+
+      {/* Add Milestone Modal */}
+      {showAddMilestone && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+              <div className="flex justify-between items-start mb-8">
+                 <div>
+                   <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">New Objective</h3>
+                   <p className="text-sm text-[var(--t-text-muted)]">Strategic goal for the command center.</p>
+                 </div>
+                 <button 
+                    onClick={() => setShowAddMilestone(false)}
+                    className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] hover:text-white transition-colors"
+                 >
+                   <X size={20} />
+                 </button>
+              </div>
+ 
+              <form onSubmit={handleAddMilestone} className="space-y-6">
+                 <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-2">Objective Label</label>
+                    <input
+                      type="text"
+                      required
+                      value={newMilestone.label}
+                      onChange={(e) => setNewMilestone({ ...newMilestone, label: e.target.value })}
+                      className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl py-3 px-4 text-[var(--t-text)] outline-none focus:border-[var(--t-primary)] transition-all"
+                      placeholder="e.g. Monthly Revenue Goal"
+                    />
+                 </div>
+ 
+                 <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-2">Target Value</label>
+                       <input
+                         type="number"
+                         required
+                         value={newMilestone.target}
+                         onChange={(e) => setNewMilestone({ ...newMilestone, target: parseInt(e.target.value) })}
+                         className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl py-3 px-4 text-[var(--t-text)] outline-none focus:border-[var(--t-primary)] transition-all"
+                         placeholder="100000"
+                       />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-2">Metric Category</label>
+                       <select
+                         value={newMilestone.type}
+                         onChange={(e) => setNewMilestone({ ...newMilestone, type: e.target.value as any })}
+                         className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl py-3 px-4 text-[var(--t-text)] outline-none focus:border-[var(--t-primary)] transition-all appearance-none"
+                       >
+                          <option value="leads">Leads Generated</option>
+                          <option value="deals">Deals Closed</option>
+                          <option value="revenue">Total Revenue</option>
+                          <option value="other">Other Tactical Metric</option>
+                       </select>
+                    </div>
+                 </div>
+ 
+                 <button
+                   type="submit"
+                   className="w-full py-4 bg-[var(--t-primary)] text-white font-black uppercase tracking-widest text-[12px] rounded-2xl shadow-xl shadow-[var(--t-primary-dim)] hover:translate-y-[-2px] transition-all"
+                 >
+                    Establish Objective
+                 </button>
+              </form>
+           </div>
+        </div>
+      )}
+ 
+      {/* Team Switcher & Creation Modals */}
       <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />
       <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
     </div>

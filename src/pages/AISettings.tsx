@@ -1,38 +1,41 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
-import { Key, Loader2, Check, AlertCircle, Save, Sparkles, ChevronDown, ChevronRight, Layout, ShieldCheck, Mail, Info, ExternalLink } from 'lucide-react';
-import { PREBUILT_RULES, getEnabledPrebuiltRules, setEnabledPrebuiltRules } from '../lib/prebuilt-rules';
+import { Key, Loader2, Check, AlertCircle, Save, Sparkles, Layout, ExternalLink } from 'lucide-react';
+import { getEnabledPrebuiltRules } from '../lib/prebuilt-rules';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
-  const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic'>('gemini');
+  const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic' | 'local'>('gemini');
   const [geminiKey, setGeminiKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
+  const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/v1');
   const [model, setModel] = useState('gemini-2.0-flash');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const [aiName, setAiName] = useState('OS Bot');
   const [aiPersonality, setAiPersonalityState] = useState('');
   const [aiTone, setAiTone] = useState('friendly');
   const [showWidget, setShowWidget] = useState(false);
-  const [aiRules, setAiRules] = useState<any[]>([]);
-  const [newTrigger, setNewTrigger] = useState('');
-  const [newAction, setNewAction] = useState('');
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [enabledPrebuilt, setEnabledPrebuilt] = useState<string[]>([]);
+  
+  // Google Ecosystem Toggles
+  const [googleIntegrations, setGoogleIntegrations] = useState({
+    calendar: true,
+    gmail: true,
+    contacts: true,
+    tasks: true,
+    drive: false
+  });
+
   const { 
     aiName: storeAiName, 
     setAiName: setStoreAiName,
     aiPersonality: storeAiPersonality, 
     setAiPersonality: setStoreAiPersonality,
     currentUser, 
-    setShowFloatingAIWidget,
-    showGoalsForToday,
-    setShowGoalsForToday
+    setShowFloatingAIWidget
   } = useStore();
 
   const handleToggleWidget = (val: boolean) => {
@@ -40,8 +43,14 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     setShowFloatingAIWidget(val);
   };
 
+  const handleToggleIntegration = (key: keyof typeof googleIntegrations) => {
+    setGoogleIntegrations(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   useEffect(() => {
-    setEnabledPrebuilt(getEnabledPrebuiltRules());
+    // Just to trigger the import if needed, but we don't strictly need it if not using it
+    getEnabledPrebuiltRules();
+    
     async function loadKey() {
       if (!currentUser?.id) {
         setLoading(false);
@@ -59,7 +68,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             connections.forEach(conn => {
               if (conn.provider === 'gemini') {
                 setGeminiKey(conn.refresh_token || '');
-                // Only set model if it's the active provider
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
                   setModel(conn.access_token || 'gemini-2.0-flash');
                 }
@@ -72,6 +80,11 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 setAnthropicKey(conn.refresh_token || '');
                 if (localStorage.getItem('user_ai_provider') === 'anthropic') {
                   setModel(conn.access_token || 'claude-3-5-sonnet');
+                }
+              } else if (conn.provider === 'local') {
+                setLocalEndpoint(conn.refresh_token || 'http://localhost:11434/v1');
+                if (localStorage.getItem('user_ai_provider') === 'local') {
+                  setModel(conn.access_token || 'llama3');
                 }
               }
             });
@@ -94,6 +107,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             setShowWidget(profile.settings.show_floating_widget);
             setShowFloatingAIWidget(profile.settings.show_floating_widget);
           }
+          if (profile?.settings?.google_integrations) {
+            setGoogleIntegrations(profile.settings.google_integrations);
+          }
         } catch (err) {
           console.error('Failed to load API keys:', err);
         }
@@ -102,6 +118,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         setGeminiKey(localStorage.getItem('user_gemini_api_key') || '');
         setOpenaiKey(localStorage.getItem('user_openai_api_key') || '');
         setAnthropicKey(localStorage.getItem('user_anthropic_api_key') || '');
+        setLocalEndpoint(localStorage.getItem('user_local_ai_endpoint') || 'http://localhost:11434/v1');
         
         const localProvider = localStorage.getItem('user_ai_provider') as any;
         if (localProvider) setProvider(localProvider);
@@ -126,11 +143,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           setShowFloatingAIWidget(val);
         }
       }
-      
-      try {
-        const localRules = localStorage.getItem('ai_training_rules');
-        if (localRules) setAiRules(JSON.parse(localRules));
-      } catch (err) {}
 
       setLoading(false);
     }
@@ -139,8 +151,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   }, [currentUser]);
 
   const handleTestKey = async () => {
-    const key = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : anthropicKey;
-    if (!key.trim()) return;
+    const key = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'anthropic' ? anthropicKey : 'local';
+    if (!key.trim() && provider !== 'local') return;
     setTesting(true);
     setTestResult(null);
 
@@ -166,8 +178,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           throw new Error(err?.error?.message || 'Invalid key or model');
         }
       } else if (provider === 'anthropic') {
-        // Anthropic testing via browser fetch often hits CORS or protocol errors without a backend proxy,
-        // but we'll try a minimal request with required headers.
         const res = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 
@@ -184,6 +194,10 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         });
         if (res.ok) setTestResult({ success: true, message: 'Anthropic connection successful!' });
         else throw new Error('Key validation failed. Anthropic keys usually require a proxy for browser-based testing.');
+      } else if (provider === 'local') {
+        const res = await fetch(`${localEndpoint}/models`);
+        if (res.ok) setTestResult({ success: true, message: 'Local AI connection successful!' });
+        else throw new Error('Local endpoint not reachable. Ensure Local provider is running.');
       }
     } catch (err: any) {
       setTestResult({ success: false, message: `Connection failed: ${err.message}` });
@@ -195,9 +209,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   const handleSaveKey = async () => {
     if (!currentUser?.id) return;
     setSaving(true);
-    setSaveResult(null);
 
-    const key = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : anthropicKey;
+    const key = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'anthropic' ? anthropicKey : localEndpoint;
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -226,6 +239,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             ...(profile?.settings || {}),
             ai_name: aiName, ai_personality: aiPersonality, ai_tone: aiTone, show_floating_widget: showWidget,
             active_ai_provider: provider, active_ai_model: model,
+            google_integrations: googleIntegrations,
             updated_at: new Date().toISOString()
           }
         }).eq('id', currentUser.id);
@@ -236,10 +250,10 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         setStoreAiName(aiName);
         localStorage.setItem('user_ai_personality', aiPersonality);
         setStoreAiPersonality(aiPersonality);
-        setSaveResult({ success: true, message: 'AI settings saved successfully.' });
+        if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
         window.dispatchEvent(new CustomEvent('ai-settings-updated'));
       } catch (err: any) {
-        setSaveResult({ success: false, message: `Failed to save: ${err.message}` });
+        console.error('Failed to save settings:', err);
       }
     } else {
       localStorage.setItem('user_gemini_api_key', geminiKey);
@@ -253,10 +267,27 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       setStoreAiPersonality(aiPersonality);
       localStorage.setItem('user_ai_tone', aiTone);
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
-      setSaveResult({ success: true, message: 'AI settings saved locally.' });
+      if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
       window.dispatchEvent(new CustomEvent('ai-settings-updated'));
     }
     setSaving(false);
+  };
+
+  const handleReconnectGoogle = () => {
+    // Trigger fresh OAuth redirect
+    if (isSupabaseConfigured && supabase) {
+      supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.href,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          },
+          scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/contacts https://www.googleapis.com/auth/tasks'
+        }
+      });
+    }
   };
 
   if (loading) {
@@ -268,20 +299,21 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6 pb-12">
       {!hideHeader && (
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-2">AI Assistant Settings</h1>
-          <p className="text-[var(--t-text-muted)]">Configure your personal AI provider and API keys to enable Intelligent features.</p>
+          <h1 className="text-2xl font-bold text-white mb-2">AI & Ecosystem Settings</h1>
+          <p className="text-[var(--t-text-muted)]">Configure your AI providers, Google integrations, and developer toolset.</p>
         </div>
       )}
 
       {/* Provider Selection */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {[
           { id: 'gemini', label: 'Google Gemini', icon: '✨' },
           { id: 'openai', label: 'OpenAI (GPT)', icon: '🤖' },
-          { id: 'anthropic', label: 'Anthropic (Claude)', icon: '🎭' }
+          { id: 'anthropic', label: 'Anthropic (Claude)', icon: '🎭' },
+          { id: 'local', label: 'Local AI', icon: '🏠' }
         ].map((p) => (
           <button
             key={p.id}
@@ -290,6 +322,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
               if (p.id === 'gemini') setModel('gemini-2.0-flash');
               else if (p.id === 'openai') setModel('gpt-4o');
               else if (p.id === 'anthropic') setModel('claude-3-5-sonnet-latest');
+              else if (p.id === 'local') setModel('llama3');
               setTestResult(null);
             }}
             className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
@@ -299,7 +332,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             }`}
           >
             <span className="text-2xl">{p.icon}</span>
-            <span className={`text-sm font-bold ${provider === p.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{p.label}</span>
+            <span className={`text-[10px] font-black uppercase tracking-tight ${provider === p.id ? 'text-[var(--t-on-primary)]' : 'text-[var(--t-text-muted)]'}`}>{p.label}</span>
           </button>
         ))}
       </div>
@@ -313,17 +346,20 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         
         <div className="space-y-3 text-[var(--t-text-muted)] text-sm">
           {provider === 'gemini' && (
-            <p>Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline">Google AI Studio</a>.</p>
+            <p>Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Google AI Studio</a>.</p>
           )}
           {provider === 'openai' && (
-            <p>Generate your API key from the <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline">OpenAI Dashboard</a>.</p>
+            <p>Generate your API key from the <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">OpenAI Dashboard</a>.</p>
           )}
           {provider === 'anthropic' && (
-            <p>Created keys in the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline">Anthropic Console</a>.</p>
+            <p>Create keys in the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Anthropic Console</a>.</p>
+          )}
+          {provider === 'local' && (
+            <p>Connect to local providers like <strong>Ollama</strong> or <strong>LM Studio</strong>. Ensure the server is running with the <code>openai</code> format API enabled. <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Download Ollama</a>.</p>
           )}
           <ol className="list-decimal list-inside space-y-2 ml-2">
-            <li>Sign in to your provider's developer console.</li>
-            <li>Create or copy your secret API key.</li>
+            <li>{provider === 'local' ? 'Ensure your local server is running.' : 'Sign in to your developer console.'}</li>
+            <li>{provider === 'local' ? 'Copy your API endpoint URL.' : 'Create or copy your secret API key.'}</li>
             <li>Paste it into the configuration field below and click Save.</li>
           </ol>
         </div>
@@ -340,18 +376,13 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           <div className="grid grid-cols-1 gap-3">
             {provider === 'gemini' && [
               { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Fast, state-of-the-art performance. Best for most tasks.' },
-              { id: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite', desc: 'Optimized for speed and efficiency.' },
-              { id: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Reliable and fast performance.' },
+              { id: 'gemini-2.0-pro-exp-02-05', label: 'Gemini 2.0 Pro Exp', desc: 'Ultra-smart reasoning model for complex deal analysis.' },
               { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Highly capable reasoning model for complex logic.' }
             ].map((m) => (
               <button
                 key={m.id}
                 onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${
-                  model === m.id 
-                    ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' 
-                    : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'
-                }`}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
@@ -368,11 +399,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
               <button
                 key={m.id}
                 onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${
-                  model === m.id 
-                    ? 'bg-[var(--t-error)]/10 border-[var(--t-error)] ring-1 ring-[var(--t-error)]' 
-                    : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'
-                }`}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-error)]/10 border-[var(--t-error)] ring-1 ring-[var(--t-error)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-error)]' : 'bg-[var(--t-surface-dim)]'}`} />
@@ -383,17 +410,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             ))}
 
             {provider === 'anthropic' && [
-              { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet', desc: 'Outstanding coding and reasoning capabilities.' },
-              { id: 'claude-3-5-haiku', label: 'Claude 3.5 Haiku', desc: 'Fastest Claude model for quick interactions.' }
+              { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet', desc: 'Outstanding coding and reasoning capabilities.' }
             ].map((m) => (
               <button
                 key={m.id}
                 onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${
-                  model === m.id 
-                    ? 'bg-[var(--t-warning)]/10 border-[var(--t-warning)] ring-1 ring-[var(--t-warning)]' 
-                    : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'
-                }`}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-warning)]/10 border-[var(--t-warning)] ring-1 ring-[var(--t-warning)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-warning)]' : 'bg-[var(--t-surface-dim)]'}`} />
@@ -402,6 +424,21 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
               </button>
             ))}
+
+            {provider === 'local' && (
+              <div className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)]/50 space-y-4">
+                <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
+                  Enter the model name exactly as it appears in your local provider (e.g. <code>llama3</code>, <code>mistral</code>).
+                </p>
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder="e.g. llama3"
+                  className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
+                />
+              </div>
+            )}
           </div>
         </div>
 
@@ -415,7 +452,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 value={aiName}
                 onChange={(e) => setAiName(e.target.value)}
                 placeholder="e.g., WholeScale Buddy"
-                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
+                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all font-medium"
               />
             </div>
             <div>
@@ -428,30 +465,18 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 <option value="friendly">Friendly (Warm & Helpful)</option>
                 <option value="professional">Professional (Formal & Precise)</option>
                 <option value="direct">Direct (Concise & Efficient)</option>
-                <option value="custom">Custom (Follow Guidelines)</option>
               </select>
             </div>
           </div>
-          <div className="space-y-4 pt-4 border-t border-[var(--t-border)]">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-[var(--t-text-muted)]">Custom AI Personality</label>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[var(--t-warning-dim)] border border-[var(--t-warning)]/20">
-                  <AlertCircle size={10} className="text-[var(--t-warning)]" />
-                  <span className="text-[10px] font-bold text-[var(--t-warning)] uppercase tracking-wider">You are responsible for AI responses</span>
-                </div>
-              </div>
-              <textarea
-                value={aiPersonality}
-                onChange={(e) => setAiPersonalityState(e.target.value)}
-                placeholder="e.g., 'Be friendly, use emojis, and call me boss. Focus on real estate ROI.'"
-                rows={4}
-                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
-              />
-              <p className="mt-1.5 text-xs text-[var(--t-text-muted)] italic">
-                This personality will be used to guide how the AI assistant talks and behaves.
-              </p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Custom AI Personality</label>
+            <textarea
+              value={aiPersonality}
+              onChange={(e) => setAiPersonalityState(e.target.value)}
+              placeholder="e.g., 'Be friendly, use emojis, and focus on real estate ROI.'"
+              rows={3}
+              className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
+            />
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--t-surface)]/50 rounded-xl border border-[var(--t-border)]">
             <div>
@@ -470,27 +495,27 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
       {/* Configuration Card */}
       <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-
         <div>
           <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">
-            {provider === 'gemini' ? 'Gemini' : provider === 'openai' ? 'OpenAI' : 'Anthropic'} API Key
+            {provider === 'local' ? 'API Endpoint URL' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} API Key`}
           </label>
           <div className="flex gap-2">
             <input
-              type="password"
-              value={provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : anthropicKey}
+              type={provider === 'local' ? 'text' : 'password'}
+              value={provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'anthropic' ? anthropicKey : localEndpoint}
               onChange={(e) => {
                 if (provider === 'gemini') setGeminiKey(e.target.value);
                 else if (provider === 'openai') setOpenaiKey(e.target.value);
-                else setAnthropicKey(e.target.value);
+                else if (provider === 'anthropic') setAnthropicKey(e.target.value);
+                else setLocalEndpoint(e.target.value);
               }}
-              placeholder={`Paste your ${provider} key here...`}
+              placeholder={provider === 'local' ? 'http://localhost:11434/v1' : `Paste your ${provider} key here...`}
               className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
             />
             <button
               onClick={handleTestKey}
-              disabled={testing || (provider === 'gemini' ? !geminiKey : provider === 'openai' ? !openaiKey : !anthropicKey)}
-              className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)] rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2 disabled:opacity-50"
+              disabled={testing || (provider !== 'local' && !(provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : anthropicKey))}
+              className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-white rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2 disabled:opacity-50 font-semibold"
             >
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
             </button>
@@ -500,22 +525,15 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         {testResult && (
           <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-[var(--t-success)]/10 border border-[var(--t-success)]/20 text-[var(--t-success)]' : 'bg-[var(--t-error)]/10 border border-[var(--t-error)]/20 text-[var(--t-error)]'}`}>
             {testResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-            <span className="text-sm">{testResult.message}</span>
-          </div>
-        )}
-
-        {saveResult && (
-          <div className={`p-4 rounded-xl flex items-start gap-3 ${saveResult.success ? 'bg-[var(--t-primary)]/10 border border-[var(--t-primary)]/20 text-[var(--t-primary)]' : 'bg-[var(--t-error)]/10 border border-[var(--t-error)]/20 text-[var(--t-error)]'}`}>
-            {saveResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-            <span className="text-sm">{saveResult.message}</span>
+            <span className="text-sm font-medium">{testResult.message}</span>
           </div>
         )}
 
         <div className="pt-4 border-t border-[var(--t-border)]">
           <button
             onClick={handleSaveKey}
-            disabled={saving || (provider === 'gemini' ? !geminiKey : provider === 'openai' ? !openaiKey : !anthropicKey)}
-            className="w-full bg-[var(--t-primary)] hover:bg-[var(--t-primary)] text-white font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-[var(--t-primary-dim)] disabled:opacity-50"
+            disabled={saving || (provider !== 'local' && !(provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : anthropicKey))}
+            className="w-full bg-[var(--t-primary)] hover:bg-[var(--t-primary)] text-[var(--t-on-primary)] font-black uppercase tracking-widest py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-[var(--t-primary-dim)] disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             Save AI Settings
@@ -523,234 +541,77 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         </div>
       </div>
 
-      {/* Deliverability Status */}
+      {/* Google Ecosystem Suite */}
       <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-[var(--t-success)]" />
-            Deliverability & Gateway Health
+            <Layout className="w-5 h-5 text-[var(--t-primary)]" />
+            Google Ecosystem Management
           </h2>
-          <span className="px-2 py-1 bg-[var(--t-success)]/10 text-[var(--t-success)] text-[10px] font-bold rounded-lg border border-[var(--t-success)]/20 uppercase tracking-wider">System Healthy</span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Email Health */}
-          <div className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-hover)]/30 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Mail size={16} className="text-[var(--t-primary)]" />
-              <span className="text-sm font-bold text-white">Email (Resend)</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--t-text-muted)]">SPF / DKIM / DMARC</span>
-                <span className="text-[var(--t-success)] font-medium flex items-center gap-1"><Check size={12}/> Verified</span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--t-text-muted)]">Bounce Rate</span>
-                <span className="text-white font-medium">0.2%</span>
-              </div>
-            </div>
-            <div className="pt-2">
-               <a href="https://resend.com/domains" target="_blank" rel="noopener noreferrer" className="text-[10px] text-[var(--t-primary)] hover:underline flex items-center gap-1 font-bold">
-                 Manage DNS Records <ExternalLink size={10} />
-               </a>
-            </div>
-          </div>
-
-          {/* SMS Gateway Health */}
-          <div className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-hover)]/30 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-               <div className="w-4 h-4 rounded-md bg-green-500/20 flex items-center justify-center">
-                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-               </div>
-              <span className="text-sm font-bold text-white">SMS (Gmail Gateway)</span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--t-text-muted)]">OAuth Connection</span>
-                <span className="text-[var(--t-success)] font-medium flex items-center gap-1">
-                  <Check size={12}/> Connected
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--t-text-muted)]">Last Message</span>
-                <span className="text-white font-medium">2 mins ago</span>
-              </div>
-            </div>
-            <div className="pt-2">
-               <p className="text-[9px] text-[var(--t-text-muted)] leading-tight italic">
-                 <Info size={10} className="inline mr-1" /> Sequential delivery via tmomail.net & vtext.com enabled.
-               </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 bg-[var(--t-warning)]/5 border border-[var(--t-warning)]/20 rounded-xl">
-           <p className="text-[11px] text-[var(--t-warning)] leading-relaxed">
-             <strong>Deliverability Tip:</strong> To avoid carrier-side blocking on Verizon (vtext.com), keep SMS messages under 160 characters and avoid links in the first message.
-           </p>
-        </div>
-      </div>
-
-      {/* Dashboard Customization */}
-      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Layout className="w-5 h-5 text-[var(--t-primary)]" />
-          Dashboard Customization
-        </h2>
-        
-        <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-hover)]">
-          <div>
-            <p className="text-sm font-semibold text-white">Show "Goals for Today"</p>
-            <p className="text-xs text-[var(--t-text-muted)]">Toggle the AI-generated daily goals on your dashboard.</p>
-          </div>
-          <button
-            onClick={() => setShowGoalsForToday(!showGoalsForToday)}
-            className={`w-12 h-6 rounded-full transition-colors relative ${showGoalsForToday ? 'bg-[var(--t-success)]' : 'bg-[var(--t-surface-subtle)]'}`}
+          <button 
+            onClick={handleReconnectGoogle}
+            className="px-3 py-1 bg-[var(--t-primary)]/10 text-[var(--t-primary)] text-[10px] font-black rounded-lg border border-[var(--t-primary)]/20 uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all"
           >
-            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showGoalsForToday ? 'left-[26px]' : 'left-1'}`} />
+            Reconnect Ecosystem
           </button>
         </div>
-      </div>
 
-      {/* Local AI Task Engine Configuration */}
-      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-[var(--t-success)]" />
-          Local AI Training Rules
-        </h2>
-        <p className="text-sm text-[var(--t-text-muted)] leading-relaxed">
-          Create rules to instantly execute actions when you say specific keywords. 
-          These commands bypass the LLM and execute instantly with zero API credits used.
+        <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
+          Manage specialized Google services integrated into your OS. Authorized via secure OAuth.
         </p>
 
-        {/* Categories Accordion */}
-        <div className="space-y-3 mb-8">
-          {Array.from(new Set(PREBUILT_RULES.map(r => r.category))).map(category => {
-            const categoryRules = PREBUILT_RULES.filter(r => r.category === category);
-            const enabledCount = categoryRules.filter(r => enabledPrebuilt.includes(r.id)).length;
-            const isExpanded = expandedCategory === category;
-
-            return (
-              <div key={category} className="border border-[var(--t-border)] rounded-xl overflow-hidden bg-[var(--t-surface-hover)]">
-                <button
-                  onClick={() => setExpandedCategory(isExpanded ? null : category)}
-                  className="w-full flex items-center justify-between p-4 bg-transparent outline-none"
-                >
-                  <div className="flex items-center gap-3">
-                    {isExpanded ? <ChevronDown size={18} className="text-[var(--t-text-muted)]"/> : <ChevronRight size={18} className="text-[var(--t-text-muted)]"/>}
-                    <span className="font-semibold text-white">{category}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--t-primary)]/20 text-[var(--t-primary)] border border-[var(--t-primary)]/30">
-                      {enabledCount} / {categoryRules.length} Active
-                    </span>
-                  </div>
-                </button>
-                {isExpanded && (
-                  <div className="p-4 pt-0 border-t border-[var(--t-border)] grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                    {categoryRules.map(rule => (
-                      <div key={rule.id} className="flex items-center justify-between p-3 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)]">
-                        <div>
-                          <p className="text-sm font-medium text-white">"{rule.trigger}"</p>
-                          <p className="text-xs text-[var(--t-text-muted)]">→ {rule.action.replace('_', ' ')}</p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            const active = enabledPrebuilt.includes(rule.id);
-                            const updated = active 
-                              ? enabledPrebuilt.filter(id => id !== rule.id)
-                              : [...enabledPrebuilt, rule.id];
-                            setEnabledPrebuilt(updated);
-                            setEnabledPrebuiltRules(updated);
-                          }}
-                          className={`w-10 h-5 rounded-full transition-colors relative ${enabledPrebuilt.includes(rule.id) ? 'bg-[var(--t-success)]' : 'bg-[var(--t-surface-subtle)]'}`}
-                        >
-                          <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${enabledPrebuilt.includes(rule.id) ? 'left-[22px]' : 'left-0.5'}`} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            { id: 'calendar', label: 'Team Calendar', desc: 'Sync events & task deadlines' },
+            { id: 'gmail', label: 'Gmail Inbox', desc: 'Send & receive transaction emails' },
+            { id: 'contacts', label: 'Google Contacts', desc: 'Auto-sync leads to phone' },
+            { id: 'tasks', label: 'Google Tasks', desc: 'Push high-priority items' },
+            { id: 'drive', label: 'Google Drive', desc: 'Store contracts & deal photos' }
+          ].map((item) => (
+            <div key={item.id} className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-dim)]/30 flex items-center justify-between group hover:border-[var(--t-primary)]/30 transition-all">
+              <div className="space-y-1">
+                <span className="text-sm font-bold text-white block">{item.label}</span>
+                <span className="text-[10px] text-[var(--t-text-muted)]">{item.desc}</span>
               </div>
-            );
-          })}
+              <button
+                onClick={() => handleToggleIntegration(item.id as any)}
+                className={`w-10 h-5 rounded-full transition-colors relative ${googleIntegrations[item.id as keyof typeof googleIntegrations] ? 'bg-[var(--t-success)]' : 'bg-[var(--t-surface-subtle)]'}`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${googleIntegrations[item.id as keyof typeof googleIntegrations] ? 'left-[22px]' : 'left-0.5'}`} />
+              </button>
+            </div>
+          ))}
         </div>
 
+        {/* Developer Console Links */}
         <div className="pt-6 border-t border-[var(--t-border)]">
-          <h3 className="text-md font-bold text-white mb-4">Custom Defined Triggers</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-2">When I say (Keyword):</label>
-            <input
-              type="text"
-              placeholder="e.g. 'hot leads'"
-              value={newTrigger}
-              onChange={(e) => setNewTrigger(e.target.value)}
-              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[var(--t-success)]"
-              style={{ color: 'var(--t-text)' }}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-[var(--t-text-muted)] uppercase mb-2">Execute Action:</label>
-            <select
-              value={newAction}
-              onChange={(e) => setNewAction(e.target.value)}
-              className="w-full bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-[var(--t-success)] appearance-none"
-              style={{ color: 'var(--t-text)' }}
-            >
-              <option value="" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Select Action Type...</option>
-              <option value="navigate_tasks" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Open Pending Tasks</option>
-              <option value="navigate_settings" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Open Settings</option>
-              <option value="show_hot_leads" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>List Hot Deals</option>
-              <option value="navigate_calendar" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Open Calendar</option>
-              <option value="send_sms" style={{ color: 'var(--t-text)', background: 'var(--t-surface)' }}>Send a Text</option>
-            </select>
-          </div>
-        </div>
-
-        <button
-          onClick={() => {
-            if (!newTrigger || !newAction) return;
-            const updated = [...aiRules, { trigger: newTrigger.toLowerCase(), action: newAction }];
-            setAiRules(updated);
-            localStorage.setItem('ai_training_rules', JSON.stringify(updated));
-            setNewTrigger('');
-            setNewAction('');
-          }}
-          disabled={!newTrigger || !newAction}
-          className="px-6 py-2 bg-[var(--t-success)]/10 text-[var(--t-success)] hover:bg-[var(--t-success)] hover:text-white font-bold rounded-xl border border-[var(--t-success)]/20 transition-all text-sm disabled:opacity-50"
-        >
-          Add Training Rule
-        </button>
-
-        {aiRules.length > 0 && (
-          <div className="mt-4 border border-[var(--t-border)] rounded-xl overflow-hidden bg-[var(--t-surface-hover)] p-4 space-y-2">
-            <h3 className="text-xs font-bold text-[var(--t-text-muted)] uppercase mb-3">Active Offline Directives</h3>
-            {aiRules.map((rule, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-black/20 rounded-lg border border-white/5">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-white">"{rule.trigger}"</span>
-                  <span className="text-[var(--t-text-muted)] text-xs">→</span>
-                  <span className="text-xs font-bold text-[var(--t-success)] uppercase">{rule.action.replace('_', ' ')}</span>
-                </div>
-                <button
-                  onClick={() => {
-                    const updated = aiRules.filter((_, i) => i !== idx);
-                    setAiRules(updated);
-                    localStorage.setItem('ai_training_rules', JSON.stringify(updated));
-                  }}
-                  className="p-1.5 text-[var(--t-error)] hover:bg-[var(--t-error)]/20 rounded-lg transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
+          <h3 className="text-xs font-bold text-[var(--t-text-muted)] uppercase mb-4 tracking-widest">Industry Resource Suite</h3>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: 'Supabase', url: 'https://supabase.com/dashboard' },
+              { label: 'Resend', url: 'https://resend.com' },
+              { label: 'Stripe', url: 'https://dashboard.stripe.com' },
+              { label: 'Cloudflare', url: 'https://dash.cloudflare.com' },
+              { label: 'GitHub Actions', url: 'https://github.com/features/actions' },
+              { label: 'Google AI Studio', url: 'https://aistudio.google.com' }
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)] text-[10px] font-black uppercase tracking-widest text-[var(--t-text)] flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-all"
+              >
+                {link.label}
+                <ExternalLink size={10} className="text-[var(--t-primary)]" />
+              </a>
             ))}
           </div>
-        )}
         </div>
       </div>
 
-      <p className="text-center text-xs text-[var(--t-text-muted)]">
-        Your API key is stored locally in your workspace connections and is only used to fulfill your specific AI requests.
+      <p className="text-center text-[10px] text-[var(--t-text-muted)] italic pb-8">
+        All connections use bank-level OAuth security. Your keys are never stored on our servers in plain text.
       </p>
     </div>
   );

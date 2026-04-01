@@ -15,7 +15,8 @@ import {
   LayoutGrid,
   AlertCircle,
   Flame,
-  GripVertical
+  GripVertical,
+  Plus
 } from 'lucide-react';
 import { StreakBadge } from '../components/StreakBadge';
 import { TeamLeaderboard } from '../components/TeamLeaderboard';
@@ -144,7 +145,7 @@ export default function Dashboard() {
     leads, team,
     loginStreak, taskStreak, memberStreaks,
     dashboardLayout, setDashboardLayout,
-    dataLoaded
+    dataLoaded, currentUser
   } = useStore();
 
   console.log('DEBUG: Dashboard rendering. dataLoaded:', dataLoaded, 'leads:', leads?.length, 'team:', team?.length);
@@ -337,6 +338,38 @@ export default function Dashboard() {
               {taskStreak > 0 && <StreakBadge streak={taskStreak} type="task" size="md" />}
             </div>
           </div>
+        </div>
+
+        {/* AI Greeting & Status */}
+        <div className="relative overflow-hidden p-8 rounded-[2.5rem] bg-gradient-to-br from-[var(--t-surface)] to-[var(--t-surface-dim)] border border-[var(--t-border)] shadow-2xl group animate-in slide-in-from-top-6 duration-1000">
+           <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+              <Zap size={160} />
+           </div>
+           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+              <div className="space-y-2">
+                 <h2 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
+                    Good Morning, <span className="text-[var(--t-primary)]">{currentUser?.name?.split(' ')[0] || 'Operative'}</span>.
+                 </h2>
+                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)] flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    {useStore.getState().aiName || 'OS Bot'} is standing by for tactical operations.
+                 </p>
+              </div>
+              <div className="flex items-center gap-6">
+                 <div className="text-right">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Current Session</p>
+                    <p className="text-xl font-black text-[var(--t-text)] italic">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                 </div>
+                 <div className="w-px h-10 bg-[var(--t-border)]" />
+                 <button 
+                    onClick={() => navigate('/leads/new')}
+                    className="px-8 py-3 bg-[var(--t-primary)] text-white font-black uppercase tracking-widest text-[10px] rounded-2xl border border-white/10 shadow-xl shadow-[var(--t-primary-dim)] hover:translate-y-[-2px] transition-all flex items-center gap-2"
+                 >
+                    <Plus size={16} />
+                    New Acquisition
+                 </button>
+              </div>
+           </div>
         </div>
 
         {/* Widgets Grid */}

@@ -6,10 +6,10 @@ import { themes } from '../styles/themes';
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost';
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost' | 'contract-in' | 'under-contract' | 'follow-up';
 
 export function isValidStatus(status: any): status is LeadStatus {
-  return typeof status === 'string' && ['new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost'].includes(status);
+  return typeof status === 'string' && ['new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost', 'contract-in', 'under-contract', 'follow-up'].includes(status);
 }
 
 export function ensureStringStatus(status: any): LeadStatus {
@@ -285,6 +285,14 @@ export interface SavedContact {
   phone: string;
   notes?: string;
   createdAt: string;
+}
+
+export interface TeamMilestone {
+  id: string;
+  type: 'leads' | 'deals' | 'revenue' | 'other';
+  target: number;
+  current: number;
+  label: string;
 }
 
 export interface TeamConfig {
@@ -1362,6 +1370,9 @@ export const STATUS_FLOW: Record<LeadStatus, LeadStatus[]> = {
   'negotiating': ['closed-won', 'closed-lost', 'qualified'],
   'closed-won': [],
   'closed-lost': ['new'],
+  'contract-in': ['closed-won', 'closed-lost'],
+  'under-contract': ['closed-won', 'closed-lost'],
+  'follow-up': ['contacted', 'qualified', 'closed-lost'],
 };
 
 export const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -1371,6 +1382,9 @@ export const STATUS_LABELS: Record<LeadStatus, string> = {
   'negotiating': 'Negotiating',
   'closed-won': 'Closed Won',
   'closed-lost': 'Closed Lost',
+  'contract-in': 'Contract In',
+  'under-contract': 'Under Contract',
+  'follow-up': 'Follow-up',
 };
 
 export const QUICK_REACTIONS = ['ðŸ‘', 'â¤ï¸', 'ðŸ˜‚', 'ðŸ˜®', 'ðŸ˜¢', 'ðŸ”¥', 'ðŸŽ‰', 'ðŸ’¯'];
@@ -1386,15 +1400,6 @@ const defaultUser: UserProfile = {
   teamRole: 'admin',
   emailVerified: true,
   createdAt: '2024-01-01T00:00:00Z',
-};
-
-const defaultTeamConfig: TeamConfig = {
-  id: uuidv4(),
-  name: 'My Team',
-  inviteCode: 'WS-000000',
-  createdAt: '2024-01-01T00:00:00Z',
-  createdBy: defaultUser.id,
-  maxSeats: 5,
 };
 
 export interface ThemePreset {
@@ -1649,6 +1654,8 @@ interface AppState {
   setAiModel: (model: string) => void;
   aiPersonality: string;
   setAiPersonality: (personality: string) => void;
+  isAiFirstUse: boolean;
+  setIsAiFirstUse: (v: boolean) => void;
 
   // Dashboard Layout
   dashboardLayout: any[];
@@ -1680,6 +1687,13 @@ interface AppState {
   deleteBackup: (id: string) => void;
   exportData: () => void;
   
+  // Team Milestones
+  milestones: TeamMilestone[];
+  updateMilestone: (id: string, current: number) => void;
+  addMilestone: (milestone: Omit<TeamMilestone, 'id'>) => void;
+  deleteMilestone: (id: string) => void;
+  setMilestones: (milestones: TeamMilestone[]) => void;
+
   // NEW: Pricing & Plan Helpers
   getMemberPrice: (tier: string) => number;
   canAddMember: () => { can: boolean; reason?: string };
@@ -1693,6 +1707,11 @@ export const useStore = create<AppState>((set, get) => ({
   authError: null,
   showFloatingAIWidget: typeof window !== 'undefined' ? localStorage.getItem('user_show_floating_widget') === 'true' : false,
   showGoalsForToday: typeof window !== 'undefined' ? (localStorage.getItem('user_show_goals_today') !== 'false') : true, // Default true
+  isAiFirstUse: typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-first-use') !== 'false' : true,
+  setIsAiFirstUse: (v: boolean) => {
+    localStorage.setItem('wholescale-ai-first-use', v.toString());
+    set({ isAiFirstUse: v });
+  },
   setShowFloatingAIWidget: (show: boolean) => {
     localStorage.setItem('user_show_floating_widget', show.toString());
     set({ showFloatingAIWidget: show });
@@ -1778,7 +1797,7 @@ export const useStore = create<AppState>((set, get) => ({
   })(),
 
   // —— UI & Settings State ———————————————————————————————————
-  notificationSettings: defaultNotificationSettings,
+  notificationSettings: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('wholescale-notifications') || 'null') || defaultNotificationSettings) : defaultNotificationSettings,
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes') || '' : '',
   showQuickNotes: false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
@@ -1902,6 +1921,8 @@ export const useStore = create<AppState>((set, get) => ({
             accept_leads: newUser.acceptLeads,
             website: newUser.website,
             ai_personality: newUser.aiCustomInstructions,
+            notifications: get().notificationSettings,
+            theme_presets: get().themePresets,
           },
           updated_at: new Date().toISOString()
         }).eq('id', currentUser.id);
@@ -1984,7 +2005,13 @@ export const useStore = create<AppState>((set, get) => ({
             totalEarnings: profile.total_earnings || 0,
             availableEarnings: profile.available_earnings || 0,
           },
-          teamId: teamId
+          teamId: teamId,
+          notificationSettings: profile.settings?.notifications || s.notificationSettings,
+          themePresets: profile.settings?.theme_presets || s.themePresets,
+          currentTheme: profile.settings?.current_theme || s.currentTheme,
+          customColors: profile.settings?.custom_colors || s.customColors,
+          milestones: profile.settings?.team_milestones || s.milestones,
+          dataLoaded: true,
         }));
         console.log('DEBUG: Profile fetched. teamId:', teamId);
       }
@@ -2391,6 +2418,7 @@ export const useStore = create<AppState>((set, get) => ({
       get().loadLeads();
     }
   },
+
   setDataLoaded: (loaded: boolean) => set({ dataLoaded: loaded }),
   setBulkData: (data: any) => set(data as Partial<AppState>),
 
@@ -2708,7 +2736,19 @@ export const useStore = create<AppState>((set, get) => ({
 
   // —— Team ——————————————————————————————————————————————————
   team: [],
-  teamConfig: defaultTeamConfig,
+  teamConfig: {
+    id: '',
+    name: 'WholeScale HQ',
+    inviteCode: 'WS-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+    maxSeats: 10,
+    createdBy: '',
+    createdAt: new Date().toISOString(),
+  },
+  milestones: [
+    { id: '1', type: 'leads', target: 50, current: 0, label: 'Lead Generation' },
+    { id: '2', type: 'deals', target: 10, current: 0, label: 'Closed Deals' },
+    { id: '3', type: 'revenue', target: 500000, current: 0, label: 'Revenue Target' }
+  ],
 
   updateMemberStatus: (id: string, status: PresenceStatus) => {
     set((s: any) => ({
@@ -2924,7 +2964,11 @@ export const useStore = create<AppState>((set, get) => ({
                                                             mapFilters: {
       showLeads: true, showBuyers: true, showCoverageAreas: true, showDrivingRoute: false,
         clusterMarkers: false,
-          leadStatusFilters: { 'new': true, 'contacted': true, 'qualified': true, 'negotiating': true, 'closed-won': true, 'closed-lost': true },
+          leadStatusFilters: { 
+            'new': true, 'contacted': true, 'qualified': true, 
+            'negotiating': true, 'closed-won': true, 'closed-lost': true,
+            'contract-in': true, 'under-contract': true, 'follow-up': true
+          },
     },
 
     mapSettings: { defaultLat: 30.2672, defaultLng: -97.7431, defaultZoom: 6, clusterRadius: 80 },
@@ -3602,33 +3646,78 @@ export const useStore = create<AppState>((set, get) => ({
                                                       }
                                                     })(),
 
-                                                    saveThemePreset: (name) => {
-                                                      const { currentTheme, customColors } = get();
-                                                      const newPreset: ThemePreset = {
-                                                        id: uuidv4(),
-                                                        name,
-                                                        themeId: currentTheme,
-                                                        customColors: { ...customColors },
-                                                        createdAt: new Date().toISOString()
-                                                      };
-                                                      set((s) => {
-                                                        const next = [...s.themePresets, newPreset];
-                                                        if (typeof window !== 'undefined') {
-                                                          localStorage.setItem('wholescale-theme-presets', JSON.stringify(next));
-                                                        }
-                                                        return { themePresets: next };
-                                                      });
-                                                    },
+    saveThemePreset: (name) => {
+      const { currentTheme, customColors, currentUser } = get();
+      const newPreset: ThemePreset = {
+        id: uuidv4(),
+        name,
+        themeId: currentTheme,
+        customColors: { ...customColors },
+        createdAt: new Date().toISOString()
+      };
+      set((s) => {
+        const next = [...s.themePresets, newPreset];
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('wholescale-theme-presets', JSON.stringify(next));
+        }
+        
+        // Sync to Supabase
+        if (currentUser?.id && isSupabaseConfigured && supabase) {
+          const supabaseClient = supabase;
+          supabaseClient.from('profiles')
+            .select('settings')
+            .eq('id', currentUser.id)
+            .maybeSingle()
+            .then(({ data: profile }) => {
+              const currentSettings = profile?.settings || {};
+              supabaseClient.from('profiles')
+                .update({ 
+                  settings: { 
+                    ...currentSettings, 
+                    theme_presets: next 
+                  } 
+                })
+                .eq('id', currentUser.id)
+                .then();
+            });
+        }
+        
+        return { themePresets: next };
+      });
+    },
 
-                                                    deleteThemePreset: (id) => {
-                                                      set((s) => {
-                                                        const next = s.themePresets.filter(p => p.id !== id);
-                                                        if (typeof window !== 'undefined') {
-                                                          localStorage.setItem('wholescale-theme-presets', JSON.stringify(next));
-                                                        }
-                                                        return { themePresets: next };
-                                                      });
-                                                    },
+    deleteThemePreset: (id) => {
+      const { currentUser } = get();
+      set((s) => {
+        const next = s.themePresets.filter(p => p.id !== id);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('wholescale-theme-presets', JSON.stringify(next));
+        }
+
+        // Sync to Supabase
+        if (currentUser?.id && isSupabaseConfigured && supabase) {
+          const supabaseClient = supabase;
+          supabaseClient.from('profiles')
+            .select('settings')
+            .eq('id', currentUser.id)
+            .maybeSingle()
+            .then(({ data: profile }) => {
+              const currentSettings = profile?.settings || {};
+              supabaseClient.from('profiles')
+                .update({ 
+                  settings: { 
+                    ...currentSettings, 
+                    theme_presets: next 
+                  } 
+                })
+                .eq('id', currentUser.id)
+                .then();
+            });
+        }
+
+        return { themePresets: next };
+      });
+    },
 
                                                     applyThemePreset: (preset) => {
                                                       const { setTheme } = get();
@@ -4212,26 +4301,103 @@ export const useStore = create<AppState>((set, get) => ({
   setShowQuickNotes: (v: boolean) => set({ showQuickNotes: v }),
 
   updateNotificationSettings: (updates: Partial<NotificationSettings>) => {
-    set((s) => ({ notificationSettings: { ...s.notificationSettings, ...updates } }));
+    const { currentUser } = get();
+    set((s) => {
+      const next = { ...s.notificationSettings, ...updates };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('wholescale-notifications', JSON.stringify(next));
+      }
+
+      // Sync to Supabase
+      if (currentUser?.id && isSupabaseConfigured && supabase) {
+        const supabaseClient = supabase;
+        supabaseClient.from('profiles')
+          .select('settings')
+          .eq('id', currentUser.id)
+          .maybeSingle()
+          .then(({ data: profile }) => {
+            const currentSettings = profile?.settings || {};
+            supabaseClient.from('profiles')
+              .update({ 
+                settings: { 
+                  ...currentSettings, 
+                  notifications: next 
+                } 
+              })
+              .eq('id', currentUser.id)
+              .then();
+          });
+      }
+
+      return { notificationSettings: next };
+    });
   },
 
   setAiName: (name: string) => {
+    const { currentUser } = get();
     if (typeof window !== 'undefined') {
       localStorage.setItem('wholescale-ai-name', name);
     }
     set({ aiName: name });
+    
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const supabaseClient = supabase;
+      supabaseClient.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          const currentSettings = profile?.settings || {};
+          supabaseClient.from('profiles')
+            .update({ settings: { ...currentSettings, ai_name: name } })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
   },
   setAiModel: (model: string) => {
+    const { currentUser } = get();
     if (typeof window !== 'undefined') {
       localStorage.setItem('wholescale-ai-model', model);
     }
     set({ aiModel: model });
+
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const supabaseClient = supabase;
+      supabaseClient.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          const currentSettings = profile?.settings || {};
+          supabaseClient.from('profiles')
+            .update({ settings: { ...currentSettings, active_ai_model: model } })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
   },
   setAiPersonality: (personality: string) => {
+    const { currentUser } = get();
     if (typeof window !== 'undefined') {
       localStorage.setItem('wholescale-ai-personality', personality);
     }
     set({ aiPersonality: personality });
+
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const supabaseClient = supabase;
+      supabaseClient.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          const currentSettings = profile?.settings || {};
+          supabaseClient.from('profiles')
+            .update({ settings: { ...currentSettings, ai_personality: personality } })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
   },
 
   setDashboardLayout: (layout: any[]) => {
@@ -4243,6 +4409,104 @@ export const useStore = create<AppState>((set, get) => ({
 
   setCursorSettings: (settings: Partial<CursorSettings>) => {
     set((s: any) => ({ cursorSettings: { ...s.cursorSettings, ...settings } }));
+  },
+
+  updateMilestone: (id: string, current: number) => {
+    const { currentUser, milestones } = get();
+    const next = milestones.map(m => m.id === id ? { ...m, current } : m);
+    set({ milestones: next });
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-milestones', JSON.stringify(next));
+    }
+
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const supabaseClient = supabase;
+      supabaseClient.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          const currentSettings = profile?.settings || {};
+          supabaseClient.from('profiles')
+            .update({ 
+              settings: { 
+                ...currentSettings, 
+                team_milestones: next 
+              } 
+            })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
+  },
+
+  setMilestones: (milestones: TeamMilestone[]) => {
+    set({ milestones });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-milestones', JSON.stringify(milestones));
+    }
+  },
+
+  addMilestone: (m: Omit<TeamMilestone, 'id'>) => {
+    const { currentUser, milestones } = get();
+    const newId = Math.random().toString(36).substr(2, 9);
+    const next = [...milestones, { ...m, id: newId }];
+    set({ milestones: next });
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-milestones', JSON.stringify(next));
+    }
+
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const s = supabase;
+      s.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          const currentSettings = profile?.settings || {};
+          s.from('profiles')
+            .update({ 
+              settings: { 
+                ...currentSettings, 
+                team_milestones: next 
+              } 
+            })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
+  },
+
+  deleteMilestone: (id: string) => {
+    const { currentUser, milestones } = get();
+    const next = milestones.filter(m => m.id !== id);
+    set({ milestones: next });
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-milestones', JSON.stringify(next));
+    }
+
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const s = supabase;
+      s.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          const currentSettings = profile?.settings || {};
+          s.from('profiles')
+            .update({ 
+              settings: { 
+                ...currentSettings, 
+                team_milestones: next 
+              } 
+            })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
   },
 
   transferTeamOwnership: (memberId: string) => {

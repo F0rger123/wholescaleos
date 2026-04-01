@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   ChevronLeft, ChevronRight, Plus, X, Search,
   Calendar as CalendarIcon, Zap, Star
@@ -8,8 +8,9 @@ import {
   startOfWeek, endOfWeek, isSameMonth, isSameDay, addDays,
   eachDayOfInterval, parseISO, isToday, isPast
 } from 'date-fns';
-import { useStore, type TeamMember } from '../../store/useStore';
+import { useStore } from '../../store/useStore';
 import { toast } from 'react-hot-toast';
+import { sendEmail, teamEventTemplate } from '../../lib/email';
 
 interface TeamEvent {
   id: string;
@@ -21,6 +22,8 @@ interface TeamEvent {
   type: 'meeting' | 'social' | 'deadline' | 'other';
   attendees: string[];
   createdBy: string;
+  reminderMinutes?: number;
+  notifyViaEmail?: boolean;
 }
 
 export function TeamCalendarTab() {
@@ -62,7 +65,9 @@ export function TeamCalendarTab() {
     description: '',
     type: 'meeting',
     location: '',
-    attendees: []
+    attendees: [],
+    reminderMinutes: 15,
+    notifyViaEmail: false
   });
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -87,12 +92,47 @@ export function TeamCalendarTab() {
       location: newEvent.location || '',
       type: newEvent.type as any,
       attendees: newEvent.attendees || [],
-      createdBy: currentUser?.id || ''
+      createdBy: currentUser?.id || '',
+      reminderMinutes: newEvent.reminderMinutes,
+      notifyViaEmail: newEvent.notifyViaEmail
     };
+
+    if (event.notifyViaEmail) {
+      // Send emails to all attendees
+      event.attendees.forEach(async (attendeeId) => {
+        const attendee = team.find(m => m.id === attendeeId);
+        if (attendee?.email) {
+          const emailPayload = teamEventTemplate(
+            attendee.name,
+            event.title,
+            event.startDate,
+            event.location,
+            event.description,
+            currentUser?.name || 'A team member',
+            window.location.origin + '/team'
+          );
+          emailPayload.to = attendee.email;
+          await sendEmail(emailPayload);
+        }
+      });
+      toast.success(`Email invites dispatched to ${event.attendees.length} members`);
+    }
+
+    if (event.reminderMinutes && event.reminderMinutes > 0) {
+      console.log(`[Reminder System] Alert set for ${event.reminderMinutes} minutes before ${format(selectedDate, 'PPp')}`);
+    }
 
     setEvents([...events, event]);
     setShowEventModal(false);
-    setNewEvent({ title: '', description: '', type: 'meeting', location: '', attendees: [] });
+    setNewEvent({ 
+      title: '', 
+      description: '', 
+      type: 'meeting', 
+      location: '', 
+      attendees: [],
+      reminderMinutes: 15,
+      notifyViaEmail: false
+    });
     toast.success('Event scheduled successfully!');
   };
 
@@ -289,12 +329,13 @@ export function TeamCalendarTab() {
                     </div>
                  </div>
 
-                 <div>
+                  <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-3 block">Team Attendees</label>
                     <div className="flex flex-wrap gap-2">
                        {team.map(m => (
                           <button
                             key={m.id}
+                            type="button"
                             onClick={() => {
                                const current = newEvent.attendees || [];
                                const next = current.includes(m.id) ? current.filter(id => id !== m.id) : [...current, m.id];
@@ -305,6 +346,37 @@ export function TeamCalendarTab() {
                              {m.name}
                           </button>
                        ))}
+                    </div>
+                 </div>
+
+                 <div className="p-6 rounded-2xl bg-[var(--t-bg)] border border-[var(--t-border)] space-y-4">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Reminders & Sync</p>
+                    <div className="flex items-center justify-between gap-4">
+                       <div className="flex-1">
+                          <label className="text-[9px] font-bold text-[var(--t-text-muted)] uppercase block mb-1">Push Alert Time</label>
+                          <select 
+                             value={newEvent.reminderMinutes}
+                             onChange={e => setNewEvent({...newEvent, reminderMinutes: parseInt(e.target.value)})}
+                             className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-xs font-black text-[var(--t-text)] outline-none"
+                          >
+                             <option value={0}>No Reminder</option>
+                             <option value={5}>5 Minutes Before</option>
+                             <option value={15}>15 Minutes Before</option>
+                             <option value={30}>30 Minutes Before</option>
+                             <option value={60}>1 Hour Before</option>
+                             <option value={1440}>1 Day Before</option>
+                          </select>
+                       </div>
+                       <div className="flex flex-col items-end">
+                          <label className="text-[9px] font-bold text-[var(--t-text-muted)] uppercase mb-1">Email Notice</label>
+                          <button 
+                             type="button"
+                             onClick={() => setNewEvent({...newEvent, notifyViaEmail: !newEvent.notifyViaEmail})}
+                             className={`w-12 h-6 rounded-full transition-all relative ${newEvent.notifyViaEmail ? 'bg-emerald-500' : 'bg-[var(--t-surface-dim)]'}`}
+                          >
+                             <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${newEvent.notifyViaEmail ? 'right-1' : 'left-1'}`} />
+                          </button>
+                       </div>
                     </div>
                  </div>
 

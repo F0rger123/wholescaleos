@@ -21,6 +21,7 @@ interface CalendarEvent {
   notified?: boolean;
   leadId?: string;
   leadName?: string;
+  sendEmailReminder?: boolean;
 }
 
 interface Category {
@@ -130,7 +131,8 @@ function Calendar() {
     endTime: '',
     description: '',
     categoryId: categories[0]?.id || '',
-    leadId: ''
+    leadId: '',
+    sendEmailReminder: false
   });
 
   // Load enrichments first
@@ -404,7 +406,8 @@ function Calendar() {
                 categoryName: selectedCategory?.name,
                 categoryColor: selectedCategory?.color,
                 leadId: formData.leadId,
-                leadName: selectedLead?.name
+                leadName: selectedLead?.name,
+                sendEmailReminder: (formData as any).sendEmailReminder
               }
             : e
         ));
@@ -448,7 +451,8 @@ function Calendar() {
           categoryColor: selectedCategory?.color,
           leadId: formData.leadId,
           leadName: selectedLead?.name,
-          notified: false
+          notified: false,
+          sendEmailReminder: (formData as any).sendEmailReminder
         };
         setEvents([...events, newEvent]);
         alert('Local event created!');
@@ -467,7 +471,8 @@ function Calendar() {
       endTime: '',
       description: '',
       categoryId: categories[0]?.id || '',
-      leadId: ''
+      leadId: '',
+      sendEmailReminder: false
     });
     setEditingEvent(null);
     setShowForm(false);
@@ -485,7 +490,8 @@ function Calendar() {
       endTime: endParts[1]?.slice(0, 5) || '10:00',
       description: event.description,
       categoryId: event.categoryId || categories[0]?.id || '',
-      leadId: event.leadId || ''
+      leadId: event.leadId || '',
+      sendEmailReminder: !!event.sendEmailReminder
     });
     setShowForm(true);
     setShowEventDetail(false);
@@ -969,6 +975,23 @@ function Calendar() {
           >
             🔔
           </button>
+
+          {/* Test Notification Button */}
+          <button
+            onClick={() => {
+              if (Notification.permission === 'granted') {
+                new Notification('TACTICAL ALERT', {
+                  body: 'Calendar notification system is online.',
+                  icon: '/favicon.png'
+                });
+              } else {
+                alert('Permission denied. Please enable notifications.');
+              }
+            }}
+            className="px-3 py-2 rounded-lg bg-[var(--t-surface-dim)] dark:bg-[var(--t-surface)] text-[var(--t-text)] dark:text-[var(--t-text-muted)] hover:text-[#3b82f6] border border-[var(--t-border)] text-[10px] font-black uppercase tracking-widest"
+          >
+            Test
+          </button>
         </div>
       </div>
 
@@ -1305,6 +1328,19 @@ function Calendar() {
                     <option key={lead.id} value={lead.id}>{lead.name}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="flex items-center gap-2 py-2">
+                <input
+                  type="checkbox"
+                  id="sendEmailReminder"
+                  checked={(formData as any).sendEmailReminder}
+                  onChange={(e) => setFormData({...formData, sendEmailReminder: e.target.checked})}
+                  className="w-4 h-4 rounded border-[var(--t-border)] text-[var(--t-primary)] focus:ring-[var(--t-primary)]"
+                />
+                <label htmlFor="sendEmailReminder" className="text-sm font-medium text-[var(--t-text)] dark:text-[var(--t-text-muted)] cursor-pointer">
+                  Send email reminder to participants
+                </label>
               </div>
               
               <div className="flex justify-end space-x-2">
