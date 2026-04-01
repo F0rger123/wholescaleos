@@ -1035,7 +1035,7 @@ export default function Contracts() {
               onClick={handleToggleEdit}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 isEditing 
-                  ? 'bg-[var(--t-success)] hover:bg-[var(--t-success-hover)] text-white shadow-lg shadow-[var(--t-success-dim)]' 
+                  ? 'bg-[var(--t-success)] hover:bg-[var(--t-success-hover)] text-[var(--t-on-primary)] shadow-lg shadow-[var(--t-success-dim)]' 
                   : 'bg-[var(--t-surface-hover)] hover:bg-[var(--t-surface-hover)]/80 text-[var(--t-text)] border border-[var(--t-border)]'
               }`}
             >
@@ -1048,7 +1048,7 @@ export default function Contracts() {
             <button 
               onClick={handleEmailLead}
               disabled={generatingPdf}
-              className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-wait ${generatingPdf ? 'animate-pulse' : ''}`}
+              className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-[var(--t-primary)] text-[var(--t-on-primary)] hover:bg-[var(--t-primary-hover)] shadow-lg shadow-[var(--t-primary-dim)] disabled:opacity-70 disabled:cursor-wait ${generatingPdf ? 'animate-pulse' : ''}`}
             >
               {generatingPdf ? <Loader2 size={16} className="animate-spin" /> : <Mail size={16} />}
               {generatingPdf ? 'Preparing document...' : 'Send Contract'}
@@ -1153,7 +1153,7 @@ export default function Contracts() {
           isAttachmentLoading={generatingPdf}
           onSuccess={() => {
             setSuccess(true);
-            setTimeout(() => setSuccess(false), 3000);
+            setTimeout(() => setSuccess(false), 1500);
           }}
         />
       )}
@@ -1220,7 +1220,7 @@ export default function Contracts() {
               The contract has been securely delivered to <span className="text-[var(--t-text)] font-bold">{selectedLead?.email || 'the recipient'}</span>.
             </p>
             <div className="mt-8 pt-8 border-t border-[var(--t-border)] w-full">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--t-text-muted)] italic">Closing in 3 seconds...</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--t-text-muted)] italic">Closing in 1.5 seconds...</p>
             </div>
           </div>
         </div>

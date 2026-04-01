@@ -807,7 +807,7 @@ export function AIBotWidget() {
         }`}
         style={{ 
           background: isOpen && !isMinimized ? 'var(--t-surface-active)' : 'var(--t-primary)',
-          color: isOpen && !isMinimized ? 'var(--t-primary)' : 'white'
+          color: isOpen && !isMinimized ? 'var(--t-primary)' : 'var(--t-on-primary)'
         }}
       >
         {isOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />}
@@ -817,7 +817,7 @@ export function AIBotWidget() {
         )}
         
         {!isOpen && (
-          <div className="absolute right-full mr-3 whitespace-nowrap bg-[var(--t-surface)] text-white text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[var(--t-border)] shadow-xl">
+          <div className="absolute right-full mr-3 whitespace-nowrap bg-[var(--t-surface)] text-[var(--t-text)] text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[var(--t-border)] shadow-xl">
             How can I help you, {currentUser?.email?.split('@')[0]}?
           </div>
         )}

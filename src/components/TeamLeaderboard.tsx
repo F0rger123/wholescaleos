@@ -72,7 +72,7 @@ export function TeamLeaderboard() {
                   className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold"
                   style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
                 >
-                  {member.name.charAt(0)}
+                  {(member.full_name || member.name || '?').charAt(0)}
                 </div>
                 {idx < 3 && (
                   <div
@@ -87,7 +87,7 @@ export function TeamLeaderboard() {
               {/* Name + Stats */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <p className="text-xs font-bold text-white truncate">{member.name}</p>
+                  <p className="text-xs font-bold text-white truncate">{member.full_name || member.name || 'Unknown'}</p>
                   {/* Streaks */}
                   <div className="flex items-center gap-1 shrink-0">
                     {member.loginStreak > 0 && (

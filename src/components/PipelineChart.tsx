@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -37,6 +37,13 @@ export function PipelineChart() {
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [timeRange, setTimeRange] = useState<ChartTimeRange>('all');
   const [metric, setMetric] = useState<MetricType>('leads');
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Small delay to ensure container dimensions are calculated by the browser
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   const filteredLeads = useMemo(() => {
     if (!leads || !Array.isArray(leads)) return [];
@@ -275,9 +282,18 @@ export function PipelineChart() {
 
       {/* Chart */}
       <div className="h-[300px] w-full min-w-0">
-        <ResponsiveContainer width="100%" height="100%">
-          {renderChart()}
-        </ResponsiveContainer>
+        {!isReady ? (
+          <div className="w-full h-full astral-glass rounded-2xl flex items-center justify-center border border-white/5 bg-white/5 animate-pulse">
+            <div className="flex flex-col items-center gap-2">
+              <BarChart3 className="w-8 h-8 text-indigo-500/30" />
+              <span className="text-[10px] text-[#6d758c] font-black uppercase tracking-widest">Calibrating Pipeline...</span>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            {renderChart()}
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

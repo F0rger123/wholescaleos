@@ -11,7 +11,7 @@ export interface Intent {
 export const intents: Intent[] = [
   {
     name: "hot_leads",
-    patterns: ["hot leads", "top leads", "who should I call", "urgent leads", "show hot leads"],
+    patterns: ["hot leads", "top leads", "who should I call", "urgent leads", "show hot leads", "who is hot", "best leads", "deals to close"],
     action: "queryLeads",
     params: { score_min: 80 },
     template: "You have {count} hot leads: {list}"

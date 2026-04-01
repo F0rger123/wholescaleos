@@ -76,7 +76,7 @@ export default function Home() {
       }
       // Force scroll to top on first load for consistency
       window.scrollTo(0, 0);
-    }, 2500);
+    }, 4000);
     return () => clearTimeout(timer);
   }, []);
 

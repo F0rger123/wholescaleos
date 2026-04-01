@@ -189,6 +189,7 @@ export interface Lead {
 export interface TeamMember {
   id: string;
   name: string;
+  full_name?: string;
   role: string;
   email: string;
   phone: string;

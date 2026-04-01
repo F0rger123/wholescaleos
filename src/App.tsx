@@ -53,7 +53,7 @@ import ScrollToTop from './components/ScrollToTop';
 function ProtectedRoute({ children, checking, isMfaRequired }: { children: React.ReactNode, checking?: boolean, isMfaRequired: boolean }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   
-  if (checking) return null;
+  if (checking) return <DeepSpaceLoader />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   // Only redirect to login for MFA if we are NOT already on the login page
@@ -80,7 +80,7 @@ function ProtectedRoute({ children, checking, isMfaRequired }: { children: React
 
 function PublicRoute({ children, checking, isMfaRequired }: { children: React.ReactNode, checking?: boolean, isMfaRequired: boolean }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
-  if (checking) return null;
+  if (checking) return <DeepSpaceLoader />;
   
   if (isAuthenticated && !isMfaRequired) {
     // If authenticated and no MFA needed, check team selection
