@@ -46,7 +46,7 @@ export const DeepSpaceLoader: React.FC = () => {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="w-24 h-24 rounded-[2rem] bg-white/10 border border-white/10 flex items-center justify-center shadow-2xl mb-10 overflow-hidden"
+          className="w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-purple-600 border border-white/10 flex items-center justify-center shadow-2xl mb-10 overflow-hidden shadow-indigo-600/40"
         >
           <Building2 size={48} className="text-white" />
         </motion.div>

@@ -20,6 +20,7 @@ import Login from './pages/Login';
 import EmailConfirmed from './pages/EmailConfirmed';
 import TeamSelection from './pages/TeamSelection';
 import AutomationsHub from './pages/AutomationsHub';
+import ResetPassword from './pages/ResetPassword';
 import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
@@ -293,10 +294,11 @@ export function App() {
 
         {/* Public routes */}
         <Route path="/login" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><Login /></PublicRoute>} />
+        <Route path="/reset-password" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><ResetPassword /></PublicRoute>} />
         <Route path="/signup" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><Login defaultMode="signup" /></PublicRoute>} />
 
         {/* Email confirmation — accessible with or without auth */}
-        <Route path="/email-confirmed" element={<EmailConfirmed />} />
+        <Route path="/email-confirmed" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><EmailConfirmed /></PublicRoute>} />
 
         {/* Team selection — after login, before main app. Also gated by MFA. */}
         <Route path="/team-selection" element={

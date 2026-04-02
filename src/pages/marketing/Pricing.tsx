@@ -331,7 +331,7 @@ export default function Pricing() {
       </section>
 
       {/* Feature Comparison Table */}
-      <section className="mt-32 max-w-7xl mx-auto px-6 overflow-x-auto">
+      <section id="compare" className="mt-32 max-w-7xl mx-auto px-6 overflow-x-auto">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-black mb-4 tracking-tight">Compare Features</h2>
           <p className="text-gray-400">Deep dive into the infrastructure specifics.</p>

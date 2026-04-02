@@ -228,7 +228,7 @@ export default function Blog() {
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
               <Sparkles size={12} /> Intelligence Hub
             </div>
-            <h1 className="text-5xl md:text-8xl font-black mb-6 leading-[0.9] tracking-tighter">
+            <h1 className="text-5xl md:text-8xl font-black mb-6 leading-none tracking-tighter pb-1">
               The <span className="astral-gradient-text">Blog</span>
             </h1>
             <p className="text-xl text-[#a3aac4] max-w-2xl mx-auto leading-relaxed font-medium">

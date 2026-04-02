@@ -39,7 +39,9 @@ export class GoogleCalendarService {
   getAuthUrl(): string {
     const clientId = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
     const redirectUri = typeof window !== 'undefined' 
-      ? (window.location.origin + '/auth/callback')
+      ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? 'http://localhost:5173/auth/callback'
+          : 'https://wholescaleos.com/auth/callback')
       : "https://wholescaleos.com/auth/callback";
     
     const params = {
@@ -140,7 +142,11 @@ export class GoogleCalendarService {
           code: code,
           client_id: "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com",
           client_secret: "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",
-          redirect_uri: typeof window !== 'undefined' ? (window.location.origin + '/auth/callback') : "https://wholescaleos.com/auth/callback",
+          redirect_uri: typeof window !== 'undefined' 
+            ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+                ? 'http://localhost:5173/auth/callback'
+                : 'https://wholescaleos.com/auth/callback')
+            : "https://wholescaleos.com/auth/callback",
           grant_type: 'authorization_code',
         }),
       });

@@ -113,6 +113,19 @@ export function AuthCallback() {
 
       addDebug(`✅ Authorization code received (length: ${code.length})`);
 
+      // 1.5 NEW: Handle Password Reset (Supabase Auth Recovery)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const isRecovery = hashParams.get('type') === 'recovery' || 
+                         new URLSearchParams(window.location.search).get('type') === 'recovery';
+
+      if (isRecovery) {
+        addDebug('🔑 Password recovery detected, redirecting to reset page...');
+        setStatus('success');
+        setMessage('Security session confirmed. Redirecting to password reset...');
+        setTimeout(() => navigate('/reset-password'), 1500);
+        return;
+      }
+
       try {
         addDebug('📡 Initializing Google Calendar service...');
         const service = GoogleCalendarService.getInstance();

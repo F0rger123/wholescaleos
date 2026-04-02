@@ -163,8 +163,8 @@ export default function Home() {
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8">
                 <Sparkles size={12} className="animate-pulse" /> Elite Real estate Infrastructure
               </div>
-              <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 leading-[0.9]">
-                Scale Your <span className="astral-gradient-text">Empire</span> <br />
+              <h1 className="text-5xl md:text-8xl font-black mb-10 leading-none tracking-tighter pb-2">
+                Real Estate Infrastructure <br/>
                 <span className="astral-gradient-text">On Autopilot.</span>
               </h1>
               <p className="text-xl text-[#a3aac4] mb-12 leading-relaxed max-w-2xl mx-auto font-medium">
@@ -180,12 +180,12 @@ export default function Home() {
                     {isAuthenticated ? 'Go to CRM' : 'Get Started'} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
-                <button 
-                  onClick={() => document.getElementById('comparison')?.scrollIntoView({ behavior: 'smooth' })}
+                <Link 
+                  to="/pricing#compare"
                   className="w-full sm:w-72 h-20 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-lg font-black transition-all flex items-center justify-center gap-3 hover-lift hover-glow-subtle shadow-xl text-white"
                 >
                   <BarChart3 size={20} /> View Comparisons
-                </button>
+                </Link>
               </div>
             </div>
 
