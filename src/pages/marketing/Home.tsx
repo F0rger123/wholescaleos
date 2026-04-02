@@ -66,9 +66,19 @@ export default function Home() {
   const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Resolve initial scroll lag by waiting for hero assets and giving the browser a moment to settle
+    const hasLoaded = sessionStorage.getItem('wholescale_initial_load_complete');
+    
+    if (hasLoaded) {
+      setIsPageReady(true);
+      const loader = document.getElementById('initial-loader');
+      if (loader) loader.remove();
+      return;
+    }
+
+    // Resolve initial scroll lag for first load only
     const timer = setTimeout(() => {
       setIsPageReady(true);
+      sessionStorage.setItem('wholescale_initial_load_complete', 'true');
       // Remove the static loader if it exists
       const loader = document.getElementById('initial-loader');
       if (loader) {

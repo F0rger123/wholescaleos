@@ -115,9 +115,23 @@ export function App() {
   const checking = isChecking || (isSupabaseConfigured && !authReady);
 
   useEffect(() => {
-    // Force a strict 4s loading experience to match the static loader and branding
+    // Check if we've already shown the initial loader in this session
+    const hasLoaded = sessionStorage.getItem('wholescale_initial_load_complete');
+    
+    if (hasLoaded) {
+      setIsChecking(false);
+      // Remove the static loader immediately 
+      const staticLoader = document.getElementById('initial-loader');
+      if (staticLoader) {
+        staticLoader.remove();
+      }
+      return;
+    }
+
+    // Force a strict 4s loading experience for the first load only
     const timer = setTimeout(() => {
       setIsChecking(false);
+      sessionStorage.setItem('wholescale_initial_load_complete', 'true');
       // Ensure the static loader is removed if it's still there
       const staticLoader = document.getElementById('initial-loader');
       if (staticLoader) {

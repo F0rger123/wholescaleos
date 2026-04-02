@@ -1,0 +1,41 @@
+/* Fix for Moon Theme button contrast
+   Moon theme uses #ffffff for --t-primary, so text-white becomes invisible.
+   Targeting Tailwind-generated classes using [var(--t-primary)] and other common button BG classes.
+*/
+
+[data-theme="moon"] button.bg-\[var\(--t-primary\)\],
+[data-theme="moon"] .bg-\[var\(--t-primary\)\],
+[data-theme="moon"] button.bg-\[var\(--t-accent\)\],
+[data-theme="moon"] .bg-\[var\(--t-accent\)\] {
+  color: var(--t-on-primary, #000000) !important;
+}
+
+/* Ensure icons inside primary buttons are also visible */
+[data-theme="moon"] button.bg-\[var\(--t-primary\)\] svg,
+[data-theme="moon"] button.bg-\[var\(--t-accent\)\] svg {
+  color: var(--t-on-primary, #000000) !important;
+  stroke: var(--t-on-primary, #000000);
+}
+
+/* Fix for AIQuickBoard specifically mentioned */
+[data-theme="moon"] .AIQuickBoard-consult-button {
+  background-color: var(--t-primary) !important;
+  color: var(--t-on-primary) !important;
+}
+
+/* Fix for CustomFieldsPanel specifically mentioned */
+[data-theme="moon"] button.bg-purple-600 {
+  background-color: var(--t-primary) !important;
+  color: var(--t-on-primary) !important;
+}
+
+/* Hover and active states for Moon buttons */
+[data-theme="moon"] button.bg-\[var\(--t-primary\)\]:hover {
+  background-color: var(--t-surface-hover) !important;
+  color: var(--t-text) !important;
+  border-color: var(--t-primary) !important;
+}
+
+[data-theme="moon"] button.bg-\[var\(--t-primary\)\]:active {
+  transform: scale(0.98);
+}

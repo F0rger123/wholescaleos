@@ -21,7 +21,6 @@ import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
 import { toast } from 'react-hot-toast';
 import { AIModelSelectionDialog } from './AIModelSelectionDialog';
-import { VoiceAssistant } from './VoiceAssistant';
 
 interface UserTeam {
   teamId: string;
@@ -997,9 +996,6 @@ export function Layout() {
           )}
         </div>
       )}
-      
-      {/* Voice Assistant */}
-      <VoiceAssistant />
     </div>
   );
-}
+}

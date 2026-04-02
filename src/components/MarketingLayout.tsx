@@ -102,7 +102,7 @@ export const MarketingLayout: React.FC = () => {
                   className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors"
                 >
                   <LayoutDashboard size={18} />
-                  Dashboard
+                  Go to CRM
                 </Link>
                 <div className="relative">
                   <button 
@@ -230,7 +230,7 @@ export const MarketingLayout: React.FC = () => {
                       className="flex items-center gap-3 text-lg font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors"
                       onClick={() => setMobileMenuOpen(false)}
                     >
-                      <LayoutDashboard size={20} /> Dashboard
+                      <LayoutDashboard size={20} /> Go to CRM
                     </Link>
                     <button 
                       onClick={async () => {

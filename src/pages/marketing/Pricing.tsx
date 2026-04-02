@@ -401,8 +401,8 @@ export default function Pricing() {
             <Link to="/contact" className="px-8 py-4 rounded-xl bg-white text-[#0f172a] font-bold transition-all hover:scale-105">
               Talk to an Expert
             </Link>
-            <Link to="/signup" className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all hover:scale-105">
-              Sign Up Free
+            <Link to={currentUser ? "/dashboard" : "/signup"} className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all hover:scale-105">
+              {currentUser ? 'Go to CRM' : 'Sign Up Free'}
             </Link>
           </div>
         </div>

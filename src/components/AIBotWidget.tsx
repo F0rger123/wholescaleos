@@ -59,7 +59,20 @@ export function AIBotWidget() {
   });
   const [isDragging, setIsDragging] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [bars, setBars] = useState<number[]>(new Array(20).fill(5));
   const recognitionRef = useRef<any>(null);
+
+  // Simulate voice bars animation
+  useEffect(() => {
+    if (isRecording || isSpeaking) {
+      const interval = setInterval(() => {
+        setBars(new Array(20).fill(0).map(() => Math.random() * 40 + 10));
+      }, 100);
+      return () => clearInterval(interval);
+    } else {
+      setBars(new Array(20).fill(5));
+    }
+  }, [isRecording, isSpeaking]);
 
   // SMS Session State — collects target + message without repeat-asking
   const [smsSession, setSmsSession] = useState<{
@@ -731,7 +744,21 @@ export function AIBotWidget() {
                   </span>
                   {insightsLoading && <Loader2 size={10} className="animate-spin text-[var(--t-primary)]" />}
                 </div>
-                <div className="space-y-1.5">
+                {/* Voice Visualization Bars */}
+                {(isRecording || isSpeaking) && (
+                  <div className="flex items-end justify-center gap-1 h-8 mb-4">
+                    {bars.map((height, i) => (
+                      <div
+                        key={i}
+                        className="w-1 rounded-full bg-[var(--t-primary)] opacity-60 transition-all duration-100"
+                        style={{ height: `${height * 0.6}px` }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Messages */}
+                <div className="space-y-4">
                   {insights.map((insight, i) => (
                     <div key={i} className="flex gap-2 items-start text-[11px] text-[var(--t-text)] leading-snug">
                       <div className="w-1 h-1 rounded-full bg-[var(--t-primary)] mt-1.5 shrink-0" />
