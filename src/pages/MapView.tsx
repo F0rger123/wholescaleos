@@ -24,6 +24,9 @@ const LEAD_COLORS: Record<LeadStatus, string> = {
   negotiating: '#f97316',
   'closed-won': '#10b981',
   'closed-lost': '#ef4444',
+  'contract-in': '#818cf8',
+  'under-contract': '#6d28d9',
+  'follow-up': '#fbbf24',
 };
 
 const createLeadIcon = (color: string) =>
@@ -245,9 +248,9 @@ export default function MapView() {
   const totalVisible = filteredLeads.length + filteredBuyers.length;
 
   return (
-    <div className="space-y-4 h-full flex flex-col" style={{ backgroundColor: 'var(--t-bg)' }}>
+    <div className="p-6 h-full flex flex-col gap-6" style={{ backgroundColor: 'var(--t-bg)' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>Property Map</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>

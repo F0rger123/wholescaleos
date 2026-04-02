@@ -951,10 +951,11 @@ function Calendar() {
               });
               setShowForm(true);
             }}
-            className="px-4 py-2 rounded-lg text-white"
-            style={{ background: 'var(--t-primary)' }}
+            className="px-6 py-2 rounded-xl text-white font-black uppercase tracking-widest italic shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
+            style={{ background: 'linear-gradient(135deg, var(--t-primary), #818cf8)' }}
           >
-            + New
+            <span className="text-xl leading-none">+</span>
+            <span>New</span>
           </button>
 
           {/* Notifications Toggle */}
@@ -1117,8 +1118,8 @@ function Calendar() {
 
       {/* Event Detail Modal */}
       {showEventDetail && selectedEvent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[var(--t-surface-dim)] rounded-lg p-6 max-w-md w-full border border-[var(--t-border)] dark:border-[var(--t-border)]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[200] animate-in fade-in duration-300">
+          <div className="astral-glass rounded-3xl p-8 max-w-md w-full border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-semibold text-[var(--t-text)] dark:text-white">
@@ -1207,8 +1208,8 @@ function Calendar() {
 
       {/* Event Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-[var(--t-surface-dim)] rounded-lg p-6 max-w-md w-full border border-[var(--t-border)] dark:border-[var(--t-border)]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[200] animate-in fade-in duration-300">
+          <div className="astral-glass rounded-3xl p-8 max-w-lg w-full border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300">
             <h2 className="text-xl font-semibold mb-4 text-[var(--t-text)] dark:text-white">
               {editingEvent ? 'Edit Event' : 'Create Event'}
             </h2>

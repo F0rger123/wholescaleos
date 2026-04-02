@@ -36,7 +36,7 @@ export class GoogleCalendarService {
     return GoogleCalendarService.instance;
   }
 
-  getAuthUrl(): string {
+  getAuthUrl(state?: string): string {
     const clientId = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
     const redirectUri = typeof window !== 'undefined' 
       ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -52,7 +52,7 @@ export class GoogleCalendarService {
       access_type: 'offline',
       prompt: 'consent select_account',
       include_granted_scopes: 'true',
-      state: 'calendar-sync',
+      state: state || 'calendar-sync',
     };
     
     let url = 'https://accounts.google.com/o/oauth2/v2/auth?';

@@ -42,7 +42,7 @@ export function GoogleCalendarConnect() {
   };
 
   const handleConnect = () => {
-    const authUrl = service.getAuthUrl();
+    const authUrl = service.getAuthUrl(window.location.pathname);
     window.location.href = authUrl;
   };
 

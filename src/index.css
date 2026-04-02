@@ -286,6 +286,9 @@
   background-clip: text;
   color: transparent;
   display: inline-block;
+  padding-bottom: 0.2em;
+  margin-bottom: -0.2em;
+  line-height: normal;
 }
 
 .astral-nav-link {

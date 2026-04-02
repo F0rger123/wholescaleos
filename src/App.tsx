@@ -116,6 +116,17 @@ export function App() {
   const checking = isChecking || (isSupabaseConfigured && !authReady);
 
   useEffect(() => {
+    // 0. Handle password recovery redirect immediately (Issue 10)
+    const hash = window.location.hash;
+    const search = window.location.search;
+    if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+      if (window.location.pathname !== '/auth/callback') {
+        console.log('[App] Recovery link detected, redirecting to AuthCallback...');
+        window.location.href = `/auth/callback${search}${hash}`;
+        return;
+      }
+    }
+
     // Check if we've already shown the initial loader in this session
     const hasLoaded = sessionStorage.getItem('wholescale_initial_load_complete');
     

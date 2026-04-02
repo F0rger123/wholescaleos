@@ -78,13 +78,15 @@ export function AuthCallback() {
       // Extract code from hash or search params
       let code = null;
       let error = null;
+      let state = null;
 
       // Check hash first (for HashRouter)
       if (window.location.hash.includes('?')) {
         const hashParams = new URLSearchParams(window.location.hash.split('?')[1]);
         code = hashParams.get('code');
         error = hashParams.get('error');
-        addDebug(`📦 From hash - code: ${code ? 'yes' : 'no'}, error: ${error || 'none'}`);
+        state = hashParams.get('state');
+        addDebug(`📦 From hash - code: ${code ? 'yes' : 'no'}, error: ${error || 'none'}, state: ${state || 'none'}`);
       }
 
       // Fallback to search params
@@ -92,7 +94,8 @@ export function AuthCallback() {
         const searchParams = new URLSearchParams(window.location.search);
         code = searchParams.get('code');
         error = searchParams.get('error');
-        addDebug(`📦 From search - code: ${code ? 'yes' : 'no'}, error: ${error || 'none'}`);
+        state = searchParams.get('state');
+        addDebug(`📦 From search - code: ${code ? 'yes' : 'no'}, error: ${error || 'none'}, state: ${state || 'none'}`);
       }
 
       if (error) {
@@ -140,7 +143,8 @@ export function AuthCallback() {
           addDebug('✅ Tokens stored successfully!');
           setStatus('success');
           setMessage('Google Calendar connected successfully!');
-          setTimeout(() => navigate('/calendar'), 2000);
+          const redirectPath = state && state !== 'calendar-sync' ? state : '/calendar';
+          setTimeout(() => navigate(redirectPath), 2000);
         } else {
           throw new Error('Failed to store tokens');
         }
