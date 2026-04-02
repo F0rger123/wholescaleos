@@ -297,10 +297,10 @@ export default function TeamSelection() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--t-background)' }}>
-        <div className="w-14 h-14 rounded-xl flex items-center justify-center"
+        <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
           style={{ background: 'var(--t-primary)' }}
         >
-          <Building2 size={28} className="text-white" />
+          <Building2 size={28} style={{ color: 'var(--t-on-primary, white)' }} />
         </div>
         <div className="flex items-center gap-2" style={{ color: 'var(--t-text-muted)' }}>
           <Loader2 size={16} className="animate-spin" />
@@ -322,9 +322,9 @@ export default function TeamSelection() {
               '--tw-shadow-color': 'var(--t-primary-dim)'
             }}
           >
-            <Building2 size={32} className="text-white" />
+            <Building2 size={32} style={{ color: 'var(--t-on-primary, white)' }} />
           </div>
-          <h1 className="text-2xl font-bold text-white">WholeScale OS</h1>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>WholeScale OS</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
             Welcome{currentUser?.name ? `, ${currentUser.name}` : ''}! Choose how to continue.
           </p>
@@ -356,7 +356,7 @@ export default function TeamSelection() {
                         <Building2 size={22} style={{ color: 'var(--t-primary)' }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-base font-semibold text-white truncate">
+                        <p className="text-base font-semibold truncate" style={{ color: 'var(--t-text)' }}>
                           {t.teamName}
                         </p>
                         <div className="flex items-center gap-3 mt-0.5">
@@ -395,7 +395,7 @@ export default function TeamSelection() {
                   <ArrowRightLeft size={18} style={{ color: 'var(--t-success)' }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Join a Team</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>Join a Team</p>
                   <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>Enter an invite code</p>
                 </div>
               </button>
@@ -414,7 +414,7 @@ export default function TeamSelection() {
                   <Plus size={18} style={{ color: 'var(--t-primary)' }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-white">Create a Team</p>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>Create a Team</p>
                   <p className="text-[11px]" style={{ color: 'var(--t-text-muted)' }}>Start a new workspace</p>
                 </div>
               </button>
@@ -442,7 +442,7 @@ export default function TeamSelection() {
                   <Users size={20} style={{ color: 'var(--t-success)' }} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Join a Team</h2>
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Join a Team</h2>
                   <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Enter the invite code from your team admin</p>
                 </div>
               </div>
@@ -491,8 +491,8 @@ export default function TeamSelection() {
               <button
                 onClick={handleJoinTeam}
                 disabled={joinLoading || !joinCode.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50"
-                style={{ backgroundColor: 'var(--t-success)' }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+                style={{ backgroundColor: 'var(--t-success)', color: 'var(--t-on-success, white)' }}
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-success-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--t-success)'}
               >
@@ -517,7 +517,7 @@ export default function TeamSelection() {
                   <Building2 size={20} style={{ color: 'var(--t-primary)' }} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Create a Team</h2>
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Create a Team</h2>
                   <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Start a new workspace for your group</p>
                 </div>
               </div>
@@ -598,8 +598,8 @@ export default function TeamSelection() {
               <button
                 onClick={handleCreateTeam}
                 disabled={createLoading || !newTeamName.trim()}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-colors disabled:opacity-50"
-                style={{ background: 'var(--t-primary)' }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
+                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary, white)' }}
               >
                 {createLoading ? (
                   <><Loader2 size={16} className="animate-spin" /> Creating...</>

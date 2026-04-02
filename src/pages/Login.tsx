@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff, Database, ExternalLink, Copy, Check, Users } from 'lucide-react';
+import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff, ExternalLink, Copy, Check, Users, Database } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
 import { sendWelcomeEmail } from '../lib/email';
 import { referralService } from '../lib/referral-service';
 
-type AuthMode = 'login' | 'signup' | 'forgot' | 'mfa';
+type AuthMode = 'login' | 'signup' | 'forgot' | 'mfa' | 'reset';
 
 interface LoginProps {
   defaultMode?: AuthMode;
@@ -80,6 +81,8 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
         setMode('signup');
       } else if (params.get('mode') === 'forgot') {
         setMode('forgot');
+      } else if (params.get('mode') === 'reset' || window.location.hash.includes('type=recovery')) {
+        setMode('reset');
       }
     };
 
@@ -717,9 +720,36 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             setLoading(false);
             return;
           }
+        } else if (mode === 'reset') {
+          // Reset Password (after clicking email link)
+          if (form.password !== form.confirmPassword) {
+            setError('Passwords do not match');
+            setLoading(false);
+            return;
+          }
+          if (form.password.length < 8) {
+            setError('Password must be at least 8 characters');
+            setLoading(false);
+            return;
+          }
+
+          const { error: updateError } = await supabase.auth.updateUser({
+            password: form.password
+          });
+
+          if (updateError) {
+            setError(updateError.message);
+          } else {
+            toast.success('Password updated successfully! You can now sign in.');
+            setMode('login');
+            // Clear hash to prevent re-entering reset mode
+            window.location.hash = '';
+          }
+          setLoading(false);
+          return;
         } else {
           // Forgot password
-          const resetRedirect = window.location.origin + '/login';
+          const resetRedirect = window.location.origin + '/auth/callback'; // Use AuthCallback helper
           console.log('[Auth] Password reset process started:', {
             email: form.email,
             redirect: resetRedirect,
@@ -786,12 +816,6 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
     }
   };
 
-  const handleDemoLogin = () => {
-    login('demo@wholescale.io', 'demo123');
-    // Demo mode skips team selection — no Supabase
-    navigate('/');
-  };
-
   const inputClass = 'w-full pl-10 pr-4 py-3 text-sm rounded-xl border transition-colors outline-none';
   const inputStyle = {
     background: 'var(--t-input-bg)',
@@ -812,13 +836,13 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
         <div className="relative">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center"
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
               style={{ background: 'var(--t-primary)' }}
             >
-              <Building2 size={26} className="text-white" />
+              <Building2 size={26} style={{ color: 'var(--t-on-primary, white)' }} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight">WholeScale</h1>
+              <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--t-text)' }}>WholeScale</h1>
               <p className="text-[11px] uppercase tracking-[0.3em] font-semibold" style={{ color: 'var(--t-primary)' }}>OS</p>
             </div>
           </div>
@@ -883,13 +907,13 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
               style={{ background: 'var(--t-primary)' }}
             >
-              <Building2 size={22} className="text-white" />
+              <Building2 size={22} style={{ color: 'var(--t-on-primary, white)' }} />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">WholeScale</h1>
+              <h1 className="text-xl font-bold" style={{ color: 'var(--t-text)' }}>WholeScale</h1>
               <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--t-primary)' }}>OS</p>
             </div>
           </div>
@@ -904,11 +928,12 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>
               {mode === 'login' ? 'Welcome back' : 
                mode === 'signup' ? 'Create your account' : 
                mode === 'mfa' ? 'Two-Factor Auth' :
                mode === 'forgot' ? 'Reset password' :
+               mode === 'reset' ? 'Set new password' :
                'Welcome back'}
             </h2>
             <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
@@ -918,6 +943,8 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                 ? 'Start managing deals in minutes'
                 : mode === 'mfa'
                 ? 'Enter the code from your authenticator app'
+                : mode === 'reset'
+                ? 'Choose a strong password for your account'
                 : 'We\'ll send you a reset link'}
             </p>
           </div>
@@ -943,7 +970,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                     style={{ backgroundColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)', color: 'var(--t-warning)' }}
                   >1</span>
                   <div className="flex-1">
-                    <p className="text-xs text-white font-medium">Open Supabase SQL Editor</p>
+                    <p className="text-xs font-medium" style={{ color: 'var(--t-text)' }}>Open Supabase SQL Editor</p>
                     <a
                       href="https://supabase.com/dashboard/project/jdneeubmkgefhrfcurji/sql/new"
                       target="_blank"
@@ -1120,8 +1147,8 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                 <button
                   type="submit"
                   disabled={loading || mfaCode.length < 6}
-                  className="flex-[2] flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: 'var(--t-primary)' }}
+                  className="flex-[2] flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary, white)' }}
                 >
                   {loading ? <><Loader2 size={16} className="animate-spin" />Verifying...</> : 'Verify & Sign In'}
                 </button>
@@ -1188,7 +1215,9 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             {/* Password */}
             {mode !== 'forgot' && (
               <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Password</label>
+                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>
+                  {mode === 'reset' ? 'New Password' : 'Password'}
+                </label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }} />
                   <input
@@ -1213,8 +1242,8 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
               </div>
             )}
 
-            {/* Confirm password (signup) */}
-            {mode === 'signup' && (
+            {/* Confirm password (signup or reset) */}
+            {(mode === 'signup' || mode === 'reset') && (
               <div>
                 <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Confirm Password</label>
                 <div className="relative">
@@ -1276,42 +1305,23 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ 
                 backgroundColor: 'var(--t-primary)',
+                color: 'var(--t-on-primary, white)',
                 '--tw-shadow-color': 'var(--t-primary-dim)'
               } as any}
             >
               {loading ? (
                 <><Loader2 size={16} className="animate-spin" />Processing...</>
               ) : (
-                <>{mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'}<ArrowRight size={16} /></>
+                <>{mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : mode === 'reset' ? 'Update Password' : 'Send Reset Link'}<ArrowRight size={16} /></>
               )}
             </button>
           </form>
           )}
 
-          {/* Demo login button */}
-          <div className="relative mt-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t" style={{ borderColor: 'var(--t-border-subtle)' }} />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="px-3" style={{ background: 'var(--t-background)', color: 'var(--t-text-muted)' }}>Or continue with demo</span>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleDemoLogin}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border transition-all mt-6"
-              style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', color: 'var(--t-text)' }}
-            >
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--t-warning-dim)' }}>
-                <Database size={14} style={{ color: 'var(--t-warning)' }} />
-              </div>
-              Try with Demo Account
-            </button>
 
           {/* Mode switcher */}
           <p className="mt-8 text-center text-sm" style={{ color: 'var(--t-text-muted)' }}>

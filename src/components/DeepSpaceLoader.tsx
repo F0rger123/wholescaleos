@@ -6,7 +6,7 @@ export const DeepSpaceLoader: React.FC = () => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const duration = 4000; // 4 seconds
+    const duration = 2500; // 2.5 seconds
     const interval = 40; // update every 40ms
     const step = 100 / (duration / interval);
 
@@ -37,7 +37,7 @@ export const DeepSpaceLoader: React.FC = () => {
           opacity: [0.3, 0.5, 0.3] 
         }}
         transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-radial from-indigo-500/20 via-transparent to-transparent blur-[120px] rounded-full pointer-events-none" 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-radial from-white/10 via-transparent to-transparent blur-[80px] rounded-full pointer-events-none" 
       />
       
       <div className="relative flex flex-col items-center">
@@ -46,14 +46,9 @@ export const DeepSpaceLoader: React.FC = () => {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.4)] mb-10 overflow-hidden"
+          className="w-24 h-24 rounded-[2rem] bg-white/10 border border-white/10 flex items-center justify-center shadow-2xl mb-10 overflow-hidden"
         >
           <Building2 size={48} className="text-white" />
-          <motion.div 
-            animate={{ x: ['-100%', '200%'] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
-          />
         </motion.div>
 
         {/* Text Area */}

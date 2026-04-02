@@ -251,7 +251,7 @@ export default function Pricing() {
                 (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
                   ? 'bg-white/5 text-gray-500 cursor-default border-transparent'
                   : plan.popular || (currentUser?.subscriptionTier || 'Free').toLowerCase() === plan.name.toLowerCase()
-                    ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xl shadow-indigo-500/30'
+                    ? 'bg-white text-black hover:bg-white/90 shadow-xl shadow-white/10'
                     : 'bg-white/5 hover:bg-white/10 text-white border border-white/10'
               } ${loading === plan.name ? 'opacity-50 cursor-wait' : ''}`}
             >
@@ -401,7 +401,7 @@ export default function Pricing() {
             <Link to="/contact" className="px-8 py-4 rounded-xl bg-white text-[#0f172a] font-bold transition-all hover:scale-105">
               Talk to an Expert
             </Link>
-            <Link to={currentUser ? "/dashboard" : "/signup"} className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all hover:scale-105">
+            <Link to={currentUser ? "/dashboard" : "/signup"} className="px-8 py-4 rounded-xl bg-white text-black font-bold transition-all hover:scale-105">
               {currentUser ? 'Go to CRM' : 'Sign Up Free'}
             </Link>
           </div>
@@ -449,7 +449,7 @@ function PlanDetailModal({ plan, billingCycle, onClose, calculatePrice, handleCh
             </div>
             <button 
               onClick={() => handleCheckout(plan.name)}
-              className="px-8 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-indigo-600/20"
+              className="px-8 py-4 rounded-2xl bg-white text-black font-black uppercase tracking-widest text-xs transition-all shadow-xl"
             >
               Initialize Plan
             </button>

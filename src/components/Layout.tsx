@@ -15,7 +15,7 @@ import {
   Calculator, Bot,
   Smartphone, Bell, StickyNote, Maximize2, Minimize2, FileText, Bot as BookshelfIcon,
   Layout as LayoutIcon, CheckCircle, Mail, Undo2, Redo2, CloudCheck,
-  Shield, BarChart3, Workflow
+  Shield, BarChart3, Workflow, TrendingUp
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -60,38 +60,40 @@ export function Layout() {
 
   const navSections = useMemo(() => {
     const sections: Record<string, { to: string; label: string; icon: any }[]> = {
-      Core: [
-        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { to: '/map', label: 'Map', icon: Map },
-        { to: '/leads', label: 'Leads', icon: Users },
-        { to: '/tasks', label: 'Tasks', icon: ListTodo },
-        { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-      ],
-      Messages: [
-        { to: '/notifications', label: 'Notification Inbox', icon: Bell },
-        { to: '/sms', label: 'SMS', icon: Smartphone },
-        { to: '/email', label: 'Email', icon: Mail },
-        { to: '/chat', label: 'Team Chat', icon: MessageSquare },
+      AI: [
         { to: '/ai-test', label: aiName || 'OS Bot', icon: Bot },
-      ],
-      Tools: [
-        { to: '/automations', label: 'Automations Hub', icon: Workflow },
-        { to: '/imports', label: 'Imports', icon: Download },
         { to: '/ai-training', label: 'AI Training Studio', icon: Bot },
-        { to: '/contracts', label: 'Contracts', icon: FileText },
-        { to: '/calculators', label: 'Calculators', icon: Calculator },
-        { to: '/settings', label: 'Settings', icon: Settings },
+        { to: '/automations', label: 'Automations Hub', icon: Workflow },
       ],
-      Network: [
-        // Consolidated into Billing Profile
+      CRM: [
+        { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { to: '/leads', label: 'Leads', icon: Users },
+        { to: '/pipeline', label: 'Pipeline', icon: TrendingUp },
+        { to: '/inventory', label: 'Inventory', icon: Building2 },
       ],
-      Team: [
+      Comms: [
+        { to: '/email', label: 'Email', icon: Mail },
+        { to: '/sms', label: 'SMS', icon: Smartphone },
+        { to: '/chat', label: 'Team Chat', icon: MessageSquare },
+        { to: '/calendar', label: 'Calendar', icon: Map },
+      ],
+      Analytics: [
+        { to: '/analytics', label: 'Performance', icon: BarChart3 },
+        { to: '/reports', label: 'Reports', icon: FileText },
+        { to: '/market', label: 'Market Metrics', icon: TrendingUp },
+      ],
+      Admin: [
         { to: '/team', label: 'Team Dashboard', icon: UserCog },
+        { to: '/billing', label: 'Billing & Plans', icon: Calculator },
+      ],
+      Settings: [
+        { to: '/settings', label: 'Platform Config', icon: Settings },
+        { to: '/profile', label: 'User Profile', icon: Users },
       ],
     };
 
     if (isAdmin) {
-      sections.Tools.push({ to: '/admin', label: 'Admin', icon: Shield });
+      sections.Admin.push({ to: '/admin', label: 'System Admin', icon: Shield });
     }
 
     // Filter out empty sections
@@ -886,11 +888,11 @@ export function Layout() {
         </header>
 
         {/* Page */}
-        <main className="flex-1 overflow-auto p-6 relative">
-          <div key={location.pathname} className="animate-page-fade-in h-full">
-            <Outlet />
-          </div>
-        </main>
+          <main className="flex-1 overflow-x-hidden overflow-y-auto">
+            <div className="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
+              <Outlet />
+            </div>
+          </main>
       </div>
 
       {/* AI Bot Floating Widget */}
@@ -918,7 +920,7 @@ export function Layout() {
               <StickyNote size={20} />
             </button>
           ) : (
-            <div
+            <form
               className={`w-full flex flex-col rounded-2xl shadow-2xl border overflow-hidden animate-in slide-in-from-bottom-5 duration-300`} 
               style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)', height: isNotesExpanded ? '500px' : '300px' }}
             >
@@ -992,10 +994,10 @@ export function Layout() {
                   Clear
                 </button>
               </div>
-            </div>
+            </form>
           )}
         </div>
       )}
     </div>
   );
-}
+}

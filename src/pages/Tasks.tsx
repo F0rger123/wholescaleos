@@ -316,9 +316,11 @@ export default function Tasks() {
             disabled={syncingTasks}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all border"
             style={syncingTasks ? { 
-              background: 'var(--t-primary)', color: 'var(--t-on-primary)', borderColor: 'var(--t-primary)'
+              background: 'var(--t-primary)', color: 'var(--t-on-primary)', borderColor: 'var(--t-primary)',
+              fontFamily: 'Inter, sans-serif'
             } : { 
-              background: 'var(--t-surface-dim)', borderColor: 'var(--t-border)', color: 'var(--t-text)'
+              background: 'var(--t-surface-dim)', borderColor: 'var(--t-border)', color: 'var(--t-text)',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             <RefreshCw size={14} className={syncingTasks ? 'animate-spin' : ''} />
@@ -330,8 +332,9 @@ export default function Tasks() {
               className="px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all"
               style={viewMode === 'list' ? { 
                 background: 'var(--t-primary)', 
-                color: 'var(--t-on-primary)' 
-              } : { color: 'var(--t-text-muted)' }}
+                color: 'var(--t-on-primary)',
+                fontFamily: 'Inter, sans-serif'
+              } : { color: 'var(--t-text-muted)', fontFamily: 'Inter, sans-serif' }}
             >
               List
             </button>
@@ -340,8 +343,9 @@ export default function Tasks() {
               className="px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all"
               style={viewMode === 'board' ? { 
                 background: 'var(--t-primary)', 
-                color: 'var(--t-on-primary)' 
-              } : { color: 'var(--t-text-muted)' }}
+                color: 'var(--t-on-primary)',
+                fontFamily: 'Inter, sans-serif'
+              } : { color: 'var(--t-text-muted)', fontFamily: 'Inter, sans-serif' }}
             >
               Board
             </button>
@@ -349,7 +353,7 @@ export default function Tasks() {
           <button
             onClick={() => { setShowAdd(true); setEditingId(null); setForm(emptyForm()); }}
             className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-[var(--t-primary-dim)]"
-            style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+            style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)', fontFamily: 'Inter, sans-serif' }}
           >
             <Plus size={16} /> New Task
           </button>

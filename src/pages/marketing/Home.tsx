@@ -175,7 +175,7 @@ export default function Home() {
                 <div className="w-full sm:w-72">
                   <Link
                     to={isAuthenticated ? "/dashboard" : "/signup"}
-                    className="w-full h-20 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(159,167,255,0.3)] group hover-glow hover-lift text-white"
+                    className="w-full h-20 rounded-2xl bg-white text-black hover:bg-white/90 text-lg font-black transition-all flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(255,255,255,0.1)] group hover-glow hover-lift"
                   >
                     {isAuthenticated ? 'Go to CRM' : 'Get Started'} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </Link>
@@ -633,7 +633,7 @@ export default function Home() {
                       <label className="text-[10px] font-black uppercase tracking-widest text-[#6d758c]">Why do you want to partner?</label>
                       <textarea className="w-full h-32 rounded-xl bg-white/5 border border-white/5 p-4 text-sm outline-none focus:border-indigo-500 transition-colors resize-none text-white" placeholder="Tell us about your audience and experience..." required />
                     </div>
-                    <button type="submit" className="w-full py-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black uppercase tracking-[0.2em] text-xs transition-all shadow-xl shadow-indigo-600/20 hover-glow hover-lift">
+                    <button type="submit" className="w-full py-5 rounded-2xl bg-white text-black hover:bg-white/90 font-black uppercase tracking-[0.2em] text-xs transition-all shadow-xl hover-glow hover-lift">
                       Send Application
                     </button>
                     <p className="text-[10px] text-center text-[#6d758c] font-medium">By applying, you agree to our Partnership Protocol & Privacy Terms.</p>
@@ -685,8 +685,8 @@ export default function Home() {
 
       {/* CTA */}
       <section className="py-40 relative overflow-hidden">
-        <div className="absolute inset-0 bg-indigo-600" />
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-700 via-purple-800 to-indigo-900 opacity-90" />
+        <div className="absolute inset-0 bg-black" />
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-[#0a0a0a] to-[#111] opacity-90" />
         <div 
           className="cta-blob absolute top-0 left-0 w-full h-full pointer-events-none bg-[radial-gradient(circle_at_20%_30%,#fff_0%,transparent_50%)]" 
         />
