@@ -749,7 +749,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           return;
         } else {
           // Forgot password
-          const resetRedirect = 'https://wholescaleos.com/reset-password'; // Adjusted to correct reset route
+          const resetRedirect = `${window.location.origin}/reset-password`; // Unified redirect route
           console.log('[Auth] Password reset process started:', {
             email: form.email,
             redirect: resetRedirect,

@@ -52,6 +52,17 @@
   --t-input-bg: #000000;
   --t-input-border: #192540;
   --t-input-focus: #3b82f6;
+
+  /* Button & Component Variables */
+  --t-button-bg: #6366f1;
+  --t-button-text: #ffffff;
+  --t-secondary: #4b5563;
+  --t-on-secondary: #ffffff;
+  --t-accent-dim: rgba(139, 92, 246, 0.1);
+  --t-success-dim: rgba(16, 185, 129, 0.1);
+  --t-error-dim: rgba(239, 68, 68, 0.1);
+  --t-warning-dim: rgba(245, 158, 11, 0.1);
+
   --t-avatar-from: #3b82f6;
   --t-avatar-to: #8b5cf6;
   --t-glow: 0 0 15px rgba(59, 130, 246, 0.1);
@@ -263,6 +274,16 @@
   --t-sidebar-bg: #020617;
   --t-sidebar-border: #1e293b;
   --t-sidebar-hover: #0f172a;
+
+  /* Button & Component Overrides for Moon */
+  --t-button-bg: #818cf8;
+  --t-button-text: #ffffff;
+  --t-secondary: #334155;
+  --t-on-secondary: #f8fafc;
+  --t-accent-dim: rgba(139, 92, 246, 0.2);
+  --t-success-dim: rgba(52, 211, 153, 0.1);
+  --t-error-dim: rgba(248, 113, 113, 0.1);
+  --t-warning-dim: rgba(251, 191, 36, 0.1);
 }
 
 [data-theme="moon"] .astral-glass {

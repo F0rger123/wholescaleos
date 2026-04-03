@@ -140,23 +140,29 @@ export function AuthCallback() {
         addDebug('💾 Storing authentication tokens...');
         const success = await service.storeUserTokens(userId, code);
 
-        if (success && mounted) {
-          addDebug('✅ Tokens stored successfully!');
-          setStatus('success');
-          setMessage('Google Calendar connected successfully!');
-          let redirectPath = '/calendar';
-          if (state && state !== 'calendar-sync') {
-            try {
-              // Handle potentially encoded paths
-              redirectPath = decodeURIComponent(state);
-              if (!redirectPath.startsWith('/')) redirectPath = '/' + redirectPath;
-            } catch (e) {
-              redirectPath = state.startsWith('/') ? state : '/calendar';
+          if (success && mounted) {
+            addDebug('✅ Tokens stored successfully!');
+            setStatus('success');
+            setMessage('Google Workspace successfully connected. Calendar, Gmail, and Tasks are ready.');
+            
+            let redirectPath = '/calendar';
+            if (state && state !== 'calendar-sync') {
+              try {
+                // If it's a full URL, extract path
+                if (state.startsWith('http')) {
+                  redirectPath = new URL(state).pathname + new URL(state).search + new URL(state).hash;
+                } else {
+                  redirectPath = decodeURIComponent(state);
+                }
+                if (!redirectPath.startsWith('/')) redirectPath = '/' + redirectPath;
+              } catch (e) {
+                console.error('State decode error:', e);
+              }
             }
-          }
-          
-          setTimeout(() => navigate(redirectPath), 1500);
-        } else {
+            
+            addDebug(`🚀 Navigating back to: ${redirectPath}`);
+            setTimeout(() => navigate(redirectPath), 1200);
+          } else {
           throw new Error('Failed to store tokens');
         }
       } catch (err) {

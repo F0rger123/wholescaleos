@@ -27,10 +27,9 @@ interface ChatMessage {
 }
 
 export function AIBotWidget() {
-  const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
@@ -38,6 +37,7 @@ export function AIBotWidget() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   
   const { 
+    isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiName, aiModel, setAiModel, isAiDocked, setAiDocked,
     sidebarOpen
@@ -134,7 +134,7 @@ export function AIBotWidget() {
       // If dragged near the top of screen, auto-dock
       if (e.clientY < 80) {
         setAiDocked(true);
-        setIsOpen(false);
+        setAiOpen(false);
         setIsMinimized(false);
       }
     };
@@ -195,17 +195,17 @@ export function AIBotWidget() {
 
   // Handle outside toggle events
   useEffect(() => {
-    const handleToggle = () => setIsOpen(prev => !prev);
+    const handleToggle = () => setAiOpen(!isAiOpen);
     const handleClear = () => setMessages([]);
     const handleUndock = () => {
       setAiDocked(false);
-      setIsOpen(true);
+      setAiOpen(true);
       setIsMinimized(false);
     };
     
     const handleDock = () => {
       setAiDocked(true);
-      setIsOpen(false);
+      setAiOpen(false);
     };
     
     window.addEventListener('toggle-ai-widget', handleToggle);
@@ -217,7 +217,7 @@ export function AIBotWidget() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
         e.preventDefault();
-        setIsOpen(prev => !prev);
+        setAiOpen(!isAiOpen);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -302,11 +302,11 @@ export function AIBotWidget() {
     if (currentUser?.id && messages.length > 0) {
       localStorage.setItem(`ai_widget_history_${currentUser.id}`, JSON.stringify(messages));
     }
-  }, [messages, isOpen]);
+  }, [messages, isAiOpen]);
 
   // Proactive Insights based on page
   useEffect(() => {
-    if (isOpen && !isMinimized && hasKey && !loading) {
+    if (isAiOpen && !isMinimized && hasKey && !loading) {
       const loadInsights = async () => {
         setInsightsLoading(true);
         try {
@@ -320,7 +320,7 @@ export function AIBotWidget() {
       };
       loadInsights();
     }
-  }, [location.pathname, isOpen, isMinimized, hasKey, loading]);
+  }, [location.pathname, isAiOpen, isMinimized, hasKey, loading]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -627,7 +627,7 @@ export function AIBotWidget() {
 
   if (!showFloatingAIWidget) return null; 
 
-  if (hasKey === false && isOpen) {
+  if (hasKey === false && isAiOpen) {
     return (
       <div 
         className="fixed z-[var(--z-popover)] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
@@ -661,7 +661,7 @@ export function AIBotWidget() {
     >
       
       {/* Expanded Chat Window */}
-      {isOpen && !isMinimized && (
+      {isAiOpen && !isMinimized && (
         <div 
           className={`w-80 md:w-96 h-[500px] border rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto mb-4 animate-in zoom-in-95 duration-200 
             ${position.y > window.innerHeight / 2 ? 'order-last mt-4 mb-0 origin-top-right' : 'mb-4 origin-bottom-right'}`}
@@ -683,7 +683,7 @@ export function AIBotWidget() {
           >
             <div className="flex items-center gap-2">
               <button 
-                onClick={() => { setAiDocked(true); setIsOpen(false); }}
+                onClick={() => { setAiDocked(true); setAiOpen(false); }}
                 className="w-6 h-6 rounded-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
                 style={{ background: 'var(--t-primary)' }}
                 title="Dock to bookshelf"
@@ -710,7 +710,7 @@ export function AIBotWidget() {
               <button 
                 onClick={() => {
                   setAiDocked(true);
-                  setIsOpen(false);
+                  setAiOpen(false);
                 }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
                 title="Dock to top bar"
@@ -718,7 +718,7 @@ export function AIBotWidget() {
                 <LayoutIcon size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
               </button>
               <button 
-                onClick={() => { setIsOpen(false); }}
+                onClick={() => { setAiOpen(false); }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
                 title="Close"
               >
@@ -890,23 +890,23 @@ export function AIBotWidget() {
 
           if (isAiDocked) {
             setAiDocked(false);
-            setIsOpen(true);
+            setAiOpen(true);
             setIsMinimized(false);
-          } else if (isOpen) {
+          } else if (isAiOpen) {
             // Slide to Jarvis area (dock)
             setAiDocked(true);
-            setIsOpen(false);
+            setAiOpen(false);
           } else {
-            setIsOpen(true);
+            setAiOpen(true);
             setIsMinimized(false);
           }
         }}
         className={`pointer-events-auto p-4 rounded-full shadow-2xl transition-all duration-500 hover:scale-110 active:scale-95 flex items-center justify-center group relative ${
-          isOpen && !isMinimized ? 'rotate-90' : 'hover:shadow-lg'
+          isAiOpen && !isMinimized ? 'rotate-90' : 'hover:shadow-lg'
         } ${isAiDocked ? 'scale-75 opacity-50 hover:opacity-100 hover:scale-100' : ''}`}
         style={{ 
-          background: (isOpen && !isMinimized) || isAiDocked ? 'var(--t-surface-active)' : 'var(--t-primary)',
-          color: (isOpen && !isMinimized) || isAiDocked ? 'var(--t-primary)' : 'var(--t-on-primary)',
+          background: (isAiOpen && !isMinimized) || isAiDocked ? 'var(--t-surface-active)' : 'var(--t-primary)',
+          color: (isAiOpen && !isMinimized) || isAiDocked ? 'var(--t-primary)' : 'var(--t-on-primary)',
           transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
           // When docked, we position it near the top (bookshelf area) so it "slides" there
           ...(isAiDocked ? {
@@ -920,13 +920,13 @@ export function AIBotWidget() {
           })
         }}
       >
-        {isAiDocked ? <LayoutIcon size={24} /> : (isOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />)}
+        {isAiDocked ? <LayoutIcon size={24} /> : (isAiOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />)}
         
-        {!isOpen && (
+        {!isAiOpen && (
           <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--t-error)] border-2 border-[var(--t-background)] rounded-full animate-pulse" />
         )}
         
-        {!isOpen && (
+        {!isAiOpen && (
           <div className="absolute right-full mr-3 whitespace-nowrap bg-[var(--t-surface)] text-[var(--t-text)] text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[var(--t-border)] shadow-xl">
             How can I help you, {currentUser?.email?.split('@')[0]}?
           </div>

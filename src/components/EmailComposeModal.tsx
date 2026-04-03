@@ -3,7 +3,7 @@ import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOp
 import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail } from '../lib/email';
-import { DEFAULT_TEMPLATES, AgentTemplate } from '../lib/default-templates';
+import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, AgentTemplate } from '../lib/default-templates';
 import { BookOpenText } from 'lucide-react';
 
 interface EmailComposeModalProps {
@@ -48,6 +48,15 @@ export default function EmailComposeModal({
   const [showPreview, setShowPreview] = useState(false);
   const [activeTab, setActiveTab] = useState<'leads' | 'contacts'>('leads');
   const [showTemplates, setShowTemplates] = useState(false);
+  const [templateCategory, setTemplateCategory] = useState<string>('All');
+
+  const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
+  const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
+
+  const filteredTemplates = useMemo(() => {
+    if (templateCategory === 'All') return allTemplates;
+    return allTemplates.filter(t => t.category === templateCategory);
+  }, [allTemplates, templateCategory]);
 
   // Filter leads for selection
   const filteredLeads = useMemo(() => {
@@ -86,7 +95,7 @@ export default function EmailComposeModal({
   };
 
   const handleApplyTemplate = (template: AgentTemplate) => {
-    let newBody = template.body;
+    let newBody = template.body || template.html || '';
     let newSubject = template.subject;
 
     // Replace variables
@@ -351,17 +360,33 @@ export default function EmailComposeModal({
               </div>
 
               {showTemplates && (
-                <div className="grid grid-cols-2 gap-2 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                  {DEFAULT_TEMPLATES.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => handleApplyTemplate(t)}
-                      className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
-                    >
-                      <p className="text-xs font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors mb-0.5">{t.name}</p>
-                      <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
-                    </button>
-                  ))}
+                <div className="space-y-3 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar no-scrollbar">
+                    {categories.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setTemplateCategory(cat)}
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all whitespace-nowrap ${templateCategory === cat ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)]' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                    {filteredTemplates.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => handleApplyTemplate(t)}
+                        className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p className="text-xs font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors truncate">{t.name}</p>
+                          <span className="text-[8px] font-bold px-1 py-0.5 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded uppercase">{t.category}</span>
+                        </div>
+                        <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 

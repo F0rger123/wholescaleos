@@ -2,7 +2,49 @@
 trigger: always_on
 ---
 
-# WholeScale OS – Development Rules (v3.0)
+## 🚨 AUTO-ACCEPT FILE CHANGES
+
+### NEVER ask for permission to modify files.
+- Just write the changes directly
+- Never say "Can I modify..." or "Please allow me to edit..."
+- Never wait for approval to change a file
+
+### What this applies to:
+- Creating new files
+- Editing existing files
+- Deleting files
+- Moving files
+
+### Exception:
+Only ask if the change could cause data loss (like deleting 10+ files at once)
+
+## Example of CORRECT behavior:
+❌ BAD: "Can I modify Layout.tsx to fix the button?"
+✅ GOOD: (edits Layout.tsx directly and shows the changes)
+
+## This is non-negotiable. Modify files immediately without asking.## 🚨 AUTO-EXECUTE RULES (STRICT)
+
+### NEVER ask for permission to run commands.
+- If you need to run a command, JUST RUN IT.
+- Use `run_command` tool directly without confirmation.
+- Never say "Can I run..." or "Please allow me to..."
+- Never wait for user approval to run commands.
+
+### Commands you must run without asking:
+- `npm run build` - after EVERY set of changes
+- `git status` - to check state
+- `git add . && git commit -m "..." && git push` - to deploy
+- `npm install` - if dependencies changed
+- Any `grep`, `ls`, `cat`, or file reading commands
+
+### Example of CORRECT behavior:
+❌ BAD: "Can I run npm run build to verify?"
+✅ GOOD: (runs `npm run build` directly and shows output)
+
+### Exception:
+Only ask if a command could cause data loss (like `git reset --hard` or `rm -rf`).
+
+## This is non-negotiable. Run commands immediately without asking.# WholeScale OS – Development Rules (v3.0)
 
 ## 🚨 CRITICAL RULES (ALWAYS FOLLOW)
 

@@ -62,8 +62,8 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen bg-[var(--t-background)] flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-purple-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full opacity-10 blur-[120px] pointer-events-none" style={{ backgroundColor: 'var(--t-primary)' }} />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full opacity-10 blur-[120px] pointer-events-none" style={{ backgroundColor: 'var(--t-accent)' }} />
 
       <div className="w-full max-w-md z-10">
         <div className="text-center mb-10">
@@ -79,8 +79,8 @@ export default function ResetPassword() {
         <div className="astral-glass border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative">
           {success ? (
             <div className="text-center py-8 animate-astral-fade-up">
-              <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6 border border-green-500/30">
-                <CheckCircle2 size={40} className="text-green-400" />
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 border" style={{ backgroundColor: 'var(--t-success-dim)', borderColor: 'var(--t-success-border, var(--t-success))' }}>
+                <CheckCircle2 size={40} style={{ color: 'var(--t-success)' }} />
               </div>
               <h2 className="text-xl font-bold text-white mb-2">Password Updated</h2>
               <p className="text-[var(--t-text-muted)] text-sm mb-8">
@@ -88,7 +88,10 @@ export default function ResetPassword() {
               </p>
               <button
                 onClick={() => navigate('/login')}
-                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-indigo-500 transition-all flex items-center justify-center gap-2"
+                className="w-full py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2"
+                style={{ backgroundColor: 'var(--t-button-bg)' }}
+                onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(1.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
               >
                 Go to Sign In <ArrowRight size={16} />
               </button>
@@ -106,7 +109,7 @@ export default function ResetPassword() {
                 <div className="relative group">
                   <label className="block text-[10px] font-black text-[var(--t-text-muted)] uppercase tracking-[0.2em] mb-2 ml-1">New Password</label>
                   <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)] group-focus-within:text-indigo-400 transition-colors">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--t-text-muted)] group-focus-within:text-[var(--t-primary)] transition-colors">
                       <Lock size={18} />
                     </div>
                     <input
@@ -149,7 +152,8 @@ export default function ResetPassword() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 disabled:opacity-50 disabled:pointer-events-none"
+                  className="w-full py-4 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:pointer-events-none"
+                  style={{ background: 'var(--t-gradient)', boxShadow: '0 10px 25px -5px var(--t-primary-dim)' }}
                 >
                   {loading ? (
                     <>
@@ -180,7 +184,7 @@ export default function ResetPassword() {
       {/* Brand Footer */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-center pointer-events-none opacity-30">
         <p className="text-[10px] font-black uppercase tracking-[0.4em] italic mb-1 text-white">WholeScale OS</p>
-        <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-indigo-400">Secure Authentication Protocol</p>
+        <p className="text-[8px] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--t-primary)' }}>Secure Authentication Protocol</p>
       </div>
     </div>
   );

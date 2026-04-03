@@ -15,7 +15,8 @@ import {
   Bot, Smartphone, StickyNote, Minimize2,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, Download, UserCog, Map,
-  Building2, ChevronDown, ArrowRightLeft, Plus, X
+  Building2, ChevronDown, ArrowRightLeft, Plus, X,
+  Maximize2, Minus, ChevronUp
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -40,10 +41,13 @@ export function Layout() {
     notesDocked, setNotesDocked,
     searchResults, performSearch,
     aiName, isAiDocked, setAiDocked,
+    isAiOpen, setAiOpen,
     activeLeadModalId,
     setActiveLeadModalId,
     undo, redo, history, future,
-    manualSave, saveStatus, isSyncing
+    manualSave, saveStatus, isSyncing,
+    quickNotesSize, setQuickNotesSize,
+    isQuickNotesCollapsed, setIsQuickNotesCollapsed
   } = useStore();
 
   // Auto-save loop (every 5 minutes)
@@ -448,7 +452,7 @@ export function Layout() {
                   onChange={(e) => { setSearchQuery(e.target.value); performSearch(e.target.value); setShowSearchResults(true); }}
                   onFocus={() => setShowSearchResults(true)}
                   placeholder="Search leads, tasks..."
-                  className="w-full px-4 py-2 text-sm focus:outline-none focus:ring-2 rounded-xl"
+                  className="w-full px-4 py-2 text-sm focus:outline-none focus:ring-2 rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.1)]"
                   style={{ background: 'var(--t-input-bg)', border: '1px solid var(--t-input-border)', color: 'var(--t-text)' }}
                 />
               </div>
@@ -496,22 +500,22 @@ export function Layout() {
             {/* AI Bookshelf Docking Bar */}
             {notesDocked && (
               <div 
-                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 cursor-pointer group hover:border-[var(--t-warning)] transition-all overflow-hidden"
+                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
                 onClick={() => { setNotesDocked(false); setQuickNotesOpen(true); }}
                 title="Open Quick Notes"
               >
-                <div className="flex items-center gap-2 pl-2 pr-4 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 group-hover:bg-orange-500 transition-all duration-300">
+                <div className="flex items-center gap-2 pl-2 pr-4 h-8 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] transition-all duration-300">
                   <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
-                    <StickyNote size={12} className="text-orange-500 group-hover:text-white transition-colors" />
+                    <StickyNote size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
                   </div>
-                  <span className="text-[10px] font-black tracking-tighter text-orange-500 group-hover:text-white uppercase leading-none">Notes</span>
+                  <span className="text-[10px] font-black tracking-tighter text-[var(--t-primary)] group-hover:text-white uppercase leading-none">Notes</span>
                 </div>
                 
                 {/* Active Indicator */}
                 <div className="flex items-center gap-1.5 px-2 mr-2">
                   <div className="relative flex">
-                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping opacity-75" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />
+                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-[var(--t-primary)] animate-ping opacity-75" />
                   </div>
                   <span className="text-[9px] font-bold text-[var(--t-text-muted)] group-hover:text-[var(--t-text)] transition-colors uppercase tracking-widest">Active</span>
                 </div>
@@ -519,7 +523,7 @@ export function Layout() {
             )}
             {isAiDocked && (
               <div 
-                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 delay-300 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden"
+                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 delay-300 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
                 onClick={() => setAiDocked(false)}
                 title="Restore OS Bot"
               >
@@ -547,12 +551,44 @@ export function Layout() {
                 <span className="text-[10px] font-black text-[var(--t-primary)] uppercase tracking-wider">Syncing</span>
               </div>
             )}
-            <div className="flex items-center gap-2 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)]">
-              <ThemeSwitcher />
+            <div className="flex items-center gap-2 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
+              {/* Bot Toggle Button */}
+              <button
+                onClick={() => setAiOpen(!isAiOpen)}
+                className={`p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 ${
+                  isAiOpen 
+                    ? 'bg-[var(--t-primary-dim)] text-[var(--t-primary)] shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.3)] ring-1 ring-[var(--t-primary)]/30' 
+                    : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
+                }`}
+                title={`${isAiOpen ? 'Close' : 'Open'} OS Bot`}
+              >
+                <Bot size={18} className={isAiOpen ? 'animate-pulse' : ''} />
+              </button>
+
+              <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5" />
+
+              {/* Notes Toggle Button */}
+              <button
+                onClick={() => setQuickNotesOpen(!isQuickNotesOpen)}
+                className={`p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 ${
+                  isQuickNotesOpen 
+                    ? 'bg-[var(--t-primary-dim)] text-[var(--t-primary)] shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.3)] ring-1 ring-[var(--t-primary)]/30' 
+                    : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
+                }`}
+                title={`${isQuickNotesOpen ? 'Close' : 'Open'} Quick Notes`}
+              >
+                <StickyNote size={18} />
+              </button>
+
               <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
-              <NotificationPanel />
+              
+              <div className="hover:scale-110 transition-transform"><ThemeSwitcher /></div>
+              <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
+              <div className="hover:scale-110 transition-transform"><NotificationPanel /></div>
             </div>
-            <UserMenu onOpenChange={setIsUserMenuOpen} />
+            <div className="hover:scale-105 active:scale-95 transition-all">
+              <UserMenu onOpenChange={setIsUserMenuOpen} />
+            </div>
           </div>
         </header>
 
@@ -597,14 +633,51 @@ export function Layout() {
       {showCreateModal && <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />}
 
       {isQuickNotesOpen && !notesDocked && (
-        <div className="fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[600px]">
-          <div className="w-full h-full bg-black/80 backdrop-blur-3xl overflow-hidden flex flex-col shadow-2xl border border-white/10 rounded-3xl">
-            <div className="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between">
+        <div 
+          className={`fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-2xl flex flex-col ${
+            isQuickNotesCollapsed ? 'h-14' : (
+              quickNotesSize === 'small' ? 'w-[400px] h-[450px]' : 
+              quickNotesSize === 'large' ? 'w-[800px] h-[800px]' : 
+              'w-[500px] h-[600px]'
+            )
+          } ${isQuickNotesCollapsed ? 'w-[300px]' : ''}`}
+        >
+          <div className="w-full h-full bg-black/80 backdrop-blur-3xl overflow-hidden flex flex-col border border-white/10 rounded-3xl">
+            <div className={`bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shrink-0`}>
               <div className="flex items-center gap-3">
                 <StickyNote size={18} className="text-orange-400" />
                 <h3 className="text-sm font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>Quick Notes</h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => setIsQuickNotesCollapsed(!isQuickNotesCollapsed)} 
+                  className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
+                  title={isQuickNotesCollapsed ? "Expand" : "Collapse"}
+                >
+                  {isQuickNotesCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+                
+                {!isQuickNotesCollapsed && (
+                  <>
+                    <button 
+                      onClick={() => setQuickNotesSize(quickNotesSize === 'large' ? 'medium' : quickNotesSize === 'medium' ? 'small' : 'small')} 
+                      disabled={quickNotesSize === 'small'}
+                      className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors disabled:opacity-20"
+                      title="Smaller"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <button 
+                      onClick={() => setQuickNotesSize(quickNotesSize === 'small' ? 'medium' : quickNotesSize === 'medium' ? 'large' : 'large')} 
+                      disabled={quickNotesSize === 'large'}
+                      className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors disabled:opacity-20"
+                      title="Bigger"
+                    >
+                      <Maximize2 size={16} />
+                    </button>
+                  </>
+                )}
+
                 <button 
                   onClick={() => setNotesDocked(true)} 
                   className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
@@ -614,15 +687,24 @@ export function Layout() {
                 </button>
                 <button 
                   onClick={() => setQuickNotesOpen(false)} 
-                  className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
+                  className="p-2 hover:bg-white/10 rounded-lg text-red-400/70 hover:text-red-400 transition-colors"
+                  title="Close"
                 >
                   <X size={16} />
                 </button>
               </div>
             </div>
-            <div className="flex-1 p-6">
-              <textarea value={quickNotes} onChange={(e) => setQuickNotes(e.target.value)} placeholder="Type thoughts..." className="w-full h-full bg-transparent border-none focus:outline-none resize-none" style={{ color: 'var(--t-text)' }} />
-            </div>
+            {!isQuickNotesCollapsed && (
+              <div className="flex-1 p-6">
+                <textarea 
+                  value={quickNotes} 
+                  onChange={(e) => setQuickNotes(e.target.value)} 
+                  placeholder="Type thoughts..." 
+                  className="w-full h-full bg-transparent border-none focus:outline-none resize-none custom-scrollbar" 
+                  style={{ color: 'var(--t-text)' }} 
+                />
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -1644,8 +1644,14 @@ interface AppState {
   setShowQuickNotes: (v: boolean) => void;
   isQuickNotesOpen: boolean;
   setQuickNotesOpen: (v: boolean) => void;
+  isAiOpen: boolean;
+  setAiOpen: (v: boolean) => void;
   notesDocked: boolean;
   setNotesDocked: (v: boolean) => void;
+  quickNotesSize: 'small' | 'medium' | 'large';
+  setQuickNotesSize: (v: 'small' | 'medium' | 'large') => void;
+  isQuickNotesCollapsed: boolean;
+  setIsQuickNotesCollapsed: (v: boolean) => void;
 
   // Search
   searchResults: {
@@ -1826,6 +1832,8 @@ export const useStore = create<AppState>((set, get) => ({
   })(),
   currentAiThreadId: typeof window !== 'undefined' ? localStorage.getItem('current-ai-thread-id') : null,
   isAiDocked: typeof window !== 'undefined' ? localStorage.getItem('ai_widget_docked') === 'true' : false,
+  isAiOpen: false,
+  setAiOpen: (v: boolean) => set({ isAiOpen: v }),
   setAiDocked: (docked: boolean) => {
     localStorage.setItem('ai_widget_docked', docked.toString());
     set({ isAiDocked: docked });
@@ -1846,6 +1854,8 @@ export const useStore = create<AppState>((set, get) => ({
   showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-show-quick-notes') === 'true' : false,
   isQuickNotesOpen: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes-open') === 'true' : false,
   notesDocked: typeof window !== 'undefined' ? localStorage.getItem('tasks-notes-docked') === 'true' : false,
+  quickNotesSize: typeof window !== 'undefined' ? (localStorage.getItem('tasks-quick-notes-size') as 'small' | 'medium' | 'large') || 'medium' : 'medium',
+  isQuickNotesCollapsed: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes-collapsed') === 'true' : false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
 
   // —— Dashboard Layout ——————————————————————————————————————
@@ -4377,6 +4387,18 @@ export const useStore = create<AppState>((set, get) => ({
     set({ notesDocked: v });
     if (typeof window !== 'undefined') {
       localStorage.setItem('tasks-notes-docked', v.toString());
+    }
+  },
+  setQuickNotesSize: (v: 'small' | 'medium' | 'large') => {
+    set({ quickNotesSize: v });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks-quick-notes-size', v);
+    }
+  },
+  setIsQuickNotesCollapsed: (v: boolean) => {
+    set({ isQuickNotesCollapsed: v });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks-quick-notes-collapsed', v.toString());
     }
   },
 

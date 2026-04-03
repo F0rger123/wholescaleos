@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Send, RefreshCw, ChevronLeft, 
   Star, Trash2, Sparkles, Loader2, 
   Inbox, FileText, Layout, Plus, 
-  Settings, Clock, Calendar, Search, Mail, Edit2, Trash, UserPlus
+  Settings, Clock, Calendar, Search, Mail, Edit2, Trash, UserPlus,
+  BookOpenText, X
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { 
   listThreads, getThread, sendEmail, EmailThread, 
@@ -14,8 +16,7 @@ import {
 } from '../lib/email';
 import { analyzeConversation } from '../lib/ai-reply-service';
 import EmailComposeModal from '../components/EmailComposeModal';
-import { DEFAULT_TEMPLATES } from '../lib/default-templates';
-import { BookOpenText } from 'lucide-react';
+import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES, AgentTemplate } from '../lib/default-templates';
 
 type EmailView = 'inbox' | 'sent' | 'starred' | 'trash' | 'templates' | 'campaigns' | 'scheduled';
 
@@ -486,21 +487,57 @@ function CampaignsList({ campaigns, onRefresh, onAdd }: { campaigns: dbEmailCamp
         </div>
       ) : (
         campaigns.map(cp => (
-          <div key={cp.id} className="p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl group relative">
-             <div className="flex items-center justify-between mb-2">
-               <h4 className="text-sm font-bold truncate">{cp.name}</h4>
+          <div key={cp.id} className="p-4 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-2xl group relative overflow-hidden transition-all hover:border-[var(--t-primary-dim)]">
+             {cp.status === 'sending' && (
+               <motion.div 
+                 initial={{ x: '-100%' }}
+                 animate={{ x: '100%' }}
+                 transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                 className="absolute top-0 left-0 h-0.5 w-full bg-gradient-to-r from-transparent via-[var(--t-primary)] to-transparent opacity-50"
+               />
+             )}
+             <div className="flex items-center justify-between mb-3">
+               <div>
+                  <h4 className="text-sm font-bold text-[var(--t-text)]">{cp.name}</h4>
+                  <p className="text-[9px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest mt-0.5">{cp.metadata?.template_name || 'Manual Template'}</p>
+               </div>
                <div className="flex items-center gap-2">
-                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${cp.status === 'completed' ? 'bg-green-500/10 text-green-500' : cp.status === 'draft' ? 'bg-gray-500/10 text-gray-400' : 'bg-blue-500/10 text-blue-500'}`}>
+                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${cp.status === 'completed' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : cp.status === 'draft' ? 'bg-gray-500/10 text-gray-400 border border-gray-500/20' : 'bg-[var(--t-primary-dim)]/10 text-[var(--t-primary)] border border-[var(--t-primary-dim)]/20'}`}>
                    {cp.status}
                  </span>
-                 <button onClick={(e) => handleDelete(cp.id, e)} className="p-1 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"><Trash size={12} /></button>
+                 <button onClick={(e) => handleDelete(cp.id, e)} className="p-1.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-all"><Trash size={12} /></button>
                </div>
              </div>
-             <div className="flex items-center gap-3">
-               <div className="flex -space-x-2">
-                 {[1,2,3].map(i => <div key={i} className="w-5 h-5 rounded-full bg-[var(--t-border)] border border-[var(--t-bg)] flex items-center justify-center text-[8px] font-bold">{i}</div>)}
-               </div>
-               <span className="text-[10px] text-[var(--t-text-muted)]">{ (cp.recipients || []).length } recipients</span>
+
+             <div className="space-y-2">
+                <div className="flex items-center justify-between text-[10px] text-[var(--t-text-muted)]">
+                   <div className="flex items-center gap-3">
+                     <div className="flex -space-x-1.5">
+                        {[1,2,3].map(i => <div key={i} className="w-4 h-4 rounded-full bg-[var(--t-border)] border border-[var(--t-bg)] flex items-center justify-center text-[7px] font-bold">{i}</div>)}
+                     </div>
+                     <span className="font-bold">{(cp.recipients || []).length} recipients</span>
+                   </div>
+                   <span className="font-bold text-[var(--t-text)]">
+                     {cp.status === 'completed' ? '100%' : `${Math.round(((cp.success_count || 0) / ((cp.recipients || []).length || 1)) * 100)}%`}
+                   </span>
+                </div>
+                <div className="w-full h-1 bg-[var(--t-border)] rounded-full overflow-hidden">
+                   <motion.div 
+                     initial={{ width: 0 }}
+                     animate={{ width: cp.status === 'completed' ? '100%' : `${((cp.success_count || 0) / ((cp.recipients || []).length || 1)) * 100}%` }}
+                     className={`h-full ${cp.status === 'completed' ? 'bg-green-500' : 'bg-[var(--t-primary)]'}`}
+                   />
+                </div>
+                <div className="flex items-center justify-between text-[9px]">
+                   <span className="text-[var(--t-text-muted)]">
+                     Sent: <span className="text-[var(--t-text)] font-bold">{cp.success_count || 0}</span>
+                   </span>
+                   {(cp.fail_count ?? 0) > 0 && (
+                     <span className="text-red-400 font-bold">
+                       Failed: {cp.fail_count}
+                     </span>
+                   )}
+                </div>
              </div>
           </div>
         ))
@@ -590,15 +627,24 @@ function TemplateModal({ template, onClose, onSave }: { template: dbEmailTemplat
 function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: dbEmailTemplate[], onClose: () => void, onSave: () => void, onSetView: (v: EmailView) => void }) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedTemplateSource, setSelectedTemplateSource] = useState<'custom' | 'pro'>('pro');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
   const [scheduleType, setScheduleType] = useState<'once' | 'daily' | 'weekly' | 'monthly'>('once');
   const [isSaving, setIsSaving] = useState(false);
   
   const { leads, contacts } = useStore();
 
+  const allTemplates = useMemo(() => {
+    return selectedTemplateSource === 'pro' ? PRO_CAMPAIGN_TEMPLATES : templates;
+  }, [selectedTemplateSource, templates]);
+
+  const currentTemplate = useMemo(() => {
+    return allTemplates.find((t: dbEmailTemplate | AgentTemplate) => t.id === selectedTemplateId);
+  }, [allTemplates, selectedTemplateId]);
+
   const handleCreate = async () => {
-    if (!name || !selectedTemplate || selectedRecipientIds.length === 0 || isSaving) return;
+    if (!name || !selectedTemplateId || selectedRecipientIds.length === 0 || isSaving) return;
     setIsSaving(true);
     try {
       // Map IDs to emails
@@ -608,11 +654,15 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
 
       await saveEmailCampaign({
         name,
-        template_id: selectedTemplate,
+        template_id: selectedTemplateId,
         recipients: allRecipients,
         status: 'scheduled',
         scheduled_at: new Date(Date.now() + 300000).toISOString(),
-        metadata: { scheduleType }
+        metadata: { 
+          scheduleType,
+          source: selectedTemplateSource,
+          template_name: currentTemplate?.name 
+        }
       });
       onSave();
       onClose();
@@ -648,31 +698,67 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
                 <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block mb-2">Campaign Name</label>
                 <input 
                   value={name} onChange={e => setName(e.target.value)}
-                  className="w-full px-4 py-3 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none"
+                  className="w-full px-4 py-3 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all"
                   placeholder="e.g. November Follow-up Blast"
                 />
               </div>
-              <div>
-                <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block mb-2">Select Template</label>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block">Select Template</label>
+                  <div className="flex bg-[var(--t-surface-dim)] p-0.5 rounded-lg border border-[var(--t-border)]">
+                    <button 
+                      onClick={() => { setSelectedTemplateSource('pro'); setSelectedTemplateId(null); }}
+                      className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${selectedTemplateSource === 'pro' ? 'bg-[var(--t-primary)] text-white' : 'text-[var(--t-text-muted)]'}`}
+                    >
+                      PRO LIBRARY
+                    </button>
+                    <button 
+                      onClick={() => { setSelectedTemplateSource('custom'); setSelectedTemplateId(null); }}
+                      className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${selectedTemplateSource === 'custom' ? 'bg-[var(--t-primary)] text-white' : 'text-[var(--t-text-muted)]'}`}
+                    >
+                      MY TEMPLATES
+                    </button>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3">
-                  {templates.map(tmp => (
+                  {allTemplates.map((tmp: dbEmailTemplate | AgentTemplate) => (
                     <button 
                       key={tmp.id}
-                      onClick={() => setSelectedTemplate(tmp.id)}
-                      className={`p-4 text-left border rounded-2xl transition-all ${selectedTemplate === tmp.id ? 'border-[var(--t-primary)] bg-[var(--t-primary-dim)]/10 ring-2 ring-[var(--t-primary)]/20' : 'border-[var(--t-border)] hover:border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)]/50'}`}
+                      onClick={() => setSelectedTemplateId(tmp.id)}
+                      className={`p-4 text-left border rounded-2xl transition-all ${selectedTemplateId === tmp.id ? 'border-[var(--t-primary)] bg-[var(--t-primary-dim)]/10 ring-2 ring-[var(--t-primary)]/20' : 'border-[var(--t-border)] hover:border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)]/50'}`}
                     >
-                      <p className="text-sm font-bold truncate mb-1">{tmp.name}</p>
-                      <p className="text-[10px] text-[var(--t-text-muted)] truncate">{tmp.subject}</p>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <p className="text-xs font-bold truncate">{tmp.name}</p>
+                        {selectedTemplateSource === 'pro' && <Sparkles size={10} className="text-[var(--t-primary)]" />}
+                      </div>
+                      <p className="text-[9px] text-[var(--t-text-muted)] truncate">{tmp.subject}</p>
                     </button>
                   ))}
-                  <button 
-                    onClick={() => { onSetView('templates'); onClose(); }}
-                    className="p-4 border-2 border-dashed border-[var(--t-border)] rounded-2xl flex flex-col items-center justify-center text-[var(--t-text-muted)] hover:text-[var(--t-primary)] hover:border-[var(--t-primary-dim)]"
-                  >
-                    <Plus size={20} className="mb-2" />
-                    <span className="text-xs font-bold">New Template</span>
-                  </button>
+                  {selectedTemplateSource === 'custom' && (
+                    <button 
+                      onClick={() => { onSetView('templates'); onClose(); }}
+                      className="p-4 border-2 border-dashed border-[var(--t-border)] rounded-2xl flex flex-col items-center justify-center text-[var(--t-text-muted)] hover:text-[var(--t-primary)] hover:border-[var(--t-primary-dim)]"
+                    >
+                      <Plus size={20} className="mb-2" />
+                      <span className="text-xs font-bold">New Template</span>
+                    </button>
+                  )}
                 </div>
+
+                {selectedTemplateId && currentTemplate && (
+                  <div className="p-4 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl animate-in fade-in zoom-in-95 duration-300">
+                    <p className="text-[10px] font-bold text-[var(--t-primary)] mb-2 uppercase tracking-widest flex items-center gap-1">
+                      <BookOpenText size={12} /> Template Preview
+                    </p>
+                    <div className="max-h-32 overflow-hidden relative">
+                       <div className="text-[11px] text-[var(--t-text-muted)] space-y-2 prose prose-invert max-w-none">
+                          {currentTemplate.body ? currentTemplate.body.split('\n').slice(0, 3).join('\n') + '...' : 'Rich HTML Content'}
+                       </div>
+                       <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--t-surface-dim)] to-transparent" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -736,23 +822,42 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
 
           {step === 4 && (
             <div className="space-y-8 animate-in slide-in-from-right-4 duration-300 h-full flex flex-col items-center justify-center text-center">
-              <div className="p-6 bg-[var(--t-primary-dim)]/10 rounded-full mb-4">
+              <div className="p-6 bg-[var(--t-primary-dim)]/10 rounded-full mb-2 relative">
                  <Send size={48} className="text-[var(--t-primary)]" />
+                 <motion.div 
+                    animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="absolute inset-0 bg-[var(--t-primary)] rounded-full -z-10" 
+                 />
               </div>
               <div className="max-w-sm">
                 <h4 className="text-xl font-bold mb-2">Ready to Launch?</h4>
                 <p className="text-sm text-[var(--t-text-muted)] mb-6">
-                  You're about to launch "<span className="text-[var(--t-text)] font-semibold">{name}</span>" for <span className="text-[var(--t-text)] font-semibold">{selectedRecipientIds.length} recipients</span>.
-                  Frequency: <span className="text-[var(--t-primary)] font-bold uppercase">{scheduleType}</span>
+                  You're about to launch "<span className="text-[var(--t-text)] font-semibold">{name}</span>" to <span className="text-[var(--t-text)] font-semibold">{selectedRecipientIds.length} recipients</span>.
                 </p>
-                <div className="p-4 bg-[var(--t-surface-dim)] rounded-2xl border border-[var(--t-border)] text-left space-y-2">
-                   <div className="flex justify-between text-[11px]">
-                     <span className="text-[var(--t-text-muted)]">Template:</span>
-                     <span className="font-bold">{templates.find(t => t.id === selectedTemplate)?.name}</span>
+                
+                <div className="grid grid-cols-2 gap-2 mb-6">
+                   <div className="p-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl text-left">
+                      <p className="text-[8px] font-bold text-[var(--t-text-muted)] uppercase mb-1">Starting</p>
+                      <p className="text-xs font-bold text-[var(--t-text)]">In 5 minutes</p>
                    </div>
-                   <div className="flex justify-between text-[11px]">
-                     <span className="text-[var(--t-text-muted)]">Subject:</span>
-                     <span className="font-bold">{templates.find(t => t.id === selectedTemplate)?.subject}</span>
+                   <div className="p-3 bg-[var(--t-surface-dim)] border border(--t-border) rounded-2xl text-left">
+                      <p className="text-[8px] font-bold text-[var(--t-text-muted)] uppercase mb-1">Frequency</p>
+                      <p className="text-xs font-bold text-[var(--t-primary)] uppercase">{scheduleType}</p>
+                   </div>
+                </div>
+
+                <div className="p-4 bg-[var(--t-surface-dim)] rounded-2xl border border-[var(--t-border)] text-left space-y-3">
+                   <div className="flex justify-between items-center text-[11px] pb-2 border-b border-[var(--t-border)]">
+                     <div className="flex items-center gap-2">
+                        <FileText size={14} className="text-[var(--t-text-muted)]" />
+                        <span className="text-[var(--t-text-muted)]">Template:</span>
+                     </div>
+                     <span className="font-bold text-[var(--t-primary)]">{currentTemplate?.name}</span>
+                   </div>
+                   <div className="space-y-1">
+                     <p className="text-[10px] text-[var(--t-text-muted)]">Subject Line Preview:</p>
+                     <p className="text-[11px] font-bold text-[var(--t-text)] leading-tight italic">"{currentTemplate?.subject}"</p>
                    </div>
                 </div>
               </div>
@@ -771,7 +876,7 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
             {step < 4 ? (
               <button 
                 onClick={() => setStep(s => s + 1)}
-                disabled={(step === 1 && (!name || !selectedTemplate)) || (step === 2 && selectedRecipientIds.length === 0)}
+                disabled={(step === 1 && (!name || !selectedTemplateId)) || (step === 2 && selectedRecipientIds.length === 0)}
                 className="px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-30"
               >
                 Continue
@@ -796,6 +901,15 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
 function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendReply, isSending, aiSuggestions, isAnalyzing, onRunAI, onAssignLead }: any) {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [templateCategory, setTemplateCategory] = useState<string>('All');
+
+  const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
+  const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
+
+  const filteredTemplates = useMemo(() => {
+    if (templateCategory === 'All') return allTemplates;
+    return allTemplates.filter(t => t.category === templateCategory);
+  }, [allTemplates, templateCategory]);
   
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -871,17 +985,33 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
         </div>
 
         {showTemplates && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
-            {DEFAULT_TEMPLATES.map(t => (
-              <button
-                key={t.id}
-                onClick={() => { setReplyText(t.html || t.body); setShowTemplates(false); }}
-                className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
-              >
-                <p className="text-[10px] font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors mb-0.5">{t.name}</p>
-                <p className="text-[9px] text-[var(--t-text-muted)] line-clamp-1">{t.category} script</p>
-              </button>
-            ))}
+          <div className="space-y-3 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar no-scrollbar text-xs">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setTemplateCategory(cat)}
+                  className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all whitespace-nowrap ${templateCategory === cat ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)]' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+              {filteredTemplates.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => { setReplyText(t.body || t.html || ''); setShowTemplates(false); }}
+                  className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                    <p className="text-[10px] font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors truncate">{t.name}</p>
+                    <span className="text-[8px] font-bold px-1 py-0.5 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded uppercase">{t.category[0]}</span>
+                  </div>
+                  <p className="text-[9px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
+                </button>
+              ))}
+            </div>
           </div>
         )}
         <div className="relative group">
@@ -965,5 +1095,3 @@ function LeadAssignModal({ onClose, onAssign }: { onClose: () => void; onAssign:
     </div>
   );
 }
-
-const X = ({ size, ...props }: any) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;

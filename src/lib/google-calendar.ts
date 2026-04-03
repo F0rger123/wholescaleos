@@ -152,25 +152,50 @@ export class GoogleCalendarService {
       });
 
       const tokens = await tokenResponse.json();
-      if (tokens.error) return false;
+      if (tokens.error || !tokens.access_token) {
+        console.error('Google token error:', tokens.error, tokens.error_description);
+        return false;
+      }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
-
       const { error } = await supabase
         .from('user_connections')
         .upsert(
           {
             user_id: userId,
             provider: 'google',
-            access_token: 'connected',
-            refresh_token: tokens.refresh_token || code,
+            access_token: tokens.access_token,
+            refresh_token: tokens.refresh_token,
+            expires_at: new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString(),
             updated_at: new Date().toISOString(),
           },
           { onConflict: 'user_id,provider' }
         );
 
-      return !error;
+      if (error) throw error;
+      
+      // Also update profiles settings for immediate UI feedback across the app
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('settings')
+        .eq('id', userId)
+        .single();
+      
+      const newSettings = {
+        ...(profile?.settings || {}),
+        google_connected: true,
+        google_connected_at: new Date().toISOString()
+      };
+      
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ settings: newSettings })
+        .eq('id', userId);
+
+      if (profileError) console.error('Failed to update profile settings:', profileError);
+
+      return true;
       
     } catch (err) {
       console.error('Failed to store tokens:', err);
@@ -179,22 +204,61 @@ export class GoogleCalendarService {
   }
 
   async isConnected(userId: string): Promise<boolean> {
-    const { data } = await supabase
-      .from('user_connections')
-      .select('access_token')
-      .eq('user_id', userId)
-      .eq('provider', 'google')
-      .maybeSingle();
-    return !!data;
+    try {
+      // Check profile settings first for rapid UI response
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('settings')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (profile?.settings?.google_connected) return true;
+      
+      // Fallback to direct check if flag is missing
+      const { data } = await supabase
+        .from('user_connections')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('provider', 'google')
+        .maybeSingle();
+      
+      return !!data;
+    } catch (err) {
+      console.error('[GoogleService] Error checking connection:', err);
+      return false;
+    }
   }
 
   async disconnect(userId: string): Promise<boolean> {
-    const { error } = await supabase
-      .from('user_connections')
-      .delete()
-      .eq('user_id', userId)
-      .eq('provider', 'google');
-    return !error;
+    try {
+      // Clear token
+      await supabase
+        .from('user_connections')
+        .delete()
+        .eq('user_id', userId)
+        .eq('provider', 'google');
+      
+      // Update profile status flag
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('settings')
+        .eq('id', userId)
+        .single();
+      
+      const newSettings = { ...(profile?.settings || {}) };
+      delete newSettings.google_connected;
+      delete newSettings.google_connected_at;
+      
+      await supabase
+        .from('profiles')
+        .update({ settings: newSettings })
+        .eq('id', userId);
+        
+      return true;
+    } catch (err) {
+      console.error('Failed to disconnect:', err);
+      return false;
+    }
   }
 
   async fetchCalendars(userId: string): Promise<any[]> {

@@ -25,6 +25,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AutomationNode } from '../components/AutomationNode';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
+import { automationTemplates, AutomationTemplate } from '../data/automationTemplates';
 
 const nodeTypes = {
   automation: AutomationNode,
@@ -83,9 +84,11 @@ export default function AutomationsHub() {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workflowName, setWorkflowName] = useState('My New Automation');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   // Load existing workflow on mount
   useEffect(() => {
@@ -189,6 +192,15 @@ export default function AutomationsHub() {
     [],
   );
 
+  const loadTemplate = (template: AutomationTemplate) => {
+    setNodes(template.nodes);
+    setEdges(template.edges);
+    setWorkflowName(template.name);
+    setWorkflowId(null); // It's a new unsaved instance of a template
+    setIsLibraryOpen(false);
+    toast.success(`Loaded ${template.name} template`);
+  };
+
   const addNode = (type: string) => {
     const id = (nodes.length + 1).toString();
     const newNode: Node = {
@@ -216,7 +228,12 @@ export default function AutomationsHub() {
         </div>
         <div className="flex gap-3">
           <button 
-            className="flex items-center gap-2 px-6 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text)] rounded-2xl font-bold transition-all hover:bg-[var(--t-surface-hover)]"
+            onClick={() => setIsLibraryOpen(!isLibraryOpen)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all border ${
+              isLibraryOpen 
+                ? 'bg-[var(--t-primary-dim)] border-[var(--t-primary)] text-[var(--t-primary)]' 
+                : 'bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
+            }`}
           >
             <Settings size={20} />
             Library
@@ -380,6 +397,92 @@ export default function AutomationsHub() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Library Sidebar */}
+      <AnimatePresence>
+        {isLibraryOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsLibraryOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99]"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--t-bg)] border-l border-[var(--t-border)] z-[100] shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface)]/50 backdrop-blur-xl">
+                <div>
+                  <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
+                    Automation <span className="text-[var(--t-primary)]">Library</span>
+                  </h2>
+                  <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">20 Professional Templates</p>
+                </div>
+                <button 
+                  onClick={() => setIsLibraryOpen(false)}
+                  className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-4 flex gap-2 overflow-x-auto border-b border-[var(--t-border)] bg-[var(--t-bg)]">
+                {['All', 'Lead Gen', 'AI', 'Comms', 'CRM'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                      selectedCategory === cat 
+                        ? 'bg-[var(--t-primary)] text-white' 
+                        : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {automationTemplates
+                  .filter(t => selectedCategory === 'All' || t.category === selectedCategory)
+                  .map(template => (
+                    <motion.div
+                      key={template.id}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => loadTemplate(template)}
+                      className="group cursor-pointer p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all shadow-lg hover:shadow-[var(--t-primary)]/10"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <span className="px-2.5 py-1 rounded-lg bg-[var(--t-primary)]/10 text-[var(--t-primary)] text-[9px] font-black uppercase tracking-widest border border-[var(--t-primary)]/20">
+                          {template.category}
+                        </span>
+                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[var(--t-primary)]/20 transition-colors">
+                          <Plus size={16} className="text-[var(--t-primary)]" />
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-black italic uppercase tracking-tighter text-[var(--t-text)] mb-2 group-hover:text-[var(--t-primary)] transition-colors">
+                        {template.name}
+                      </h3>
+                      <p className="text-sm text-[var(--t-text-muted)] leading-relaxed line-clamp-2">
+                        {template.description}
+                      </p>
+                      <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Bot size={12} className="text-[var(--t-primary)]" />
+                        Contains AI Automation Steps
+                      </div>
+                    </motion.div>
+                  ))}
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </div>

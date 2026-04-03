@@ -1,3 +1,6 @@
+import { AGENT_EMAIL_TEMPLATES } from '../data/emailTemplates';
+import { PRO_CAMPAIGN_TEMPLATES } from '../data/campaignTemplates';
+
 export interface AgentTemplate {
   id: string;
   name: string;
@@ -9,6 +12,8 @@ export interface AgentTemplate {
   description?: string;
   tags: string[];
 }
+
+export { AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES };
 
 export const DEFAULT_TEMPLATES: AgentTemplate[] = [
   {
