@@ -9,17 +9,13 @@ import { CreateTeamModal } from './CreateTeamModal';
 import { switchToTeam } from '../lib/team-utils';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
-  LayoutDashboard, Users, Maximize2, LogOut, Layout, 
-  Settings, User, Lock, ExternalLink,
-  ChevronRight, ChevronLeft, Search,
-  Bell, Check, RefreshCw, Layers,
-  MessageSquare,
-  Calendar, FileText, PieChart, Indent, AlignLeft,
+  LayoutDashboard, Users, Maximize2, 
+  Settings, Search,
+  Indent, AlignLeft,
   Bot, Smartphone, StickyNote, Minimize2,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, Download, UserCog, Map,
-  Building2, ChevronDown, ArrowRightLeft, Plus, X,
-  ChevronUp
+  Building2, ChevronDown, ArrowRightLeft, Plus, X
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
