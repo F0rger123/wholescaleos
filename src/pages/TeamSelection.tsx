@@ -4,6 +4,7 @@ import {
   Building2, Loader2, Users, ArrowRight, ArrowRightLeft,
   Check, Copy, LogOut, Plus, X
 } from 'lucide-react';
+import { Logo } from '../components/Logo';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
@@ -297,11 +298,7 @@ export default function TeamSelection() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--t-background)' }}>
-        <div className="w-14 h-14 rounded-xl flex items-center justify-center shadow-lg"
-          style={{ background: 'var(--t-primary)' }}
-        >
-          <Building2 size={28} style={{ color: 'var(--t-on-primary, white)' }} />
-        </div>
+        <Logo size={56} />
         <div className="flex items-center gap-2" style={{ color: 'var(--t-text-muted)' }}>
           <Loader2 size={16} className="animate-spin" />
           <span className="text-sm">Finding your teams...</span>
@@ -315,15 +312,7 @@ export default function TeamSelection() {
       <div className="w-full max-w-lg">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl"
-            style={{
-              background: 'var(--t-primary)',
-              // @ts-expect-error custom prop
-              '--tw-shadow-color': 'var(--t-primary-dim)'
-            }}
-          >
-            <Building2 size={32} style={{ color: 'var(--t-on-primary, white)' }} />
-          </div>
+          <Logo size={64} className="mx-auto mb-4" />
           <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>WholeScale OS</h1>
           <p className="text-sm mt-1" style={{ color: 'var(--t-text-muted)' }}>
             Welcome{currentUser?.name ? `, ${currentUser.name}` : ''}! Choose how to continue.

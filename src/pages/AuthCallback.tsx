@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { supabase } from '../lib/supabase';
-import { Building2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Logo } from '../components/Logo';
 
 console.log('🚀 AuthCallback component mounted!');
 
@@ -168,9 +169,7 @@ export function AuthCallback() {
 
   return (
     <div className="min-h-screen bg-[var(--t-background)] flex flex-col items-center justify-center gap-6 p-4">
-      <div className="w-16 h-16 rounded-xl bg-[var(--t-primary)] flex items-center justify-center">
-        <Building2 size={32} className="text-white" />
-      </div>
+      <Logo size={64} />
       
       <div className="text-center space-y-3 max-w-md">
         {status === 'loading' && (

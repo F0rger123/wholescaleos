@@ -145,7 +145,12 @@ function emailLayout(body: string, preheader?: string): string {
                 <tr>
                   <td style="vertical-align: middle;">
                     <div style="width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, ${BRAND.color}, #818cf8); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-                       <img src="${BRAND.logo}" alt="" width="32" height="32" style="display: block; border: 0;" />
+                        <div style="padding: 10px;">
+                          <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M30 70 L30 45 L50 30 L70 45 L70 70 Z" fill="white"/>
+                            <path d="M45 70 L45 55 L55 55 L55 70 Z" fill="#6366f1"/>
+                          </svg>
+                        </div>
                     </div>
                   </td>
                   <td style="padding-left: 18px; vertical-align: middle; text-align: left;">

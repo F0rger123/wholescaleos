@@ -6,6 +6,7 @@ import {
   Linkedin, LayoutDashboard, LogOut, Settings, User, 
   ChevronDown
 } from 'lucide-react';
+import { Logo } from './Logo';
 import { useStore } from '../store/useStore';
 
 
@@ -63,10 +64,7 @@ export const MarketingLayout: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
-              <Building2 size={24} className="text-white" />
-            </div>
-            <span className="text-xl font-black tracking-tighter italic uppercase">WholeScale <span className="text-indigo-400">OS</span></span>
+            <Logo size={40} showText={true} />
           </Link>
 
           {/* Desktop Nav */}
@@ -282,10 +280,7 @@ export const MarketingLayout: React.FC = () => {
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12">
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-600/20">
-                <Building2 size={24} className="text-white" />
-              </div>
-              <span className="text-xl font-black tracking-tighter italic uppercase">WholeScale <span className="text-indigo-400">OS</span></span>
+              <Logo size={40} showText={true} />
             </div>
             <p className="text-[#6d758c] text-sm leading-relaxed mb-8 font-medium">
               The all-in-one operating system for modern real estate Professionals. Automate, scale, and build your empire.

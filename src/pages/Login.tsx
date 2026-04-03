@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, ExternalLink, Users } from 'lucide-react';
+import { Logo } from '../components/Logo';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -840,11 +841,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
         <div className="relative z-10 animate-in fade-in slide-in-from-top-8 duration-1000">
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.3)] border border-white/10"
-              style={{ background: 'linear-gradient(135deg, var(--t-primary), #818cf8)' }}
-            >
-              <Building2 size={30} className="text-white" />
-            </div>
+            <Logo size={48} />
             <div>
               <h1 className="text-3xl font-black tracking-tighter text-white">WholeScale</h1>
               <p className="text-xs uppercase tracking-[0.4em] font-black italic text-indigo-400">OPERATING SYSTEM</p>
@@ -887,15 +884,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
         <div className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border border-white/10"
-              style={{ background: 'linear-gradient(135deg, var(--t-primary), #818cf8)' }}
-            >
-              <Building2 size={24} className="text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tighter text-white">WholeScale</h1>
-              <p className="text-[10px] uppercase tracking-[0.4em] font-black italic text-indigo-400">OS</p>
-            </div>
+            <Logo size={40} showText={true} />
           </div>
 
           <div className="mb-10 text-center lg:text-left">

@@ -22,12 +22,12 @@ export default function CRMCompare() {
   ];
 
   return (
-    <div className="pb-32 bg-[#0f172a]">
+    <div className="pb-32 bg-black text-[#dee5ff] selection:bg-indigo-500/30">
       {/* Hero */}
       <section className="pt-32 pb-20 text-center px-6 relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-blue-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-[var(--t-primary-dim)] blur-[120px] rounded-full pointer-events-none opacity-20" />
         <h1 className="text-5xl md:text-7xl font-black mb-8 italic tracking-tighter">
-          The Last CRM You'll <span className="text-blue-500">Ever Need.</span>
+          The Last CRM You'll <span className="text-[var(--t-primary)]">Ever Need.</span>
         </h1>
         <p className="text-xl text-gray-400 max-w-3xl mx-auto mb-12">
           Stop stitching together 5 different tools. WholeScale OS is the only platform that combines AI, skip tracing, and full-stack communications into one sovereign infrastructure.
@@ -36,14 +36,14 @@ export default function CRMCompare() {
 
       {/* Comparison Table */}
       <section className="max-w-7xl mx-auto px-6">
-        <div className="rounded-[3rem] bg-[#121a2d]/50 border border-white/5 overflow-hidden shadow-2xl">
+        <div className="rounded-[3rem] bg-[#0a0a0a]/80 border border-white/5 overflow-hidden shadow-2xl backdrop-blur-sm">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/5 bg-white/[0.02]">
-                <th className="py-10 px-8 text-xs font-black uppercase tracking-[0.2em] text-gray-500">Feature Infrastructure</th>
-                <th className="py-10 px-8 text-center bg-blue-600/10">
-                   <div className="text-xl font-black italic mb-1">WholeScale <span className="text-blue-500">OS</span></div>
-                   <div className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">The Standard</div>
+                <th className="py-10 px-8 text-xs font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)]">Feature Infrastructure</th>
+                <th className="py-10 px-8 text-center bg-[var(--t-primary-dim)]">
+                   <div className="text-xl font-black italic mb-1">WholeScale <span className="text-[var(--t-primary)]">OS</span></div>
+                   <div className="text-[10px] text-[var(--t-primary)] font-bold uppercase tracking-widest">The Standard</div>
                 </th>
                 {competitors.map((c, i) => (
                   <th key={i} className="py-10 px-8 text-center">
@@ -55,9 +55,9 @@ export default function CRMCompare() {
             <tbody className="text-sm">
               {features.map((f, fIdx) => (
                 <tr key={fIdx} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
-                  <td className="py-8 px-8 font-bold text-gray-300">{f.name}</td>
-                  <td className="py-8 px-8 text-center bg-blue-600/5">
-                    <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center mx-auto shadow-lg shadow-blue-500/10">
+                  <td className="py-8 px-8 font-bold text-[var(--t-text)]">{f.name}</td>
+                  <td className="py-8 px-8 text-center bg-[var(--t-primary-dim)]/30">
+                    <div className="w-8 h-8 rounded-full bg-[var(--t-primary-dim)] text-[var(--t-primary)] flex items-center justify-center mx-auto shadow-lg shadow-[var(--t-primary)]/10">
                       <Check size={20} strokeWidth={3} />
                     </div>
                   </td>
@@ -76,14 +76,14 @@ export default function CRMCompare() {
               ))}
               
               {/* Pricing Row */}
-              <tr className="bg-white/[0.02] border-t-2 border-blue-500/30">
+              <tr className="bg-white/[0.02] border-t-2 border-indigo-500/30">
                 <td className="py-10 px-8">
-                  <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Entry Price</div>
-                  <div className="text-lg font-bold text-white">Monthly Cost</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Entry Price</div>
+                  <div className="text-lg font-bold text-[var(--t-text)]">Monthly Cost</div>
                 </td>
-                <td className="py-10 px-8 text-center bg-blue-600/10">
-                  <div className="text-3xl font-black text-white">$27</div>
-                  <div className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-1">Solo Plan</div>
+                <td className="py-10 px-8 text-center bg-[var(--t-primary-dim)]">
+                  <div className="text-3xl font-black text-[var(--t-text)]">$27</div>
+                  <div className="text-[10px] text-[var(--t-primary)] font-bold uppercase tracking-widest mt-1">Solo Plan</div>
                 </td>
                 {competitors.map((c, i) => {
                   const yearlySavings = (c.price - 27) * 12;
@@ -124,30 +124,30 @@ export default function CRMCompare() {
           }
         ].map((p, i) => (
           <div key={i} className="space-y-6 reveal">
-            <div className="w-16 h-16 rounded-3xl bg-blue-600/10 flex items-center justify-center text-blue-500 shadow-xl shadow-blue-600/5">
+            <div className="w-16 h-16 rounded-3xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)] shadow-xl shadow-[var(--t-primary)]/5">
               <p.icon size={32} />
             </div>
             <h3 className="text-2xl font-bold">{p.title}</h3>
-            <p className="text-gray-400 leading-relaxed text-sm">{p.desc}</p>
+            <p className="text-[var(--t-text-muted)] leading-relaxed text-sm">{p.desc}</p>
           </div>
         ))}
       </section>
 
       {/* CTA */}
       <section className="mt-40 max-w-5xl mx-auto px-6">
-        <div className="rounded-[4rem] p-16 bg-gradient-to-br from-blue-600 to-indigo-700 text-center relative overflow-hidden shadow-2xl">
+        <div className="rounded-[4rem] p-16 bg-gradient-to-br from-[var(--t-primary)] to-[#000] text-center relative overflow-hidden shadow-2xl border border-white/5">
           <div className="absolute top-0 right-0 p-12 opacity-10">
             <Globe size={200} />
           </div>
-          <h2 className="text-4xl md:text-5xl font-black mb-8">Ready to upgrade your infrastructure?</h2>
-          <p className="text-blue-100 mb-12 text-lg max-w-2xl mx-auto">
+          <h2 className="text-4xl md:text-5xl font-black mb-8 text-white">Ready to upgrade your infrastructure?</h2>
+          <p className="text-[var(--t-text-muted)] mb-12 text-lg max-w-2xl mx-auto">
             Join 5,000+ elite agents who have digitized their entire operation with WholeScale OS.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <Link to="/login?signup=true" className="px-10 py-5 rounded-2xl bg-white text-blue-600 font-bold hover:scale-105 transition-all shadow-xl shadow-black/20">
+            <Link to="/login?signup=true" className="px-10 py-5 rounded-2xl bg-[var(--t-primary)] text-white font-bold hover:scale-105 transition-all shadow-xl shadow-black/20">
               Start Your Free Trial
             </Link>
-            <Link to="/contact" className="px-10 py-5 rounded-2xl bg-blue-800/30 text-white font-bold border border-white/20 hover:bg-blue-800/40 transition-all">
+            <Link to="/contact" className="px-10 py-5 rounded-2xl bg-white/5 text-white font-bold border border-white/10 hover:bg-white/10 transition-all">
               Book a Strategy Demo
             </Link>
           </div>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Building2, Lock, ArrowRight, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Lock, ArrowRight, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Logo } from '../components/Logo';
 import { toast } from 'react-hot-toast';
 
 export default function ResetPassword() {
@@ -66,9 +67,7 @@ export default function ResetPassword() {
 
       <div className="w-full max-w-md z-10">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-xl shadow-indigo-500/20 mb-6">
-            <Building2 size={32} className="text-white" />
-          </div>
+          <Logo size={64} className="mx-auto mb-6" />
           <h1 className="text-3xl font-black text-white tracking-tight uppercase italic mb-2">
             Secure Reset
           </h1>

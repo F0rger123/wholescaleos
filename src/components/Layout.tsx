@@ -9,14 +9,19 @@ import { CreateTeamModal } from './CreateTeamModal';
 import { switchToTeam } from '../lib/team-utils';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
-  LayoutDashboard, Users, Map, UserCog, Settings, Menu, X, Building2, Search,
-  ChevronDown, Plus, ArrowRightLeft,
-  Bot, Smartphone, StickyNote, Maximize2, Minimize2,
+  LayoutDashboard, Users, Maximize2, LogOut, Layout, 
+  Settings, User, Lock, ExternalLink,
+  ChevronRight, ChevronLeft, Search,
+  Bell, Check, RefreshCw, Layers,
+  MessageSquare,
+  Calendar, FileText, PieChart, Indent, AlignLeft,
+  Bot, Smartphone, StickyNote, Minimize2,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, Download
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
+import { Logo } from './Logo';
 
 interface UserTeam {
   teamId: string;
@@ -34,7 +39,7 @@ export function Layout() {
     showQuickNotes,
     isQuickNotesOpen, setQuickNotesOpen,
     searchResults, performSearch,
-    aiName,
+    aiName, isAiDocked, setAiDocked,
     activeLeadModalId,
     setActiveLeadModalId,
     undo, redo, history, future,
@@ -277,23 +282,12 @@ export function Layout() {
       <aside
         className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-[var(--z-sidebar)]`}
       >
+
         <Link
           to="/"
           className="flex items-center gap-4 px-6 py-8 border-b border-[var(--t-sidebar-border)] hover:bg-[var(--t-sidebar-hover)] transition-all group overflow-hidden"
         >
-          <div
-            className="flex items-center justify-center w-12 h-12 rounded-[1.25rem] text-white shrink-0 group-hover:scale-110 transition-transform bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-600/30"
-          >
-            <Building2 size={24} />
-          </div>
-          <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'max-w-[150px] opacity-100 ml-0' : 'max-w-0 opacity-0 ml-0'}`}>
-            <h1 className="text-xl font-black leading-tight tracking-[-0.05em] whitespace-nowrap italic uppercase">
-              WholeScale
-            </h1>
-            <p className="text-[10px] uppercase font-black tracking-[0.3em] bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
-              Operating System
-            </p>
-          </div>
+          <Logo size={48} showText={sidebarOpen} />
         </Link>
 
         <div
@@ -427,8 +421,18 @@ export function Layout() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-[var(--t-sidebar-border)] relative" style={{ zIndex: (isUserMenuOpen || showSearchResults) ? 200 : 100 }}>
           <div className="flex items-center gap-4">
-            <button onClick={toggleSidebar} className="p-2 rounded-lg hover:bg-[var(--t-surface-hover)]" style={{ color: 'var(--t-text-secondary)' }}>
-              {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            {/* Sidebar Toggle */}
+            <button 
+              onClick={toggleSidebar} 
+              className="p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-all hover:scale-105 active:scale-95 group relative" 
+              style={{ color: 'var(--t-text-secondary)' }}
+              id="sidebar-toggle"
+            >
+              {sidebarOpen ? (
+                <Indent size={20} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-text)]" />
+              ) : (
+                <AlignLeft size={20} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
+              )}
             </button>
             <div className="relative flex items-center" ref={searchRef}>
               <button
@@ -491,6 +495,35 @@ export function Layout() {
           </div>
 
           <div className="flex items-center gap-4">
+            {/* AI Bookshelf Docking Bar */}
+            {isAiDocked && (
+              <div 
+                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-500 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden"
+                onClick={() => setAiDocked(false)}
+                title="Restore OS Bot"
+              >
+                {/* AI Book Element */}
+                <div className="flex items-center gap-2 pl-2 pr-4 h-8 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] transition-all duration-300">
+                  <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
+                    <Bot size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
+                  </div>
+                  <span className="text-[10px] font-black tracking-tighter text-[var(--t-primary)] group-hover:text-white uppercase leading-none">{aiName}</span>
+                </div>
+                
+                {/* Active Indicator */}
+                <div className="flex items-center gap-1.5 px-2">
+                  <div className="relative flex">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)]" />
+                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-ping opacity-75" />
+                  </div>
+                  <span className="text-[9px] font-bold text-[var(--t-text-muted)] group-hover:text-[var(--t-text)] transition-colors uppercase tracking-widest">Docked</span>
+                </div>
+
+                <div className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 group-hover:bg-[var(--t-primary)]/10 transition-all mr-0.5">
+                  <Maximize2 size={12} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
+                </div>
+              </div>
+            )}
             {isSyncing && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary-dim)]">
                 <CloudCheck size={14} className="text-[var(--t-primary)] animate-pulse" />

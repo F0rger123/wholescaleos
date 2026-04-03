@@ -12,7 +12,8 @@
 import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { useStore, type Lead, type TeamMember, type Task, type ChatChannel, type ChatMessage, type Buyer, type CoverageArea, type AppNotification, type TimelineEntry, type StatusHistoryEntry } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Building2, Loader2, Database, Wifi } from 'lucide-react';
+import { Loader2, Database, Wifi } from 'lucide-react';
+import { Logo } from '../components/Logo';
 
 // ─── DB → Store Converters ────────────────────────────────────────────────────
 
@@ -211,8 +212,8 @@ function SyncLoadingScreen({ status }: { status: string }) {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-500/10 blur-[80px] rounded-full pointer-events-none" />
 
       <div className="relative flex flex-col items-center">
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-indigo-500/30 mb-8 animate-astral-hero">
-          <Building2 size={40} className="text-white" />
+        <div className="mb-8 animate-astral-hero">
+          <Logo size={80} />
         </div>
 
         <div className="text-center animate-astral-fade-up">
@@ -320,6 +321,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
             id: teamId,
             name: (teamData?.name as string) || 'My Team',
             inviteCode: (teamData?.invite_code as string) || 'WS-000000',
+            maxSeats: 10,
             createdAt: (teamData?.created_at as string) || new Date().toISOString(),
             createdBy: (teamData?.owner_id as string) || userId,
           },

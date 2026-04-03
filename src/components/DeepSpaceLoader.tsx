@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Logo } from './Logo';
 
 export const DeepSpaceLoader: React.FC = () => {
   const [progress, setProgress] = useState(0);
@@ -46,9 +46,9 @@ export const DeepSpaceLoader: React.FC = () => {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className="w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-purple-600 border border-white/10 flex items-center justify-center shadow-2xl mb-10 overflow-hidden shadow-indigo-600/40"
+          className="shadow-2xl mb-10 overflow-hidden shadow-indigo-600/40"
         >
-          <Building2 size={48} className="text-white" />
+          <Logo size={96} />
         </motion.div>
 
         {/* Text Area */}

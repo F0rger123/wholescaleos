@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, CheckCircle2, Loader2, XCircle, ArrowRight, PartyPopper, Shield, Sparkles } from 'lucide-react';
+import { CheckCircle2, Loader2, XCircle, ArrowRight, PartyPopper, Shield, Sparkles } from 'lucide-react';
+import { Logo } from '../components/Logo';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
 
@@ -149,19 +150,7 @@ export default function EmailConfirmed() {
       <div className="relative w-full max-w-lg">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-10">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
-            style={{ 
-              background: 'var(--t-primary)',
-              // @ts-expect-error custom prop
-              '--tw-shadow-color': 'var(--t-primary-dim)'
-            }}
-          >
-            <Building2 size={26} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">WholeScale</h1>
-            <p className="text-[10px] uppercase tracking-[0.3em] font-semibold" style={{ color: 'var(--t-primary)' }}>OS</p>
-          </div>
+          <Logo size={48} showText={true} />
         </div>
 
         {/* ═══ VERIFYING STATE ═══ */}

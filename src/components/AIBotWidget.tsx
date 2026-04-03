@@ -39,15 +39,12 @@ export function AIBotWidget() {
   
   const { 
     currentUser, showFloatingAIWidget, incrementAiUsage,
-    aiName, aiModel, setAiModel 
+    aiName, aiModel, setAiModel, isAiDocked, setAiDocked
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => {
     return localStorage.getItem('ai_speech_enabled') !== 'false';
   });
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isDocked, setIsDocked] = useState(() => {
-    return localStorage.getItem('ai_widget_docked') === 'true';
-  });
   const location = useLocation();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -135,10 +132,8 @@ export function AIBotWidget() {
       localStorage.setItem('ai_widget_position', JSON.stringify(position));
       // If dragged near the top of screen, auto-dock
       if (e.clientY < 80) {
-        setIsDocked(true);
-        localStorage.setItem('ai_widget_docked', 'true');
+        setAiDocked(true);
         setIsOpen(false);
-        window.dispatchEvent(new CustomEvent('dock-ai-widget'));
       }
     };
 
@@ -189,8 +184,8 @@ export function AIBotWidget() {
     window.addEventListener('ai-settings-updated', loadPrefs);
     
     // Sync initial docked state
-    if (isDocked) {
-      window.dispatchEvent(new CustomEvent('dock-ai-widget'));
+    if (isAiDocked) {
+      // Do something if needed on mount when docked
     }
 
     return () => window.removeEventListener('ai-settings-updated', loadPrefs);
@@ -201,15 +196,14 @@ export function AIBotWidget() {
     const handleToggle = () => setIsOpen(prev => !prev);
     const handleClear = () => setMessages([]);
     const handleUndock = () => {
-      setIsDocked(false);
-      localStorage.setItem('ai_widget_docked', 'false');
+      setAiDocked(false);
       setIsOpen(true);
       setIsMinimized(false);
     };
     
     const handleDock = () => {
-      setIsDocked(true);
-      localStorage.setItem('ai_widget_docked', 'true');
+      setAiDocked(true);
+      setIsOpen(false);
     };
     
     window.addEventListener('toggle-ai-widget', handleToggle);
@@ -629,7 +623,7 @@ export function AIBotWidget() {
     }
   };
 
-  if (!showFloatingAIWidget) return null; // Removed isDocked check to ensure it renders if enabled
+  if (!showFloatingAIWidget || isAiDocked) return null; 
 
   if (hasKey === false && isOpen) {
     return (
@@ -710,9 +704,8 @@ export function AIBotWidget() {
               </button>
               <button 
                 onClick={() => {
-                  setIsDocked(true);
-                  localStorage.setItem('ai_widget_docked', 'true');
-                  window.dispatchEvent(new CustomEvent('dock-ai-widget'));
+                  setAiDocked(true);
+                  setIsOpen(false);
                 }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
                 title="Dock to top bar"

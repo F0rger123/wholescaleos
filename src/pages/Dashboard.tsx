@@ -293,7 +293,7 @@ export default function Dashboard() {
     <DashboardErrorBoundary>
       <div className="space-y-8 p-6 lg:p-12 min-h-screen bg-[var(--t-bg)] text-[var(--t-text)]">
         {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav relative z-[10]">
+        <div className={`flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav relative ${showPresets ? 'z-[201]' : 'z-[10]'}`}>
           <div>
             <h1 className="text-4xl md:text-5xl font-black tracking-tighter italic uppercase" style={{ color: 'var(--t-text)' }}>Dashboard</h1>
             <p className="text-[#6d758c] text-sm font-black uppercase tracking-[0.2em] mt-2 opacity-80 italic">Real-time Performance Metrics</p>

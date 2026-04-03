@@ -1588,7 +1588,9 @@ interface AppState {
 
   // Floating AI Widget
   showFloatingAIWidget: boolean;
+  isAiDocked: boolean;
   setShowFloatingAIWidget: (v: boolean) => void;
+  setAiDocked: (v: boolean) => void;
 
   // Goals
   showGoalsForToday: boolean;
@@ -1821,6 +1823,11 @@ export const useStore = create<AppState>((set, get) => ({
     return [];
   })(),
   currentAiThreadId: typeof window !== 'undefined' ? localStorage.getItem('current-ai-thread-id') : null,
+  isAiDocked: typeof window !== 'undefined' ? localStorage.getItem('ai_widget_docked') === 'true' : false,
+  setAiDocked: (docked: boolean) => {
+    localStorage.setItem('ai_widget_docked', docked.toString());
+    set({ isAiDocked: docked });
+  },
   aiMessages: (() => {
     try {
       if (typeof window !== 'undefined') {
