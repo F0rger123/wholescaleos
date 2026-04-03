@@ -115,7 +115,6 @@ function Calendar() {
   const [showCalendarSelector, setShowCalendarSelector] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
   // Immediate Google OAuth state refresh
   useEffect(() => {
@@ -794,11 +793,6 @@ function Calendar() {
     );
   };
 
-  const buttonClasses = {
-    primary: `text-white transition-colors`,
-    secondary: `bg-[var(--t-surface-dim)] dark:bg-[var(--t-surface)] text-[var(--t-text)] dark:text-[var(--t-text-muted)] hover:bg-[var(--t-surface-dim)] dark:hover:bg-[var(--t-surface-subtle)] transition-colors`,
-    danger: `bg-[var(--t-error)] hover:bg-[var(--t-error-hover)] text-white transition-colors`
-  };
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -964,12 +958,14 @@ function Calendar() {
               });
               setShowForm(true);
             }}
-            className="px-6 py-2.5 rounded-xl text-white font-black uppercase tracking-widest italic shadow-[0_0_20px_rgba(var(--t-primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--t-primary-rgb),0.5)] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group"
+            className="px-6 py-2.5 rounded-xl font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group shadow-xl relative overflow-hidden"
             style={{ 
-              background: 'linear-gradient(135deg, var(--t-primary), #818cf8)',
-              border: '1px solid rgba(255,255,255,0.1)'
+              background: 'var(--t-primary)',
+              color: 'var(--t-on-primary)',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
+            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 slant-glow" />
             <span className="text-xl leading-none group-hover:rotate-90 transition-transform duration-300">+</span>
             <span>New Event</span>
           </button>
@@ -1206,7 +1202,7 @@ function Calendar() {
                 </button>
                 <button
                   onClick={() => deleteEvent(selectedEvent.id, selectedEvent.source, selectedEvent.googleId)}
-                  className="px-4 py-2 bgfrom-[var(--t-primary)] to-[var(--t-secondary)]xt-white rounded-lg hover:bg-[var(--t-error)] transition-colors"
+                  className="px-4 py-2 bg-red-500/20 text-red-500 border border-red-500/50 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
                 >
                   Delete
                 </button>
@@ -1370,8 +1366,8 @@ function Calendar() {
                 </button>
                 <button
                   type="submit"
-                  className={`px-4 py-2 rounded-lg ${buttonClasses.primary}`}
-                  style={{ backgroundColor: theme.primary }}
+                  className="px-6 py-2 rounded-lg font-black uppercase tracking-widest text-white transition-all hover:scale-105 active:scale-95"
+                  style={{ background: 'var(--t-primary)' }}
                 >
                   {editingEvent ? 'Update' : 'Create'}
                 </button>

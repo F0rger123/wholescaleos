@@ -252,19 +252,21 @@ function GeneralTab() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
+            className="px-8 py-3 rounded-xl text-sm font-black uppercase tracking-[0.15em] flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-95 shadow-xl relative overflow-hidden group"
             style={{
-              backgroundColor: saving ? 'var(--t-surface-hover)' : 'var(--t-primary)',
+              background: 'var(--t-primary)',
               color: 'var(--t-on-primary)',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
+            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 slant-glow" />
             {saving ? (
               <>
-                <Loader2 size={14} className="animate-spin" /> Saving...
+                <Loader2 size={16} className="animate-spin" /> Saving...
               </>
             ) : (
               <>
-                <Save size={14} /> Save Settings
+                <Save size={16} /> Save Settings
               </>
             )}
           </button>
@@ -289,7 +291,8 @@ function GeneralTab() {
             </div>
             <button
               onClick={handleReconnectGoogle}
-              className="px-4 py-2 rounded-lg text-xs font-bold border border-[var(--t-primary)] text-[var(--t-primary)] hover:bg-[var(--t-primary)] hover:text-white transition-all flex items-center gap-2"
+              className="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-[0.1em] border-2 border-[var(--t-primary)] text-[var(--t-primary)] hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)]"
+              style={{ fontFamily: 'Inter, sans-serif' }}
             >
               <RefreshCw size={14} />
               Reconnect Google
@@ -556,8 +559,12 @@ function SecurityTab() {
           <button
             onClick={handlePasswordChange}
             disabled={passLoading || !newPass || !confirmPass}
-            className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all disabled:opacity-50"
-            style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+            className="px-6 py-2 rounded-lg text-sm font-black uppercase tracking-[0.1em] flex items-center gap-2 transition-all disabled:opacity-50 shadow-lg shadow-[var(--t-primary-dim)]"
+            style={{ 
+              backgroundColor: 'var(--t-primary)', 
+              color: 'var(--t-on-primary)',
+              fontFamily: 'Inter, sans-serif'
+            }}
           >
             {passLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             {passLoading ? 'Updating...' : 'Update Password'}
@@ -1080,7 +1087,12 @@ function ProfileTab() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-8 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-500 transition-all active:scale-95 disabled:opacity-50"
+            className="px-8 py-3 rounded-xl text-sm font-black uppercase tracking-[0.1em] shadow-xl shadow-[var(--t-primary-dim)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+            style={{ 
+              backgroundColor: 'var(--t-primary)', 
+              color: 'var(--t-on-primary)',
+              fontFamily: 'Inter, sans-serif'
+            }}
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : 'Save Profile Changes'}
           </button>
@@ -1165,8 +1177,8 @@ const user = data?.user;
                 setThemeSaved(true);
                 setTimeout(() => setThemeSaved(false), 3000);
               }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all hover:bg-[var(--t-surface-hover)]"
-              style={{ color: 'var(--t-text-muted)', border: '1px solid var(--t-border)' }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-[0.05em] transition-all hover:bg-[var(--t-surface-hover)] border border-[var(--t-border)]"
+              style={{ color: 'var(--t-text-muted)', fontFamily: 'Inter, sans-serif' }}
             >
               <RefreshCw size={14} /> Reset Colors
             </button>
@@ -1352,7 +1364,12 @@ const user = data?.user;
                     input.value = '';
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-[var(--t-primary)] text-white text-sm font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
+                className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-black uppercase tracking-[0.05em] shadow-lg shadow-[var(--t-primary-dim)] active:scale-95 transition-all"
+                style={{ 
+                  backgroundColor: 'var(--t-primary)', 
+                  color: 'var(--t-on-primary)',
+                  fontFamily: 'Inter, sans-serif'
+                }}
               >
                 <Plus size={16} /> Save New
               </button>
@@ -1383,7 +1400,8 @@ const user = data?.user;
                   </div>
                   <button 
                     onClick={() => applyThemePreset(preset)}
-                    className="w-full py-2 rounded-lg border border-[var(--t-primary)] text-[var(--t-primary)] text-xs font-black uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-white transition-all active:scale-95"
+                    className="w-full py-2 rounded-lg border-2 border-[var(--t-primary)] text-[var(--t-primary)] text-xs font-black uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all active:scale-95"
+                    style={{ fontFamily: 'Inter, sans-serif' }}
                   >
                     Apply Preset
                   </button>
@@ -1525,11 +1543,12 @@ function NotificationsTab() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all active:scale-95"
+          className="px-6 py-2 rounded-lg text-sm font-black uppercase tracking-[0.1em] flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-[var(--t-primary-dim)]"
           style={{
             backgroundColor: 'var(--t-primary)',
             color: 'var(--t-on-primary)',
-            opacity: saving ? 0.7 : 1
+            opacity: saving ? 0.7 : 1,
+            fontFamily: 'Inter, sans-serif'
           }}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
@@ -1663,7 +1682,14 @@ function EmailTab() {
             className="flex-1 px-3 py-2 rounded-lg text-sm"
             style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
           />
-          <button className="px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2" style={{ backgroundColor: 'var(--t-primary)', color: 'var(--t-on-primary)' }}>
+          <button 
+            className="px-4 py-2 rounded-lg text-sm font-black uppercase tracking-[0.1em] flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)]" 
+            style={{ 
+              backgroundColor: 'var(--t-primary)', 
+              color: 'var(--t-on-primary)',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
             <Send size={14} /> Send Test
           </button>
         </div>
@@ -1718,10 +1744,11 @@ function BackupTab() {
           <button
             onClick={() => manualSave()}
             disabled={saveStatus === 'saving'}
-            className="px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2"
+            className="px-6 py-2 rounded-lg text-sm font-black uppercase tracking-[0.05em] transition-all flex items-center gap-2 shadow-lg"
             style={{ 
               backgroundColor: saveStatus === 'success' ? 'var(--t-success-dim)' : 'var(--t-primary)',
-              color: saveStatus === 'success' ? 'var(--t-success)' : 'var(--t-on-primary)'
+              color: saveStatus === 'success' ? 'var(--t-success)' : 'var(--t-on-primary)',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             {saveStatus === 'saving' ? <Loader2 size={14} className="animate-spin" /> : saveStatus === 'success' ? <Check size={14} /> : <Save size={14} />}
@@ -1748,8 +1775,11 @@ function BackupTab() {
               createBackup(backupName);
               setBackupName('');
             }}
-            className="px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2"
-            style={{ backgroundColor: 'var(--t-surface-hover)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+            className="px-6 py-2 rounded-lg text-sm font-black uppercase tracking-[0.05em] flex items-center gap-2 border border-[var(--t-border)] transition-all hover:bg-[var(--t-surface-hover)]"
+            style={{ 
+              color: 'var(--t-text)',
+              fontFamily: 'Inter, sans-serif'
+            }}
           >
             <Plus size={14} /> Create Backup
           </button>

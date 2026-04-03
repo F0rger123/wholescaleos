@@ -35,7 +35,9 @@ export function Layout() {
     shortcutsEnabled,
     currentTheme, setTheme,
     showQuickNotes,
+    quickNotes, setQuickNotes,
     isQuickNotesOpen, setQuickNotesOpen,
+    notesDocked, setNotesDocked,
     searchResults, performSearch,
     aiName, isAiDocked, setAiDocked,
     activeLeadModalId,
@@ -99,9 +101,7 @@ export function Layout() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
 
-  const { quickNotes, setQuickNotes } = useStore();
   const [userShortcuts, setUserShortcuts] = useState<any[]>([]);
-  const [notesDocked, setNotesDocked] = useState(() => localStorage.getItem('quick_notes_docked') === 'true');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -509,16 +509,12 @@ export function Layout() {
                 </div>
                 
                 {/* Active Indicator */}
-                <div className="flex items-center gap-1.5 px-2">
+                <div className="flex items-center gap-1.5 px-2 mr-2">
                   <div className="relative flex">
                     <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)]" />
                     <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-ping opacity-75" />
                   </div>
                   <span className="text-[9px] font-bold text-[var(--t-text-muted)] group-hover:text-[var(--t-text)] transition-colors uppercase tracking-widest">Docked</span>
-                </div>
-
-                <div className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/5 group-hover:bg-[var(--t-primary)]/10 transition-all mr-0.5">
-                  <Maximize2 size={12} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
                 </div>
               </div>
             )}

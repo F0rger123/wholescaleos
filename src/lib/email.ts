@@ -83,6 +83,9 @@ export interface dbEmailTemplate {
   name: string;
   subject: string;
   body: string;
+  html_content?: string;
+  category?: string;
+  description?: string;
   created_at: string;
 }
 
@@ -93,7 +96,11 @@ export interface dbEmailCampaign {
   template_id: string;
   status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'paused';
   scheduled_at?: string;
+  last_run_at?: string;
   recipients: string[];
+  recipient_count?: number;
+  success_count?: number;
+  fail_count?: number;
   metadata: any;
   created_at: string;
 }

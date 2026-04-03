@@ -193,7 +193,7 @@ export default function Tasks() {
 
     return (
       <div
-        className={`group border rounded-2xl p-5 transition-all hover:shadow-2xl hover:border-[var(--t-primary)] ${isDone || isCancelled ? 'opacity-60 grayscale-[0.5]' : ''} astral-glass`}
+        className={`group border rounded-xl p-3 transition-all hover:shadow-xl hover:border-[var(--t-primary)] ${isDone || isCancelled ? 'opacity-60 grayscale-[0.5]' : ''} astral-glass`}
         style={{ 
           background: 'var(--t-surface)', 
           borderColor: 'var(--t-border)'
@@ -203,31 +203,31 @@ export default function Tasks() {
           {/* Check button */}
           <button
             onClick={() => isDone ? updateTask(task.id, { status: 'todo', completedAt: null }) : completeTask(task.id)}
-            className={`mt-1 shrink-0 transition-all hover:scale-110 active:scale-90`}
+            className={`mt-0.5 shrink-0 transition-all hover:scale-110 active:scale-90`}
             style={{ color: isDone ? 'var(--t-success)' : 'var(--t-border-focus)' }}
           >
-            {isDone ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+            {isDone ? <CheckCircle2 size={20} /> : <Circle size={20} />}
           </button>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h3 className={`text-base font-bold italic`} style={{ color: isDone ? 'var(--t-text-muted)' : 'var(--t-text)', textDecoration: isDone ? 'line-through' : 'none' }}>{task.title}</h3>
-              <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg border uppercase tracking-wider ${pc.text}`} style={{ background: pc.bg, borderColor: 'currentColor' }}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className={`text-xs font-semibold italic`} style={{ color: isDone ? 'var(--t-text-muted)' : 'var(--t-text)', textDecoration: isDone ? 'line-through' : 'none' }}>{task.title}</h3>
+              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${pc.text}`} style={{ background: pc.bg, borderColor: 'currentColor' }}>
                 {task.priority}
               </span>
-              <span className={`text-[9px] font-black px-2 py-0.5 rounded-lg border uppercase tracking-wider ${sc.text}`} style={{ background: sc.bg, borderColor: 'currentColor' }}>
+              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border uppercase tracking-wider ${sc.text}`} style={{ background: sc.bg, borderColor: 'currentColor' }}>
                 {task.status === 'in-progress' ? 'In Progress' : task.status}
               </span>
             </div>
 
             {task.description && (
-              <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>{task.description}</p>
+              <p className="text-[10px] mt-0.5 line-clamp-1" style={{ color: 'var(--t-text-muted)' }}>{task.description}</p>
             )}
 
-            <div className="flex items-center gap-6 mt-4 flex-wrap">
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
               {/* Assignee */}
-              <span className="inline-flex items-center gap-2 text-[11px] font-bold" style={{ color: 'var(--t-text-muted)' }}>
-                <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-white shadow-lg"
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-bold" style={{ color: 'var(--t-text-muted)' }}>
+                <div className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black text-white shadow-lg"
                   style={{ background: 'linear-gradient(135deg, var(--t-primary), #9333ea)' }}
                 >
                   {getMemberAvatar(task.assignedTo)}
@@ -236,8 +236,8 @@ export default function Tasks() {
               </span>
 
               {/* Due */}
-              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold`} style={{ color: getDueColor(task) }}>
-                <Calendar size={13} />
+              <span className={`inline-flex items-center gap-1 text-[10px] font-bold`} style={{ color: getDueColor(task) }}>
+                <Calendar size={11} />
                 {getDueLabel(task.dueDate)}
                 {isPast(parseISO(task.dueDate)) && task.status !== 'done' && task.status !== 'cancelled' && (
                   <AlertTriangle size={12} className="animate-bounce" />
@@ -246,8 +246,8 @@ export default function Tasks() {
 
               {/* Lead link */}
               {leadName && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold italic" style={{ color: 'var(--t-primary)' }}>
-                  <Link2 size={13} />
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold italic" style={{ color: 'var(--t-primary)' }}>
+                  <Link2 size={11} />
                   {leadName}
                 </span>
               )}
@@ -302,26 +302,27 @@ export default function Tasks() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="max-w-7xl mx-auto space-y-4 pb-12 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-6 bg-[var(--t-surface)] p-8 rounded-[2rem] border border-[var(--t-border)] shadow-2xl astral-glass">
+      <div className="flex items-center justify-between flex-wrap gap-4 bg-[var(--t-surface)] p-4 rounded-3xl border border-[var(--t-border)] shadow-xl astral-glass">
         <div>
-          <h1 className="text-3xl font-black italic uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Tasks</h1>
-          <p className="text-sm mt-1 font-medium" style={{ color: 'var(--t-text-muted)' }}>Manage team assignments and to-dos</p>
+          <h1 className="text-2xl font-black italic uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>Tasks</h1>
+          <p className="text-xs mt-1 font-medium" style={{ color: 'var(--t-text-muted)' }}>Manage team assignments and to-dos</p>
         </div>
         <div className="flex items-center gap-3">
           {/* View toggle */}
           <button
             onClick={handleSyncTasks}
             disabled={syncingTasks}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] rounded-xl transition-all border shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50"
-            style={syncingTasks ? { 
-              background: 'var(--t-primary)', color: 'var(--t-on-primary)', borderColor: 'var(--t-primary)'
-            } : { 
-              background: 'var(--t-surface-dim)', borderColor: 'var(--t-border)', color: 'var(--t-text)'
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all border shadow-lg hover:scale-105 active:scale-95 disabled:opacity-50"
+            style={{ 
+              background: syncingTasks ? 'var(--t-primary)' : 'var(--t-surface-dim)', 
+              color: syncingTasks ? 'var(--t-on-primary)' : 'var(--t-text)',
+              borderColor: syncingTasks ? 'var(--t-primary)' : 'var(--t-border)',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
-            <RefreshCw size={14} className={syncingTasks ? 'animate-spin' : ''} />
+            <RefreshCw size={12} className={syncingTasks ? 'animate-spin' : ''} />
             Sync
           </button>
           <div className="flex bg-[var(--t-background)] rounded-xl p-1 border border-[var(--t-border)] shadow-inner">
@@ -331,8 +332,9 @@ export default function Tasks() {
               style={viewMode === 'list' ? { 
                 background: 'var(--t-primary)', 
                 color: 'var(--t-on-primary)',
-                boxShadow: '0 4px 12px var(--t-primary-dim)'
-              } : { color: 'var(--t-text-muted)' }}
+                boxShadow: '0 4px 12px var(--t-primary-dim)',
+                fontFamily: 'Inter, sans-serif'
+              } : { color: 'var(--t-text-muted)', fontFamily: 'Inter, sans-serif' }}
             >
               List
             </button>
@@ -342,25 +344,26 @@ export default function Tasks() {
               style={viewMode === 'board' ? { 
                 background: 'var(--t-primary)', 
                 color: 'var(--t-on-primary)',
-                boxShadow: '0 4px 12px var(--t-primary-dim)'
-              } : { color: 'var(--t-text-muted)' }}
+                boxShadow: '0 4px 12px var(--t-primary-dim)',
+                fontFamily: 'Inter, sans-serif'
+              } : { color: 'var(--t-text-muted)', fontFamily: 'Inter, sans-serif' }}
             >
               Board
             </button>
           </div>
           <button
             onClick={() => { setShowAdd(true); setEditingId(null); setForm(emptyForm()); }}
-            className="flex items-center gap-2 px-6 py-3 text-sm font-black uppercase tracking-[0.15em] rounded-2xl transition-all shadow-xl hover:scale-105 active:scale-95 group overflow-hidden relative"
-            style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+            className="flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-[0.15em] rounded-xl transition-all shadow-xl hover:scale-105 active:scale-95 group overflow-hidden relative"
+            style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)', fontFamily: 'Inter, sans-serif' }}
           >
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 slant-glow" />
-            <Plus size={18} /> New Task
+            <Plus size={16} /> New Task
           </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
           { label: 'Total', value: stats.total, icon: Zap, color: 'var(--t-text)' },
           { label: 'To Do', value: stats.todo, icon: Circle, color: 'var(--t-text-muted)' },
@@ -369,10 +372,10 @@ export default function Tasks() {
           { label: 'Today', value: stats.todayDue, icon: Calendar, color: 'var(--t-warning)' },
           { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, color: 'var(--t-error)' },
         ].map((s) => (
-          <div key={s.label} className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-5 text-center shadow-lg hover:border-[var(--t-primary)] transition-all group astral-glass">
-            <s.icon size={20} className="mx-auto mb-2 transition-transform group-hover:scale-110" style={{ color: s.color }} />
-            <p className="text-2xl font-black" style={{ color: 'var(--t-text)' }}>{s.value}</p>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--t-text-muted)' }}>{s.label}</p>
+          <div key={s.label} className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl p-3 text-center shadow-md hover:border-[var(--t-primary)] transition-all group astral-glass">
+            <s.icon size={16} className="mx-auto mb-1 transition-transform group-hover:scale-110" style={{ color: s.color }} />
+            <p className="text-xl font-black" style={{ color: 'var(--t-text)' }}>{s.value}</p>
+            <p className="text-[8px] font-black uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>{s.label}</p>
           </div>
         ))}
       </div>

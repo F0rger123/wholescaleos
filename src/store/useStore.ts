@@ -1644,6 +1644,8 @@ interface AppState {
   setShowQuickNotes: (v: boolean) => void;
   isQuickNotesOpen: boolean;
   setQuickNotesOpen: (v: boolean) => void;
+  notesDocked: boolean;
+  setNotesDocked: (v: boolean) => void;
 
   // Search
   searchResults: {
@@ -1841,8 +1843,9 @@ export const useStore = create<AppState>((set, get) => ({
   // —— UI & Settings State ———————————————————————————————————
   notificationSettings: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('wholescale-notifications') || 'null') || defaultNotificationSettings) : defaultNotificationSettings,
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes') || '' : '',
-  showQuickNotes: false,
-  isQuickNotesOpen: false,
+  showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-show-quick-notes') === 'true' : false,
+  isQuickNotesOpen: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes-open') === 'true' : false,
+  notesDocked: typeof window !== 'undefined' ? localStorage.getItem('tasks-notes-docked') === 'true' : false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
 
   // —— Dashboard Layout ——————————————————————————————————————
@@ -4341,17 +4344,41 @@ export const useStore = create<AppState>((set, get) => ({
     }
     const { currentUser } = get();
     if (currentUser?.id && isSupabaseConfigured && supabase) {
-      supabase.from('profiles')
-        .update({ settings: { quick_notes: v } })
+      const s = supabase;
+      s.from('profiles')
+        .select('settings')
         .eq('id', currentUser.id)
-        .then();
+        .maybeSingle()
+        .then(({ data: profile }) => {
+          const currentSettings = profile?.settings || {};
+          s.from('profiles')
+            .update({ settings: { ...currentSettings, quick_notes: v } })
+            .eq('id', currentUser.id)
+            .then();
+        });
     }
   },
 
   setActiveLeadModalId: (id: string | null) => set({ activeLeadModalId: id }),
 
-  setShowQuickNotes: (v: boolean) => set({ showQuickNotes: v }),
-  setQuickNotesOpen: (v: boolean) => set({ isQuickNotesOpen: v }),
+  setShowQuickNotes: (v: boolean) => {
+    set({ showQuickNotes: v });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks-show-quick-notes', v.toString());
+    }
+  },
+  setQuickNotesOpen: (v: boolean) => {
+    set({ isQuickNotesOpen: v });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks-quick-notes-open', v.toString());
+    }
+  },
+  setNotesDocked: (v: boolean) => {
+    set({ notesDocked: v });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks-notes-docked', v.toString());
+    }
+  },
 
   updateNotificationSettings: (updates: Partial<NotificationSettings>) => {
     const { currentUser } = get();

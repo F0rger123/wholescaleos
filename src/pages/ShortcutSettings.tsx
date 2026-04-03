@@ -176,23 +176,27 @@ export default function ShortcutSettings() {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg"
-            style={{ background: 'var(--t-secondary)' }}
+            className="px-6 py-2.5 text-white rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group shadow-xl relative overflow-hidden"
+            style={{ 
+              background: 'var(--t-secondary)',
+              fontFamily: 'Inter, sans-serif'
+            }}
           >
-            <Plus size={14} />
+            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 slant-glow" />
+            <Plus size={16} className="group-hover:rotate-90 transition-transform duration-300" />
             Create New
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
+            className="px-6 py-2.5 text-white rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group shadow-xl relative overflow-hidden disabled:opacity-50"
             style={{
               background: 'var(--t-primary)',
-              // @ts-expect-error custom prop
-              '--tw-shadow-color': 'var(--t-primary-dim)'
+              fontFamily: 'Inter, sans-serif'
             }}
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save size={14} />}
+            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 slant-glow" />
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={18} />}
             Save Changes
           </button>
         </div>

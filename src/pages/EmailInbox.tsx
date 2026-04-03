@@ -872,7 +872,7 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
             {DEFAULT_TEMPLATES.map(t => (
               <button
                 key={t.id}
-                onClick={() => { setReplyText(t.body); setShowTemplates(false); }}
+                onClick={() => { setReplyText(t.html || t.body); setShowTemplates(false); }}
                 className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
               >
                 <p className="text-[10px] font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors mb-0.5">{t.name}</p>

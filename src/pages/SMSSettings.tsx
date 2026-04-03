@@ -278,9 +278,13 @@ export default function SMSSettings() {
           <button
             onClick={() => handleSave()}
             disabled={saving || !phone}
-            className="flex-1 px-4 py-2.5 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: 'var(--t-primary)' }}
+            className="flex-1 px-4 py-3 text-white font-black uppercase tracking-[0.15em] rounded-xl transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 group shadow-xl relative overflow-hidden disabled:opacity-50"
+            style={{ 
+              background: 'var(--t-primary)',
+              fontFamily: 'Inter, sans-serif'
+            }}
           >
+            <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 slant-glow" />
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Settings
           </button>

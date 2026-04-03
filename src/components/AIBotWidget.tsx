@@ -134,6 +134,7 @@ export function AIBotWidget() {
       if (e.clientY < 80) {
         setAiDocked(true);
         setIsOpen(false);
+        setIsMinimized(false);
       }
     };
 
@@ -623,7 +624,7 @@ export function AIBotWidget() {
     }
   };
 
-  if (!showFloatingAIWidget || isAiDocked) return null; 
+  if (!showFloatingAIWidget) return null; 
 
   if (hasKey === false && isOpen) {
     return (
@@ -680,11 +681,14 @@ export function AIBotWidget() {
             onMouseDown={startDrag}
           >
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg flex items-center justify-center"
+              <button 
+                onClick={() => { setAiDocked(true); setIsOpen(false); }}
+                className="w-6 h-6 rounded-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
                 style={{ background: 'var(--t-primary)' }}
+                title="Dock to bookshelf"
               >
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
-              </div>
+              </button>
               <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{aiName}</span>
               <div className="flex gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-pulse" />
@@ -883,18 +887,36 @@ export function AIBotWidget() {
           const moved = Math.abs(e.clientX - dragStart.current.x) > 5 || Math.abs(e.clientY - dragStart.current.y) > 5;
           if (moved) return;
 
-          setIsOpen(!isOpen);
-          setIsMinimized(false);
+          if (isAiDocked) {
+            setAiDocked(false);
+            setIsOpen(true);
+            setIsMinimized(false);
+          } else if (isOpen) {
+            // Slide to Jarvis area (dock)
+            setAiDocked(true);
+            setIsOpen(false);
+          } else {
+            setIsOpen(true);
+            setIsMinimized(false);
+          }
         }}
-        className={`pointer-events-auto p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 flex items-center justify-center group relative ${
+        className={`pointer-events-auto p-4 rounded-full shadow-2xl transition-all duration-500 hover:scale-110 active:scale-95 flex items-center justify-center group relative ${
           isOpen && !isMinimized ? 'rotate-90' : 'hover:shadow-lg'
-        }`}
+        } ${isAiDocked ? 'scale-75 opacity-50 hover:opacity-100 hover:scale-100' : ''}`}
         style={{ 
-          background: isOpen && !isMinimized ? 'var(--t-surface-active)' : 'var(--t-primary)',
-          color: isOpen && !isMinimized ? 'var(--t-primary)' : 'var(--t-on-primary)'
+          background: (isOpen && !isMinimized) || isAiDocked ? 'var(--t-surface-active)' : 'var(--t-primary)',
+          color: (isOpen && !isMinimized) || isAiDocked ? 'var(--t-primary)' : 'var(--t-on-primary)',
+          transition: 'all 0.5s cubic-bezier(0.23, 1, 0.32, 1)',
+          // When docked, we position it near the top (bookshelf area) so it "slides" there
+          ...(isAiDocked ? {
+            bottom: 'calc(100vh - 100px)', // Move towards bookshelf
+            right: '250px',
+            transform: 'scale(0.8)',
+            opacity: 0.8
+          } : {})
         }}
       >
-        {isOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />}
+        {isAiDocked ? <LayoutIcon size={24} /> : (isOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />)}
         
         {!isOpen && (
           <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--t-error)] border-2 border-[var(--t-background)] rounded-full animate-pulse" />

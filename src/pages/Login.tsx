@@ -41,7 +41,6 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
   const [info, setInfo] = useState<string | null>(null);
   const [showDbSetup, setShowDbSetup] = useState(false);
   const [showEmailFix, setShowEmailFix] = useState(false);
-  const [sqlCopied, setSqlCopied] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [partialUser, setPartialUser] = useState<any>(null);
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
@@ -343,21 +342,21 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE team_members; EXCEPTIO
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE notifications; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE leads; EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN OTHERS THEN NULL; END $$;`;
-
+    
     try {
       await navigator.clipboard.writeText(sql);
+      toast.success('SQL copied to clipboard');
     } catch {
-      // Fallback
       const ta = document.createElement('textarea');
       ta.value = sql;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
+      toast.success('SQL copied to clipboard');
     }
-    setSqlCopied(true);
-    setTimeout(() => setSqlCopied(false), 3000);
   };
+
 
   // Helper: join a team by invite code in Supabase
   const joinTeamByInviteCode = async (inviteCode: string, userId: string): Promise<{ success: boolean; teamName?: string }> => {
@@ -750,7 +749,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           return;
         } else {
           // Forgot password
-          const resetRedirect = 'https://wholescaleos.com/auth/callback'; // Hardcode production domain as requested
+          const resetRedirect = 'https://wholescaleos.com/reset-password'; // Adjusted to correct reset route
           console.log('[Auth] Password reset process started:', {
             email: form.email,
             redirect: resetRedirect,
