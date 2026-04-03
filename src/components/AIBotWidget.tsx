@@ -39,7 +39,8 @@ export function AIBotWidget() {
   
   const { 
     currentUser, showFloatingAIWidget, incrementAiUsage,
-    aiName, aiModel, setAiModel, isAiDocked, setAiDocked
+    aiName, aiModel, setAiModel, isAiDocked, setAiDocked,
+    sidebarOpen
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => {
     return localStorage.getItem('ai_speech_enabled') !== 'false';
@@ -906,14 +907,17 @@ export function AIBotWidget() {
         style={{ 
           background: (isOpen && !isMinimized) || isAiDocked ? 'var(--t-surface-active)' : 'var(--t-primary)',
           color: (isOpen && !isMinimized) || isAiDocked ? 'var(--t-primary)' : 'var(--t-on-primary)',
-          transition: 'all 0.5s cubic-bezier(0.23, 1, 0.32, 1)',
+          transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
           // When docked, we position it near the top (bookshelf area) so it "slides" there
           ...(isAiDocked ? {
-            bottom: 'calc(100vh - 100px)', // Move towards bookshelf
-            right: '250px',
-            transform: 'scale(0.8)',
-            opacity: 0.8
-          } : {})
+            bottom: 'calc(100vh - 110px)', // Move towards header area
+            right: sidebarOpen ? '420px' : '320px', // Adjust based on sidebar
+            transform: 'scale(0.6) rotate(-10deg)',
+            opacity: 0.4,
+            zIndex: 1000
+          } : {
+            zIndex: 1000
+          })
         }}
       >
         {isAiDocked ? <LayoutIcon size={24} /> : (isOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />)}

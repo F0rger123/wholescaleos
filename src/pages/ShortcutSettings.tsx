@@ -176,9 +176,10 @@ export default function ShortcutSettings() {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-2.5 text-white rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group shadow-xl relative overflow-hidden"
+            className="px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group shadow-xl relative overflow-hidden"
             style={{ 
               background: 'var(--t-secondary)',
+              color: 'var(--t-on-secondary)',
               fontFamily: 'Inter, sans-serif'
             }}
           >
@@ -189,9 +190,10 @@ export default function ShortcutSettings() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-2.5 text-white rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group shadow-xl relative overflow-hidden disabled:opacity-50"
+            className="px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group shadow-xl relative overflow-hidden disabled:opacity-50"
             style={{
-              background: 'var(--t-primary)',
+              background: 'var(--t-button-bg)',
+              color: 'var(--t-button-text)',
               fontFamily: 'Inter, sans-serif'
             }}
           >

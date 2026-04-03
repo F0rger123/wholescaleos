@@ -144,8 +144,18 @@ export function AuthCallback() {
           addDebug('✅ Tokens stored successfully!');
           setStatus('success');
           setMessage('Google Calendar connected successfully!');
-          const redirectPath = state && state !== 'calendar-sync' ? state : '/calendar';
-          setTimeout(() => navigate(redirectPath), 2000);
+          let redirectPath = '/calendar';
+          if (state && state !== 'calendar-sync') {
+            try {
+              // Handle potentially encoded paths
+              redirectPath = decodeURIComponent(state);
+              if (!redirectPath.startsWith('/')) redirectPath = '/' + redirectPath;
+            } catch (e) {
+              redirectPath = state.startsWith('/') ? state : '/calendar';
+            }
+          }
+          
+          setTimeout(() => navigate(redirectPath), 1500);
         } else {
           throw new Error('Failed to store tokens');
         }

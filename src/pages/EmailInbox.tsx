@@ -500,7 +500,7 @@ function CampaignsList({ campaigns, onRefresh, onAdd }: { campaigns: dbEmailCamp
                <div className="flex -space-x-2">
                  {[1,2,3].map(i => <div key={i} className="w-5 h-5 rounded-full bg-[var(--t-border)] border border-[var(--t-bg)] flex items-center justify-center text-[8px] font-bold">{i}</div>)}
                </div>
-               <span className="text-[10px] text-[var(--t-text-muted)]">{cp.recipients.length} recipients</span>
+               <span className="text-[10px] text-[var(--t-text-muted)]">{ (cp.recipients || []).length } recipients</span>
              </div>
           </div>
         ))
@@ -845,27 +845,30 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
       </div>
 
       <div className="p-6 border-t border-[var(--t-border)] bg-[var(--t-surface-dim)]/30 space-y-4">
-        {aiSuggestions.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <button 
-              onClick={() => setShowTemplates(!showTemplates)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${showTemplates ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] border-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)] text-[var(--t-primary)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
-            >
-              <BookOpenText size={12} />
-              Templates
-            </button>
-            <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
-            {aiSuggestions.map((s: string, i: number) => (
-              <button 
-                key={i} 
-                onClick={() => setReplyText(s)}
-                className="px-3 py-1.5 bg-[var(--t-primary-dim)]/20 border border-[var(--t-primary-dim)] text-[var(--t-primary)] rounded-full text-[10px] font-medium hover:bg-[var(--t-primary-dim)]/40 transition-all"
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={() => setShowTemplates(!showTemplates)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${showTemplates ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] border-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)] text-[var(--t-primary)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
+          >
+            <BookOpenText size={12} />
+            Templates
+          </button>
+
+          {aiSuggestions.length > 0 && (
+            <>
+              <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
+              {aiSuggestions.map((s: string, i: number) => (
+                <button 
+                  key={i} 
+                  onClick={() => setReplyText(s)}
+                  className="px-3 py-1.5 bg-[var(--t-primary-dim)]/20 border border-[var(--t-primary-dim)] text-[var(--t-primary)] rounded-full text-[10px] font-medium hover:bg-[var(--t-primary-dim)]/40 transition-all"
+                >
+                  {s}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
 
         {showTemplates && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">

@@ -59,10 +59,10 @@ export function GoogleCalendarConnect() {
     <div className="relative">
       <button
         onClick={isConnected ? () => setShowDropdown(!showDropdown) : handleConnect}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all border font-black uppercase tracking-wider text-[10px] ${
           isConnected 
-            ? 'bg-[var(--t-surface)] text-[var(--t-success)] dark:text-[var(--t-text-muted)] hover:bg-[var(--t-success)]/10' 
-            : 'bg-[var(--t-primary)] text-white hover:bg-[var(--t-primary-hover)]'
+            ? 'bg-[var(--t-surface)] border-[var(--t-success)]/20 text-[var(--t-success)] hover:bg-[var(--t-success)]/10' 
+            : 'bg-[var(--t-primary)] border-[var(--t-primary)] text-[var(--t-on-primary)] hover:opacity-90 shadow-lg shadow-[var(--t-primary)]/20'
         }`}
       >
         <Calendar size={18} />

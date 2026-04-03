@@ -9,7 +9,7 @@ import { CreateTeamModal } from './CreateTeamModal';
 import { switchToTeam } from '../lib/team-utils';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
-  LayoutDashboard, Users, Maximize2, 
+  LayoutDashboard, Users, 
   Settings, Search,
   Indent, AlignLeft,
   Bot, Smartphone, StickyNote, Minimize2,
@@ -494,9 +494,32 @@ export function Layout() {
 
           <div className="flex items-center gap-4">
             {/* AI Bookshelf Docking Bar */}
+            {notesDocked && (
+              <div 
+                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 cursor-pointer group hover:border-[var(--t-warning)] transition-all overflow-hidden"
+                onClick={() => { setNotesDocked(false); setQuickNotesOpen(true); }}
+                title="Open Quick Notes"
+              >
+                <div className="flex items-center gap-2 pl-2 pr-4 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 group-hover:bg-orange-500 transition-all duration-300">
+                  <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
+                    <StickyNote size={12} className="text-orange-500 group-hover:text-white transition-colors" />
+                  </div>
+                  <span className="text-[10px] font-black tracking-tighter text-orange-500 group-hover:text-white uppercase leading-none">Notes</span>
+                </div>
+                
+                {/* Active Indicator */}
+                <div className="flex items-center gap-1.5 px-2 mr-2">
+                  <div className="relative flex">
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping opacity-75" />
+                  </div>
+                  <span className="text-[9px] font-bold text-[var(--t-text-muted)] group-hover:text-[var(--t-text)] transition-colors uppercase tracking-widest">Active</span>
+                </div>
+              </div>
+            )}
             {isAiDocked && (
               <div 
-                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-500 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden"
+                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 delay-300 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden"
                 onClick={() => setAiDocked(false)}
                 title="Restore OS Bot"
               >
@@ -573,17 +596,28 @@ export function Layout() {
       {showJoinModal && <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />}
       {showCreateModal && <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />}
 
-      {isQuickNotesOpen && (
-        <div className={`fixed transform transition-all duration-500 z-[150] ${notesDocked ? 'bottom-24 right-8 w-80 h-[400px]' : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[600px]'}`}>
-          <div className="w-full h-full astral-glass overflow-hidden flex flex-col shadow-2xl border border-white/10 rounded-3xl">
+      {isQuickNotesOpen && !notesDocked && (
+        <div className="fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[600px]">
+          <div className="w-full h-full bg-black/80 backdrop-blur-3xl overflow-hidden flex flex-col shadow-2xl border border-white/10 rounded-3xl">
             <div className="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <StickyNote size={18} className="text-orange-400" />
                 <h3 className="text-sm font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>Quick Notes</h3>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => setNotesDocked(!notesDocked)} className="p-2 hover:bg-white/10 rounded-lg">{notesDocked ? <Maximize2 size={16} /> : <Minimize2 size={16} />}</button>
-                <button onClick={() => setQuickNotesOpen(false)} className="p-2 hover:bg-white/10 rounded-lg"><X size={16} /></button>
+                <button 
+                  onClick={() => setNotesDocked(true)} 
+                  className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
+                  title="Dock to Bookshelf"
+                >
+                  <Minimize2 size={16} />
+                </button>
+                <button 
+                  onClick={() => setQuickNotesOpen(false)} 
+                  className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
               </div>
             </div>
             <div className="flex-1 p-6">

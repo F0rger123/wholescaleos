@@ -82,11 +82,11 @@ export interface dbEmailTemplate {
   user_id: string;
   name: string;
   subject: string;
-  body: string;
+  body?: string;
   html_content?: string;
   category?: string;
   description?: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface dbEmailCampaign {
@@ -97,12 +97,12 @@ export interface dbEmailCampaign {
   status: 'draft' | 'scheduled' | 'sending' | 'completed' | 'paused';
   scheduled_at?: string;
   last_run_at?: string;
-  recipients: string[];
+  recipients?: string[];
   recipient_count?: number;
   success_count?: number;
   fail_count?: number;
-  metadata: any;
-  created_at: string;
+  metadata?: any;
+  created_at?: string;
 }
 
 // ─── Brand Constants ──────────────────────────────────────────────────────────

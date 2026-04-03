@@ -1075,8 +1075,8 @@ function Calendar() {
                   <button
                     onClick={editingCategory ? updateCategory : addCategory}
                     disabled={!newCategoryName.trim()}
-                    className="flex-1 px-3 py-2 text-white rounded hover:opacity-90 disabled:opacity-50 text-sm"
-                    style={{ background: 'var(--t-primary)' }}
+                    className="flex-1 px-3 py-2 rounded-lg font-black uppercase tracking-widest text-[var(--t-button-text)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 text-sm"
+                    style={{ background: 'var(--t-button-bg)' }}
                   >
                     {editingCategory ? 'Update' : 'Add'}
                   </button>
@@ -1195,8 +1195,8 @@ function Calendar() {
               <div className="flex justify-end gap-3 pt-4 border-t border-[var(--t-border)] dark:border-[var(--t-border)]">
                 <button
                   onClick={() => editEvent(selectedEvent)}
-                  className="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-colors"
-                  style={{ backgroundColor: 'var(--t-primary)' }}
+                  className="px-4 py-2 rounded-lg font-black uppercase tracking-widest text-[var(--t-button-text)] transition-all hover:scale-105 active:scale-95"
+                  style={{ backgroundColor: 'var(--t-button-bg)' }}
                 >
                   Edit
                 </button>
@@ -1366,8 +1366,8 @@ function Calendar() {
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 rounded-lg font-black uppercase tracking-widest text-white transition-all hover:scale-105 active:scale-95"
-                  style={{ background: 'var(--t-primary)' }}
+                  className="px-6 py-2 rounded-lg font-black uppercase tracking-widest text-[var(--t-button-text)] transition-all hover:scale-105 active:scale-95"
+                  style={{ background: 'var(--t-button-bg)' }}
                 >
                   {editingEvent ? 'Update' : 'Create'}
                 </button>

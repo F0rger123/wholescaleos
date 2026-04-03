@@ -148,7 +148,7 @@ const AdminEmailCampaigns = () => {
       // 3. Send emails
       for (const profile of profiles) {
         try {
-          const personalizedHtml = (template.html_content || template.body)
+          const personalizedHtml = (template.html_content || template.body || '')
             .replace(/{{name}}/g, profile.full_name || 'there')
             .replace(/{{email}}/g, profile.email);
 
@@ -189,7 +189,7 @@ const AdminEmailCampaigns = () => {
       subject: tpl.subject,
       category: tpl.category,
       description: tpl.description,
-      html_content: tpl.html || tpl.content || '',
+      html_content: tpl.html || tpl.body || tpl.content || '',
     });
     setShowTemplateModal(true);
   };
@@ -353,10 +353,11 @@ const AdminEmailCampaigns = () => {
                   {camp.status === 'draft' && (
                     <button
                       onClick={() => handleLaunchCampaign(camp)}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-[var(--t-primary)] text-white rounded-lg font-black uppercase tracking-wider transition-all hover:scale-105"
+                      disabled={isSending}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-[var(--t-primary)] text-white rounded-lg font-black uppercase tracking-wider transition-all hover:scale-105 disabled:opacity-50 disabled:scale-100"
                     >
                       <Play size={18} />
-                      Launch
+                      {isSending ? 'Launching...' : 'Launch'}
                     </button>
                   )}
                   <button
