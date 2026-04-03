@@ -17,7 +17,9 @@ import {
   Calendar, FileText, PieChart, Indent, AlignLeft,
   Bot, Smartphone, StickyNote, Minimize2,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
-  Undo2, Redo2, Download
+  Undo2, Redo2, Download, UserCog, Map,
+  Building2, ChevronDown, ArrowRightLeft, Plus, X,
+  ChevronUp
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
