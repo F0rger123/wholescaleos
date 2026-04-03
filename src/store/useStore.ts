@@ -1852,10 +1852,10 @@ export const useStore = create<AppState>((set, get) => ({
   notificationSettings: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('wholescale-notifications') || 'null') || defaultNotificationSettings) : defaultNotificationSettings,
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes') || '' : '',
   showQuickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-show-quick-notes') === 'true' : false,
-  isQuickNotesOpen: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes-open') === 'true' : false,
-  notesDocked: typeof window !== 'undefined' ? localStorage.getItem('tasks-notes-docked') === 'true' : false,
-  quickNotesSize: typeof window !== 'undefined' ? (localStorage.getItem('tasks-quick-notes-size') as 'small' | 'medium' | 'large') || 'medium' : 'medium',
-  isQuickNotesCollapsed: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes-collapsed') === 'true' : false,
+  isQuickNotesOpen: false,
+  notesDocked: false,
+  quickNotesSize: 'medium',
+  isQuickNotesCollapsed: false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
 
   // —— Dashboard Layout ——————————————————————————————————————
@@ -4379,27 +4379,15 @@ export const useStore = create<AppState>((set, get) => ({
   },
   setQuickNotesOpen: (v: boolean) => {
     set({ isQuickNotesOpen: v });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tasks-quick-notes-open', v.toString());
-    }
   },
   setNotesDocked: (v: boolean) => {
     set({ notesDocked: v });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tasks-notes-docked', v.toString());
-    }
   },
   setQuickNotesSize: (v: 'small' | 'medium' | 'large') => {
     set({ quickNotesSize: v });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tasks-quick-notes-size', v);
-    }
   },
   setIsQuickNotesCollapsed: (v: boolean) => {
     set({ isQuickNotesCollapsed: v });
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('tasks-quick-notes-collapsed', v.toString());
-    }
   },
 
   updateNotificationSettings: (updates: Partial<NotificationSettings>) => {

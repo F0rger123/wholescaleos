@@ -634,18 +634,18 @@ export function Layout() {
 
       {isQuickNotesOpen && !notesDocked && (
         <div 
-          className={`fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-2xl flex flex-col ${
+          className={`fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-2xl flex flex-col max-w-[500px] max-h-[80vh] ${
             isQuickNotesCollapsed ? 'h-14' : (
-              quickNotesSize === 'small' ? 'w-[400px] h-[450px]' : 
-              quickNotesSize === 'large' ? 'w-[800px] h-[800px]' : 
-              'w-[500px] h-[600px]'
+              quickNotesSize === 'small' ? 'w-[350px] h-[400px]' : 
+              quickNotesSize === 'large' ? 'w-[500px] h-[80vh]' : 
+              'w-[450px] h-[550px]'
             )
           } ${isQuickNotesCollapsed ? 'w-[300px]' : ''}`}
         >
           <div className="w-full h-full bg-black/80 backdrop-blur-3xl overflow-hidden flex flex-col border border-white/10 rounded-3xl">
             <div className={`bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shrink-0`}>
               <div className="flex items-center gap-3">
-                <StickyNote size={18} className="text-orange-400" />
+                <StickyNote size={18} className="text-purple-400" />
                 <h3 className="text-sm font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>Quick Notes</h3>
               </div>
               <div className="flex items-center gap-1.5">
