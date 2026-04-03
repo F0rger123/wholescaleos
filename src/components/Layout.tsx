@@ -32,6 +32,7 @@ export function Layout() {
     shortcutsEnabled,
     currentTheme, setTheme,
     showQuickNotes,
+    isQuickNotesOpen, setQuickNotesOpen,
     searchResults, performSearch,
     aiName,
     activeLeadModalId,
@@ -59,6 +60,7 @@ export function Layout() {
       MAIN: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/leads', label: 'Leads', icon: Users },
+        { to: '/tasks', label: 'Tasks', icon: CheckCircle },
         { to: '/map', label: 'Map', icon: Map },
       ],
       AI: [
@@ -160,6 +162,13 @@ export function Layout() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
+  // Sync Quick Notes Setting to Visibility
+  useEffect(() => {
+    if (showQuickNotes) {
+      setQuickNotesOpen(true);
+    }
+  }, [showQuickNotes]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!shortcutsEnabled) return;
@@ -210,7 +219,7 @@ export function Layout() {
 
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        useStore.getState().setShowQuickNotes(!showQuickNotes);
+        setQuickNotesOpen(!isQuickNotesOpen);
       }
 
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
@@ -385,7 +394,7 @@ export function Layout() {
               </div>
               <div className="flex flex-col gap-1">
                 {items.map(({ to, label, icon: Icon }) => {
-                  const badge = label === 'Tasks' ? pendingTaskCount : label === 'Team Dashboard' ? onlineCount : label === 'Team Chat' ? totalUnread : 0;
+                  const badge = (label === 'Tasks' || label === 'Tasks') ? pendingTaskCount : label === 'Team Dashboard' ? onlineCount : label === 'Team Chat' ? totalUnread : 0;
                   return (
                     <NavLink
                       key={to}
@@ -502,30 +511,32 @@ export function Layout() {
         </main>
       </div>
 
-      <div className="fixed bottom-6 right-6 flex items-center gap-2 z-[var(--z-popover)] animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="flex items-center gap-1 p-1 rounded-2xl astral-glass border border-white/10 shadow-2xl">
-          <button
-            onClick={undo}
-            disabled={history.length === 0}
-            className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 transition-all text-[var(--t-text-muted)] hover:text-white"
-            title="Undo (Ctrl+Z)"
-          ><Undo2 size={18} /></button>
-          <button
-            onClick={redo}
-            disabled={future.length === 0}
-            className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 transition-all text-[var(--t-text-muted)] hover:text-white"
-            title="Redo (Ctrl+Y)"
-          ><Redo2 size={18} /></button>
-          <div className="w-[1px] h-4 bg-white/10 mx-1" />
-          <button
-            onClick={() => manualSave()}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${saveStatus === 'success' ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'border-white/10 hover:bg-white/10 text-white/80 hover:text-white backdrop-blur-md'}`}
-          >
-            {saveStatus === 'saving' ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : saveStatus === 'success' ? <CloudCheck size={16} /> : <Download size={16} className="rotate-180" />}
-            <span className="text-[10px] font-black uppercase tracking-widest leading-none">{saveStatus === 'saving' ? 'Saving' : saveStatus === 'success' ? 'Saved' : 'Save'}</span>
-          </button>
+      {!(location.pathname.startsWith('/settings') || location.pathname.startsWith('/admin')) && (
+        <div className="fixed bottom-6 right-6 flex items-center gap-2 z-[var(--z-popover)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-1 p-1 rounded-2xl astral-glass border border-white/10 shadow-2xl">
+            <button
+              onClick={undo}
+              disabled={history.length === 0}
+              className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 transition-all text-[var(--t-text-muted)] hover:text-white"
+              title="Undo (Ctrl+Z)"
+            ><Undo2 size={18} /></button>
+            <button
+              onClick={redo}
+              disabled={future.length === 0}
+              className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 transition-all text-[var(--t-text-muted)] hover:text-white"
+              title="Redo (Ctrl+Y)"
+            ><Redo2 size={18} /></button>
+            <div className="w-[1px] h-4 bg-white/10 mx-1" />
+            <button
+              onClick={() => manualSave()}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${saveStatus === 'success' ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'border-white/10 hover:bg-white/10 text-[var(--t-text)] hover:text-white backdrop-blur-md'}`}
+            >
+              {saveStatus === 'saving' ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : saveStatus === 'success' ? <CloudCheck size={16} /> : <Download size={16} className="rotate-180" />}
+              <span className="text-[10px] font-black uppercase tracking-widest leading-none">{saveStatus === 'saving' ? 'Saving' : saveStatus === 'success' ? 'Saved' : 'Save'}</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <AIBotWidget />
       
@@ -535,21 +546,21 @@ export function Layout() {
       {showJoinModal && <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />}
       {showCreateModal && <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />}
 
-      {showQuickNotes && (
+      {isQuickNotesOpen && (
         <div className={`fixed transform transition-all duration-500 z-[150] ${notesDocked ? 'bottom-24 right-8 w-80 h-[400px]' : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[600px]'}`}>
           <div className="w-full h-full astral-glass overflow-hidden flex flex-col shadow-2xl border border-white/10 rounded-3xl">
             <div className="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <StickyNote size={18} className="text-orange-400" />
-                <h3 className="text-sm font-black uppercase tracking-widest italic">Quick Notes</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>Quick Notes</h3>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setNotesDocked(!notesDocked)} className="p-2 hover:bg-white/10 rounded-lg">{notesDocked ? <Maximize2 size={16} /> : <Minimize2 size={16} />}</button>
-                <button onClick={() => useStore.getState().setShowQuickNotes(false)} className="p-2 hover:bg-white/10 rounded-lg"><X size={16} /></button>
+                <button onClick={() => setQuickNotesOpen(false)} className="p-2 hover:bg-white/10 rounded-lg"><X size={16} /></button>
               </div>
             </div>
             <div className="flex-1 p-6">
-              <textarea value={quickNotes} onChange={(e) => setQuickNotes(e.target.value)} placeholder="Type thoughts..." className="w-full h-full bg-transparent border-none focus:outline-none resize-none text-white/80" />
+              <textarea value={quickNotes} onChange={(e) => setQuickNotes(e.target.value)} placeholder="Type thoughts..." className="w-full h-full bg-transparent border-none focus:outline-none resize-none" style={{ color: 'var(--t-text)' }} />
             </div>
           </div>
         </div>

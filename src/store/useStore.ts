@@ -1640,6 +1640,8 @@ interface AppState {
   setQuickNotes: (v: string) => void;
   showQuickNotes: boolean;
   setShowQuickNotes: (v: boolean) => void;
+  isQuickNotesOpen: boolean;
+  setQuickNotesOpen: (v: boolean) => void;
 
   // Search
   searchResults: {
@@ -1833,6 +1835,7 @@ export const useStore = create<AppState>((set, get) => ({
   notificationSettings: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('wholescale-notifications') || 'null') || defaultNotificationSettings) : defaultNotificationSettings,
   quickNotes: typeof window !== 'undefined' ? localStorage.getItem('tasks-quick-notes') || '' : '',
   showQuickNotes: false,
+  isQuickNotesOpen: false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
 
   // —— Dashboard Layout ——————————————————————————————————————
@@ -4341,6 +4344,7 @@ export const useStore = create<AppState>((set, get) => ({
   setActiveLeadModalId: (id: string | null) => set({ activeLeadModalId: id }),
 
   setShowQuickNotes: (v: boolean) => set({ showQuickNotes: v }),
+  setQuickNotesOpen: (v: boolean) => set({ isQuickNotesOpen: v }),
 
   updateNotificationSettings: (updates: Partial<NotificationSettings>) => {
     const { currentUser } = get();

@@ -629,12 +629,12 @@ export function AIBotWidget() {
     }
   };
 
-  if (!showFloatingAIWidget || isDocked) return null;
+  if (!showFloatingAIWidget) return null; // Removed isDocked check to ensure it renders if enabled
 
   if (hasKey === false && isOpen) {
     return (
       <div 
-        className="fixed z-[var(--z-loader)] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
+        className="fixed z-[var(--z-popover)] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
         style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
       >
         <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6 shadow-2xl max-w-sm text-center pointer-events-auto relative">

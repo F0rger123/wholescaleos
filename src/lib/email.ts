@@ -104,11 +104,11 @@ const BRAND = {
   name: 'WholeScale OS',
   color: '#6366f1',
   colorDark: '#4f46e5',
-  bgDark: '#000000',
-  bgCard: '#0a0a0a',
+  bgDark: '#020617', // Slate 950
+  bgCard: '#0f172a', // Slate 900
   textLight: '#94a3b8',
   textWhite: '#f8fafc',
-  logo: 'https://wholescaleos.com/logo.png', // Assuming logo.png after deployment
+  logo: 'https://wholescaleos.com/logo-white.png', 
   year: new Date().getFullYear(),
 };
 
@@ -122,65 +122,56 @@ function emailLayout(body: string, preheader?: string): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${BRAND.name}</title>
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
     a { color: ${BRAND.color}; text-decoration: none; }
-    .btn:hover { opacity: 0.9; }
+    .btn:hover { background: ${BRAND.colorDark} !important; box-shadow: 0 8px 20px ${BRAND.color}60 !important; transform: translateY(-1px); }
   </style>
 </head>
 <body style="background-color: ${BRAND.bgDark}; margin: 0; padding: 0; width: 100%;">
   ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">${preheader}</div>` : ''}
   
-  <!-- Container -->
   <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.bgDark};">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
+      <td align="center" style="padding: 60px 20px;">
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px;">
           
           <!-- Logo Header -->
           <tr>
-            <td align="center" style="padding-bottom: 32px;">
-              <a href="https://wholescaleos.com" style="text-decoration: none;">
-                <table cellpadding="0" cellspacing="0" border="0" style="display: inline-block;">
-                  <tr>
-                    <td style="vertical-align: middle;">
-                      <img src="${BRAND.logo}" alt="${BRAND.name} Logo" width="48" height="48" style="display: block; border-radius: 12px; border: 0;" />
-                    </td>
-                    <td style="padding-left: 14px; vertical-align: middle; text-align: left;">
-                      <span style="font-size: 22px; font-weight: 900; color: ${BRAND.textWhite}; letter-spacing: -1px; font-style: italic; text-transform: uppercase;">WholeScale</span>
-                      <br/>
-                      <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 4px; color: ${BRAND.color}; font-weight: 900;">OS</span>
-                    </td>
-                  </tr>
-                </table>
-              </a>
+            <td align="center" style="padding-bottom: 40px;">
+              <table cellpadding="0" cellspacing="0" border="0" style="display: inline-block;">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <div style="width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, ${BRAND.color}, #818cf8); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                       <img src="${BRAND.logo}" alt="" width="32" height="32" style="display: block; border: 0;" />
+                    </div>
+                  </td>
+                  <td style="padding-left: 18px; vertical-align: middle; text-align: left;">
+                    <span style="font-size: 26px; font-weight: 900; color: ${BRAND.textWhite}; letter-spacing: -1px; font-style: italic; text-transform: uppercase;">WholeScale</span>
+                    <br/>
+                    <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 5px; color: ${BRAND.color}; font-weight: 900; margin-top: -4px; display: block;">OS</span>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           
           <!-- Body Card -->
           <tr>
-            <td style="background-color: ${BRAND.bgCard}; border-radius: 20px; border: 1px solid #334155; padding: 40px 36px;">
+            <td style="background-color: ${BRAND.bgCard}; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); padding: 50px 48px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
               ${body}
             </td>
           </tr>
           
           <!-- Footer -->
           <tr>
-            <td align="center" style="padding-top: 32px;">
-              <p style="font-size: 12px; color: #475569; line-height: 1.6;">
-                © ${BRAND.year} ${BRAND.name}. All rights reserved.<br/>
-                <a href="#" style="color: #64748b; text-decoration: underline;">Unsubscribe</a> · 
-                <a href="#" style="color: #64748b; text-decoration: underline;">Preferences</a>
+            <td align="center" style="padding-top: 40px;">
+              <p style="font-size: 13px; color: #475569; line-height: 1.8; font-weight: 500;">
+                © ${BRAND.year} <span style="color: ${BRAND.textLight}">${BRAND.name}</span>. All rights reserved.<br/>
+                <a href="https://wholescaleos.com/privacy" style="color: #64748b; text-decoration: none;">Privacy Policy</a> · 
+                <a href="https://wholescaleos.com/terms" style="color: #64748b; text-decoration: none;">Terms of Service</a>
               </p>
             </td>
           </tr>

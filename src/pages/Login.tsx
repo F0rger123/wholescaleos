@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff, ExternalLink, Copy, Check, Users, Database } from 'lucide-react';
+import { Building2, Eye, EyeOff, ArrowRight, Mail, Lock, User, AlertCircle, CheckCircle2, Loader2, ExternalLink, Users } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -41,9 +41,10 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
   const [showDbSetup, setShowDbSetup] = useState(false);
   const [showEmailFix, setShowEmailFix] = useState(false);
   const [sqlCopied, setSqlCopied] = useState(false);
-  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState('');
   const [partialUser, setPartialUser] = useState<any>(null);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [codeType, setCodeType] = useState<'referral' | 'team' | 'promo'>('referral');
 
   const [form, setForm] = useState({
     name: '',
@@ -52,6 +53,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
     confirmPassword: '',
     inviteCode: '',
     referralCode: '',
+    promoCode: '',
   });
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -343,8 +345,6 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
 
     try {
       await navigator.clipboard.writeText(sql);
-      setSqlCopied(true);
-      setTimeout(() => setSqlCopied(false), 3000);
     } catch {
       // Fallback
       const ta = document.createElement('textarea');
@@ -353,9 +353,9 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
-      setSqlCopied(true);
-      setTimeout(() => setSqlCopied(false), 3000);
     }
+    setSqlCopied(true);
+    setTimeout(() => setSqlCopied(false), 3000);
   };
 
   // Helper: join a team by invite code in Supabase
@@ -749,7 +749,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           return;
         } else {
           // Forgot password
-          const resetRedirect = window.location.origin + '/auth/callback'; // Use AuthCallback helper
+          const resetRedirect = 'https://wholescaleos.com/auth/callback'; // Hardcode production domain as requested
           console.log('[Auth] Password reset process started:', {
             email: form.email,
             redirect: resetRedirect,
@@ -874,13 +874,6 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
         </div>
 
         <div className="relative">
-          <div className="flex items-center gap-2 mb-2">
-            {isSupabaseConfigured ? (
-              <><Wifi size={12} style={{ color: 'var(--t-success)' }} /><span className="text-xs" style={{ color: 'var(--t-success)' }}>Connected to Supabase</span></>
-            ) : (
-              <><WifiOff size={12} style={{ color: 'var(--t-warning)' }} /><span className="text-xs" style={{ color: 'var(--t-warning)' }}>Demo Mode</span></>
-            )}
-          </div>
           <p className="text-xs opacity-40" style={{ color: 'var(--t-text)' }}>© 2026 WholeScale OS. All rights reserved.</p>
         </div>
       </div>
@@ -926,72 +919,6 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                 : 'Requesting emergency recovery credentials.'}
             </p>
           </div>
-
-          {/* ═══ DATABASE SETUP ERROR ═══ */}
-          {showDbSetup && (
-            <div className="mb-6 p-4 rounded-2xl border" style={{ 
-              backgroundColor: 'var(--t-warning-dim)',
-              borderColor: 'var(--t-warning-border)'
-            }}>
-              <div className="flex items-center gap-2 mb-3">
-                <Database size={18} style={{ color: 'var(--t-warning)' }} />
-                <h3 className="text-sm font-bold" style={{ color: 'var(--t-warning)' }}>Database Setup Required</h3>
-              </div>
-              <p className="text-xs mb-4" style={{ color: 'color-mix(in srgb, var(--t-warning) 80%, black)' }}>
-                Your Supabase project is connected but has no tables yet. Follow these 3 steps:
-              </p>
-
-              <div className="space-y-3">
-                {/* Step 1 */}
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)', color: 'var(--t-warning)' }}
-                  >1</span>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium" style={{ color: 'var(--t-text)' }}>Open Supabase SQL Editor</p>
-                    <a
-                      href="https://supabase.com/dashboard/project/jdneeubmkgefhrfcurji/sql/new"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs hover:opacity-80 mt-1"
-                      style={{ color: 'var(--t-primary)' }}
-                    >
-                      Open SQL Editor <ExternalLink size={10} />
-                    </a>
-                  </div>
-                </div>
-
-                {/* Step 2 */}
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: 'var(--t-warning-dim)', color: 'var(--t-warning)' }}>2</span>
-                  <div className="flex-1">
-                    <p className="text-xs text-white font-medium mb-1.5">Copy & paste this SQL, then click "Run"</p>
-                    <button
-                      onClick={copySqlUrl}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-white transition-colors"
-                      style={{ background: 'var(--t-primary)' }}
-                    >
-                      {sqlCopied ? <><Check size={12} />Copied!</> : <><Copy size={12} />Copy Setup SQL</>}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Step 3 */}
-                <div className="flex items-start gap-3">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: 'var(--t-warning-dim)', color: 'var(--t-warning)' }}>3</span>
-                  <div className="flex-1">
-                    <p className="text-xs text-white font-medium">Come back here and sign up again!</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t" style={{ borderColor: 'color-mix(in srgb, var(--t-warning) 20%, transparent)' }}>
-                <p className="text-[10px]" style={{ color: 'color-mix(in srgb, var(--t-warning) 50%, black)' }}>
-                  💡 The SQL creates all tables, triggers, security policies, and a default team for you automatically.
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* ═══ EMAIL FIX INSTRUCTIONS ═══ */}
           {showEmailFix && (
@@ -1136,44 +1063,103 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name (signup only) */}
             {mode === 'signup' && (
-              <div>
-                <label className="text-xs mb-1.5 block font-bold tracking-tight text-slate-500 uppercase">Full Name</label>
-                <div className="relative group">
-                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-indigo-400 transition-colors" style={{ color: 'var(--t-text-muted)' }} />
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                    placeholder="Enter your name"
-                    className={inputClass}
-                    style={inputStyle}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2 mt-4">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Revenue Share Code (Optional)</label>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs mb-1.5 block font-bold tracking-tight text-slate-400 uppercase">Full Name</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors">
-                      <Users size={16} />
-                    </div>
+                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-indigo-400 transition-colors" style={{ color: 'var(--t-text-muted)' }} />
                     <input
-                      type="text"
-                      placeholder="e.g. AGENT-X"
-                      value={form.referralCode}
-                      onChange={(e) => setForm({ ...form, referralCode: e.target.value })}
+                      value={form.name}
+                      onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                      placeholder="Enter your name"
                       className={inputClass}
                       style={inputStyle}
                       disabled={loading}
+                      required
                     />
                   </div>
+                  {fieldErrors.name && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.name}</p>}
                 </div>
-                {fieldErrors.name && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.name}</p>}
+
+                {/* Code Type Selector */}
+                <div className="flex p-1 bg-white/[0.03] rounded-2xl border border-white/5 backdrop-blur-sm">
+                  {(['referral', 'team', 'promo'] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setCodeType(type)}
+                      className={`flex-1 py-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl transition-all ${
+                        codeType === type 
+                          ? 'bg-indigo-500/20 text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.15)] border border-indigo-500/20' 
+                          : 'text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      {type === 'referral' ? 'Revenue' : type === 'team' ? 'Invite' : 'Promo'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  {codeType === 'referral' && (
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5 block">Revenue Share Code</label>
+                      <div className="relative group">
+                        <Users size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                        <input
+                          type="text"
+                          placeholder="AGENT-X"
+                          value={form.referralCode}
+                          onChange={(e) => setForm({ ...form, referralCode: e.target.value.toUpperCase() })}
+                          className={inputClass}
+                          style={inputStyle}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {codeType === 'team' && (
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5 block">Team Invite Code</label>
+                      <div className="relative group">
+                        <Building2 size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                        <input
+                          type="text"
+                          placeholder="WS-XXXXXX"
+                          value={form.inviteCode}
+                          onChange={(e) => setForm({ ...form, inviteCode: e.target.value.toUpperCase() })}
+                          className={inputClass}
+                          style={inputStyle}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {codeType === 'promo' && (
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1 mb-1.5 block">Promo Code</label>
+                      <div className="relative group">
+                        <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+                        <input
+                          type="text"
+                          placeholder="SAVE50"
+                          value={form.promoCode}
+                          onChange={(e) => setForm({ ...form, promoCode: e.target.value.toUpperCase() })}
+                          className={inputClass}
+                          style={inputStyle}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Email */}
             <div>
-              <label className="text-xs mb-1.5 block font-bold tracking-tight text-slate-500 uppercase">Email Address</label>
+              <label className="text-xs mb-1.5 block font-bold tracking-tight text-slate-400 uppercase">Email Address</label>
               <div className="relative group">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 group-focus-within:text-indigo-400 transition-colors" style={{ color: 'var(--t-text-muted)' }} />
                 <input
@@ -1184,6 +1170,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                   className={inputClass}
                   style={inputStyle}
                   disabled={loading}
+                  required
                 />
               </div>
               {fieldErrors.email && <p className="text-xs mt-1" style={{ color: 'var(--t-error)' }}>{fieldErrors.email}</p>}
@@ -1192,7 +1179,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
             {/* Password */}
             {mode !== 'forgot' && (
               <div>
-                <label className="text-xs mb-1.5 block font-bold tracking-tight text-slate-500 uppercase">
+                <label className="text-xs mb-1.5 block font-bold tracking-tight text-slate-400 uppercase">
                   {mode === 'reset' ? 'New Secure Password' : 'Password'}
                 </label>
                 <div className="relative group">
@@ -1205,6 +1192,7 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
                     className={`${inputClass} pr-12`}
                     style={inputStyle}
                     disabled={loading}
+                    required
                   />
                   <button
                     type="button"
@@ -1239,30 +1227,6 @@ DO $$ BEGIN ALTER PUBLICATION supabase_realtime ADD TABLE tasks; EXCEPTION WHEN 
               </div>
             )}
 
-            {/* Invite code (signup) */}
-            {mode === 'signup' && (
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Team Invite Code <span style={{ color: 'var(--t-text-muted)' }}>(optional — join an existing team)</span></label>
-                <input
-                  value={form.inviteCode}
-                  onChange={(e) => setForm(f => ({ ...f, inviteCode: e.target.value.toUpperCase() }))}
-                  placeholder="WS-XXXXXX"
-                  className="w-full px-4 py-3 text-sm rounded-xl focus:outline-none focus:ring-2 font-mono tracking-wider"
-                  style={{ 
-                    backgroundColor: 'var(--t-surface)',
-                    border: '1px solid var(--t-border)',
-                    color: 'var(--t-text)',
-                    '--tw-ring-color': 'var(--t-primary-dim)' 
-                  } as any}
-                  disabled={loading}
-                />
-                {form.inviteCode.trim() && (
-                  <p className="text-[11px] mt-1" style={{ color: 'var(--t-primary)' }}>
-                    ✨ You'll be added to the team after creating your account
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Forgot password link */}
             {mode === 'login' && (

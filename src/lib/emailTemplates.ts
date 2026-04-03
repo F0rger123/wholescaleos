@@ -328,5 +328,58 @@ Would you like to be added to the inner circle?
 Best,
 {{sender_name}}`,
     category: 'marketing'
+  },
+  {
+    id: 'price-reduction-update',
+    name: 'Price Reduction Update',
+    subject: 'Update: New Price for {{address}}',
+    content: `Hi {{name}},
+
+I wanted to give you a quick update on {{address}}. We've decided to adjust the price to {{new_price}} to attract more immediate interest from our cash buyer network.
+
+At this new price point, the ROI jumps to {{projected_roi}}%. 
+
+Are you interested in re-evaluating this deal with the new numbers?
+
+Best,
+{{sender_name}}`,
+    category: 'sales'
+  },
+  {
+    id: 'under-contract-notice',
+    name: 'Under Contract Update',
+    subject: 'Good News! {{address}} is Under Contract',
+    content: `Hi {{name}},
+
+I'm excited to let you know that we are officially under contract for {{address}}!
+
+The inspection is scheduled for {{inspection_date}} and we are on track for a target closing date of {{closing_date}}.
+
+I'll keep you posted as we move through the title and escrow process.
+
+Best,
+{{sender_name}}`,
+    category: 'support'
+  },
+  {
+    id: 'closing-day-logistics',
+    name: 'Closing Day Logistics',
+    subject: 'Final Steps: Closing Day for {{address}}',
+    content: `Hi {{name}},
+
+It's almost time! We are scheduled to close on {{address}} tomorrow at {{closing_time}}.
+
+Please remember to:
+1. Bring a valid government-issued ID.
+2. Ensure your wire transfer has been initiated (if applicable).
+3. Bring any keys or garage openers for the property.
+
+The signing will take place at {{title_company_address}}.
+
+See you there!
+
+Best,
+{{sender_name}}`,
+    category: 'legal'
   }
 ];

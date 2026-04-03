@@ -115,6 +115,19 @@ function Calendar() {
   const [showCalendarSelector, setShowCalendarSelector] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Immediate Google OAuth state refresh
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('refresh') === 'google' || params.get('code')) {
+      checkGoogleConnection();
+      loadAllEvents();
+      // Clean up the URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState('month');
@@ -951,11 +964,14 @@ function Calendar() {
               });
               setShowForm(true);
             }}
-            className="px-6 py-2 rounded-xl text-white font-black uppercase tracking-widest italic shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
-            style={{ background: 'linear-gradient(135deg, var(--t-primary), #818cf8)' }}
+            className="px-6 py-2.5 rounded-xl text-white font-black uppercase tracking-widest italic shadow-[0_0_20px_rgba(var(--t-primary-rgb),0.3)] hover:shadow-[0_0_30px_rgba(var(--t-primary-rgb),0.5)] transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 group"
+            style={{ 
+              background: 'linear-gradient(135deg, var(--t-primary), #818cf8)',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}
           >
-            <span className="text-xl leading-none">+</span>
-            <span>New</span>
+            <span className="text-xl leading-none group-hover:rotate-90 transition-transform duration-300">+</span>
+            <span>New Event</span>
           </button>
 
           {/* Notifications Toggle */}
@@ -1209,7 +1225,7 @@ function Calendar() {
       {/* Event Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[200] animate-in fade-in duration-300">
-          <div className="astral-glass rounded-3xl p-8 max-w-lg w-full border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300">
+          <div className="astral-glass rounded-3xl p-6 max-w-md w-full border border-white/10 shadow-2xl animate-in zoom-in-95 duration-300 overflow-y-auto max-h-[90vh]">
             <h2 className="text-xl font-semibold mb-4 text-[var(--t-text)] dark:text-white">
               {editingEvent ? 'Edit Event' : 'Create Event'}
             </h2>

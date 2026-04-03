@@ -36,7 +36,7 @@ import LeadManagement from './pages/LeadManagement';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminPromos from './pages/AdminPromos';
-import { CursorEffects } from './components/CursorEffects';
+
 import { MarketingLayout } from './components/MarketingLayout';
 import { DeepSpaceLoader } from './components/DeepSpaceLoader';
 import Home from './pages/marketing/Home';
@@ -284,7 +284,7 @@ export function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <CursorEffects />
+
       <Routes>
         {/* Marketing Site */}
         <Route element={<MarketingLayout />}>
