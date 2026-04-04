@@ -15,6 +15,7 @@ import { parseIntent } from '../lib/ai/intent-parser';
 import { actionHandlers } from '../lib/ai/action-handlers';
 import { formatTemplate } from '../lib/ai/template-engine';
 import { UserLearningManager } from '../lib/ai/user-learning';
+import { voiceService } from '../lib/voice-service';
 
 interface ChatMessage {
   id: string;
@@ -42,9 +43,7 @@ export function AIBotWidget() {
     aiName, aiModel, setAiModel, isAiDocked, setAiDocked,
     sidebarOpen
   } = useStore();
-  const [speechEnabled, setSpeechEnabled] = useState(() => {
-    return localStorage.getItem('ai_speech_enabled') !== 'false';
-  });
+  const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -58,7 +57,6 @@ export function AIBotWidget() {
   const [isDragging, setIsDragging] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [bars, setBars] = useState<number[]>(new Array(20).fill(5));
-  const recognitionRef = useRef<any>(null);
 
   // Simulate voice bars animation
   useEffect(() => {
@@ -231,68 +229,50 @@ export function AIBotWidget() {
     };
   }, []);
 
-  // Initialize Speech Recognition
+  // Initialize Voice Service Callbacks
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-
-      recognitionRef.current.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        setPrompt(prev => prev + transcript);
-      };
-
-      recognitionRef.current.onerror = () => setIsRecording(false);
-      recognitionRef.current.onend = () => setIsRecording(false);
-    }
+    voiceService.setCallbacks(
+      (transcript) => setPrompt(prev => prev + transcript),
+      // Auto submit when recording stops and prompt is not empty
+      (isRec) => {
+         setIsRecording(isRec);
+      },
+      (err) => {
+         console.warn(err);
+         // setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: err, timestamp: new Date().toISOString() }]);
+      }
+    );
   }, []);
 
-  const toggleRecording = () => {
-    if (!recognitionRef.current) return;
-    if (isRecording) {
-      recognitionRef.current.stop();
-    } else {
-      recognitionRef.current.start();
-      setIsRecording(true);
+  // Use a ref for the prompt so we can submit it inside an effect without staleness
+  const promptRef = useRef(prompt);
+  useEffect(() => {
+    promptRef.current = prompt;
+  }, [prompt]);
+
+  // Handle auto-submit on recording end
+  useEffect(() => {
+    if (!isRecording && promptRef.current.trim().length > 0 && !loading) {
+      // Simulate form submit
+      const dummyEvent = { preventDefault: () => {} } as React.FormEvent;
+      handleSubmit(dummyEvent);
     }
+  }, [isRecording]);
+
+  const toggleRecording = () => {
+    voiceService.toggleListening();
   };
 
   const speak = (text: string) => {
-    if (!speechEnabled || !window.speechSynthesis) return;
-
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    
-    // Try to find a good premium-sounding voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => 
-      (v.name.includes('Google') || v.name.includes('Premium') || v.name.includes('Natural')) && 
-      v.lang.startsWith('en')
-    ) || voices.find(v => v.lang.startsWith('en'));
-
-    if (preferredVoice) utterance.voice = preferredVoice;
-    
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-
-    window.speechSynthesis.speak(utterance);
+    voiceService.speak(
+      text,
+      () => setIsSpeaking(true),
+      () => setIsSpeaking(false)
+    );
   };
 
   useEffect(() => {
-    localStorage.setItem('ai_speech_enabled', speechEnabled.toString());
-    if (!speechEnabled) window.speechSynthesis.cancel();
+    voiceService.toggleMute(!speechEnabled);
   }, [speechEnabled]);
 
   useEffect(() => {

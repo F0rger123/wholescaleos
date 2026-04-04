@@ -2,6 +2,7 @@ import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '
 import type { Lead } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { sendSMS } from './sms-service';
+import { detectIntent, executeTask, generateResponse } from './local-ai';
 
 export interface GeminiResponse {
   intent: string;
@@ -498,7 +499,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
 
   
-  let provider: 'gemini'|'openai'|'anthropic' = 'gemini';
+  let provider: 'gemini'|'openai'|'anthropic'|'local' = 'gemini';
   let apiKey = '';
   let model = modelOverride || '';
 
@@ -533,31 +534,53 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       
       if (provider === 'gemini') {
         apiKey = localStorage.getItem('user_gemini_api_key') || '';
-        if (!model || !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+        if (!model || !model.startsWith('gemini')) model = 'gemini-3.1-flash-lite';
       } else if (provider === 'openai') {
         apiKey = localStorage.getItem('user_openai_api_key') || '';
         if (!model || !model.startsWith('gpt')) model = 'gpt-4o';
       } else if (provider === 'anthropic') {
         apiKey = localStorage.getItem('user_anthropic_api_key') || '';
         if (!model || !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
+      } else if (provider === 'local') {
+        apiKey = 'local';
+        model = 'local-engine';
       }
     } else {
       // Even if we have a key (from Supabase), validate the model-provider combo
-      if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+      if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-3.1-flash-lite';
       if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
       if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
     }
   }
 
   // CRITICAL: Final safeguard against model name mismatch in URL construction
-  if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+  if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-3.1-flash-lite';
   if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
   if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
 
-  if (!apiKey) {
+  if (!apiKey && provider !== 'local') {
     return {
       intent: 'redirect_setup',
       response: `Your AI provider (${provider}) API key is missing. Please configure it in the AI Settings page.`
+    };
+  }
+
+  // 1.5 - Intercept Local Provider
+  if (provider === 'local') {
+    const intentResult = detectIntent(prompt);
+    let executionResult;
+    
+    // Only execute if intent confidence is high enough
+    if (intentResult.confidence > 0.4) {
+      executionResult = await executeTask(intentResult);
+    }
+
+    const textResponse = generateResponse(intentResult, executionResult);
+    
+    return {
+      intent: intentResult.intent,
+      response: textResponse,
+      data: intentResult.data || executionResult?.data || null
     };
   }
 
@@ -801,7 +824,7 @@ Time: ${context.currentTime || new Date().toISOString()}`;
     if (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('invalid model')) {
       if (!modelOverride) { // Avoid infinite loops
         console.warn(`Model ${model} not found for ${provider}. Retrying with default...`);
-        const fallbackModel = provider === 'gemini' ? 'gemini-2.0-flash' : 
+        const fallbackModel = provider === 'gemini' ? 'gemini-3.1-flash-lite' : 
                             provider === 'openai' ? 'gpt-4o-mini' : 
                             'claude-3-5-sonnet-latest';
         return processPrompt(prompt, context, fallbackModel, signal);

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Bot, Database, Mic, User, Target, Save, Loader2, Sparkles, BrainCircuit, Headphones, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Database, Mic, User, Target, Save, Loader2, Sparkles, BrainCircuit, Headphones, Plus, Trash2 } from 'lucide-react';
+import { TrainingManager, LocalTrainingRule, LOCAL_INTENTS } from '../lib/local-ai';
 
 const AITrainingStudio: React.FC = () => {
   const [activeSection, setActiveSection] = useState('model');
@@ -13,6 +14,27 @@ const AITrainingStudio: React.FC = () => {
     { id: 'personality', label: 'Personality', icon: User, desc: 'Define tone, behavior, and constraints' },
     { id: 'scoring', label: 'Smart Lead Scoring', icon: Target, desc: 'Train the deal scoring algorithm' }
   ];
+
+  const [rules, setRules] = useState<LocalTrainingRule[]>([]);
+  const [newTrigger, setNewTrigger] = useState('');
+  const [newAction, setNewAction] = useState(LOCAL_INTENTS[0] || 'general_response');
+
+  useEffect(() => {
+    setRules(TrainingManager.getRules());
+    const handleUpdate = () => setRules(TrainingManager.getRules());
+    window.addEventListener('ai-settings-updated', handleUpdate);
+    return () => window.removeEventListener('ai-settings-updated', handleUpdate);
+  }, []);
+
+  const handleAddRule = () => {
+    if (!newTrigger.trim() || !newAction.trim()) return;
+    TrainingManager.addRule(newTrigger, newAction);
+    setNewTrigger('');
+  };
+
+  const handleDeleteRule = (id: string) => {
+    TrainingManager.deleteRule(id);
+  };
 
   const handleSave = () => {
     setSaving(true);
@@ -99,15 +121,69 @@ const AITrainingStudio: React.FC = () => {
              {activeSection === 'data' && (
                 <div className="space-y-8 reveal">
                   <div className="flex items-center gap-2 text-[10px] uppercase font-black tracking-[0.4em] text-indigo-400">
-                    <Database size={12} /> Data Ingestion
+                    <Database size={12} /> Local Intention Engine
                   </div>
-                  <h2 className="text-3xl font-black italic tracking-tighter">Fine-Tuning Datasets</h2>
-                  <div className="border-2 border-dashed border-[var(--t-border)] rounded-3xl p-12 text-center space-y-4 hover:border-indigo-500/50 transition-all cursor-pointer">
-                    <Upload size={48} className="mx-auto text-[var(--t-text-muted)]" />
-                    <div>
-                      <p className="font-bold">Drop training logs here</p>
-                      <p className="text-sm text-[var(--t-text-muted)]">Upload .csv, .json, or .txt exported from your CRM</p>
+                  <h2 className="text-3xl font-black italic tracking-tighter">Custom Triggers</h2>
+                  
+                  <div className="bg-black/20 border border-[var(--t-border)] p-6 rounded-3xl space-y-4">
+                    <h3 className="font-bold text-white flex items-center gap-2">Add New Rule</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="text-xs text-[var(--t-text-muted)] mb-1 block">When user says (trigger phrase)</label>
+                        <input
+                          type="text"
+                          value={newTrigger}
+                          onChange={e => setNewTrigger(e.target.value)}
+                          placeholder="e.g. text seller"
+                          className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all text-sm"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-xs text-[var(--t-text-muted)] mb-1 block">Map to Action (Intent)</label>
+                        <select
+                          value={newAction}
+                          onChange={e => setNewAction(e.target.value)}
+                          className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all text-sm"
+                        >
+                          {LOCAL_INTENTS.map(intent => (
+                            <option key={intent} value={intent}>{intent.replace('_', ' ').toUpperCase()}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="md:col-span-1 flex items-end">
+                        <button
+                          onClick={handleAddRule}
+                          disabled={!newTrigger.trim()}
+                          className="w-full h-[46px] rounded-xl bg-indigo-500 text-white font-bold flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all disabled:opacity-50"
+                        >
+                          <Plus size={18} /> Add
+                        </button>
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h3 className="font-bold text-[var(--t-text-muted)]">Active Training Rules ({rules.length})</h3>
+                    {rules.length === 0 ? (
+                      <div className="text-center py-8 text-[var(--t-text-muted)] text-sm italic border border-dashed border-[var(--t-border)] rounded-2xl">
+                        No custom rules configured yet.
+                      </div>
+                    ) : (
+                      rules.map(r => (
+                        <div key={r.id} className="flex items-center justify-between p-4 rounded-2xl border border-[var(--t-border)] bg-[var(--t-surface-dim)] group">
+                          <div className="flex flex-col">
+                            <span className="font-mono text-sm text-indigo-400">"{r.trigger}"</span>
+                            <span className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-wider mt-1">maps to &rarr; {r.action}</span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteRule(r.id)}
+                            className="p-2 text-[var(--t-text-muted)] hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
              )}

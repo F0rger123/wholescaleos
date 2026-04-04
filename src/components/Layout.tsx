@@ -171,8 +171,12 @@ export function Layout() {
 
   // Sync Quick Notes Setting to Visibility
   useEffect(() => {
-    if (showQuickNotes) {
+    // Only open if setting is enabled
+    if (showQuickNotes === true) {
       setQuickNotesOpen(true);
+    } else {
+      // Hide if setting is disabled
+      setQuickNotesOpen(false);
     }
   }, [showQuickNotes]);
 
@@ -634,13 +638,19 @@ export function Layout() {
 
       {isQuickNotesOpen && !notesDocked && (
         <div 
-          className={`fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-2xl flex flex-col max-w-[500px] max-h-[80vh] ${
-            isQuickNotesCollapsed ? 'h-14' : (
+          className={`fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-2xl flex flex-col ${
+            isQuickNotesCollapsed ? 'h-14 w-[300px]' : (
               quickNotesSize === 'small' ? 'w-[350px] h-[400px]' : 
               quickNotesSize === 'large' ? 'w-[500px] h-[80vh]' : 
               'w-[450px] h-[550px]'
             )
-          } ${isQuickNotesCollapsed ? 'w-[300px]' : ''}`}
+          }`}
+          style={{ 
+            maxWidth: '500px', 
+            maxHeight: '80vh',
+            width: isQuickNotesCollapsed ? '300px' : (quickNotesSize === 'small' ? '350px' : quickNotesSize === 'large' ? '500px' : '450px'),
+            height: isQuickNotesCollapsed ? '56px' : (quickNotesSize === 'small' ? '400px' : quickNotesSize === 'large' ? '80vh' : '550px')
+          }}
         >
           <div className="w-full h-full bg-black/80 backdrop-blur-3xl overflow-hidden flex flex-col border border-white/10 rounded-3xl">
             <div className={`bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shrink-0`}>
