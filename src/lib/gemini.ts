@@ -534,7 +534,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       
       if (provider === 'gemini') {
         apiKey = localStorage.getItem('user_gemini_api_key') || '';
-        if (!model || !model.startsWith('gemini')) model = 'gemini-3.1-flash-lite';
+        if (!model || !model.startsWith('gemini')) model = 'gemini-2.0-flash';
       } else if (provider === 'openai') {
         apiKey = localStorage.getItem('user_openai_api_key') || '';
         if (!model || !model.startsWith('gpt')) model = 'gpt-4o';
@@ -547,14 +547,14 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       }
     } else {
       // Even if we have a key (from Supabase), validate the model-provider combo
-      if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-3.1-flash-lite';
+      if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
       if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
       if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
     }
   }
 
   // CRITICAL: Final safeguard against model name mismatch in URL construction
-  if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-3.1-flash-lite';
+  if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
   if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
   if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
 
@@ -820,14 +820,14 @@ Time: ${context.currentTime || new Date().toISOString()}`;
   } catch (error: any) {
     clearTimeout(timeoutId);
     
-    // SMART FALLBACK: If model is not found, retry with a core model
-    if (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('invalid model')) {
-      if (!modelOverride) { // Avoid infinite loops
-        console.warn(`Model ${model} not found for ${provider}. Retrying with default...`);
-        const fallbackModel = provider === 'gemini' ? 'gemini-3.1-flash-lite' : 
-                            provider === 'openai' ? 'gpt-4o-mini' : 
-                            'claude-3-5-sonnet-latest';
-        return processPrompt(prompt, context, fallbackModel, signal);
+    // SMART FALLBACK: If model is not found, retry with a cascade of valid models
+    if (error.message?.toLowerCase().includes('not found') || error.message?.toLowerCase().includes('invalid model') || error.message?.toLowerCase().includes('404') || error.message?.toLowerCase().includes('not supported')) {
+      const geminiFallbackChain = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+      const nextFallback = geminiFallbackChain.find(m => m !== model);
+      
+      if (nextFallback && (!modelOverride || modelOverride !== nextFallback)) {
+        console.warn(`Model ${model} not found for ${provider}. Retrying with ${nextFallback}...`);
+        return processPrompt(prompt, context, nextFallback, signal);
       }
     }
 

@@ -15,8 +15,7 @@ import {
   Bot, Smartphone, StickyNote, Minimize2,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, Download, UserCog, Map,
-  Building2, ChevronDown, ArrowRightLeft, Plus, X,
-  Maximize2, Minus, ChevronUp
+  Building2, ChevronDown, ArrowRightLeft, Plus, X
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { LeadFormModal } from './LeadFormModal';
@@ -45,9 +44,7 @@ export function Layout() {
     activeLeadModalId,
     setActiveLeadModalId,
     undo, redo, history, future,
-    manualSave, saveStatus, isSyncing,
-    quickNotesSize, setQuickNotesSize,
-    isQuickNotesCollapsed, setIsQuickNotesCollapsed
+    manualSave, saveStatus, isSyncing
   } = useStore();
 
   // Auto-save loop (every 5 minutes)
@@ -115,6 +112,14 @@ export function Layout() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  // Quick Notes drag state
+  const [notesPos, setNotesPos] = useState(() => {
+    const saved = localStorage.getItem('quick_notes_position');
+    return saved ? JSON.parse(saved) : { x: -1, y: -1 };
+  });
+  const [isNotesDragging, setIsNotesDragging] = useState(false);
+  const notesDragStart = useRef({ x: 0, y: 0, posX: 0, posY: 0 });
+
   // Load Preferences
   useEffect(() => {
     async function loadPrefs() {
@@ -179,6 +184,44 @@ export function Layout() {
       setQuickNotesOpen(false);
     }
   }, [showQuickNotes]);
+
+  // Quick Notes drag handler
+  const startNotesDrag = (e: React.MouseEvent) => {
+    // Only drag from the header bar, not buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+    setIsNotesDragging(true);
+    const curX = notesPos.x === -1 ? window.innerWidth / 2 - 225 : notesPos.x;
+    const curY = notesPos.y === -1 ? window.innerHeight / 2 - 275 : notesPos.y;
+    notesDragStart.current = { x: e.clientX, y: e.clientY, posX: curX, posY: curY };
+  };
+
+  useEffect(() => {
+    if (!isNotesDragging) return;
+    const onMouseMove = (e: MouseEvent) => {
+      const newX = notesDragStart.current.posX + (e.clientX - notesDragStart.current.x);
+      const newY = notesDragStart.current.posY + (e.clientY - notesDragStart.current.y);
+      setNotesPos({
+        x: Math.max(0, Math.min(window.innerWidth - 460, newX)),
+        y: Math.max(0, Math.min(window.innerHeight - 560, newY))
+      });
+    };
+    const onMouseUp = () => {
+      setIsNotesDragging(false);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isNotesDragging]);
+
+  // Persist notes position
+  useEffect(() => {
+    if (!isNotesDragging && notesPos.x !== -1) {
+      localStorage.setItem('quick_notes_position', JSON.stringify(notesPos));
+    }
+  }, [isNotesDragging, notesPos]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -571,15 +614,25 @@ export function Layout() {
 
               <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5" />
 
-              {/* Notes Toggle Button */}
+              {/* Notes Toggle Button — mirrors OS Bot: open → dock, closed → open */}
               <button
-                onClick={() => setQuickNotesOpen(!isQuickNotesOpen)}
+                onClick={() => {
+                  if (isQuickNotesOpen) {
+                    setNotesDocked(true);
+                    setQuickNotesOpen(false);
+                  } else if (notesDocked) {
+                    setNotesDocked(false);
+                    setQuickNotesOpen(true);
+                  } else {
+                    setQuickNotesOpen(true);
+                  }
+                }}
                 className={`p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 ${
                   isQuickNotesOpen 
                     ? 'bg-[var(--t-primary-dim)] text-[var(--t-primary)] shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.3)] ring-1 ring-[var(--t-primary)]/30' 
                     : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
                 }`}
-                title={`${isQuickNotesOpen ? 'Close' : 'Open'} Quick Notes`}
+                title={`${isQuickNotesOpen ? 'Dock' : 'Open'} Quick Notes`}
               >
                 <StickyNote size={18} />
               </button>
@@ -638,56 +691,26 @@ export function Layout() {
 
       {isQuickNotesOpen && !notesDocked && (
         <div 
-          className={`fixed transform transition-all duration-500 z-[150] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 shadow-2xl flex flex-col ${
-            isQuickNotesCollapsed ? 'h-14 w-[300px]' : (
-              quickNotesSize === 'small' ? 'w-[350px] h-[400px]' : 
-              quickNotesSize === 'large' ? 'w-[500px] h-[80vh]' : 
-              'w-[450px] h-[550px]'
-            )
-          }`}
+          className="fixed shadow-2xl flex flex-col w-[450px] h-[550px] z-[150]"
           style={{ 
             maxWidth: '500px', 
             maxHeight: '80vh',
-            width: isQuickNotesCollapsed ? '300px' : (quickNotesSize === 'small' ? '350px' : quickNotesSize === 'large' ? '500px' : '450px'),
-            height: isQuickNotesCollapsed ? '56px' : (quickNotesSize === 'small' ? '400px' : quickNotesSize === 'large' ? '80vh' : '550px')
+            left: notesPos.x === -1 ? '50%' : `${notesPos.x}px`,
+            top: notesPos.y === -1 ? '50%' : `${notesPos.y}px`,
+            transform: notesPos.x === -1 ? 'translate(-50%, -50%)' : 'none',
+            transition: isNotesDragging ? 'none' : 'box-shadow 0.3s ease'
           }}
         >
           <div className="w-full h-full bg-black/80 backdrop-blur-3xl overflow-hidden flex flex-col border border-white/10 rounded-3xl">
-            <div className={`bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shrink-0`}>
+            <div 
+              className="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shrink-0 cursor-move select-none"
+              onMouseDown={startNotesDrag}
+            >
               <div className="flex items-center gap-3">
                 <StickyNote size={18} className="text-purple-400" />
                 <h3 className="text-sm font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>Quick Notes</h3>
               </div>
               <div className="flex items-center gap-1.5">
-                <button 
-                  onClick={() => setIsQuickNotesCollapsed(!isQuickNotesCollapsed)} 
-                  className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
-                  title={isQuickNotesCollapsed ? "Expand" : "Collapse"}
-                >
-                  {isQuickNotesCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                </button>
-                
-                {!isQuickNotesCollapsed && (
-                  <>
-                    <button 
-                      onClick={() => setQuickNotesSize(quickNotesSize === 'large' ? 'medium' : quickNotesSize === 'medium' ? 'small' : 'small')} 
-                      disabled={quickNotesSize === 'small'}
-                      className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors disabled:opacity-20"
-                      title="Smaller"
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <button 
-                      onClick={() => setQuickNotesSize(quickNotesSize === 'small' ? 'medium' : quickNotesSize === 'medium' ? 'large' : 'large')} 
-                      disabled={quickNotesSize === 'large'}
-                      className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors disabled:opacity-20"
-                      title="Bigger"
-                    >
-                      <Maximize2 size={16} />
-                    </button>
-                  </>
-                )}
-
                 <button 
                   onClick={() => setNotesDocked(true)} 
                   className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
@@ -704,17 +727,15 @@ export function Layout() {
                 </button>
               </div>
             </div>
-            {!isQuickNotesCollapsed && (
-              <div className="flex-1 p-6">
-                <textarea 
-                  value={quickNotes} 
-                  onChange={(e) => setQuickNotes(e.target.value)} 
-                  placeholder="Type thoughts..." 
-                  className="w-full h-full bg-transparent border-none focus:outline-none resize-none custom-scrollbar" 
-                  style={{ color: 'var(--t-text)' }} 
-                />
-              </div>
-            )}
+            <div className="flex-1 p-6">
+              <textarea 
+                value={quickNotes} 
+                onChange={(e) => setQuickNotes(e.target.value)} 
+                placeholder="Type thoughts..." 
+                className="w-full h-full bg-transparent border-none focus:outline-none resize-none custom-scrollbar" 
+                style={{ color: 'var(--t-text)' }} 
+              />
+            </div>
           </div>
         </div>
       )}

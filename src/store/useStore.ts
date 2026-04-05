@@ -1810,7 +1810,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   // —— AI State ——————————————————————————————————————————————
   aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
-  aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'gemini-3.1-flash-lite',
+  aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'gemini-2.0-flash',
   aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
   aiUsage: (() => {
     try {

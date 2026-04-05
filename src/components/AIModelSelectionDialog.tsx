@@ -11,7 +11,7 @@ export const AIModelSelectionDialog: React.FC = () => {
   if (!isAiFirstUse) return null;
 
   const handleSave = () => {
-    let model = 'gemini-3.1-flash-lite';
+    let model = 'gemini-2.0-flash';
     if (provider === 'openai') model = 'gpt-4o';
     else if (provider === 'anthropic') model = 'claude-3-5-sonnet-latest';
     else if (provider === 'local') model = 'llama3';

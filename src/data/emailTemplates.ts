@@ -131,5 +131,55 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     body: `Hi {{name}},\n\nAs promised, here is your custom property valuation report for {{address}}. Based on recent comparable sales in {{area}}, your estimated value is in the range of $325k - $350k.\n\nWould you like to discuss the details over a brief call?\n\nBest,\n{{agent_name}}`,
     category: 'Marketing',
     tags: ['valuation']
+  },
+
+  // --- ADVANCED TEMPLATES ---
+  {
+    id: 'agent-expired-listing',
+    name: 'Expired Listing Outreach',
+    subject: 'About your listing at {{address}}',
+    body: `Hi {{name}},\n\nI noticed that your listing at {{address}} recently expired. Selling a home can be frustrating, especially when it doesn't move as quickly as expected.\n\nI specialize in selling homes that other agents couldn't. My approach includes targeted online marketing, off-market buyer networks, and creative pricing strategies.\n\nWould you be open to a no-obligation conversation about a fresh approach?\n\nBest,\n{{agent_name}}`,
+    category: 'Sales',
+    tags: ['expired-listing', 'outreach']
+  },
+  {
+    id: 'agent-pre-foreclosure',
+    name: 'Pre-Foreclosure Outreach',
+    subject: 'Important options for {{address}}',
+    body: `Hi {{name}},\n\nI'm reaching out because I understand the stress that comes with difficult financial situations. If you're exploring your options for {{address}}, I may be able to help.\n\nI've helped many homeowners in {{area}} avoid foreclosure by connecting them with:\n- Quick cash offers (close in 7-14 days)\n- Short sale negotiation with lenders\n- Lease-back arrangements so you can stay in the home\n\nEverything is 100% confidential. Would you like to explore your options?\n\nBest,\n{{agent_name}}`,
+    category: 'Sales',
+    tags: ['pre-foreclosure', 'distressed']
+  },
+  {
+    id: 'agent-fsbo-intro',
+    name: 'FSBO Introduction',
+    subject: 'Saw your For Sale By Owner listing at {{address}}',
+    body: `Hi {{name}},\n\nI saw your FSBO listing for {{address}} and wanted to reach out. I respect the decision to sell on your own — it can definitely save you money.\n\nThat said, I work with a pool of pre-approved buyers actively searching in {{area}}. If you'd be open to a buyer referral arrangement at a reduced commission, it could help you sell faster.\n\nNo pressure at all — just another option on the table.\n\nBest,\n{{agent_name}}`,
+    category: 'Sales',
+    tags: ['fsbo', 'intro']
+  },
+  {
+    id: 'agent-investment-opp',
+    name: 'Investment Opportunity',
+    subject: 'New investment property in {{area}}',
+    body: `Hi {{name}},\n\nI just came across a deal in {{area}} that I think would be perfect for your portfolio:\n\n- Address: {{address}}\n- Estimated ARV: {{price}}\n- Current Condition: Needs light cosmetic rehab\n- Cash Flow Potential: Strong rental demand in this zip code\n\nWant me to send over the full analysis and comps?\n\nBest,\n{{agent_name}}`,
+    category: 'Marketing',
+    tags: ['investor', 'opportunity']
+  },
+  {
+    id: 'agent-holiday-greeting',
+    name: 'Holiday Greeting',
+    subject: 'Happy Holidays from {{agent_name}}!',
+    body: `Hi {{name}},\n\nWishing you and your family a wonderful holiday season! It's been a great year in the {{area}} real estate market, and I'm grateful for the trust you've placed in me.\n\nIf 2025 brings any real estate goals — whether buying, selling, or investing — I'm here to help.\n\nWarm regards,\n{{agent_name}}`,
+    category: 'Marketing',
+    tags: ['holiday', 'seasonal']
+  },
+  {
+    id: 'agent-testimonial-request',
+    name: 'Testimonial Request',
+    subject: 'Would you share your experience?',
+    body: `Hi {{name}},\n\nNow that we've successfully closed on {{address}}, I was hoping you might be willing to share a brief testimonial about your experience.\n\nA few sentences about what stood out to you would go a long way in helping other homeowners feel confident working with me.\n\nHere's a quick link to leave a review: [Google Review Link]\n\nThank you so much!\n\nBest,\n{{agent_name}}`,
+    category: 'Marketing',
+    tags: ['testimonial', 'review']
   }
 ];

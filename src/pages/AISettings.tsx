@@ -12,7 +12,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   const [openaiKey, setOpenaiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
   const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/v1');
-  const [model, setModel] = useState('gemini-3.1-flash-lite');
+  const [model, setModel] = useState('gemini-2.0-flash');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -71,7 +71,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
               if (conn.provider === 'gemini') {
                 setGeminiKey(conn.refresh_token || '');
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
-                  setModel(conn.access_token || 'gemini-3.1-flash-lite');
+                  setModel(conn.access_token || 'gemini-2.0-flash');
                 }
               } else if (conn.provider === 'openai') {
                 setOpenaiKey(conn.refresh_token || '');
@@ -317,7 +317,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             key={p.id}
             onClick={() => {
               setProvider(p.id as any);
-              if (p.id === 'gemini') setModel('gemini-3.1-flash-lite');
+              if (p.id === 'gemini') setModel('gemini-2.0-flash');
               else if (p.id === 'openai') setModel('gpt-4o');
               else if (p.id === 'anthropic') setModel('claude-3-5-sonnet-latest');
               else if (p.id === 'local') setModel('llama3');
@@ -373,7 +373,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred {provider.charAt(0).toUpperCase() + provider.slice(1)} Model</label>
           <div className="grid grid-cols-1 gap-3">
             {provider === 'gemini' && [
-              { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', desc: 'Lightning fast default model.' },
+              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Lightning fast default model.' },
               { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Fast, state-of-the-art performance. Best for most tasks.' },
               { id: 'gemini-2.0-pro-exp-02-05', label: 'Gemini 2.0 Pro Exp', desc: 'Ultra-smart reasoning model for complex deal analysis.' },
               { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Highly capable reasoning model for complex logic.' }

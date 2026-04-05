@@ -89,6 +89,8 @@ export default function AutomationsHub() {
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workflowName, setWorkflowName] = useState('My New Automation');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [createName, setCreateName] = useState('');
+  const [createDesc, setCreateDesc] = useState('');
 
   // Load existing workflow on mount
   useEffect(() => {
@@ -364,6 +366,8 @@ export default function AutomationsHub() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Workflow Name</label>
                   <input 
                     type="text" 
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
                     placeholder="e.g. Lead Follow-up Engine"
                     className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm text-[var(--t-text)] focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
                   />
@@ -371,6 +375,8 @@ export default function AutomationsHub() {
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Description</label>
                   <textarea 
+                    value={createDesc}
+                    onChange={(e) => setCreateDesc(e.target.value)}
                     placeholder="What does this automation do?"
                     rows={3}
                     className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm text-[var(--t-text)] focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 resize-none"
@@ -387,8 +393,20 @@ export default function AutomationsHub() {
                 </button>
                 <button 
                   onClick={() => {
+                    const name = createName.trim() || 'My New Automation';
+                    setWorkflowName(name);
+                    setWorkflowId(null);
+                    setNodes([{
+                      id: '1',
+                      type: 'automation',
+                      position: { x: 250, y: 50 },
+                      data: { label: 'Start Trigger', type: 'trigger', description: createDesc.trim() || 'Configure your workflow starting point.' }
+                    }]);
+                    setEdges([]);
                     setIsCreating(false);
-                    setNodes(initialNodes);
+                    setCreateName('');
+                    setCreateDesc('');
+                    toast.success(`Created new workflow: ${name}`);
                   }}
                   className="flex-1 px-6 py-3 bg-[var(--t-primary)] text-white rounded-2xl font-bold shadow-lg shadow-[var(--t-primary-dim)] hover:scale-[1.02] transition-all"
                 >

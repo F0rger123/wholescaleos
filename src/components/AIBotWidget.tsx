@@ -636,7 +636,9 @@ export function AIBotWidget() {
 
   return (
     <div 
-      className="fixed z-[var(--z-loader)] flex flex-col items-end pointer-events-none"
+      className={`fixed z-[var(--z-loader)] flex items-end pointer-events-none ${
+        position.y > window.innerHeight / 2 ? 'flex-col' : 'flex-col-reverse'
+      }`}
       style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
     >
       
