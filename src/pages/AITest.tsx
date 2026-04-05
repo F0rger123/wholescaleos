@@ -39,7 +39,7 @@ export default function AITest() {
     aiThreads, currentAiThreadId, aiMessages,
     createAiThread, deleteAiThread, setCurrentAiThread,
     updateAiThreadTitle, toggleAiThreadPin, addAiMessage, clearAiThreadMessages,
-    aiName, aiModel, setAiModel
+    aiName, aiModel
   } = useStore();
   
   const [debug, setDebug] = useState(false);
@@ -1276,14 +1276,6 @@ export default function AITest() {
       <RateLimitModal
         isOpen={showRateLimitModal}
         onClose={() => setShowRateLimitModal(false)}
-        currentModel={aiModel}
-        onSwitchModel={(modelId) => {
-          setAiModel(modelId);
-          setShowRateLimitModal(false);
-          setRateLimit(null);
-          localStorage.removeItem('ai_rate_limit_expiry');
-          window.dispatchEvent(new CustomEvent('ai-settings-updated'));
-        }}
       />
     </div>
   );

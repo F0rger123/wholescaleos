@@ -15,6 +15,28 @@ import { supabase } from '../../lib/supabase';
 import RichTextEditor from './RichTextEditor';
 import { DEFAULT_TEMPLATES } from '../../lib/default-templates';
 
+const EmailTemplatePreview = ({ html, body, scale = 0.25, className = "" }: { html?: string, body?: string, scale?: number, className?: string }) => {
+  const previewHtml = html || `
+    <div style="font-family: sans-serif; padding: 20px; color: #333;">
+      ${(body || '').replace(/\n/g, '<br/>')}
+    </div>
+  `;
+
+  return (
+    <div className={`rounded-lg border border-[var(--t-border)] bg-white overflow-hidden relative ${className}`}>
+      <div 
+        className="absolute inset-0 origin-top-left p-8 bg-white pointer-events-none"
+        style={{ 
+          width: `${100 / scale}%`, 
+          height: `${100 / scale}%`, 
+          transform: `scale(${scale})` 
+        }}
+        dangerouslySetInnerHTML={{ __html: previewHtml }}
+      />
+    </div>
+  );
+};
+
 const AdminEmailCampaigns = () => {
   const [templates, setTemplates] = useState<dbEmailTemplate[]>([]);
   const [campaigns, setCampaigns] = useState<dbEmailCampaign[]>([]);
@@ -261,13 +283,11 @@ const AdminEmailCampaigns = () => {
                 className="group p-5 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl transition-all hover:border-[var(--t-primary)]/50 flex gap-6"
               >
                 {/* HTML Preview Thumbnail */}
-                <div className="w-24 h-32 rounded-lg border border-[var(--t-border)] bg-white overflow-hidden flex-shrink-0 relative">
-                  <div 
-                    className="absolute inset-0 origin-top-left scale-[0.25] w-[400%] h-[400%] p-8 bg-white pointer-events-none"
-                    dangerouslySetInnerHTML={{ __html: tpl.html_content || '' }}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
-                </div>
+                <EmailTemplatePreview 
+                  html={tpl.html_content} 
+                  body={tpl.body}
+                  className="w-24 h-32 flex-shrink-0"
+                />
 
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
@@ -325,10 +345,18 @@ const AdminEmailCampaigns = () => {
                   <button
                     key={tpl.id}
                     onClick={() => handleImportPredefined(tpl)}
-                    className="w-full text-left p-4 bg-black/20 border border-[var(--t-border)] rounded-xl group transition-all hover:border-[var(--t-primary)]"
+                    className="w-full text-left p-3 bg-black/20 border border-[var(--t-border)] rounded-xl group transition-all hover:border-[var(--t-primary)] flex gap-3"
                   >
-                    <p className="font-black uppercase tracking-wider text-xs mb-1 group-hover:text-[var(--t-primary)]">{tpl.name}</p>
-                    <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{tpl.description}</p>
+                    <EmailTemplatePreview 
+                      html={tpl.html} 
+                      body={tpl.body}
+                      scale={0.15}
+                      className="w-12 h-16 flex-shrink-0 bg-white"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black uppercase tracking-wider text-[10px] mb-0.5 group-hover:text-[var(--t-primary)] truncate">{tpl.name}</p>
+                      <p className="text-[9px] text-[var(--t-text-muted)] line-clamp-2 leading-tight">{tpl.description || tpl.subject}</p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -501,7 +529,7 @@ const AdminEmailCampaigns = () => {
                 ) : (
                   <RichTextEditor
                     value={editingTemplate?.html_content || ''}
-                    onChange={(val) => setEditingTemplate({...editingTemplate, html_content: val})}
+                    onChange={(val: string) => setEditingTemplate({...editingTemplate, html_content: val})}
                   />
                 )}
               </div>

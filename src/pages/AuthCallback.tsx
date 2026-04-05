@@ -143,7 +143,7 @@ export function AuthCallback() {
           if (success && mounted) {
             addDebug('✅ Tokens stored successfully!');
             setStatus('success');
-            setMessage('Google Workspace successfully connected. Calendar, Gmail, and Tasks are ready.');
+            setMessage('Google Workspace successfully connected. Calendar, Gmail, and Tasks are now synchronized.');
             
             let redirectPath = '/calendar';
             if (state && state !== 'calendar-sync') {

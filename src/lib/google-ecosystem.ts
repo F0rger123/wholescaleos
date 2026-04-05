@@ -62,7 +62,9 @@ export class GoogleEcosystemService {
     if (!res.ok) {
       const err = await res.text();
       console.error('[GoogleTasks] Fetch lists failed:', res.status, err);
-      if (res.status === 403) throw new Error('Permission denied (403). Please reconnect Google with Tasks scope.');
+      if (res.status === 403) {
+        throw new Error('Google Tasks Permission Denied (403). This usually means you haven\'t granted the "Manage your tasks" permission. Please go to Settings > Connections and click "Reconnect with Tasks".');
+      }
       throw new Error(`Failed to fetch task lists (${res.status})`);
     }
     const data = await res.json();

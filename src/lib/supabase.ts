@@ -1,15 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// ─── Vite Environment Type Declaration ────────────────────────────────────────
-declare global {
-  interface ImportMeta {
-    readonly env: Record<string, string | undefined>;
-  }
-}
-
 // ─── Environment Variables ────────────────────────────────────────────────────
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const env = (import.meta as any).env || {};
+const supabaseUrl = env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY || '';
 
 // ─── Supabase Client ──────────────────────────────────────────────────────────
 // Only creates the client when both env vars are present.
@@ -22,7 +16,7 @@ export const isSupabaseConfigured =
   supabaseAnonKey !== 'your_anon_key';
 
 // FIXED: Added global headers to help with CORS
-export const supabase = isSupabaseConfigured
+export const supabase = (isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
@@ -43,7 +37,7 @@ export const supabase = isSupabaseConfigured
         },
       },
     })
-  : null;
+  : null) as any;
 
 // ─── Helper Exports ───────────────────────────────────────────────────────────
 

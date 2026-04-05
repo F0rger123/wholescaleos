@@ -10,6 +10,13 @@ export function GoogleCalendarConnect() {
   const [selectedCalendar, setSelectedCalendar] = useState('primary');
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [permissions, setPermissions] = useState<Record<string, boolean>>({
+    calendar: false,
+    gmail: false,
+    contacts: false,
+    tasks: false,
+    drive: false
+  });
 
   const service = GoogleCalendarService.getInstance();
 
@@ -24,6 +31,8 @@ export function GoogleCalendarConnect() {
     const connected = await service.isConnected(currentUser.id);
     setIsConnected(connected);
     if (connected) {
+      const perms = await service.getDetailedPermissions(currentUser.id);
+      setPermissions(perms);
       loadCalendars();
     }
   };
@@ -107,19 +116,31 @@ export function GoogleCalendarConnect() {
               
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { name: 'Calendar', status: 'Active', color: 'text-blue-400' },
-                  { name: 'Gmail', status: 'Active', color: 'text-red-400' },
-                  { name: 'Tasks', status: 'Active', color: 'text-indigo-400' }
+                  { id: 'calendar', name: 'Calendar', status: permissions.calendar ? 'Active' : 'Missing', color: 'text-blue-400' },
+                  { id: 'gmail', name: 'Gmail', status: permissions.gmail ? 'Active' : 'Missing', color: 'text-red-400' },
+                  { id: 'tasks', name: 'Tasks', status: permissions.tasks ? 'Active' : 'Missing', color: 'text-indigo-400' }
                 ].map(service => (
                   <div key={service.name} className="flex flex-col items-center p-2 rounded-lg bg-[var(--t-background)]/50 border border-[var(--t-border)]">
                     <span className="text-[9px] font-black uppercase tracking-tighter mb-1 opacity-60" style={{ color: 'var(--t-text)' }}>{service.name}</span>
                     <div className="flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-pulse" />
-                      <span className="text-[8px] font-black uppercase tracking-tighter text-[var(--t-success)]">{service.status}</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${service.status === 'Active' ? 'bg-[var(--t-success)]' : 'bg-[var(--t-error)]'} ${service.status === 'Active' ? 'animate-pulse' : ''}`} />
+                      <span className={`text-[8px] font-black uppercase tracking-tighter ${service.status === 'Active' ? 'text-[var(--t-success)]' : 'text-[var(--t-error)]'}`}>{service.status}</span>
                     </div>
                   </div>
                 ))}
               </div>
+
+              {!permissions.tasks && isConnected && (
+                <div className="mt-4 p-3 bg-[var(--t-error)]/5 rounded-xl border border-[var(--t-error)]/20">
+                  <p className="text-[10px] text-[var(--t-error)] font-bold mb-2 uppercase tracking-tight">Tasks Sync Permission Missing</p>
+                  <button 
+                    onClick={handleConnect}
+                    className="w-full py-2 bg-[var(--t-error)]/10 hover:bg-[var(--t-error)]/20 text-[var(--t-error)] rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
+                  >
+                    Grant Tasks Access
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="p-3">

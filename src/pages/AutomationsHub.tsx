@@ -26,6 +26,7 @@ import { AutomationNode } from '../components/AutomationNode';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { automationTemplates, AutomationTemplate } from '../data/automationTemplates';
+import { useStore } from '../store/useStore';
 
 const nodeTypes = {
   automation: AutomationNode,
@@ -57,6 +58,9 @@ export default function AutomationsHub() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [createName, setCreateName] = useState('');
   const [createDesc, setCreateDesc] = useState('');
+  const [isActive, setIsActive] = useState(true);
+
+  const { isAutomationRunning } = useStore();
 
   // Load existing workflow on mount
   useEffect(() => {
@@ -85,6 +89,7 @@ export default function AutomationsHub() {
           setWorkflowName(data.name || 'My New Automation');
           setNodes(data.nodes as Node[]);
           setEdges(data.edges as Edge[]);
+          setIsActive(data.is_active ?? true);
         }
       } catch (err) {
         console.error('Load Error:', err);
@@ -116,6 +121,7 @@ export default function AutomationsHub() {
         name: workflowName, 
         nodes,
         edges,
+        is_active: isActive,
         updated_at: new Date().toISOString(),
       };
 
@@ -165,6 +171,7 @@ export default function AutomationsHub() {
     setEdges(template.edges);
     setWorkflowName(template.name);
     setWorkflowId(null);
+    setIsActive(true);
     setIsLibraryOpen(false);
   };
 
@@ -245,6 +252,30 @@ export default function AutomationsHub() {
                 <span>v1.0.4</span>
               </div>
             </div>
+
+            <div className="flex items-center gap-3 ml-4 bg-white/5 p-1.5 rounded-2xl border border-white/10">
+              <button
+                onClick={() => setIsActive(!isActive)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-black uppercase tracking-tighter text-[10px] transition-all ${
+                  isActive 
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]' 
+                    : 'bg-white/5 text-white/40 border border-white/10'
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-400 animate-pulse' : 'bg-white/20'}`} />
+                {isActive ? 'Active' : 'Inactive'}
+              </button>
+            </div>
+
+            {isAutomationRunning && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-[var(--t-primary-dim)] border border-[var(--t-primary)] rounded-2xl animate-pulse shadow-lg shadow-[var(--t-primary-dim)] ml-4">
+                <div className="w-2 h-2 rounded-full bg-[var(--t-primary)] animate-ping" />
+                <span className="text-[10px] font-black italic uppercase tracking-tighter text-[var(--t-primary)]">
+                  Automation Running
+                </span>
+              </div>
+            )}
+
             <div className="w-px h-8 bg-white/10 mx-1" />
             <div className="flex items-center gap-2">
               <button 
@@ -368,6 +399,7 @@ export default function AutomationsHub() {
                       data: { label: 'Start Trigger', type: 'trigger', description: createDesc.trim() || 'Configure your workflow starting point.' }
                     }]);
                     setEdges([]);
+                    setIsActive(true);
                     setIsCreating(false);
                     setCreateName('');
                     setCreateDesc('');

@@ -11,7 +11,6 @@ export interface AgentTemplate {
   category_label?: string;
   description?: string;
   tags: string[];
-  imageUrl?: string;
 }
 
 export { AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES };

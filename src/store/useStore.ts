@@ -214,6 +214,16 @@ export interface AgentTestimonial {
   date: string;
 }
 
+export interface AutomatedReportSettings {
+  dailySummary: boolean;
+  weeklySummary: boolean;
+  dealClosed: boolean;
+  offerMade: boolean;
+  calendarDigest: boolean;
+  lastDailySent?: string;
+  lastWeeklySent?: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -1714,6 +1724,12 @@ interface AppState {
   // NEW: Pricing & Plan Helpers
   getMemberPrice: (tier: string) => number;
   canAddMember: () => { can: boolean; reason?: string };
+
+  // Automation Engine
+  isAutomationRunning: boolean;
+  setIsAutomationRunning: (v: boolean) => void;
+  sendAutomationSms: (leadId: string, content: string) => Promise<void>;
+  sendAutomationEmail: (leadId: string, subject: string, content: string) => Promise<void>;
 }
 
 const calculateSmartLeadScore = (lead: any): number => {
@@ -1814,7 +1830,7 @@ export const useStore = create<AppState>((set, get) => ({
   // —— AI State ——————————————————————————————————————————————
   aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
   aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'gemini-3.1-flash-lite',
-  premiumMessagesLeft: typeof window !== 'undefined' ? parseInt(localStorage.getItem('wholescale-premium-messages') || '20', 10) : 20,
+  premiumMessagesLeft: 99999,
   aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
   aiUsage: (() => {
     try {
@@ -1861,6 +1877,10 @@ export const useStore = create<AppState>((set, get) => ({
   quickNotesSize: 'medium',
   isQuickNotesCollapsed: false,
   cursorSettings: { type: 'glow', color: 'var(--t-primary)', size: 20, enabled: true, intensity: 0.5 },
+
+  // —— Automation State ——————————————————————————————————————
+  isAutomationRunning: false,
+  setIsAutomationRunning: (v: boolean) => set({ isAutomationRunning: v }),
 
   // —— Dashboard Layout ——————————————————————————————————————
   dashboardLayout: (() => {
@@ -2018,7 +2038,7 @@ export const useStore = create<AppState>((set, get) => ({
             .select('team_id')
             .eq('user_id', userId);
           
-          const validTeamIds = (memberships || []).map(m => m.team_id);
+          const validTeamIds = (memberships || []).map((m: any) => m.team_id);
           
           if (preferredId && validTeamIds.includes(preferredId)) {
             teamId = preferredId;
@@ -2655,10 +2675,15 @@ export const useStore = create<AppState>((set, get) => ({
       }),
     }));
 
-    // Trigger Automation if Lead Score is high
+    // Trigger Automation if Lead Score is high or Status changed
     const leadAfterUpdate = get().leads.find(l => l.id === id);
-    if (leadAfterUpdate && (leadAfterUpdate.dealScore || 0) >= 80) {
-      automationEngine.trigger('LEAD_SCORE_HIGH', { ...leadAfterUpdate, deal_score: leadAfterUpdate.dealScore });
+    if (leadAfterUpdate) {
+      if ((leadAfterUpdate.dealScore || 0) >= 80) {
+        automationEngine.trigger('LEAD_SCORE_HIGH', { ...leadAfterUpdate, deal_score: leadAfterUpdate.dealScore });
+      }
+      if (updates.status) {
+        automationEngine.trigger('LEAD_STATUS_CHANGED', { ...leadAfterUpdate, status: updates.status });
+      }
     }
 
     // 2. Background Sync
@@ -2881,7 +2906,7 @@ export const useStore = create<AppState>((set, get) => ({
         .from('teams')
         .update({ invite_code: newCode })
         .eq('id', teamId)
-        .then(({ error }) => {
+        .then(({ error }: any) => {
           if (error) console.error('Failed to update invite code:', error);
         });
     }
@@ -2899,7 +2924,7 @@ export const useStore = create<AppState>((set, get) => ({
           .from('teams')
           .update(dbUpdates)
           .eq('id', teamId)
-          .then(({ error }) => {
+          .then(({ error }: any) => {
             if (error) console.error('Failed to update team:', error);
           });
       }
@@ -2943,6 +2968,15 @@ export const useStore = create<AppState>((set, get) => ({
   updateTask: (id: string, updates: Partial<Task>) => {
     get().saveToHistory();
     set((s: any) => ({ tasks: s.tasks.map((t: any) => t.id === id ? { ...t, ...updates } : t) }));
+    
+    // Trigger Automation if status changed
+    if (updates.status) {
+      const task = get().tasks.find(t => t.id === id);
+      if (task) {
+        automationEngine.trigger('TASK_STATUS_CHANGED', task).then();
+      }
+    }
+
     if (isSupabaseConfigured && supabase) {
       const dbUp: Record<string, unknown> = {};
       if (updates.title !== undefined) dbUp.title = updates.title;
@@ -2966,7 +3000,11 @@ export const useStore = create<AppState>((set, get) => ({
     set((s: any) => ({ tasks: s.tasks.map((t: any) => t.id === id ? { ...t, status: 'done' as TaskStatus, completedAt: now } : t) }));
     
     // Trigger Automation
-    automationEngine.trigger('TASK_STATUS_CHANGED', { id, status: 'done' });
+    const task = get().tasks.find(t => t.id === id);
+    if (task) {
+      automationEngine.trigger('TASK_STATUS_CHANGED', { ...task, status: 'done' });
+    }
+    
     if (isSupabaseConfigured && supabase) tasksService.complete(id).catch(() => {});
   },
 
@@ -3302,7 +3340,7 @@ export const useStore = create<AppState>((set, get) => ({
                         last_message_at: now,
                         created_at: now,
                       }])
-                      .then(({ data, error }) => {
+                      .then(({ data, error }: any) => {
                         if (error) {
                           console.error('âŒ Failed to save channel to Supabase:', error);
                         } else {
@@ -3318,7 +3356,7 @@ export const useStore = create<AppState>((set, get) => ({
                                 user_id: userId,
                               }))
                               )
-                              .then(({ data: memberData, error: memberError }) => {
+                              .then(({ data: memberData, error: memberError }: any) => {
                                 if (memberError) {
                                   console.error('âŒ Failed to save channel members:', memberError);
                                 } else {
@@ -3375,7 +3413,7 @@ export const useStore = create<AppState>((set, get) => ({
                         .from('channels')
                         .delete()
                         .eq('id', channelId)
-                        .then(({ data, error }) => {
+                        .then(({ data, error }: any) => {
                           if (error) {
                             console.error('âŒ Failed to delete channel from Supabase:', error);
 
@@ -3418,7 +3456,7 @@ export const useStore = create<AppState>((set, get) => ({
                             description: updates.description,
                           })
                           .eq('id', channelId)
-                          .then(({ error }) => {
+                          .then(({ error }: any) => {
                             if (error) {
                               console.error('âŒ Failed to update channel:', error);
                             } else {
@@ -3453,7 +3491,7 @@ export const useStore = create<AppState>((set, get) => ({
                               channel_id: channelId,
                               user_id: userId,
                             }])
-                            .then(({ error }) => {
+                            .then(({ error }: any) => {
                               if (error) {
                                 console.error('âŒ Failed to add channel member:', error);
                               } else {
@@ -3490,7 +3528,7 @@ export const useStore = create<AppState>((set, get) => ({
                               .delete()
                               .eq('channel_id', channelId)
                               .eq('user_id', userId)
-                              .then(({ error }) => {
+                              .then(({ error }: any) => {
                                 if (error) {
                                   console.error('âŒ Failed to remove channel member:', error);
                                 } else {
@@ -3525,7 +3563,7 @@ export const useStore = create<AppState>((set, get) => ({
                                 .delete()
                                 .eq('channel_id', channelId)
                                 .eq('user_id', user.id)
-                                .then(({ error }) => {
+                                .then(({ error }: any) => {
                                   if (error) {
                                     console.error('âŒ Failed to leave channel:', error);
                                   } else {
@@ -3689,21 +3727,22 @@ export const useStore = create<AppState>((set, get) => ({
                                                     }
                                                   }
                                                   if (supabase && isSupabaseConfigured) {
-                                                    supabase.auth.getUser().then(({ data }) => {
+                                                    supabase.auth.getUser().then(({ data }: any) => {
                                                       if (data?.user && supabase) {
                                                         supabase
                                                           .from('profiles')
                                                           .select('settings')
                                                           .eq('id', data.user.id)
                                                           .single()
-                                                          .then(({ data: profile }) => {
+                                                          .then((res: any) => {
+                                                            const profile = res.data;
                                                             if (profile && supabase) {
                                                               const existing = (profile.settings as Record<string, unknown>) || {};
                                                               supabase
                                                                 .from('profiles')
                                                                 .update({ settings: { ...existing, theme } })
                                                                 .eq('id', data.user.id)
-                                                                .then(({ error }) => {
+                                                                .then(({ error }: any) => {
                                                                   if (error) console.error('Failed to save theme:', error);
                                                                   console.log('âœ… Theme saved to Supabase:', theme);
                                                                 });
@@ -3759,7 +3798,8 @@ export const useStore = create<AppState>((set, get) => ({
             .select('settings')
             .eq('id', currentUser.id)
             .maybeSingle()
-            .then(({ data: profile }) => {
+            .then((res: any) => {
+              const profile = res.data;
               const currentSettings = profile?.settings || {};
               supabaseClient.from('profiles')
                 .update({ 
@@ -3792,7 +3832,8 @@ export const useStore = create<AppState>((set, get) => ({
             .select('settings')
             .eq('id', currentUser.id)
             .maybeSingle()
-            .then(({ data: profile }) => {
+            .then((res: any) => {
+              const profile = res.data;
               const currentSettings = profile?.settings || {};
               supabaseClient.from('profiles')
                 .update({ 
@@ -3843,7 +3884,8 @@ export const useStore = create<AppState>((set, get) => ({
                                                             .select('settings')
                                                             .eq('id', currentUser.id)
                                                             .single()
-                                                            .then(({ data: profile }) => {
+                                                            .then((res: any) => {
+                                                              const profile = res.data;
                                                               if (profile && supabase) {
                                                                 const existing = (profile.settings as Record<string, unknown>) || {};
                                                                 const customSettings = (existing.customColors as Record<string, string>) || {};
@@ -3856,7 +3898,7 @@ export const useStore = create<AppState>((set, get) => ({
                                                                     }
                                                                   })
                                                                   .eq('id', currentUser.id)
-                                                                  .then(({ error }) => {
+                                                                  .then(({ error }: any) => {
                                                                     if (error) console.error('Failed to save custom color:', error);
                                                                   });
                                                               }
@@ -3891,7 +3933,7 @@ export const useStore = create<AppState>((set, get) => ({
                                                               .select('settings')
                                                               .eq('id', currentUser.id)
                                                               .single()
-                                                              .then(({ data: profile }) => {
+                                                              .then(({ data: profile }: { data: any }) => {
                                                                 if (profile && supabase) {
                                                                   const existing = (profile.settings as Record<string, unknown>) || {};
                                                                   supabase
@@ -3900,7 +3942,7 @@ export const useStore = create<AppState>((set, get) => ({
                                                                       settings: { ...existing, customColors: {} }
                                                                     })
                                                                     .eq('id', currentUser.id)
-                                                                    .then(({ error }) => {
+                                                                    .then(({ error }: any) => {
                                                                       if (error) console.error('Failed to reset custom colors:', error);
                                                                     });
                                                                 }
@@ -4221,7 +4263,13 @@ export const useStore = create<AppState>((set, get) => ({
     set((s: any) => ({ smsMessages: [...s.smsMessages, msg] }));
     
     // Trigger Automation
-    automationEngine.trigger('SMS_RECEIVED', { message: msg, phone: msg.phone_number });
+    const lead = get().leads.find(l => l.phone === msg.phone_number);
+    automationEngine.trigger('SMS_RECEIVED', { 
+      message: msg, 
+      phone: msg.phone_number, 
+      ...(lead || {}),
+      id: lead?.id // Ensure id is present for the engine to target
+    });
   },
   markSMSAsRead: (id) => set((s: any) => ({
     smsMessages: s.messages.map((m: any) => m.id === id ? { ...m, read: true } : m)
@@ -4390,7 +4438,7 @@ export const useStore = create<AppState>((set, get) => ({
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }) => {
+        .then(({ data: profile }: { data: any }) => {
           const currentSettings = profile?.settings || {};
           s.from('profiles')
             .update({ settings: { ...currentSettings, quick_notes: v } })
@@ -4436,7 +4484,7 @@ export const useStore = create<AppState>((set, get) => ({
           .select('settings')
           .eq('id', currentUser.id)
           .maybeSingle()
-          .then(({ data: profile }) => {
+          .then(({ data: profile }: { data: any }) => {
             const currentSettings = profile?.settings || {};
             supabaseClient.from('profiles')
               .update({ 
@@ -4467,7 +4515,7 @@ export const useStore = create<AppState>((set, get) => ({
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }) => {
+        .then(({ data: profile }: { data: any }) => {
           const currentSettings = profile?.settings || {};
           supabaseClient.from('profiles')
             .update({ settings: { ...currentSettings, ai_name: name } })
@@ -4476,13 +4524,7 @@ export const useStore = create<AppState>((set, get) => ({
         });
     }
   },
-  decrementPremiumMessages: () => set((state) => {
-    const newCount = Math.max(0, state.premiumMessagesLeft - 1);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('wholescale-premium-messages', newCount.toString());
-    }
-    return { premiumMessagesLeft: newCount };
-  }),
+  decrementPremiumMessages: () => {}, // Limit removed
   setAiModel: (model: string) => {
     const { currentUser } = get();
     if (typeof window !== 'undefined') {
@@ -4496,7 +4538,8 @@ export const useStore = create<AppState>((set, get) => ({
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }) => {
+        .then((res: any) => {
+          const profile = res.data;
           const currentSettings = profile?.settings || {};
           supabaseClient.from('profiles')
             .update({ settings: { ...currentSettings, active_ai_model: model } })
@@ -4518,7 +4561,8 @@ export const useStore = create<AppState>((set, get) => ({
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }) => {
+        .then((res: any) => {
+          const profile = res.data;
           const currentSettings = profile?.settings || {};
           supabaseClient.from('profiles')
             .update({ settings: { ...currentSettings, ai_personality: personality } })
@@ -4554,7 +4598,8 @@ export const useStore = create<AppState>((set, get) => ({
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }) => {
+        .then((res: any) => {
+          const profile = res.data;
           const currentSettings = profile?.settings || {};
           supabaseClient.from('profiles')
             .update({ 
@@ -4592,7 +4637,8 @@ export const useStore = create<AppState>((set, get) => ({
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }) => {
+        .then((res: any) => {
+          const profile = res.data;
           const currentSettings = profile?.settings || {};
           s.from('profiles')
             .update({ 
@@ -4622,7 +4668,8 @@ export const useStore = create<AppState>((set, get) => ({
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }) => {
+        .then((res: any) => {
+          const profile = res.data;
           const currentSettings = profile?.settings || {};
           s.from('profiles')
             .update({ 
@@ -4642,6 +4689,104 @@ export const useStore = create<AppState>((set, get) => ({
     if (teamConfig) {
       set({ teamConfig: { ...teamConfig, createdBy: memberId } });
       // In a real app, we would also update the database here via teamService
+    }
+  },
+
+  sendAutomationSms: async (leadId, content) => {
+    const { currentUser, leads } = get();
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead || !currentUser) return;
+
+    const now = new Date().toISOString();
+    const msgId = uuidv4();
+    
+    const newMsg: SMSMessage = {
+      id: msgId,
+      user_id: currentUser.id,
+      lead_id: leadId,
+      phone_number: lead.phone,
+      content,
+      direction: 'outbound',
+      is_read: true,
+      created_at: now
+    };
+
+    // Add to SMS list
+    set((s) => ({ smsMessages: [...s.smsMessages, newMsg] }));
+
+    // Add to Lead Timeline
+    const timelineEntry: TimelineEntry = {
+      id: uuidv4(),
+      type: 'call', // Using 'call' icon for SMS for now or 'note'
+      content: `[Automation] SMS Sent: ${content}`,
+      timestamp: now,
+      user: 'Automation Bot'
+    };
+
+    set((s) => ({
+      leads: s.leads.map(l => l.id === leadId ? {
+        ...l,
+        timeline: [timelineEntry, ...(l.timeline || [])]
+      } : l)
+    }));
+
+    // Sync to Supabase if available
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('sms_messages').insert({
+        id: msgId,
+        user_id: currentUser.id,
+        lead_id: leadId,
+        phone_number: lead.phone,
+        content,
+        direction: 'outbound',
+        is_read: true,
+        created_at: now
+      });
+      
+      await supabase.from('timeline_entries').insert({
+        lead_id: leadId,
+        type: 'call',
+        content: `[Automation] SMS Sent: ${content}`,
+        user_name: 'Automation Bot',
+        created_at: now
+      });
+    }
+  },
+
+  sendAutomationEmail: async (leadId, subject, content) => {
+    const { leads } = get();
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    const now = new Date().toISOString();
+    
+    // Add to Lead Timeline
+    const timelineEntry: TimelineEntry = {
+      id: uuidv4(),
+      type: 'email',
+      content: `[Automation] Email Sent: ${subject}`,
+      timestamp: now,
+      user: 'Automation Bot',
+      metadata: { body: content }
+    };
+
+    set((s) => ({
+      leads: s.leads.map(l => l.id === leadId ? {
+        ...l,
+        timeline: [timelineEntry, ...(l.timeline || [])]
+      } : l)
+    }));
+
+    // Sync to Supabase if available
+    if (isSupabaseConfigured && supabase) {
+      await supabase.from('timeline_entries').insert({
+        lead_id: leadId,
+        type: 'email',
+        content: `[Automation] Email Sent: ${subject}`,
+        user_name: 'Automation Bot',
+        created_at: now,
+        metadata: { body: content }
+      });
     }
   },
 }));

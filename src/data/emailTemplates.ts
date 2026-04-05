@@ -7,7 +7,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'Welcome to the Family, {{name}}! 🚀',
     category: 'Sales',
     tags: ['welcome', 'new-lead'],
-    imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #111827; padding: 0; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
         <img src="{{header_image}}" style="width: 100%; height: 240px; object-fit: cover; display: block;" />
@@ -34,7 +33,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'New Listing Alert: Check out this gem in {{area}}! ✨',
     category: 'Sales',
     tags: ['alert', 'listing'],
-    imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6199f7a096?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #0f172a; color: #ffffff; padding: 0; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b;">
         <div style="position: relative;">
@@ -71,7 +69,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'Monthly Trends: What\'s happening in {{area}}? 📈',
     category: 'Marketing',
     tags: ['market-update', 'report'],
-    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
         <div style="background: #111827; padding: 40px; text-align: center;">
@@ -105,7 +102,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'You\'re Invited: Champagne Open House at {{address}}! 🥂',
     category: 'Marketing',
     tags: ['open-house', 'invitation'],
-    imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
         <img src="{{header_image}}" style="width: 100%; height: 350px; object-fit: cover; display: block;" />
@@ -128,7 +124,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'Official Offer Submitted: {{address}} 📄',
     category: 'Sales',
     tags: ['offer', 'confirmation'],
-    imageUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 40px;">
         <div style="width: 64px; height: 64px; background: #dcfce7; color: #166534; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 24px;">📝</div>
@@ -158,7 +153,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'CONGRATULATIONS! Your offer was accepted! 🎉',
     category: 'Sales',
     tags: ['accepted', 'congratulations'],
-    imageUrl: 'https://images.unsplash.com/photo-1556155092-490a1ba16284?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #10b981; padding: 60px 40px; border-radius: 32px; text-align: center; color: white;">
         <h1 style="font-size: 64px; margin: 0 0 20px 0;">🥂</h1>
@@ -177,7 +171,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'Closing Timeline: Important Dates for {{address}} 📅',
     category: 'Operations',
     tags: ['closing', 'logistics'],
-    imageUrl: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
         <div style="background: #111827; padding: 30px; text-align: center;">
@@ -214,7 +207,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'We loved working with you, {{name}}! ⭐⭐⭐⭐⭐',
     category: 'Operations',
     tags: ['review', 'feedback'],
-    imageUrl: 'https://images.unsplash.com/photo-1521791136064-7986c2923216?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 48px; text-align: center;">
         <h2 style="font-size: 24px; font-weight: 900; margin: 0 0 16px 0;">You're officially a homeowner!</h2>
@@ -234,7 +226,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'A small favor... and a reward for you! 🤝',
     category: 'Marketing',
     tags: ['referral', 'marketing'],
-    imageUrl: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border-radius: 24px; padding: 48px; text-align: center;">
         <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 24px;">🤝</div>
@@ -254,7 +245,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'Warmest wishes from our family to yours! 🎄',
     category: 'Marketing',
     tags: ['holiday', 'marketing'],
-    imageUrl: 'https://images.unsplash.com/photo-1543589077-47d81606c1bf?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden; text-align: center;">
         <img src="{{header_image}}" style="width: 100%; height: 350px; object-fit: cover; display: block;" />
@@ -274,7 +264,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'Happy 1-Year House-versary! 🏠🍰',
     category: 'Marketing',
     tags: ['anniversary', 'loyalty'],
-    imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 48px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
         <h1 style="font-size: 48px; margin-bottom: 24px;">🏠</h1>
@@ -293,7 +282,6 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     subject: 'PRICE REDUCED: {{address}} is now a steal! 🔥',
     category: 'Sales',
     tags: ['price-drop', 'urgent'],
-    imageUrl: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
         <div style="background: #ef4444; padding: 12px; text-align: center;">
@@ -313,68 +301,160 @@ export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
     `
   },
   {
-    id: 'agent-new-listing',
-    name: 'New Listing (The Hero)',
-    subject: 'Just Listed: The home you\'ve been waiting for! 🏠',
-    category: 'Sales',
-    tags: ['new-listing', 'sales'],
-    imageUrl: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&q=80&w=800&h=450',
+    id: 'DAILY_SUMMARY_REPORT',
+    name: 'Daily Agent Summary',
+    subject: 'Your Daily Performance Snapshot 📊',
+    category: 'Reports',
+    tags: ['summary', 'daily'],
     html: `
-      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 32px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
-        <img src="{{header_image}}" style="width: 100%; height: 400px; object-fit: cover; display: block;" />
-        <div style="padding: 40px;">
-          <div style="background: #ede9fe; color: #6366f1; padding: 6px 12px; border-radius: 8px; display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: 1px; margin-bottom: 20px;">NEW LISTING</div>
-          <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 0 0 8px 0;">Stunning Modern Retreat</h2>
-          <p style="font-size: 18px; color: #6b7280; font-weight: 500; margin-bottom: 24px;">{{address}}</p>
-          <div style="height: 1px; background: #f1f5f9; margin-bottom: 24px;"></div>
-          <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">This architectural masterpiece features floor-to-ceiling windows, a gourmet kitchen, and panoramic views of <strong>{{area}}</strong>. Truly a one-of-a-kind opportunity.</p>
-          <div style="display: flex; gap: 16px;">
-            <a href="#" style="flex: 1; padding: 18px; background: #6366f1; color: white; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900;">View Full Gallery</a>
-            <a href="#" style="flex: 1; padding: 18px; background: #111827; color: white; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900;">Ask a Question</a>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #f8fafc; border-radius: 24px; border: 1px solid #e2e8f0; overflow: hidden;">
+        <div style="background: linear-gradient(135deg, #6366f1, #4f46e5); padding: 40px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 900;">Daily Summary</h1>
+          <p style="margin: 8px 0 0 0; opacity: 0.9;">Great work today! Here's your performance snapshot.</p>
+        </div>
+        <div style="padding: 32px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div style="background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Revenue</p>
+              <h2 style="margin: 8px 0 0 0; font-size: 24px; color: #059669;">{{revenue}}</h2>
+            </div>
+            <div style="background: white; padding: 20px; border-radius: 16px; border: 1px solid #e2e8f0; text-align: center;">
+              <p style="margin: 0; font-size: 12px; color: #64748b; font-weight: 700; text-transform: uppercase;">Deals Closed</p>
+              <h2 style="margin: 8px 0 0 0; font-size: 24px; color: #111827;">{{deals}}</h2>
+            </div>
           </div>
+          <div style="background: white; padding: 24px; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
+            <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 800;">Activity Summary</h3>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+              <span style="color: #64748b;">New Leads</span>
+              <span style="font-weight: 700; color: #111827;">+{{newLeads}}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f1f5f9;">
+              <span style="color: #64748b;">Tasks Completed</span>
+              <span style="font-weight: 700; color: #111827;">{{tasksCompleted}}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0;">
+              <span style="color: #64748b;">Calendar Events</span>
+              <span style="font-weight: 700; color: #111827;">{{events}}</span>
+            </div>
+          </div>
+          <a href="#" style="display: block; width: 100%; padding: 16px; background: #6366f1; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900;">View Dashboard</a>
         </div>
       </div>
     `
   },
   {
-    id: 'agent-buyer-consultation',
-    name: 'Consultation Confirmation (The Expert)',
-    subject: 'Confirmed: Our Consultation for {{area}} ☕',
-    category: 'Sales',
-    tags: ['consultation', 'confirmation'],
-    imageUrl: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=800&h=450',
+    id: 'WEEKLY_SUMMARY_REPORT',
+    name: 'Weekly Agent Summary',
+    subject: 'Your Weekly Performance Report 📈',
+    category: 'Reports',
+    tags: ['summary', 'weekly'],
     html: `
-      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 48px;">
-        <h2 style="font-size: 28px; font-weight: 900; margin: 0 0 16px 0;">Coffee is on me! ☕</h2>
-        <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">Hi {{name}}, I'm looking forward to our strategy session tomorrow. We'll go over your goals, the current market in <strong>{{area}}</strong>, and mapping out your success plan.</p>
-        <div style="background: #f8fafc; padding: 24px; border-radius: 16px; margin-bottom: 32px;">
-           <p style="margin: 0; font-size: 14px; font-weight: 900; color: #64748b; text-transform: uppercase;">APPOINTMENT DETAILS</p>
-           <p style="margin: 12px 0 0 0; font-size: 18px; font-weight: 700;">Tomorrow at 10:00 AM</p>
-           <p style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">Starbucks on 4th & Main (or via Zoom)</p>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <div style="background: #111827; padding: 48px; text-align: left; color: white;">
+          <h1 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1px;">Weekly Recap</h1>
+          <p style="margin: 12px 0 0 0; color: #94a3b8; font-size: 18px;">You absolute legend. Here's your weekly win list.</p>
         </div>
-        <p style="font-size: 14px; color: #94a3b8;">If anything changes, please let me know at least 2 hours in advance. Talk soon!</p>
+        <div style="padding: 40px;">
+          <div style="background: #f8fafc; padding: 32px; border-radius: 20px; border: 1px solid #e2e8f0; margin-bottom: 32px;">
+             <p style="margin: 0; font-size: 14px; font-weight: 900; color: #6366f1; text-transform: uppercase; letter-spacing: 1px;">TOTAL REVENUE</p>
+             <h1 style="margin: 8px 0 0 0; font-size: 48px; font-weight: 900; color: #111827;">{{revenue}}</h1>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+            <div style="text-align: center; padding: 24px; background: #ecfdf5; border-radius: 16px;">
+              <p style="margin: 0; font-size: 12px; color: #065f46; font-weight: 800;">DEALS WON</p>
+              <h2 style="margin: 4px 0 0 0; font-size: 32px; color: #047857;">{{won}}</h2>
+            </div>
+            <div style="text-align: center; padding: 24px; background: #fff1f2; border-radius: 16px;">
+              <p style="margin: 0; font-size: 12px; color: #9f1239; font-weight: 800;">DEALS LOST</p>
+              <h2 style="margin: 4px 0 0 0; font-size: 32px; color: #be123c;">{{lost}}</h2>
+            </div>
+          </div>
+          <div style="background: #f1f5f9; padding: 24px; border-radius: 16px; margin-bottom: 32px;">
+             <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                   <p style="margin: 0; font-size: 14px; color: #64748b; font-weight: 600;">Conversion Rate</p>
+                   <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 900; color: #111827;">{{conversion}}%</p>
+                </div>
+                <div style="height: 40px; width: 40px; background: #6366f1; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900;">%</div>
+             </div>
+          </div>
+          <a href="#" style="display: block; width: 100%; padding: 20px; background: #6366f1; color: white; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4);">Open Performance Insights</a>
+        </div>
       </div>
     `
   },
   {
-    id: 'agent-seller-followup',
-    name: 'Seller Follow-up (The Persistent)',
-    subject: 'Still thinking about selling {{address}}? 🏠',
-    category: 'Sales',
-    tags: ['follow-up', 'seller'],
-    imageUrl: 'https://images.unsplash.com/photo-1516156008625-3a9d6067fab5?auto=format&fit=crop&q=80&w=800&h=450',
+    id: 'DEAL_CLOSED_NOTIFICATION',
+    name: 'Deal Closed Alert',
+    subject: 'KA-CHING! Link in bio... just kidding, you CLOSED one! 💰',
+    category: 'Alerts',
+    tags: ['deal', 'closed'],
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden; text-align: center;">
+        <div style="background: #059669; padding: 60px 40px; color: white;">
+          <div style="font-size: 64px; margin-bottom: 16px;">🎊</div>
+          <h1 style="margin: 0; font-size: 36px; font-weight: 900; letter-spacing: -1px;">Deal Closed!</h1>
+          <p style="margin: 12px 0 0 0; font-size: 20px; opacity: 0.9;">{{lead_name}} is officially a счастливый клиент!</p>
+        </div>
+        <div style="padding: 48px;">
+          <h2 style="font-size: 14px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px;">DEAL DETAILS</h2>
+          <div style="background: #f0fdf4; padding: 24px; border-radius: 16px; margin-bottom: 32px;">
+            <p style="margin: 0; font-size: 18px; font-weight: 700; color: #065f46;">{{address}}</p>
+            <p style="margin: 8px 0 0 0; font-size: 24px; font-weight: 900; color: #047857;">{{revenue}} Revenue</p>
+          </div>
+          <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 32px;">Another one for the books. Your hard work in <strong>{{area}}</strong> is paying off. Keep the momentum going!</p>
+          <a href="#" style="display: block; width: 100%; padding: 18px; background: #059669; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 800;">View Deal in CRM</a>
+        </div>
+      </div>
+    `
+  },
+  {
+    id: 'OFFER_SUBMITTED_NOTIFICATION',
+    name: 'Offer Submitted Alert',
+    subject: 'Offer Out: Fingers crossed for {{lead_name}}! 🤞',
+    category: 'Alerts',
+    tags: ['offer', 'submitted'],
     html: `
       <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
-        <div style="padding: 40px; text-align: left;">
-          <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 0 0 16px 0;">Thinking ahead...</h2>
-          <p style="font-size: 16px; line-height: 1.6; color: #374151; margin-bottom: 32px;">Hi {{name}}, I know life gets busy, but I wanted to keep <strong>{{address}}</strong> on your radar. With the current low inventory, homes in your neighborhood are selling for <strong>record premiums</strong>.</p>
-          <div style="background: #fdf2f2; border-left: 4px solid #ef4444; padding: 20px; border-radius: 0 12px 12px 0; margin-bottom: 32px;">
-             <p style="margin: 0; font-weight: 800; color: #991b1b;">Active Buyers in your zip code: 42</p>
-             <p style="margin: 4px 0 0 0; font-size: 14px; color: #991b1b;">Waiting for a home exactly like yours.</p>
-          </div>
-          <a href="#" style="display: block; width: 100%; padding: 18px; background: #111827; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Get an Instant Value Report</a>
+        <div style="background: #3b82f6; padding: 40px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 900;">Offer Submitted</h1>
+          <p style="margin: 8px 0 0 0; opacity: 0.9;">The paperwork is in for {{address}}.</p>
         </div>
-        <img src="{{header_image}}" style="width: 100%; height: 200px; object-fit: cover; display: block;" />
+        <div style="padding: 40px;">
+          <p style="font-size: 16px; line-height: 1.6; color: #374151; margin-bottom: 32px;">You've officially submitted an offer on behalf of <strong>{{lead_name}}</strong>. Great job moving this deal forward.</p>
+          <div style="background: #eff6ff; padding: 20px; border-radius: 12px; border-left: 4px solid #3b82f6; margin-bottom: 32px;">
+            <p style="margin: 0; font-weight: 700; color: #1e40af;">What's Next?</p>
+            <p style="margin: 8px 0 0 0; font-size: 14px; color: #1e40af;">Expect a response within 24-48 hours. Don't forget to follow up with the listing agent tomorrow.</p>
+          </div>
+          <a href="#" style="display: block; width: 100%; padding: 16px; background: #111827; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900;">View Offer Details</a>
+        </div>
+      </div>
+    `
+  },
+  {
+    id: 'CALENDAR_DIGEST_REPORT',
+    name: 'Calendar Digest',
+    subject: 'Rise and Shine! Here\'s your schedule for today ☕',
+    category: 'Reports',
+    tags: ['calendar', 'digest'],
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <div style="padding: 40px; background: #fdf2f8;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: 900; color: #be185d;">Good Morning!</h1>
+          <p style="margin: 4px 0 0 0; color: #9d174d; font-weight: 600;">You have {{events}} events scheduled for today.</p>
+        </div>
+        <div style="padding: 40px;">
+          <h2 style="font-size: 12px; font-weight: 900; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 24px;">YOUR SCHEDULE</h2>
+          <div style="margin-bottom: 32px;">
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.8;">{{eventList}}</p>
+          </div>
+          <div style="padding: 24px; background: #fdf4ff; border-radius: 16px; border: 1px solid #f5d0fe; color: #86198f;">
+            <p style="margin: 0; font-weight: 700;">Agent Pro-Tip:</p>
+            <p style="margin: 8px 0 0 0; font-size: 14px;">Review your materials at least 15 minutes before your first showing to stay ahead of the game.</p>
+          </div>
+          <a href="#" style="display: block; width: 100%; padding: 18px; margin-top: 32px; background: #be185d; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900;">Open Full Calendar</a>
+        </div>
       </div>
     `
   }

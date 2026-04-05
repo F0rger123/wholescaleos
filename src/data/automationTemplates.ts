@@ -127,5 +127,115 @@ export const automationTemplates: AutomationTemplate[] = [
       { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Notify On-Call Agent', type: 'action', actionType: 'notify', message: 'NEW FACEBOOK LEAD: {{name}} is requesting info on {{address}}!', description: 'Speed to lead alert' } }
     ],
     edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'referral-request-automated',
+    name: 'Closed Won → Automated Referral Request',
+    description: 'When a deal closes, send a polite referral and review request email.',
+    category: 'Sales',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Status = Closed Won', type: 'trigger', triggerType: 'status_change', status: 'closed-won', description: 'Triggers on final closing' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Review Request', type: 'email', actionType: 'send_email', subject: 'Congratulations, {{name}}!', message: 'Hi {{name}}, it was a pleasure working with you. If you have a moment, could you leave us a review?', description: 'Sends thank you + link' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'high-value-alert',
+    name: 'High Value ($1M+) → Desktop Alert',
+    description: 'Get an immediate notification for luxury-tier properties over $1,000,000.',
+    category: 'Sales',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Value > $1,000,000', type: 'trigger', triggerType: 'new_lead', description: 'Triggers on luxury leads' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Luxury Alert', type: 'action', actionType: 'notify', message: '💰 LUXURY LEAD: {{name}} has a property valued at {{property_value}}!', description: 'Team-wide luxury nudge' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'zillow-sms-auto',
+    name: 'Zillow Lead → Immediate SMS Follow-up',
+    description: 'Ensure speed-to-lead by instantly texting Zillow leads as they arrive.',
+    category: 'Lead Gen',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Source = Zillow', type: 'trigger', triggerType: 'new_lead', description: 'Zillow webhook trigger' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Zillow Reply', type: 'sms', actionType: 'send_sms', message: 'Hi {{name}}! 👋 I just received your request from Zillow for the property on {{address}}. Are you available for a quick chat?', description: 'Targeted lead source reply' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'inbound-sms-task',
+    name: 'SMS Received → Lead Action Required Task',
+    description: 'Automatically create a high-priority task for the agent when a lead texts back.',
+    category: 'CRM',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'SMS Received', type: 'trigger', triggerType: 'sms_received', description: 'Inbound message event' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Reply Task', type: 'action', actionType: 'add_task', taskTitle: 'Reply to SMS from {{name}}', description: 'Action item for agent', priority: 'high' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'long-term-nurture',
+    name: 'Monthly Market Update → Smart Nurture',
+    description: 'Keep your leads warm with automated property market updates and check-ins.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Monthly Trigger', type: 'trigger', triggerType: 'monthly_run', description: 'Scheduled recurring run' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Market Update', type: 'email', actionType: 'send_email', subject: 'Monthly Real Estate Update for {{city}}', message: 'Hi {{name}}, here is what happened in the {{city}} market this month...', description: 'Educational content email' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'offer-rejected-reengage',
+    name: 'Offer Rejected → Re-engagement Flow',
+    description: 'When an offer falls through, start a new engagement sequence to stay in the game.',
+    category: 'Sales',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Status = Closed Lost', type: 'trigger', triggerType: 'status_change', status: 'closed-lost', description: 'Failed deal trigger' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Nudge SMS', type: 'sms', actionType: 'send_sms', message: 'Sorry we couldn\'t make it work this time, {{name}}. I\'ll keep an eye out for other properties that fit your criteria!', description: 'Graceful follow-up' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'ai-lead-qualification',
+    name: 'New Lead → AI Neural Analysis',
+    description: 'Use WholeScale AI to instantly analyze and score leads based on neural patterns.',
+    category: 'AI',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'New Lead Created', type: 'trigger', triggerType: 'new_lead', description: 'Initial entry' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Risk Analysis', type: 'ai', actionType: 'notify', message: 'AI Analysis: {{name}} has a 85% probability of closing based on historical data.', description: 'Neural score update' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'google-sync-notify',
+    name: 'Google Event → Lead Alert',
+    description: 'Synchronize your Google Calendar and alert your team the moment a lead books a viewing.',
+    category: 'CRM',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Calendar Event', type: 'trigger', triggerType: 'new_event', description: 'Google sync event' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Team Alert', type: 'action', actionType: 'notify', message: 'NEW VIEWING: A lead has scheduled a property tour on {{date}}.', description: 'Immediate calendar alert' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'document-signed-closing',
+    name: 'Document Signed → Prepare Closing',
+    description: 'Instantly notify your legal team when a critical closing document is signed.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Doc Signed', type: 'trigger', triggerType: 'doc_signed', description: 'Docusign/SignWell webhook' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Notify Legal', type: 'email', actionType: 'send_email', subject: 'ACTION REQUIRED: Closing Documents Signed', message: 'Legal Team, the documents for {{name}} ({{address}}) have been signed and are ready for review.', description: 'Internal team nudge' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'facebook-lead-immediate',
+    name: 'FB Ad Lead → Hot Lead Tagging',
+    description: 'Instantly tag and categorize leads from Facebook Advertising campaigns.',
+    category: 'Lead Gen',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'FB Lead Form', type: 'trigger', triggerType: 'facebook_lead', description: 'Facebook Ads webhook' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Tag & Route', type: 'action', actionType: 'assign_lead', agentId: 'fb-specialist', description: 'Auto-tag as "Social Lead"' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
   }
 ];

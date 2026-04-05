@@ -11,6 +11,7 @@ export interface GeminiResponse {
   intent: string;
   response: string;
   data?: any;
+  systemLog?: string;
 }
 
 export async function listAvailableModels(apiKey: string) {
@@ -741,10 +742,19 @@ Time: ${context.currentTime || new Date().toISOString()}`;
 
     console.error(`Error processing prompt with ${provider}:`, error);
     
-    if (error.message === "RATE_LIMIT") {
+    if (error.message === "RATE_LIMIT" || error.message?.includes('429')) {
+      console.warn(`[AI Fallback] Rate limit reached for ${provider}. Falling back to Local AI...`);
+      const localFallback = await processWithLocalAI(prompt);
+      if (localFallback) {
+        return {
+          ...localFallback,
+          response: `[Rate Limit Fallback] ${localFallback.response}`,
+          systemLog: `🤖 Local AI (Rate Limit Fallback)`
+        };
+      }
       return {
         intent: 'rate_limit',
-        response: `You've reached your rate limit for ${provider}. Please wait a moment or switch models.`,
+        response: `You've reached your rate limit for ${provider}, and I couldn't process this request locally. Please wait a moment or switch models.`,
         data: { retryAfter: 60 }
       };
     }

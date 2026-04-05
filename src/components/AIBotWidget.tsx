@@ -40,8 +40,8 @@ export function AIBotWidget() {
   const { 
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
-    aiName, aiModel, setAiModel, isAiDocked, setAiDocked,
-    sidebarOpen, premiumMessagesLeft, decrementPremiumMessages
+    aiName, aiModel, isAiDocked, setAiDocked,
+    sidebarOpen
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -306,15 +306,6 @@ export function AIBotWidget() {
     e?.preventDefault();
     if (!prompt.trim() || loading || !hasKey) return;
 
-    const isPremiumModel = aiModel.includes('gpt-4o') || aiModel.includes('claude-3-5') || aiModel.includes('claude-3-opus') || aiModel.includes('o1');
-    if (isPremiumModel) {
-      if (premiumMessagesLeft <= 0) {
-        setShowRateLimitModal(true);
-        return;
-      }
-      decrementPremiumMessages();
-    }
-
     const userText = prompt.trim();
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -443,7 +434,9 @@ export function AIBotWidget() {
         return;
       }
 
-      incrementAiUsage(aiModel);
+      if (response.intent !== 'error' && response.intent !== 'rate_limit' && !response.systemLog?.includes('Local AI')) {
+        incrementAiUsage(aiModel);
+      }
 
       if (response.intent === 'redirect_setup') {
         setMessages(prev => [...prev, {
@@ -839,16 +832,7 @@ export function AIBotWidget() {
           <form onSubmit={handleSubmit} className={`p-3 border-t flex flex-col gap-2 ${position.y < 200 ? 'order-2 border-t-0' : ''}`}
             style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}
           >
-            {(aiModel.includes('gpt-4o') || aiModel.includes('claude-3-5') || aiModel.includes('claude-3-opus') || aiModel.includes('o1')) && (
-              <div className="flex justify-between items-center px-1">
-                <span className="text-[10px] font-bold text-[var(--t-text-muted)]">
-                  {premiumMessagesLeft} messages remaining on {aiModel.replace('gpt-4o', 'GPT-4o').replace('claude-3-5-sonnet-20241022', 'Claude 3.5 Sonnet')}
-                </span>
-                {premiumMessagesLeft <= 5 && (
-                  <span className="text-[10px] font-bold text-[var(--t-warning)] animate-pulse">Running low</span>
-                )}
-              </div>
-            )}
+            {/* Removed premium limit display */}
             <div className="flex gap-2 w-full relative">
               <div className="relative flex-1">
               <input
@@ -942,12 +926,6 @@ export function AIBotWidget() {
       <RateLimitModal
         isOpen={showRateLimitModal}
         onClose={() => setShowRateLimitModal(false)}
-        currentModel={aiModel}
-        onSwitchModel={(modelId) => {
-          setAiModel(modelId);
-          setShowRateLimitModal(false);
-          window.dispatchEvent(new CustomEvent('ai-settings-updated'));
-        }}
       />
 
       {/* Confirmation Modal */}

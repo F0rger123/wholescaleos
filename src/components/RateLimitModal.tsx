@@ -4,11 +4,9 @@ import { useNavigate } from 'react-router-dom';
 interface RateLimitModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentModel: string;
-  onSwitchModel: (modelId: string) => void;
 }
 
-export function RateLimitModal({ isOpen, onClose, currentModel, onSwitchModel }: RateLimitModalProps) {
+export function RateLimitModal({ isOpen, onClose }: RateLimitModalProps) {
   const navigate = useNavigate();
 
   if (!isOpen) return null;
@@ -23,26 +21,13 @@ export function RateLimitModal({ isOpen, onClose, currentModel, onSwitchModel }:
           <div className="w-16 h-16 rounded-2xl bg-[var(--t-warning)]/10 flex items-center justify-center mx-auto mb-4 border border-[var(--t-warning)]/20 text-[var(--t-warning)]">
             <AlertTriangle size={32} />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Premium Limit Reached</h2>
+          <h2 className="text-xl font-bold text-white mb-2">API Rate Limit Reached</h2>
           <p className="text-sm text-[var(--t-text-muted)]">
-            You've reached your free 20 message limit on <strong>{currentModel}</strong>.
+            The AI provider has temporarily limited requests. Please try again in a few minutes or upgrade for higher limits.
           </p>
         </div>
 
         <div className="p-6 space-y-4">
-          <button
-            onClick={() => {
-              onSwitchModel('gemini-2.0-flash');
-            }}
-            className="w-full flex items-center justify-between p-4 rounded-xl border transition-all hover:bg-[var(--t-surface-hover)]"
-            style={{ borderColor: 'var(--t-border)' }}
-          >
-            <div className="text-left">
-              <p className="text-sm font-bold text-[var(--t-text)]">Switch to Gemini 2.0 Flash</p>
-              <p className="text-xs text-[var(--t-text-muted)] mt-1">Continue chatting for free with our advanced model</p>
-            </div>
-          </button>
-          
           <button
             onClick={() => {
               onClose();
@@ -53,14 +38,14 @@ export function RateLimitModal({ isOpen, onClose, currentModel, onSwitchModel }:
           >
             <div className="text-left">
               <p className="text-sm font-bold text-white">Upgrade to OS Pro</p>
-              <p className="text-xs text-white/80 mt-1">Unlimited messages on GPT-4o & Claude 3.5</p>
+              <p className="text-xs text-white/80 mt-1">Get higher rate limits and priority access</p>
             </div>
           </button>
         </div>
 
         <div className="p-4 border-t flex justify-center" style={{ borderColor: 'var(--t-border)', background: 'var(--t-surface-hover)' }}>
           <button onClick={onClose} className="text-sm font-bold text-[var(--t-text-muted)] hover:text-[var(--t-text)] transition-colors">
-            Cancel
+            Close
           </button>
         </div>
       </div>

@@ -48,7 +48,15 @@ export class GoogleCalendarService {
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/contacts.readonly https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/drive.file',
+      scope: [
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.readonly',
+        'https://www.googleapis.com/auth/contacts.readonly',
+        'https://www.googleapis.com/auth/tasks',
+        'https://www.googleapis.com/auth/drive.file'
+      ].join(' '),
       access_type: 'offline',
       prompt: 'consent select_account',
       include_granted_scopes: 'true',
@@ -114,23 +122,38 @@ export class GoogleCalendarService {
     }
   }
 
-  async hasRequiredPermissions(userId: string): Promise<boolean> {
+  async getDetailedPermissions(userId: string): Promise<Record<string, boolean>> {
     const token = await this.getAccessToken(userId);
-    if (!token) return false;
+    if (!token) return {
+      calendar: false,
+      gmail: false,
+      contacts: false,
+      tasks: false,
+      drive: false
+    };
 
     try {
       const response = await fetch(`https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=${token}`);
-      if (!response.ok) return false;
+      if (!response.ok) throw new Error('Token verification failed');
       const info = await response.json();
       const scopes = info.scope || '';
-      return scopes.includes('https://www.googleapis.com/auth/gmail.send') 
-          && scopes.includes('https://www.googleapis.com/auth/gmail.readonly')
-          && scopes.includes('https://www.googleapis.com/auth/contacts.readonly')
-          && scopes.includes('https://www.googleapis.com/auth/tasks');
+      
+      return {
+        calendar: scopes.includes('https://www.googleapis.com/auth/calendar'),
+        gmail: scopes.includes('https://www.googleapis.com/auth/gmail.send') && scopes.includes('https://www.googleapis.com/auth/gmail.readonly'),
+        contacts: scopes.includes('https://www.googleapis.com/auth/contacts.readonly'),
+        tasks: scopes.includes('https://www.googleapis.com/auth/tasks'),
+        drive: scopes.includes('https://www.googleapis.com/auth/drive.file')
+      };
     } catch (err) {
-      console.error('Error checking Workspace permissions:', err);
-      return false;
+      console.error('Error fetching detailed Workspace permissions:', err);
+      return { calendar: false, gmail: false, contacts: false, tasks: false, drive: false };
     }
+  }
+
+  async hasRequiredPermissions(userId: string): Promise<boolean> {
+    const perms = await this.getDetailedPermissions(userId);
+    return perms.calendar && perms.gmail && perms.contacts && perms.tasks;
   }
 
   async storeUserTokens(userId: string, code: string): Promise<boolean> {
