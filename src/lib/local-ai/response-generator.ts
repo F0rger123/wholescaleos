@@ -3,56 +3,55 @@
  * Generates natural language responses based on intent and task result.
  */
 
-import { getUserPreferences } from './memory-store';
+import { useStore } from '../../store/useStore';
 
 export function generateResponse(intent: string, result: any): string {
-  const prefs = getUserPreferences();
-  const name = prefs.name || 'User';
+  const store = useStore.getState();
+  const userName = store.currentUser?.name?.split(' ')[0] || 'there';
+
+  if (!result || !result.success && intent !== 'help' && intent !== 'unknown') {
+    return `I'm sorry ${userName}, I ran into a bit of trouble with that. ${result?.message || 'Please try rephrasing your request.'}`;
+  }
 
   switch (intent) {
     case 'show_dashboard':
-      return `Done ${name}! Navigating to your dashboard.`;
+      return `Right away, ${userName}. Loading your dashboard now.`;
     
     case 'show_leads':
-      return `Right away. Opening your leads database.`;
+      return `Sure thing! Opening your leads database.`;
     
     case 'show_tasks':
-      return `Sure. Taking you to your tasks and calendar.`;
+      return `Coming right up. Here is your task list and calendar.`;
     
     case 'create_lead':
-      if (result.success) {
-        return `I've successfully created a new lead for ${result.data?.full_name}. Anything else you need for them?`;
-      }
-      return `I encountered an issue creating that lead. Please check the details and try again.`;
+      return `Done! I've added ${result.data?.name || 'the new lead'} to your database. You can find them in your leads list.`;
 
     case 'create_task':
-      if (result.success) {
-        return `Task "${result.data?.title}" has been added to your schedule. I'll make sure you're reminded!`;
-      }
-      return `I couldn't add that task. Is there a different way you'd like me to phrased it?`;
+      return `Got it. "${result.data?.title}" has been added to your tasks for ${result.data?.dueDate || 'today'}.`;
 
     case 'send_sms':
-      return `Message sent to ${result.data?.phone || 'the contact'}. I've logged it in the activity history.`;
+      return `Message sent to ${result.data?.phone || 'the contact'}. I've logged this in your communications history.`;
 
     case 'search_leads':
-      return `I'm searching your database for matching leads. One moment...`;
+      return `Searching for "${result.data?.query}"... I've opened the leads page so you can see the results.`;
 
     case 'update_lead_status':
-      return `Lead status updated. Your pipeline has been refreshed.`;
+      return `Success! I've updated the lead status for you. Your pipeline view has been refreshed.`;
 
     case 'add_note':
-      return `Note added. I've archived that for your next follow-up.`;
+      return `I've added that note to the lead's timeline. It's saved for your next follow-up.`;
 
     case 'remind_me':
-      return `Reminder set! I'll ping you at ${result.data?.time || 'the scheduled time'}.`;
+      return `Reminder set! I've added "${result.data?.task}" to your tasks so you don't miss it.`;
 
     case 'what_is_my_schedule':
-      return `Here is your agenda. You have some high-priority items to address today!`;
+      return `Here is your agenda for today, ${userName}. You've got this!`;
 
     case 'help':
-      return `I am your local AI assistant. I can help you manage leads, tasks, and navigate the platform without any external dependencies. Just ask!`;
+      return `I'm your WholeScale Local AI. I can help you with things like:\n- "Create lead John Doe"\n- "Add task Follow up with Sarah due Friday"\n- "Send sms to 555-1234 saying Hello"\n- "Show my dashboard"\n- "Update John's status to Hot"\nHow can I help you right now?`;
 
     default:
-      return `Task completed. Is there anything else I can assist you with, ${name}?`;
+      return `Task completed successfully, ${userName}. Is there anything else I can do for you?`;
   }
 }
+

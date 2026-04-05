@@ -12,19 +12,25 @@ export interface IntentResult {
 export function recognizeIntent(text: string): IntentResult {
   const normalized = text.toLowerCase().trim();
 
-  // 1. Navigation / Show
-  if (normalized.match(/^(show|go to|take me to|open)\s+(dashboard|home)/)) {
+  // 1. Help
+  if (normalized.match(/^(help|what can you do|how do i use|available commands|help me)/)) {
+    return { intent: 'help', entities: {}, confidence: 0.95 };
+  }
+
+  // 2. Navigation / Show
+  if (normalized.match(/^(show|go to|take me to|open|view)\s+(dashboard|home|main)/)) {
     return { intent: 'show_dashboard', entities: {}, confidence: 0.95 };
   }
-  if (normalized.match(/^(show|go to|take me to|open)\s+(leads|contacts|prospects)/)) {
+  if (normalized.match(/^(show|go to|take me to|open|view)\s+(leads|contacts|prospects|database)/)) {
     return { intent: 'show_leads', entities: {}, confidence: 0.95 };
   }
-  if (normalized.match(/^(show|go to|take me to|open)\s+(tasks|todo|calendar|schedule)/)) {
+  if (normalized.match(/^(show|go to|take me to|open|view)\s+(tasks|todo|calendar|schedule|agenda|plans)/)) {
     return { intent: 'show_tasks', entities: {}, confidence: 0.95 };
   }
 
-  // 2. Create Lead
-  const leadMatch = normalized.match(/(?:create|add|new)\s+(?:lead|contact)\s+([\w\s]+)(?:\s+email\s+([\w.@+-]+))?(?:\s+phone\s+([\d+-]+))?(?:\s+company\s+([\w\s]+))?/);
+  // 3. Create Lead
+  // Pattern: create lead [Name] email [Email] phone [Phone] company [Company]
+  const leadMatch = normalized.match(/(?:create|add|new)\s+(?:lead|contact)\s+([^@\d\n]+?)(?:\s+email\s+([\w.@+-]+))?(?:\s+phone\s+([\d+-]+))?(?:\s+company\s+(.+))?$/i);
   if (leadMatch) {
     return {
       intent: 'create_lead',
@@ -38,8 +44,9 @@ export function recognizeIntent(text: string): IntentResult {
     };
   }
 
-  // 3. Create Task
-  const taskMatch = normalized.match(/(?:create|add|new)\s+task\s+([\w\s]+)(?:\s+due\s+([\w\s\d,/-]+))?(?:\s+priority\s+(low|medium|high))?/);
+  // 4. Create Task
+  // Pattern: create task [Title] due [Date] priority [Priority]
+  const taskMatch = normalized.match(/(?:create|add|new)\s+task\s+([\w\s]+?)(?:\s+due\s+([\w\s\d,/-]+))?(?:\s+priority\s+(low|medium|high|urgent))?$/i);
   if (taskMatch) {
     return {
       intent: 'create_task',
@@ -52,21 +59,22 @@ export function recognizeIntent(text: string): IntentResult {
     };
   }
 
-  // 4. Send SMS
-  const smsMatch = normalized.match(/(?:send|message|sms)\s+(?:to\s+)?([\d+-]+)\s+(?:saying\s+)?(.*)/);
+  // 5. Send SMS
+  // Pattern: send sms to [Phone/Name] saying [Message]
+  const smsMatch = normalized.match(/(?:send|message|sms)\s+(?:to\s+)?([\d+-]+|[\w\s]+?)\s+(?:saying|content|message)\s+(.*)/i);
   if (smsMatch) {
     return {
       intent: 'send_sms',
       entities: {
-        phone: smsMatch[1],
+        target: smsMatch[1]?.trim(),
         message: smsMatch[2]?.trim()
       },
       confidence: 0.9
     };
   }
 
-  // 5. Search Leads
-  const searchMatch = normalized.match(/(?:search|find|find lead|look up)\s+([\w\s]+)/);
+  // 6. Search Leads
+  const searchMatch = normalized.match(/(?:search|find|find lead|look up|search for)\s+([\w\s]+)/i);
   if (searchMatch) {
     return {
       intent: 'search_leads',
@@ -75,8 +83,8 @@ export function recognizeIntent(text: string): IntentResult {
     };
   }
 
-  // 6. Update Lead Status
-  const statusMatch = normalized.match(/(?:update|change)\s+(?:lead\s+)?status\s+(?:to\s+)?(new|hot|warm|cold|closed)\s+(?:for\s+)?([\w\s]+)/);
+  // 7. Update Lead Status
+  const statusMatch = normalized.match(/(?:update|change)\s+(?:lead\s+)?status\s+(?:to\s+)?(new|hot|warm|cold|closed|contacted|qualified|negotiating|lost)\s+(?:for|of)\s+([\w\s]+)/i);
   if (statusMatch) {
     return {
       intent: 'update_lead_status',
@@ -88,8 +96,8 @@ export function recognizeIntent(text: string): IntentResult {
     };
   }
 
-  // 7. Add Note
-  const noteMatch = normalized.match(/(?:add|write)\s+note\s+(?:to\s+)?([\w\s]+)\s+(?:saying\s+)?(.*)/);
+  // 8. Add Note
+  const noteMatch = normalized.match(/(?:add|write|save)\s+note\s+(?:to|for)\s+([\w\s]+)\s+(?:saying|content)\s+(.*)/i);
   if (noteMatch) {
     return {
       intent: 'add_note',
@@ -101,8 +109,8 @@ export function recognizeIntent(text: string): IntentResult {
     };
   }
 
-  // 8. Remind Me
-  const remindMatch = normalized.match(/(?:remind|reminder|set reminder)\s+(?:me\s+)?(?:to\s+)?(.*)\s+(?:at|on|tomorrow|today|in)\s+(.*)/);
+  // 9. Remind Me
+  const remindMatch = normalized.match(/(?:remind|reminder|set reminder)\s+(?:me\s+)?(?:to\s+)?(.*)\s+(?:at|on|tomorrow|today|in)\s+(.*)/i);
   if (remindMatch) {
     return {
       intent: 'remind_me',
@@ -114,18 +122,14 @@ export function recognizeIntent(text: string): IntentResult {
     };
   }
 
-  // 9. What is my schedule
-  if (normalized.match(/^(what is|show|tell me|view)\s+(my|today's|this week's)\s+(schedule|calendar|agenda|plans)/)) {
+  // 10. Schedule check
+  if (normalized.match(/^(what is|show|tell me|view)\s+(my|today's|this week's)\s+(schedule|calendar|agenda|plans)/i)) {
     return { intent: 'what_is_my_schedule', entities: {}, confidence: 0.95 };
-  }
-
-  // 10. Help
-  if (normalized.match(/^(help|what can you do|how do I use|available commands)/)) {
-    return { intent: 'help', entities: {}, confidence: 0.95 };
   }
 
   return { intent: 'unknown', entities: {}, confidence: 0 };
 }
+
 export const LOCAL_INTENTS = [
   'create_lead',
   'create_task',
@@ -140,3 +144,4 @@ export const LOCAL_INTENTS = [
   'what_is_my_schedule',
   'help'
 ];
+

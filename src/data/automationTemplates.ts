@@ -4,83 +4,43 @@ export interface AutomationTemplate {
   id: string;
   name: string;
   description: string;
-  category: 'Lead Gen' | 'AI' | 'Comms' | 'CRM' | 'Email';
+  category: 'Lead Gen' | 'AI' | 'Comms' | 'CRM' | 'Email' | 'Sales';
   nodes: Node[];
   edges: Edge[];
 }
 
 export const automationTemplates: AutomationTemplate[] = [
   {
-    id: 'zillow-funnel',
-    name: 'Zillow Concierge Funnel',
-    description: 'Instant AI response and CRM sync for new Zillow leads with high-intent detection.',
-    category: 'Lead Gen',
+    id: 'welcome-sms',
+    name: 'New Lead → Send Welcome SMS',
+    description: 'Instantly send an AI-powered welcome SMS when a new lead lands in your CRM.',
+    category: 'Comms',
     nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Zillow Webhook', type: 'trigger', description: 'New lead from Zillow' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Intent Check', type: 'ai', description: 'Is buyer ready?' } },
-      { id: '3', type: 'automation', position: { x: 100, y: 300 }, data: { label: 'Hot SMS Response', type: 'sms', description: 'Priority follow-up' } },
-      { id: '4', type: 'automation', position: { x: 400, y: 300 }, data: { label: 'Drip Email', type: 'action', description: 'Standard nurturing' } }
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'New Lead Created', type: 'trigger', triggerType: 'new_lead', description: 'Triggers on every new lead' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Send Welcome SMS', type: 'sms', actionType: 'send_sms', message: 'Hi {{name}}! 👋 This is {{agent_name}} with WholeScale. I saw you were looking at homes in {{city}}. How can I help?', description: 'Sends automated welcome text' } }
     ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: 'var(--t-primary)' } },
-      { id: 'e2-3', source: '2', target: '3', label: 'High Intent', style: { stroke: 'var(--t-success)' } },
-      { id: 'e2-4', source: '2', target: '4', label: 'General', style: { stroke: 'var(--t-border)' } }
-    ]
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: 'var(--t-primary)' } }]
   },
   {
-    id: 'fb-ads',
-    name: 'Facebook Ad Automation',
-    description: 'Sync Facebook Lead Ads to CRM and tag by interest automatically.',
-    category: 'Lead Gen',
-    nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'FB Lead Ad', type: 'trigger', description: 'New Facebook Ad lead' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Tag by Campaign', type: 'action', description: 'Add CRM tags' } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'AI Intro Email', type: 'ai', description: 'Personalized intro' } }
-    ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true },
-      { id: 'e2-3', source: '2', target: '3', animated: true }
-    ]
-  },
-  {
-    id: 'ai-valuation',
-    name: 'Home Valuation Flow',
-    description: 'AI calculates property value and schedules a consultation for sellers.',
-    category: 'AI',
-    nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Valuation Request', type: 'trigger', description: 'User submits address' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Value Engine', type: 'ai', description: 'Fetch comps and calculate' } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Send Report', type: 'action', description: 'SMS value report' } }
-    ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true },
-      { id: 'e2-3', source: '2', target: '3', animated: true }
-    ]
-  },
-  {
-    id: 'cold-reengagement',
-    name: 'Cold Lead Re-engagement',
-    description: 'Auto-detect dead leads and send AI re-engagement SMS to revive interest.',
+    id: 'task-overdue-notify',
+    name: 'Task Overdue → Notify Team',
+    description: 'Alert the lead agent or team lead immediately when a critical task becomes overdue.',
     category: 'CRM',
     nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Idle for 30 Days', type: 'trigger', description: 'No activity detected' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Tone Match', type: 'ai', description: 'Check past history' } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Re-engage SMS', type: 'sms', description: 'Sent at 10 AM' } }
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Task Is Overdue', type: 'trigger', triggerType: 'task_overdue', description: 'Triggers on status = overdue' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Notify Team Lead', type: 'action', actionType: 'notify', message: 'CRITICAL: Task "{{title}}" for lead {{name}} is OVERDUE.', description: 'Sends push notification' } }
     ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true },
-      { id: 'e2-3', source: '2', target: '3', animated: true }
-    ]
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
   },
   {
-    id: 'listing-alert',
-    name: 'Smart Listing Alerts',
-    description: 'Send match alerts based on AI preference learning from browsing behavior.',
-    category: 'AI',
+    id: 'high-score-assign',
+    name: 'High Lead Score → Assign to Top Agent',
+    description: 'Automatically route high-intent leads (Score > 80) to your best closing agent.',
+    category: 'Sales',
     nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'New Listing', type: 'trigger', description: 'MLS Update' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Match Analysis', type: 'ai', description: 'Check against lead likes' } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Push Alert', type: 'action', description: 'Send text with link' } }
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Lead Score >= 80', type: 'trigger', triggerType: 'high_score', threshold: 80, description: 'Triggers on hot leads' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Assign to Closer', type: 'action', actionType: 'assign_lead', agentId: 'top-closer-uuid', description: 'Route to senior agent' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Notify Agent', type: 'action', actionType: 'notify', message: 'You have been assigned a HOT lead: {{name}} (Score: {{deal_score}})', description: 'Alert the new owner' } }
     ],
     edges: [
       { id: 'e1-2', source: '1', target: '2', animated: true },
@@ -88,29 +48,47 @@ export const automationTemplates: AutomationTemplate[] = [
     ]
   },
   {
-    id: 'open-house-survey',
-    name: 'Open House Follow-up',
-    description: 'Immediate SMS survey and CRM logging after open house check-in.',
-    category: 'Lead Gen',
+    id: 'email-opened-followup',
+    name: 'Email Opened → Send Follow-up',
+    description: 'Captilize on engagement by sending an SMS follow-up the moment an email is opened.',
+    category: 'Email',
     nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Open House QR', type: 'trigger', description: 'New attendee scan' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Immediate SMS', type: 'sms', description: "Thanks for coming!" } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: '24h Feedback AI', type: 'ai', description: 'Analyze sentiment' } }
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Email Opened', type: 'trigger', triggerType: 'email_opened', description: 'Triggers on open event' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Send SMS Nudge', type: 'sms', actionType: 'send_sms', message: 'Hey {{name}}, just following up on that email. Did you have any questions?', description: 'Immediate SMS nudge' } }
     ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true },
-      { id: 'e2-3', source: '2', target: '3', animated: true }
-    ]
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
   },
   {
-    id: 'new-construction-flow',
-    name: 'New Construction Interest',
-    description: 'Specific tagging and educational drip for leads interested in new builds.',
+    id: 'sms-auto-reply',
+    name: 'SMS Received → Auto-Reply',
+    description: 'Ensure 24/7 responsiveness with an immediate auto-reply to incoming texts.',
+    category: 'Comms',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'SMS Received', type: 'trigger', triggerType: 'sms_received', description: 'Incoming text event' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Immediate Reply', type: 'sms', actionType: 'send_sms', message: 'Hi {{name}}! I am currently in a meeting but received your message. I will call you back shortly.', description: 'Sends OOO reply' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'viewing-directions',
+    name: 'Viewing Scheduled → Send Directions',
+    description: 'Automatically send property directions to the lead when a viewing is scheduled.',
     category: 'CRM',
     nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'New Build Search', type: 'trigger', description: 'Website search filter' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Add "New-Builder" Tag', type: 'action', description: 'CRM Classification' } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Builder Guide Email', type: 'email', description: 'Dynamic PDF send' } }
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Viewing Scheduled', type: 'trigger', triggerType: 'new_event', description: 'Triggers on calendar sync' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Send Directions', type: 'sms', actionType: 'send_sms', message: 'Confirmed! Here are the directions to {{address}}: https://maps.google.com/?q={{address}}', description: 'Sends Google Maps link' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'offer-accepted-tasks',
+    name: 'Offer Accepted → Closing Tasks',
+    description: 'When an offer is accepted, automatically generate the closing task checklist.',
+    category: 'Sales',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Status = Negotiating', type: 'trigger', triggerType: 'status_change', status: 'negotiating', description: 'Offer accepted trigger' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Add Inspection Task', type: 'action', actionType: 'add_task', taskTitle: 'Schedule Home Inspection - {{name}}', description: 'Standard closing step 1' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 250 }, data: { label: 'Add Title Task', type: 'action', actionType: 'add_task', taskTitle: 'Open Title for {{address}}', description: 'Standard closing step 2' } }
     ],
     edges: [
       { id: 'e1-2', source: '1', target: '2', animated: true },
@@ -118,48 +96,36 @@ export const automationTemplates: AutomationTemplate[] = [
     ]
   },
   {
-    id: 'failed-listing-recovery',
-    name: 'Failed Listing Recovery',
-    description: 'Hyper-personalized outreach for expired or canceled MLS listings.',
+    id: 'revive-lead',
+    name: 'No Activity 3 Days → Revive Lead',
+    description: 'Revive cold leads after 3 days of no activity with a polite check-in nudge.',
     category: 'Lead Gen',
     nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Listing Expired', type: 'trigger', description: 'MLS Data Sync' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Script Gen', type: 'ai', description: "Why it didn't sell" } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Seller SMS', type: 'sms', description: 'Immediate empathetic touch' } }
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'No Action 3 Days', type: 'trigger', triggerType: 'inactivity', days: 3, description: 'Idle lead detection' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Check-in Email', type: 'email', actionType: 'send_email', subject: 'Thinking of you!', body: 'Hi {{name}}, just checking in to see if you still have interest in real estate in {{city}}.', description: 'Soft nurture nudge' } }
     ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true },
-      { id: 'e2-3', source: '2', target: '3', animated: true }
-    ]
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
   },
   {
-    id: 'investor-roi-alert',
-    name: 'Investor ROI Alert',
-    description: 'Automatic CAP rate calculation and delivery for multi-family leads.',
-    category: 'AI',
-    nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'New Multi-Family', type: 'trigger', description: 'Listing matching criteria' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI ROI Audit', type: 'ai', description: 'Estimate cash flow' } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Investor SMS', type: 'sms', description: 'Deal alert with numbers' } }
-    ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true },
-      { id: 'e2-3', source: '2', target: '3', animated: true }
-    ]
-  },
-  {
-    id: 'post-close-loop',
-    name: 'Post-Close Referral Loop',
-    description: 'Long-term client appreciation and referral request cycle.',
+    id: 'unsubscribe-lost',
+    name: 'Lead Unsubscribed → Change to Lost',
+    description: 'Automatically mark a lead as "Lost" if they unsubscribe from communications.',
     category: 'CRM',
     nodes: [
-      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Closing Date + 1yr', type: 'trigger', description: 'Anniversary Trigger' } },
-      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Personal Note', type: 'ai', description: 'Reflect on home stay' } },
-      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Video Greeting Email', type: 'email', description: 'Referral request' } }
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Lead Unsubscribed', type: 'trigger', triggerType: 'unsubscribed', description: 'Opt-out event' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Mark as Closed Lost', type: 'action', actionType: 'update_status', status: 'closed-lost', description: 'Removes from active pipeline' } }
     ],
-    edges: [
-      { id: 'e1-2', source: '1', target: '2', animated: true },
-      { id: 'e2-3', source: '2', target: '3', animated: true }
-    ]
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
+  },
+  {
+    id: 'fb-lead-tag',
+    name: 'Facebook Lead → Tag & Notify',
+    description: 'Instantly tag and notify the team when a new lead arrives from Facebook Ads.',
+    category: 'Lead Gen',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'New Facebook Lead', type: 'trigger', triggerType: 'facebook_lead', description: 'Webhook from FB Ads' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Notify On-Call Agent', type: 'action', actionType: 'notify', message: 'NEW FACEBOOK LEAD: {{name}} is requesting info on {{address}}!', description: 'Speed to lead alert' } }
+    ],
+    edges: [{ id: 'e1-2', source: '1', target: '2', animated: true }]
   }
 ];

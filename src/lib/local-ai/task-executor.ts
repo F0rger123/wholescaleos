@@ -4,6 +4,7 @@
  */
 
 import { useStore } from '../../store/useStore';
+import { sendSMS } from '../sms-service';
 
 export interface TaskResponse {
   success: boolean;
@@ -29,21 +30,33 @@ export async function executeTask(intent: string, entities: any): Promise<TaskRe
 
     case 'create_lead':
       try {
-        const newLead = {
-          id: crypto.randomUUID(),
-          full_name: entities.name || 'Unknown Lead',
+        const result = await store.addLead({
+          name: entities.name || 'New Lead',
           email: entities.email || '',
           phone: entities.phone || '',
-          company: entities.company || '',
-          status: 'New',
-          created_at: new Date().toISOString(),
-          last_contact: new Date().toISOString()
-        };
-        store.addLead(newLead as any);
+          status: 'new',
+          source: 'other',
+          propertyAddress: entities.company || '', // Using company as address if provided, or empty
+          propertyType: 'single-family',
+          estimatedValue: 0,
+          bedrooms: 0,
+          bathrooms: 0,
+          sqft: 0,
+          offerAmount: 0,
+          lat: 30.2672,
+          lng: -97.7431,
+          notes: `Created via Local AI. Company: ${entities.company || 'N/A'}`,
+          assignedTo: store.currentUser?.id || 'system',
+          probability: 50,
+          engagementLevel: 1,
+          timelineUrgency: 1,
+          competitionLevel: 1,
+          documents: [],
+        });
         return { 
-          success: true, 
-          message: `Successfully created lead: ${entities.name}.`,
-          data: newLead
+          success: result.success, 
+          message: result.success ? `Successfully created lead: ${entities.name}.` : 'Failed to create lead.',
+          data: entities
         };
       } catch (e) {
         return { success: false, message: 'Failed to create lead.' };
@@ -51,43 +64,74 @@ export async function executeTask(intent: string, entities: any): Promise<TaskRe
 
     case 'create_task':
       try {
-        const newTask = {
-          id: crypto.randomUUID(),
-          title: entities.title || 'Untitled Task',
-          due_date: entities.dueDate || new Date().toISOString().split('T')[0],
+        store.addTask({
+          title: entities.title || 'New Task',
+          description: '',
+          assignedTo: store.currentUser?.id || 'system',
+          dueDate: entities.dueDate || new Date().toISOString().split('T')[0],
           priority: entities.priority || 'medium',
-          status: 'pending',
-          created_at: new Date().toISOString()
-        };
-        // store.addTask is expected in useStore. Check if it exists.
-        if ((store as any).addTask) {
-          (store as any).addTask(newTask);
-        }
-        return { success: true, message: `Task "${entities.title}" added to your list.`, data: newTask };
+          status: 'todo',
+          createdBy: store.currentUser?.id || 'system'
+        });
+        return { success: true, message: `Task "${entities.title}" added to your list.`, data: entities };
       } catch (e) {
         return { success: false, message: 'Failed to create task.' };
       }
 
     case 'send_sms':
-      // Integration point for SMS service
-      return { success: true, message: `Preparing to send SMS to ${entities.phone}.` };
+      try {
+        const res = await sendSMS(entities.target || entities.phone, entities.message);
+        return { 
+          success: res.success, 
+          message: res.success ? `SMS sent to ${entities.target}.` : `Failed to send SMS: ${res.message}`,
+          data: { phone: res.formattedPhone }
+        };
+      } catch (e) {
+        return { success: false, message: 'SMS service error.' };
+      }
 
     case 'search_leads':
-      // This might involve setting a search filter in the store
+      // Navigation with search parameter – current UI might not support it, but we can go to leads
+      window.location.hash = '#/leads';
       return { success: true, message: `Searching for leads matching "${entities.query}"...` };
 
     case 'update_lead_status':
-      return { success: true, message: `Updating status for ${entities.leadName} to ${entities.status}.` };
+      const lead = store.leads.find(l => l.name?.toLowerCase().includes(entities.leadName?.toLowerCase()));
+      if (lead) {
+        store.updateLeadStatus(lead.id, entities.status, store.currentUser?.id || 'system');
+        return { success: true, message: `Updated ${lead.name} to ${entities.status}.` };
+      }
+      return { success: false, message: `Could not find lead named ${entities.leadName}.` };
 
     case 'add_note':
-      return { success: true, message: `Adding note to ${entities.leadName}: "${entities.note}".` };
+      const noteLead = store.leads.find(l => l.name?.toLowerCase().includes(entities.leadName?.toLowerCase()));
+      if (noteLead && store.addTimelineEntry) {
+        store.addTimelineEntry(noteLead.id, {
+          type: 'note',
+          content: entities.note,
+          user: store.currentUser?.id || 'system',
+          timestamp: new Date().toISOString()
+        });
+        return { success: true, message: `Note added to ${noteLead.name}.` };
+      }
+      return { success: false, message: `Could not find lead named ${entities.leadName}.` };
+
 
     case 'remind_me':
-      return { success: true, message: `Reminder set: ${entities.task} at ${entities.time}.` };
+      store.addTask({
+        title: `Reminder: ${entities.task}`,
+        description: `Triggered at ${entities.time}`,
+        assignedTo: store.currentUser?.id || 'system',
+        dueDate: new Date().toISOString().split('T')[0],
+        priority: 'high',
+        status: 'todo',
+        createdBy: store.currentUser?.id || 'system'
+      });
+      return { success: true, message: `Reminder set: ${entities.task}.` };
 
     case 'what_is_my_schedule':
       window.location.hash = '#/tasks';
-      return { success: true, message: 'Here is your current schedule.' };
+      return { success: true, message: 'Navigating to your schedule.' };
 
     case 'help':
       return {
@@ -96,6 +140,7 @@ export async function executeTask(intent: string, entities: any): Promise<TaskRe
       };
 
     default:
-      return { success: false, message: 'I am not sure how to handle that task yet.' };
+      return { success: false, message: 'Unknown local task.' };
   }
 }
+

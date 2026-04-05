@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StickyNote, X, Minimize2, GripHorizontal } from 'lucide-react';
+import { StickyNote, X, GripHorizontal } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export function QuickNotes() {
@@ -8,6 +8,7 @@ export function QuickNotes() {
     setQuickNotes, 
     isQuickNotesOpen, 
     setQuickNotesOpen,
+    setNotesDocked,
   } = useStore();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -130,6 +131,7 @@ export function QuickNotes() {
             
             <button 
               onClick={() => {
+                setNotesDocked(true);
                 setQuickNotesOpen(false);
               }} 
               className="p-1.5 hover:bg-[var(--t-error)]/10 rounded-lg text-[var(--t-error)]/70 hover:text-[var(--t-error)] transition-colors"

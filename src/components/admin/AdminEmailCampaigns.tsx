@@ -413,21 +413,21 @@ const AdminEmailCampaigns = () => {
       )}
 
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="w-full max-w-4xl bg-black/40 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-500">
-            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
-              <h2 className="text-xl font-black uppercase tracking-wider text-white">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="w-full max-w-[800px] bg-[var(--t-surface)]/80 border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md animate-in zoom-in-95 duration-500 flex flex-col">
+            <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-black/20">
+              <h2 className="text-xl font-black uppercase tracking-wider text-[var(--t-text)]">
                 {editingTemplate?.id ? 'Edit Template' : 'New Template'}
               </h2>
               <button 
                 onClick={() => setShowTemplateModal(false)}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
+                className="p-2 hover:bg-black/20 rounded-full transition-colors text-[var(--t-text-muted)] hover:text-[var(--t-text)]"
               >
                 <X size={24} />
               </button>
             </div>
             
-            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar flex-1">
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">

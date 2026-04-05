@@ -37,10 +37,10 @@ export function Layout() {
     currentTheme, setTheme,
     showQuickNotes,
     isQuickNotesOpen, setQuickNotesOpen,
-    notesDocked, setNotesDocked,
+    setNotesDocked,
     showFloatingAIWidget,
     searchResults, performSearch,
-    aiName, isAiDocked, setAiDocked,
+    aiName, setAiDocked,
     isAiOpen, setAiOpen,
     activeLeadModalId,
     setActiveLeadModalId,
@@ -175,13 +175,9 @@ export function Layout() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // Sync Quick Notes Setting to Visibility
+  // Sync Quick Notes Setting to Visibility - REMOVED AUTO-OPEN
   useEffect(() => {
-    // Only open if setting is enabled
-    if (showQuickNotes === true) {
-      setQuickNotesOpen(true);
-    } else {
-      // Hide if setting is disabled
+    if (showQuickNotes === false) {
       setQuickNotesOpen(false);
     }
   }, [showQuickNotes]);
@@ -536,59 +532,6 @@ export function Layout() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* AI Bookshelf Docking Bar */}
-            {showQuickNotes && (notesDocked || isQuickNotesOpen) && (
-              <div 
-                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
-                onClick={() => { 
-                  if (isQuickNotesOpen) {
-                    setNotesDocked(true);
-                    setQuickNotesOpen(false);
-                  } else {
-                    setNotesDocked(false);
-                    setQuickNotesOpen(true);
-                  }
-                }}
-                title={isQuickNotesOpen ? "Close Quick Notes" : "Open Quick Notes"}
-              >
-                <div className={`flex items-center gap-2 pr-4 h-8 rounded-full transition-all duration-300 ${isQuickNotesOpen ? 'bg-[var(--t-primary)] border-[var(--t-primary)] pl-4' : 'bg-[var(--t-primary-dim)] border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] pl-2'}`}>
-                  {!isQuickNotesOpen && (
-                    <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
-                      <StickyNote size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
-                    </div>
-                  )}
-                  <span className={`text-[10px] font-black tracking-tighter uppercase leading-none ${isQuickNotesOpen ? 'text-white' : 'text-[var(--t-primary)] group-hover:text-white'}`}>
-                    {isQuickNotesOpen ? 'Close' : 'Notes'}
-                  </span>
-                </div>
-              </div>
-            )}
-            {showFloatingAIWidget && (isAiDocked || isAiOpen) && (
-              <div 
-                className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 delay-300 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
-                onClick={() => {
-                  if (isAiOpen) {
-                    setAiDocked(true);
-                    setAiOpen(false);
-                  } else {
-                    setAiDocked(false);
-                    setAiOpen(true);
-                  }
-                }}
-                title={isAiOpen ? "Dock OS Bot" : "Open OS Bot"}
-              >
-                <div className={`flex items-center gap-2 pr-4 h-8 rounded-full transition-all duration-300 ${isAiOpen ? 'bg-[var(--t-primary)] border-[var(--t-primary)] pl-4' : 'bg-[var(--t-primary-dim)] border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] pl-2'}`}>
-                  {!isAiOpen && (
-                    <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
-                      <Bot size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
-                    </div>
-                  )}
-                  <span className={`text-[10px] font-black tracking-tighter uppercase leading-none ${isAiOpen ? 'text-white' : 'text-[var(--t-primary)] group-hover:text-white'}`}>
-                    {isAiOpen ? 'Open' : aiName}
-                  </span>
-                </div>
-              </div>
-            )}
             {isSyncing && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary-dim)]">
                 <CloudCheck size={14} className="text-[var(--t-primary)] animate-pulse" />
@@ -596,34 +539,63 @@ export function Layout() {
               </div>
             )}
             <div className="flex items-center gap-2 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
-              {/* Bot Toggle Button */}
-              {showFloatingAIWidget && !(isAiDocked || isAiOpen) && (
-                <button
-                  onClick={() => setAiOpen(true)}
-                  className="p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]"
-                  title="Open OS Bot"
-                >
-                  <Bot size={18} />
-                </button>
-              )}
-
-              {showFloatingAIWidget && !(isAiDocked || isAiOpen) && !(notesDocked || isQuickNotesOpen) && (
-                <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5" />
-              )}
-
-              {/* Notes Toggle Button */}
-              {showQuickNotes && !(notesDocked || isQuickNotesOpen) && (
-                <button
-                  onClick={() => setQuickNotesOpen(true)}
-                  className="p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]"
-                  title="Open Quick Notes"
-                >
-                  <StickyNote size={18} />
-                </button>
-              )}
-
-              <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
+              {/* Unified Header Cluster */}
               
+              {/* OS Bot Toggle */}
+              {showFloatingAIWidget && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (isAiOpen) {
+                        setAiDocked(true);
+                        setAiOpen(false);
+                      } else {
+                        setAiDocked(false);
+                        setAiOpen(true);
+                      }
+                    }}
+                    className={`flex items-center gap-2 p-1.5 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
+                      isAiOpen 
+                        ? 'bg-[var(--t-primary)] text-white shadow-lg px-3' 
+                        : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
+                    }`}
+                    title={isAiOpen ? "Close OS Bot" : "Open OS Bot"}
+                  >
+                    <Bot size={18} />
+                    {isAiOpen && <span className="text-[10px] font-black uppercase tracking-widest">Close</span>}
+                  </button>
+                  <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5 opacity-50" />
+                </>
+              )}
+
+              {/* Quick Notes Toggle */}
+              {showQuickNotes && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (isQuickNotesOpen) {
+                        setNotesDocked(true);
+                        setQuickNotesOpen(false);
+                      } else {
+                        setNotesDocked(false);
+                        setQuickNotesOpen(true);
+                      }
+                    }}
+                    className={`flex items-center gap-2 p-1.5 rounded-lg transition-all duration-300 hover:scale-105 active:scale-95 ${
+                      isQuickNotesOpen 
+                        ? 'bg-[var(--t-primary)] text-white shadow-lg px-3' 
+                        : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
+                    }`}
+                    title={isQuickNotesOpen ? "Close Quick Notes" : "Open Quick Notes"}
+                  >
+                    <StickyNote size={18} />
+                    {isQuickNotesOpen && <span className="text-[10px] font-black uppercase tracking-widest">Close</span>}
+                  </button>
+                  <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5 opacity-50" />
+                </>
+              )}
+
+              {/* Theme & Notifications */}
               <div className="hover:scale-110 transition-transform"><ThemeSwitcher /></div>
               <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
               <div className="hover:scale-110 transition-transform"><NotificationPanel /></div>

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { leadsService, tasksService, teamService, chatService, notificationsService, mapService } from '../lib/supabase-service';
 import { themes } from '../styles/themes';
+import { automationEngine } from '../lib/automation-engine';
 
 // â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -1812,7 +1813,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   // —— AI State ——————————————————————————————————————————————
   aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
-  aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'gemini-2.0-flash',
+  aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'gemini-3.1-flash-lite',
   premiumMessagesLeft: typeof window !== 'undefined' ? parseInt(localStorage.getItem('wholescale-premium-messages') || '20', 10) : 20,
   aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
   aiUsage: (() => {
@@ -2539,6 +2540,9 @@ export const useStore = create<AppState>((set, get) => ({
     
     set((s) => ({ leads: [...s.leads, newLead] }));
     
+    // Trigger Automation
+    automationEngine.trigger('LEAD_CREATED', { ...newLead, id: newId });
+    
     if (teamId && isSupabaseConfigured && supabase) {
       try {
         console.log('DEBUG: addLead attempting to sync lead to Supabase:', newId);
@@ -2650,7 +2654,13 @@ export const useStore = create<AppState>((set, get) => ({
         return l;
       }),
     }));
-    
+
+    // Trigger Automation if Lead Score is high
+    const leadAfterUpdate = get().leads.find(l => l.id === id);
+    if (leadAfterUpdate && (leadAfterUpdate.dealScore || 0) >= 80) {
+      automationEngine.trigger('LEAD_SCORE_HIGH', { ...leadAfterUpdate, deal_score: leadAfterUpdate.dealScore });
+    }
+
     // 2. Background Sync
     if (isSupabaseConfigured && supabase) {
       set({ isSyncing: true });
@@ -2786,6 +2796,12 @@ export const useStore = create<AppState>((set, get) => ({
       ),
     }));
 
+    // Trigger Automation
+    const leadAfterStatusUpdate = get().leads.find(l => l.id === leadId);
+    if (leadAfterStatusUpdate) {
+      automationEngine.trigger('LEAD_STATUS_CHANGED', { ...leadAfterStatusUpdate, id: leadId, status: sanitizedStatus });
+    }
+
     if (isSupabaseConfigured && supabase) {
       try {
         await Promise.all([
@@ -2897,7 +2913,11 @@ export const useStore = create<AppState>((set, get) => ({
     get().saveToHistory();
     const newId = uuidv4();
     const now = new Date().toISOString();
-    set((s: any) => ({ tasks: [...s.tasks, { ...task, id: newId, createdAt: now, completedAt: null }] }));
+    const newTask = { ...task, id: newId, createdAt: now, completedAt: null };
+    set((s: any) => ({ tasks: [...s.tasks, newTask] }));
+    
+    // Trigger Automation
+    automationEngine.trigger('TASK_STATUS_CHANGED', { ...newTask, id: newId });
     const { teamId } = get();
     if (teamId && isSupabaseConfigured && supabase) {
       tasksService.create({
@@ -2944,6 +2964,9 @@ export const useStore = create<AppState>((set, get) => ({
     get().saveToHistory();
     const now = new Date().toISOString();
     set((s: any) => ({ tasks: s.tasks.map((t: any) => t.id === id ? { ...t, status: 'done' as TaskStatus, completedAt: now } : t) }));
+    
+    // Trigger Automation
+    automationEngine.trigger('TASK_STATUS_CHANGED', { id, status: 'done' });
     if (isSupabaseConfigured && supabase) tasksService.complete(id).catch(() => {});
   },
 
@@ -4194,7 +4217,12 @@ export const useStore = create<AppState>((set, get) => ({
     leads: s.leads.map((l: any) => l.id === leadId ? { ...l, photos } : l)
   })),
   setSMSMessages: (msgs) => set({ smsMessages: msgs }),
-  addSMSMessage: (msg) => set((s: any) => ({ smsMessages: [...s.smsMessages, msg] })),
+  addSMSMessage: (msg) => {
+    set((s: any) => ({ smsMessages: [...s.smsMessages, msg] }));
+    
+    // Trigger Automation
+    automationEngine.trigger('SMS_RECEIVED', { message: msg, phone: msg.phone_number });
+  },
   markSMSAsRead: (id) => set((s: any) => ({
     smsMessages: s.messages.map((m: any) => m.id === id ? { ...m, read: true } : m)
   })),

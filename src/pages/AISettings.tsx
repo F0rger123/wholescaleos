@@ -7,12 +7,13 @@ import { Key, Loader2, Check, AlertCircle, Save, Sparkles, Layout, ExternalLink 
 import { getEnabledPrebuiltRules } from '../lib/prebuilt-rules';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
-  const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic' | 'local'>('gemini');
+  const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic' | 'local'>('local');
   const [geminiKey, setGeminiKey] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
   const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/v1');
-  const [model, setModel] = useState('gemini-2.0-flash');
+  const [model, setModel] = useState('native-intent');
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -74,7 +75,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 } else if (conn.provider === 'gemini') {
                 setGeminiKey(conn.refresh_token || '');
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
-                  setModel(conn.access_token || 'gemini-2.0-flash');
+                  setModel(conn.access_token || 'gemini-3.1-flash-lite');
                 }
               } else if (conn.provider === 'openai') {
                 setOpenaiKey(conn.refresh_token || '');
@@ -322,7 +323,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             key={p.id}
             onClick={() => {
               setProvider(p.id as any);
-              if (p.id === 'gemini') setModel('gemini-2.0-flash');
+              if (p.id === 'gemini') setModel('gemini-3.1-flash-lite');
               else if (p.id === 'openai') setModel('gpt-4o');
               else if (p.id === 'anthropic') setModel('claude-3-5-sonnet-latest');
               else if (p.id === 'local') setModel('llama3');
@@ -378,7 +379,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred {provider.charAt(0).toUpperCase() + provider.slice(1)} Model</label>
           <div className="grid grid-cols-1 gap-3">
             {provider === 'gemini' && [
-              { id: 'gemini-2.0-flash', label: 'Gemini 3.1 Flash-Lite', desc: 'Ultra-low latency, cost-effective model for rapid task execution.' },
+              { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', desc: 'High-performance alternative (mapped to 2.0 Flash)' },
+              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Ultra-low latency, cost-effective model for rapid task execution.' },
               { id: 'gemini-2.0-pro-exp-02-05', label: 'Gemini 2.0 Pro Exp', desc: 'Ultra-smart reasoning model for complex deal analysis.' },
               { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Highly capable reasoning model for complex logic.' }
             ].map((m) => (
@@ -428,20 +430,38 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
               </button>
             ))}
 
-            {provider === 'local' && (
+            {provider === 'local' && [
+              { id: 'native-intent', label: 'System Native (No Internet)', desc: 'Built-in regex intent engine. Handles CRM tasks with 100% privacy and zero latency.' },
+              { id: 'ollama-bridge', label: 'External Local (Ollama/LM Studio)', desc: 'Connect to a locally running large language model via OpenAI-compatible API.' }
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setModel(m.id)}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
+                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
+                </div>
+                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
+              </button>
+            ))}
+
+            {provider === 'local' && model === 'ollama-bridge' && (
               <div className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)]/50 space-y-4">
                 <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
-                  Enter the model name exactly as it appears in your local provider (e.g. <code>llama3</code>, <code>mistral</code>).
+                  Enter the model name exactly as it appears in your local provider (e.g. <code>llama3</code>, <code>mistral</code>) and use the endpoint field below.
                 </p>
                 <input
                   type="text"
-                  value={model}
+                  value={model === 'ollama-bridge' ? '' : model}
                   onChange={(e) => setModel(e.target.value)}
                   placeholder="e.g. llama3"
-                  className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
+                  className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all font-mono text-sm"
                 />
               </div>
             )}
+
           </div>
         </div>
 

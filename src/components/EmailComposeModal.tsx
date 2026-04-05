@@ -4,8 +4,9 @@ import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail } from '../lib/email';
 import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, AgentTemplate } from '../lib/default-templates';
-import { BookOpenText } from 'lucide-react';
+import { BookOpenText, ImageIcon, Upload, Link as LinkIcon } from 'lucide-react';
 import RichTextEditor from './admin/RichTextEditor';
+import { supabase } from '../lib/supabase';
 
 interface EmailComposeModalProps {
   isOpen: boolean;
@@ -50,6 +51,8 @@ export default function EmailComposeModal({
   const [activeTab, setActiveTab] = useState<'leads' | 'contacts'>('leads');
   const [showTemplates, setShowTemplates] = useState(false);
   const [templateCategory, setTemplateCategory] = useState<string>('All');
+  const [templateImages, setTemplateImages] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
 
   const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
   const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
@@ -99,26 +102,83 @@ export default function EmailComposeModal({
     let newBody = template.body || template.html || '';
     let newSubject = template.subject;
 
+    // Handle images
+    const initialImages: Record<string, string> = {};
+    if (template.imageUrl) {
+      initialImages['header_image'] = template.imageUrl;
+    }
+    setTemplateImages(initialImages);
+
     // Replace variables
     const vars: Record<string, string> = {
       '{{name}}': selectedLead?.name || 'there',
       '{{address}}': selectedLead?.propertyAddress || 'your property',
       '{{area}}': selectedLead?.city || 'your area',
+      '{{city}}': selectedLead?.city || 'your city',
       '{{agent_name}}': currentUser?.name || 'your agent',
       '{{offer_amount}}': '$' + ((selectedLead as any)?.metadata?.estimatedValue?.toLocaleString() || '---'),
       '{{closing_date}}': '30 days from now',
-      '{{inspection_period}}': '7'
+      '{{inspection_period}}': '7',
+      '{{header_image}}': template.imageUrl || '',
+      '{{price}}': '$' + ((selectedLead as any)?.metadata?.estimatedValue?.toLocaleString() || '450,000')
     };
 
+    let processedHtml = newBody;
     Object.entries(vars).forEach(([key, val]) => {
       const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-      newBody = newBody.replace(regex, val);
+      processedHtml = processedHtml.replace(regex, val);
       newSubject = newSubject.replace(regex, val);
     });
 
     setSubject(newSubject);
-    setBody(newBody);
+    setBody(processedHtml);
     setShowTemplates(false);
+  };
+
+  const handleUpdateTemplateImage = async (key: string, fileOrUrl: File | string) => {
+    let finalUrl = '';
+    
+    if (typeof fileOrUrl === 'string') {
+      finalUrl = fileOrUrl;
+    } else {
+      setIsUploading(true);
+      try {
+        if (!supabase) return;
+        const fileExt = fileOrUrl.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${currentUser?.id}/${Date.now()}-${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('email-assets')
+          .upload(filePath, fileOrUrl);
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage
+          .from('email-assets')
+          .getPublicUrl(filePath);
+        
+        finalUrl = data.publicUrl;
+      } catch (err) {
+        console.error('Upload error:', err);
+        alert('Failed to upload image.');
+        return;
+      } finally {
+        setIsUploading(false);
+      }
+    }
+
+    if (finalUrl) {
+      setTemplateImages(prev => ({ ...prev, [key]: finalUrl }));
+      const oldUrl = templateImages[key];
+      if (oldUrl) {
+         setBody(prev => prev.split(oldUrl).join(finalUrl));
+      } else {
+         // If for some reason it wasn't there, we just update the state and hope for the best
+         // In reality, our templates use {{header_image}} which we replaced on load.
+         // So we need to find the <img> with src that matches the old URL.
+      }
+    }
   };
 
   const handleSend = async () => {
@@ -361,31 +421,98 @@ export default function EmailComposeModal({
               </div>
 
               {showTemplates && (
-                <div className="space-y-3 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar no-scrollbar">
-                    {categories.map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => setTemplateCategory(cat)}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all whitespace-nowrap ${templateCategory === cat ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)]' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
-                      >
-                        {cat}
-                      </button>
-                    ))}
+                <div className="space-y-4 p-4 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                      {categories.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => setTemplateCategory(cat)}
+                          className={`px-4 py-1.5 rounded-full text-[10px] font-bold border transition-all whitespace-nowrap ${templateCategory === cat ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)] shadow-lg shadow-[var(--t-primary-dim)]' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+
+                  <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                     {filteredTemplates.map(t => (
                       <button
                         key={t.id}
                         onClick={() => handleApplyTemplate(t)}
-                        className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
+                        className="group relative flex flex-col bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl hover:border-[var(--t-primary-dim)] hover:shadow-xl transition-all overflow-hidden text-left"
                       >
-                        <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <p className="text-xs font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors truncate">{t.name}</p>
-                          <span className="text-[8px] font-bold px-1 py-0.5 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded uppercase">{t.category}</span>
-                        </div>
-                        <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
+                         <div className="aspect-video w-full bg-[var(--t-surface-hover)] overflow-hidden relative">
+                            {t.imageUrl ? (
+                              <img src={t.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[var(--t-text-muted)]">
+                                <ImageIcon size={24} />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                               <p className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-1">
+                                 <Plus size={10} /> Use Template
+                               </p>
+                            </div>
+                         </div>
+                         <div className="p-3">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <p className="text-xs font-bold text-[var(--t-text)] truncate">{t.name}</p>
+                              <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded-md uppercase">{t.category}</span>
+                            </div>
+                            <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
+                         </div>
                       </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Graphic Editor (Visible when a template with an image is active) */}
+              {Object.keys(templateImages).length > 0 && (
+                <div className="p-4 bg-[var(--t-primary-dim)]/5 border border-[var(--t-primary-dim)]/20 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                     <p className="text-[10px] font-bold text-[var(--t-primary)] uppercase tracking-widest flex items-center gap-1.5">
+                       <ImageIcon size={12} /> Graphic Assets Found
+                     </p>
+                     {isUploading && <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--t-primary)] animate-pulse"><Loader2 size={10} className="animate-spin" /> Uploading...</div>}
+                  </div>
+                  <div className="space-y-2">
+                    {Object.entries(templateImages).map(([key, url]) => (
+                      <div key={key} className="flex items-center gap-4 p-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl group">
+                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--t-surface-hover)] border border-[var(--t-border)]">
+                           <img src={url} className="w-full h-full object-cover" />
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <p className="text-[10px] font-bold text-[var(--t-text)] truncate capitalize">{key.replace('_', ' ')}</p>
+                           <p className="text-[9px] text-[var(--t-text-muted)] truncate">{url}</p>
+                         </div>
+                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <label className="p-2 hover:bg-[var(--t-primary-dim)]/20 hover:text-[var(--t-primary)] rounded-lg cursor-pointer transition-colors" title="Upload Replacement">
+                               <Upload size={14} />
+                               <input 
+                                 type="file" 
+                                 className="hidden" 
+                                 accept="image/*"
+                                 onChange={(e) => {
+                                   const file = e.target.files?.[0];
+                                   if (file) handleUpdateTemplateImage(key, file);
+                                 }}
+                               />
+                            </label>
+                            <button 
+                              onClick={() => {
+                                const newUrl = prompt('Enter Image URL:', url);
+                                if (newUrl) handleUpdateTemplateImage(key, newUrl);
+                              }}
+                              className="p-2 hover:bg-[var(--t-primary-dim)]/20 hover:text-[var(--t-primary)] rounded-lg transition-colors" title="External URL"
+                            >
+                               <LinkIcon size={14} />
+                            </button>
+                         </div>
+                      </div>
                     ))}
                   </div>
                 </div>

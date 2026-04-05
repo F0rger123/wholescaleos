@@ -1,386 +1,381 @@
 import { AgentTemplate } from '../lib/default-templates';
 
 export const AGENT_EMAIL_TEMPLATES: AgentTemplate[] = [
-  // --- LEAD GENERATION ---
   {
-    id: 'agent-intro-buyer',
-    name: 'Buyer Introduction',
-    subject: 'Assisting with your home search in {{area}}',
-    body: `Hi {{name}},\n\nI noticed you were looking at properties in {{area}}. I've got a few off-market opportunities that might fit exactly what you're looking for.\n\nAre you free for a quick 5-minute chat tomorrow?\n\nBest,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #4f46e5; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: white; margin: 0; text-transform: uppercase; letter-spacing: 2px;">New Property Alert</h2>
-        </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>I noticed you were looking at properties in <strong>{{area}}</strong>. I've got a few off-market opportunities that might fit exactly what you're looking for.</p>
-          <p>These homes aren't on the MLS yet, so you'd be the first to see them.</p>
-          <div style="margin: 30px 0; text-align: center;">
-            <a href="#" style="background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Off-Market Picks</a>
-          </div>
-          <p>Are you free for a quick 5-minute chat tomorrow to discuss your search?</p>
-          <p>Best regards,<br><strong>{{agent_name}}</strong></p>
-        </div>
-      </div>
-    `,
+    id: 'agent-welcome-lead',
+    name: 'Welcome Lead (The Premium Intro)',
+    subject: 'Welcome to the Family, {{name}}! 🚀',
     category: 'Sales',
-    tags: ['buyer', 'intro']
-  },
-  {
-    id: 'agent-intro-seller',
-    name: 'Seller Introduction',
-    subject: 'Question about your property at {{address}}',
-    body: `Hi {{name}},\n\nI'm a local specialist in {{area}} and I'm currently working with several buyers looking for homes in your neighborhood. I came across {{address}} and was wondering if you'd ever considered an off-market offer?\n\nWe can often close very quickly with no commissions.\n\nLet me know if you'd be open to a conversation.\n\nBest,\n{{agent_name}}`,
+    tags: ['welcome', 'new-lead'],
+    imageUrl: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #111; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: #6366f1; margin: 0; text-transform: uppercase; letter-spacing: 2px;">Confidential Inquiry</h2>
-        </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>I'm a local specialist in <strong>{{area}}</strong> and I'm currently working with several pre-approved buyers looking for homes exactly like yours in your neighborhood.</p>
-          <p>I came across <strong>{{address}}</strong> and was wondering if you'd ever considered an off-market offer?</p>
-          <p><strong>The Benefits:</strong></p>
-          <ul>
-            <li>No public showings or open houses</li>
-            <li>No agent commissions (save 6%)</li>
-            <li>Close on your timeline (as fast as 14 days)</li>
-          </ul>
-          <p>Let me know if you'd be open to a confidential conversation about what your home could be worth in today's market.</p>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
-        </div>
-      </div>
-    `,
-    category: 'Sales',
-    tags: ['seller', 'intro']
-  },
-  {
-    id: 'agent-followup-1',
-    name: 'Day 1 Follow-up',
-    subject: 'Checking in on our conversation',
-    body: `Hi {{name}},\n\nJust wanted to make sure you received my previous message. I'm truly interested in {{address}} and would love to see if we can make something work that benefits both of us.\n\nTalk soon,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-radius: 12px; background: #f9fafb;">
-          <p>Hi {{name}},</p>
-          <p>Just wanted to make sure you received my previous message regarding <strong>{{address}}</strong>.</p>
-          <p>I know life gets busy, but I'm truly interested in the property and would love to see if we can put together a deal that works for everyone.</p>
-          <p>Do you have 2 minutes for a quick text or call this afternoon?</p>
-          <p>Talk soon,<br><strong>{{agent_name}}</strong></p>
-        </div>
-      </div>
-    `,
-    category: 'Sales',
-    tags: ['followup']
-  },
-  {
-    id: 'agent-zombie-revival',
-    name: 'Zombie Lead Revival',
-    subject: 'Still interested in selling {{address}}?',
-    body: `Hi {{name}},\n\nIt's been a while since we talked about {{address}}. I'm still very interested in the property. Is it still available, or have your plans changed?\n\nBest,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>It's been a few months since we connected about your property at <strong>{{address}}</strong>.</p>
-          <p>I'm still very active in the neighborhood and am still interested in that specific location. Is the property still available, or have your plans for the year changed?</p>
-          <p>No pressure at all — just checking in to see where you're at.</p>
-          <p>Best regards,<br><strong>{{agent_name}}</strong></p>
-        </div>
-      </div>
-    `,
-    category: 'Sales',
-    tags: ['followup', 'revival']
-  },
-  {
-    id: 'agent-price-reduction',
-    name: 'Price Reduction Alert',
-    subject: 'Significant Price Drop: {{address}}',
-    body: `Hi {{name}},\n\nWe just authorized a major price reduction on {{address}}. It's now listed at {{price}}.\n\nThis is currently the best value in the {{area}} market. Let me know if you want to schedule a walkthrough.\n\nBest,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #ef4444; padding: 15px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: white; margin: 0; text-transform: uppercase; font-size: 18px;">🔥 PRICE REDUCED 🔥</h2>
-        </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>I wanted you to be the first to know: We just authorized a <strong>major price reduction</strong> on <strong>{{address}}</strong>.</p>
-          <div style="background: #fef2f2; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-            <span style="display: block; text-decoration: line-through; color: #9ca3af; font-size: 14px;">Original Price</span>
-            <span style="font-size: 28px; font-weight: 900; color: #ef4444;">{{price}}</span>
-          </div>
-          <p>This is now the best value in the <strong>{{area}}</strong> market. I expect multiple offers by the end of the week.</p>
-          <p>Would you like to schedule a walkthrough tomorrow before the public open house?</p>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
-        </div>
-      </div>
-    `,
-    category: 'Marketing',
-    tags: ['price-drop']
-  },
-  {
-    id: 'agent-cash-offer',
-    name: 'Cash Offer Proposal',
-    subject: 'Official Cash Offer for {{address}}',
-    body: `Hi {{name}},\n\nWe've completed our evaluation of {{address}} and are prepared to make a solid cash offer. \n\nKey Benefits:\n- No Inspections required\n- We pay all closing costs\n- Close in 10-14 days\n\nWould you like to review the full agreement today?\n\nBest,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #059669; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: white; margin: 0; text-transform: uppercase; letter-spacing: 2px;">Cash Offer Proposal</h2>
-        </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>We've completed our evaluation of <strong>{{address}}</strong> and are prepared to move forward with a solid cash offer.</p>
-          <div style="margin: 25px 0; background: #f0fdf4; padding: 20px; border-radius: 12px; border: 1px solid #dcfce7;">
-            <h4 style="margin-top: 0; color: #065f46;">Why this is the easiest way to sell:</h4>
-            <ul style="margin-bottom: 0;">
-              <li><strong>As-Is Purchase:</strong> No repairs or cleaning needed</li>
-              <li><strong>Zero Fees:</strong> We pay all closing costs & commissions</li>
-              <li><strong>Fast Close:</strong> Funds in your account in 10-14 days</li>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #111827; padding: 0; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <img src="{{header_image}}" style="width: 100%; height: 240px; object-fit: cover; display: block;" />
+        <div style="padding: 40px; text-align: center;">
+          <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 0 0 16px 0;">Welcome, {{name}}!</h2>
+          <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">We're thrilled to assist you with your real estate journey in <strong>{{area}}</strong>. Our mission is to make your transition as smooth as possible.</p>
+          <div style="background: #f9fafb; padding: 24px; border-radius: 16px; margin-bottom: 32px; text-align: left; border-left: 4px solid #6366f1;">
+            <p style="margin: 0; font-weight: 700; font-size: 14px; text-transform: uppercase; color: #6366f1;">Next Steps:</p>
+            <ul style="margin: 12px 0 0 0; padding-left: 20px; color: #374151;">
+              <li>Confirm your search criteria</li>
+              <li>Schedule a 10-minute discovery call</li>
+              <li>Get access to our off-market inventory</li>
             </ul>
           </div>
-          <p>Would you like to review the full agreement today? I can send over a DocuSign link immediately.</p>
-          <p>Best regards,<br><strong>{{agent_name}}</strong></p>
+          <a href="#" style="display: inline-block; padding: 16px 40px; background: #6366f1; color: white; text-decoration: none; border-radius: 12px; font-weight: 900; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);">Get Started Today</a>
+          <p style="margin-top: 40px; font-size: 14px; color: #9ca3af;">Best regards,<br><strong style="color: #111827;">{{agent_name}}</strong></p>
         </div>
       </div>
-    `,
+    `
+  },
+  {
+    id: 'agent-property-alert',
+    name: 'Property Alert (The Modern Grid)',
+    subject: 'New Listing Alert: Check out this gem in {{area}}! ✨',
     category: 'Sales',
-    tags: ['offer', 'cash']
-  },
-  {
-    id: 'agent-creative-finance',
-    name: 'Creative Finance Solution',
-    subject: 'A customized way to sell {{address}}',
-    body: `Hi {{name}},\n\nIf a traditional cash offer doesn't meet your net proceeds goal, I have some creative solutions like Seller Financing or Subject-To that can get you a higher price while saving you money on capital gains.\n\nInterested in hearing how this could work for you?\n\nBest,\n{{agent_name}}`,
+    tags: ['alert', 'listing'],
+    imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6199f7a096?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-radius: 12px; background: linear-gradient(to bottom, #ffffff, #f3f4f6);">
-          <p>Hi {{name}},</p>
-          <p>I know you're looking for a specific net number for <strong>{{address}}</strong>. If a traditional cash offer isn't reaching that goal, I have several <strong>Creative Finance</strong> solutions that can bridge the gap.</p>
-          <p><strong>We can explore:</strong></p>
-          <ul>
-            <li><strong>Seller Financing:</strong> Get monthly passive income + interest</li>
-            <li><strong>Subject-To:</strong> We take over your existing payments & equity</li>
-            <li><strong>Novation:</strong> We partner to renovate and sell for max profit</li>
-          </ul>
-          <p>These strategies often result in 15-20% higher net proceeds for the seller. Interested in hearing which one fits your situation best?</p>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
-        </div>
-      </div>
-    `,
-    category: 'Sales',
-    tags: ['offer', 'creative']
-  },
-  {
-    id: 'agent-closing-instr',
-    name: 'Closing Day Logistics',
-    subject: 'Closing Day Instructions for {{address}}',
-    body: `Hi {{name}},\n\nWe are all set for closing on {{address}}! \n\nReminder Checklist:\n1. Bring your Photo ID\n2. Bring all keys and remotes\n3. Bring any final docs requested by the title company\n\nSee you at the closing table!\n\nBest,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #4f46e5; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: white; margin: 0;">It's Closing Day! 🔑</h2>
-        </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>Congratulations! We are officially all set for closing on <strong>{{address}}</strong>.</p>
-          <p><strong>Quick Reminder Checklist:</strong></p>
-          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <ul style="margin: 0; padding-left: 20px;">
-              <li>Bring a valid Government Photo ID</li>
-              <li>Bring all house keys, mailbox keys, and garage remotes</li>
-              <li>Bring any final docs requested by the title company</li>
-              <li>Ensure your wire transfer was initiated (if applicable)</li>
-            </ul>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #0f172a; color: #ffffff; padding: 0; border-radius: 32px; overflow: hidden; border: 1px solid #1e293b;">
+        <div style="position: relative;">
+          <img src="{{header_image}}" style="width: 100%; height: 300px; object-fit: cover; display: block;" />
+          <div style="position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.2);">
+            <span style="font-size: 12px; font-weight: 900; letter-spacing: 1px;">JUST LISTED</span>
           </div>
-          <p>I'll be there waiting for you at the title office. See you at the closing table!</p>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
         </div>
-      </div>
-    `,
-    category: 'Operations',
-    tags: ['closing', 'instructions']
-  },
-  {
-    id: 'agent-post-closing',
-    name: 'Post-Closing Satisfaction',
-    subject: 'Congratulations! How was your experience?',
-    body: `Hi {{name}},\n\nCongratulations on the successful closing of {{address}}! \n\nI wanted to check in and see how the process was for you. Your feedback is incredibly valuable to me and my team.\n\nThanks again for trusting me with your real estate journey.\n\nBest,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6; text-align: center;">
-        <div style="padding: 40px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff;">
-          <h1 style="color: #4f46e5; margin-bottom: 10px;">Congratulations! 🥂</h1>
-          <p style="font-size: 18px;">The keys are officially in your hands for <strong>{{address}}</strong>.</p>
-          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-          <p>Hi {{name}},</p>
-          <p>It has been an absolute pleasure assisting you with this journey. I wanted to check in and see how the move is going and if there's anything else I can do to help you settle in.</p>
-          <p>Your satisfaction is my top priority. If you have 30 seconds, I'd love to hear about your experience working with me.</p>
-          <div style="margin: 30px 0;">
-            <a href="#" style="background: #111; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Leave Feedback</a>
+        <div style="padding: 40px;">
+          <h3 style="font-size: 24px; font-weight: 800; margin: 0 0 8px 0;">{{address}}</h3>
+          <p style="font-size: 20px; color: #3b82f6; font-weight: 900; margin-bottom: 24px;">Price: $425,000</p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 32px;">
+            <div style="background: #1e293b; padding: 12px; border-radius: 12px; text-align: center;">
+              <p style="margin: 0; font-size: 10px; color: #94a3b8; text-transform: uppercase;">Beds</p>
+              <p style="margin: 4px 0 0 0; font-weight: 700;">4</p>
+            </div>
+            <div style="background: #1e293b; padding: 12px; border-radius: 12px; text-align: center;">
+              <p style="margin: 0; font-size: 10px; color: #94a3b8; text-transform: uppercase;">Baths</p>
+              <p style="margin: 4px 0 0 0; font-weight: 700;">3</p>
+            </div>
+            <div style="background: #1e293b; padding: 12px; border-radius: 12px; text-align: center;">
+              <p style="margin: 0; font-size: 10px; color: #94a3b8; text-transform: uppercase;">SqFt</p>
+              <p style="margin: 4px 0 0 0; font-weight: 700;">2,450</p>
+            </div>
           </div>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
+          <a href="#" style="display: block; width: 100%; padding: 18px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;">Schedule a Private Tour</a>
         </div>
       </div>
-    `,
-    category: 'Operations',
-    tags: ['closing', 'feedback']
+    `
   },
   {
     id: 'agent-market-update',
-    name: 'Monthly Market Report',
-    subject: 'What\'s happening in the {{area}} market?',
-    body: `Hi {{name}},\n\nInventory is at record lows in {{area}} right now! This means your property at {{address}} might be worth significantly more than it was last year.\n\nWould you like a free, 5-minute valuation report?\n\nBest,\n{{agent_name}}`,
-    html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #1e293b; padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: white; margin: 0; text-transform: uppercase; letter-spacing: 3px;">Market Update</h2>
-          <p style="color: #94a3b8; font-size: 12px; margin-top: 5px;">{{area}} | {{date}}</p>
-        </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>Inventory is at record lows in <strong>{{area}}</strong> right now! For homeowners, this is an incredible opportunity. High demand and low supply mean your property at <strong>{{address}}</strong> might be worth significantly more than it was even 12 months ago.</p>
-          <div style="margin: 30px 0; padding: 20px; border: 2px dashed #e2e8f0; border-radius: 12px; text-align: center;">
-            <p style="margin-top: 0; font-weight: bold;">Current Estimated Value Range:</p>
-            <p style="font-size: 24px; color: #4f46e5; font-weight: 900;">$325k - $360k</p>
-            <a href="#" style="color: #4f46e5; font-weight: bold; text-decoration: underline;">Request Detailed Valuation</a>
-          </div>
-          <p>Would you like a more precise report based on recent internal sales in your specific block?</p>
-          <p>Best regards,<br><strong>{{agent_name}}</strong></p>
-        </div>
-      </div>
-    `,
+    name: 'Market Update (The Statistical)',
+    subject: 'Monthly Trends: What\'s happening in {{area}}? 📈',
     category: 'Marketing',
-    tags: ['market-update']
-  },
-  {
-    id: 'agent-referral-ask',
-    name: 'Referral Request',
-    subject: 'A quick favor?',
-    body: `Hi {{name}},\n\nI really enjoyed working with you on {{address}}. If you know anyone else looking to buy or sell in the near future, I'd love to provide them with the same high level of service.\n\nI even offer a referral commission for any successfully closed deals you send my way!\n\nBest,\n{{agent_name}}`,
+    tags: ['market-update', 'report'],
+    imageUrl: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6; text-align: center;">
-        <div style="padding: 40px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-          <div style="width: 60px; hieght: 60px; background: #4f46e5; border-radius: 50%; margin: 0 auto 20px; display: inline-block; padding: 15px;">
-            <span style="color: white; font-size: 30px;">🤝</span>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        <div style="background: #111827; padding: 40px; text-align: center;">
+          <h2 style="color: #6366f1; font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;">Market Report</h2>
+          <h1 style="color: white; font-size: 28px; font-weight: 900; margin: 0;">{{area}} Real Estate Trends</h1>
+        </div>
+        <div style="padding: 40px;">
+          <p style="color: #4b5563; line-height: 1.6; margin-bottom: 30px;">Inventory is at record lows right now! This means your property might be worth <strong>15% more</strong> than it was last year.</p>
+          <div style="margin-bottom: 32px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f1f5f9;">
+              <span style="color: #64748b; font-weight: 600;">Avg. Sale Price</span>
+              <span style="color: #059669; font-weight: 900;">$545,000 (+4.2%) ↑</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #f1f5f9;">
+              <span style="color: #64748b; font-weight: 600;">Avg. Days on Market</span>
+              <span style="color: #ef4444; font-weight: 900;">12 Days (-5.1%) ↓</span>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0;">
+              <span style="color: #64748b; font-weight: 600;">Total Inventory</span>
+              <span style="color: #111827; font-weight: 900;">145 Units</span>
+            </div>
           </div>
-          <h2 style="margin: 0; color: #111;">A Quick Favor?</h2>
-          <p>Hi {{name}},</p>
-          <p>I really enjoyed helping you with <strong>{{address}}</strong>. My business relies on positive word-of-mouth from clients like you.</p>
-          <p>If you know anyone else looking to buy, sell, or invest in <strong>{{area}}</strong>, I'd love the opportunity to provide them with the same level of service.</p>
-          <p style="background: #fefce8; padding: 15px; border-radius: 8px; color: #854d0e; font-weight: bold;">
-            Bonus: I offer a referral reward for every lead that results in a successful closing!
-          </p>
-          <p>Thank you for your support!</p>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
+          <a href="#" style="display: block; width: 100%; padding: 16px; background: #6366f1; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900;">Get Your Custom Evaluation</a>
         </div>
       </div>
-    `,
+    `
+  },
+  {
+    id: 'agent-open-house',
+    name: 'Open House Inv (The Social)',
+    subject: 'You\'re Invited: Champagne Open House at {{address}}! 🥂',
     category: 'Marketing',
-    tags: ['referral']
-  },
-  {
-    id: 'agent-expired-listing',
-    name: 'Expired Listing Outreach',
-    subject: 'About your listing at {{address}}',
-    body: `Hi {{name}},\n\nI noticed that your listing at {{address}} recently expired. Selling a home can be frustrating, especially when it doesn't move as quickly as expected.\n\nI specialize in selling homes that other agents couldn't. My approach includes targeted online marketing, off-market buyer networks, and creative pricing strategies.\n\nWould you be open to a no-obligation conversation about a fresh approach?`,
+    tags: ['open-house', 'invitation'],
+    imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #dc2626; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: white; margin: 0; text-transform: uppercase;">Fresh Strategy Required</h2>
-        </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>I noticed that your listing at <strong>{{address}}</strong> recently expired. It's frustrating when a home doesn't sell, but it usually comes down to one of three factors: Exposure, Presentation, or Pricing Strategy.</p>
-          <p><strong>My Approach is Different:</strong></p>
-          <ul>
-            <li><strong>Digital Domination:</strong> Targeting high-intent buyers on FB/IG/Google</li>
-            <li><strong>Off-Market Network:</strong> Access to 500+ private investors in {{area}}</li>
-            <li><strong>Professional Staging:</strong> High-end lifestyle photography that pops</li>
-          </ul>
-          <p>I specialize in selling homes that other agents couldn't. Would you be open to a no-obligation, 10-minute audit of your previous listing to see what we can do differently?</p>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <img src="{{header_image}}" style="width: 100%; height: 350px; object-fit: cover; display: block;" />
+        <div style="padding: 40px; text-align: center;">
+          <div style="display: inline-block; padding: 4px 12px; background: #fdf2f8; color: #db2777; border-radius: 99px; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px;">Exclusive Event</div>
+          <h2 style="font-size: 32px; font-weight: 900; margin: 0 0 8px 0; color: #1e293b;">Join Us Saturday</h2>
+          <p style="font-size: 16px; color: #64748b; margin-bottom: 32px;">Experience this stunning residence in person. Refreshments will be served.</p>
+          <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 20px; padding: 30px; margin-bottom: 32px;">
+            <p style="margin: 0; font-size: 18px; font-weight: 700; color: #1e293b;">{{address}}</p>
+            <p style="margin: 8px 0 0 0; font-size: 16px; font-weight: 900; color: #db2777;">June 15th | 1:00 PM — 4:00 PM</p>
+          </div>
+          <a href="#" style="display: inline-block; padding: 16px 40px; background: #1e293b; color: white; text-decoration: none; border-radius: 12px; font-weight: 900;">Add to My Calendar</a>
         </div>
       </div>
-    `,
+    `
+  },
+  {
+    id: 'agent-offer-sent',
+    name: 'Offer Sent (The Professional)',
+    subject: 'Official Offer Submitted: {{address}} 📄',
     category: 'Sales',
-    tags: ['expired-listing', 'outreach']
+    tags: ['offer', 'confirmation'],
+    imageUrl: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 40px;">
+        <div style="width: 64px; height: 64px; background: #dcfce7; color: #166534; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 24px;">📝</div>
+        <h2 style="font-size: 28px; font-weight: 900; margin: 0 0 12px 0;">Offer Submitted.</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">Hi {{name}}, we have officially submitted our offer for <strong>{{address}}</strong>. Our terms are highly competitive and designed to stand out.</p>
+        <div style="background: #f9fafb; padding: 24px; border-radius: 16px; margin-bottom: 32px;">
+          <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            <span style="width: 24px; height: 24px; background: #6366f1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 12px;">✓</span>
+            <span style="font-weight: 600;">Full Cash Offer</span>
+          </div>
+          <div style="display: flex; align-items: center; margin-bottom: 12px;">
+            <span style="width: 24px; height: 24px; background: #6366f1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 12px;">✓</span>
+            <span style="font-weight: 600;">14-Day Close Timeline</span>
+          </div>
+          <div style="display: flex; align-items: center;">
+            <span style="width: 24px; height: 24px; background: #6366f1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; margin-right: 12px;">✓</span>
+            <span style="font-weight: 600;">As-Is Selection</span>
+          </div>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">I will keep you notified immediately as soon as we hear back from the listing agent.</p>
+      </div>
+    `
   },
   {
-    id: 'agent-investment-opp',
-    name: 'Investment Opportunity',
-    subject: 'New investment property in {{area}}',
-    body: `Hi {{name}},\n\nI just came across a deal in {{area}} that I think would be perfect for your portfolio:\n\n- Address: {{address}}\n- Estimated ARV: {{price}}\n- Current Condition: Needs light cosmetic rehab\n- Cash Flow Potential: Strong rental demand in this zip code\n\nWant me to send over the full analysis and comps?\n\nBest,\n{{agent_name}}`,
+    id: 'agent-offer-accepted',
+    name: 'Offer Accepted (The Celebration)',
+    subject: 'CONGRATULATIONS! Your offer was accepted! 🎉',
+    category: 'Sales',
+    tags: ['accepted', 'congratulations'],
+    imageUrl: 'https://images.unsplash.com/photo-1556155092-490a1ba16284?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="background: #111; padding: 25px; border-radius: 12px 12px 0 0; text-align: center;">
-          <h2 style="color: #fbbf24; margin: 0; text-transform: uppercase;">Investor Alert: Deal of the Week</h2>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #10b981; padding: 60px 40px; border-radius: 32px; text-align: center; color: white;">
+        <h1 style="font-size: 64px; margin: 0 0 20px 0;">🥂</h1>
+        <h2 style="font-size: 42px; font-weight: 900; letter-spacing: -2px; margin: 0 0 16px 0;">It's Official!</h2>
+        <h3 style="font-size: 20px; font-weight: 600; opacity: 0.9; margin-bottom: 40px;">The offer for <strong>{{address}}</strong> was accepted!</h3>
+        <div style="background: rgba(255,255,255,0.2); padding: 24px; border-radius: 20px; backdrop-filter: blur(10px); margin-bottom: 40px;">
+          <p style="margin: 0; font-size: 16px; font-weight: 700;">We're officially under contract. Time to open escrow and get moving!</p>
         </div>
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>I just found a property in <strong>{{area}}</strong> that fits your specific buy-box perfectly:</p>
-          <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border-left: 4px solid #fbbf24; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Property:</strong> {{address}}</p>
-            <p style="margin: 5px 0;"><strong>Estimated ARV:</strong> {{price}}</p>
-            <p style="margin: 0;"><strong>Strategy:</strong> Fix & Flip or BRRRR candidate</p>
+        <a href="#" style="background: white; color: #10b981; padding: 18px 44px; border-radius: 12px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 1px;">View Transaction Timeline</a>
+      </div>
+    `
+  },
+  {
+    id: 'agent-closing-soon',
+    name: 'Closing Soon (The Logistics)',
+    subject: 'Closing Timeline: Important Dates for {{address}} 📅',
+    category: 'Operations',
+    tags: ['closing', 'logistics'],
+    imageUrl: 'https://images.unsplash.com/photo-1551288049-bbbda5366391?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <div style="background: #111827; padding: 30px; text-align: center;">
+          <h2 style="color: #6366f1; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Operations Update</h2>
+          <h1 style="color: white; font-size: 24px; font-weight: 900; margin: 0;">Road to Closing</h1>
+        </div>
+        <div style="padding: 40px;">
+          <p style="color: #4b5563; line-height: 1.6; margin-bottom: 32px;">Hi {{name}}, we're making great progress on <strong>{{address}}</strong>. Here are the key milestones ahead:</p>
+          <div style="position: relative; padding-left: 40px;">
+            <div style="position: absolute; left: 16px; top: 0; bottom: 0; width: 2px; background: #f1f5f9;"></div>
+            <div style="margin-bottom: 24px; position: relative;">
+               <div style="position: absolute; left: -32px; top: 0; width: 14px; height: 14px; background: #10b981; border: 4px solid #ffffff; border-radius: 50%;"></div>
+               <p style="margin: 0; font-weight: 700; color: #111827;">Inspection Completed</p>
+               <p style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">May 12th</p>
+            </div>
+            <div style="margin-bottom: 24px; position: relative;">
+               <div style="position: absolute; left: -32px; top: 0; width: 14px; height: 14px; background: #6366f1; border: 4px solid #ffffff; border-radius: 50%;"></div>
+               <p style="margin: 0; font-weight: 700; color: #111827;">Appraisal Ordered</p>
+               <p style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">May 18th (Expected)</p>
+            </div>
+            <div style="position: relative;">
+               <div style="position: absolute; left: -32px; top: 0; width: 14px; height: 14px; background: #e2e8f0; border: 4px solid #ffffff; border-radius: 50%;"></div>
+               <p style="margin: 0; font-weight: 700; color: #94a3b8;">Final Signing & Keys</p>
+               <p style="margin: 4px 0 0 0; font-size: 14px; color: #94a3b8;">June 1st</p>
+            </div>
           </div>
-          <p>The numbers look strong for a high-single-digit CAP rate or a quick $40k-$60k spread on a flip.</p>
-          <p>Want me to send over the full ROI analysis and rental comps?</p>
-          <div style="margin: 25px 0;">
-            <a href="#" style="background: #fbbf24; color: #111; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Unlock Full Deal Analysis</a>
-          </div>
-          <p>Best,<br><strong>{{agent_name}}</strong></p>
         </div>
       </div>
-    `,
+    `
+  },
+  {
+    id: 'agent-review-request',
+    name: 'Thank You + Review (The 5-Star)',
+    subject: 'We loved working with you, {{name}}! ⭐⭐⭐⭐⭐',
+    category: 'Operations',
+    tags: ['review', 'feedback'],
+    imageUrl: 'https://images.unsplash.com/photo-1521791136064-7986c2923216?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 48px; text-align: center;">
+        <h2 style="font-size: 24px; font-weight: 900; margin: 0 0 16px 0;">You're officially a homeowner!</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">It was an absolute pleasure assisting you with <strong>{{address}}</strong>. Our business grows on positive word of mouth from clients like you.</p>
+        <div style="margin-bottom: 32px;">
+          <div style="font-size: 32px; color: #fbbf24; letter-spacing: 8px; margin-bottom: 24px;">★ ★ ★ ★ ★</div>
+          <p style="font-size: 14px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 1px;">Care to share your experience?</p>
+        </div>
+        <a href="#" style="display: block; width: 100%; padding: 18px; background: #111827; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Leave a Google Review</a>
+        <p style="margin-top: 24px; font-size: 12px; color: #94a3b8;">It only takes 30 seconds and helps us more than you know!</p>
+      </div>
+    `
+  },
+  {
+    id: 'agent-referral-request',
+    name: 'Referral Request (The Networker)',
+    subject: 'A small favor... and a reward for you! 🤝',
     category: 'Marketing',
-    tags: ['investor', 'opportunity']
+    tags: ['referral', 'marketing'],
+    imageUrl: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: linear-gradient(135deg, #1e293b, #0f172a); color: white; border-radius: 24px; padding: 48px; text-align: center;">
+        <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 24px;">🤝</div>
+        <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 0 0 16px 0;">Who's Next?</h2>
+        <p style="font-size: 16px; line-height: 1.6; opacity: 0.8; margin-bottom: 32px;">I'm currently opening my calendar for new clients in <strong>{{area}}</strong>. If you know anyone looking to buy, sell, or invest, I'd love to provide them with the same VIP service you received.</p>
+        <div style="background: #ffffff; color: #111827; padding: 24px; border-radius: 16px; margin-bottom: 32px;">
+           <p style="margin: 0; font-weight: 900; text-transform: uppercase; font-size: 12px; color: #6366f1;">REFERRAL REWARD</p>
+           <p style="margin: 12px 0 0 0; font-size: 20px; font-weight: 800;">Receive $500 as a thank you for every successfully closed referral!</p>
+        </div>
+        <a href="#" style="display: inline-block; padding: 16px 40px; background: #6366f1; color: white; text-decoration: none; border-radius: 12px; font-weight: 900;">Send Me a Name</a>
+      </div>
+    `
   },
   {
-    id: 'agent-pre-foreclosure',
-    name: 'Pre-Foreclosure Outreach',
-    subject: 'Important options for {{address}}',
-    body: `Hi {{name}},\n\nI'm reaching out because I understand the stress that comes with difficult financial situations. If you're exploring your options for {{address}}, I may be able to help.`,
+    id: 'agent-holiday-greeting',
+    name: 'Holiday Greeting (The Warm)',
+    subject: 'Warmest wishes from our family to yours! 🎄',
+    category: 'Marketing',
+    tags: ['holiday', 'marketing'],
+    imageUrl: 'https://images.unsplash.com/photo-1543589077-47d81606c1bf?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff;">
-          <div style="background: #fff7ed; padding: 15px; border-radius: 8px; border-left: 4px solid #f97316; margin-bottom: 25px;">
-             <strong>Time Sensitive Update regarding {{address}}</strong>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden; text-align: center;">
+        <img src="{{header_image}}" style="width: 100%; height: 350px; object-fit: cover; display: block;" />
+        <div style="padding: 48px;">
+          <h2 style="font-size: 36px; font-weight: 900; letter-spacing: -2px; margin: 0 0 16px 0; color: #1e293b;">Happy Holidays!</h2>
+          <p style="font-size: 16px; line-height: 1.6; color: #64748b; margin-bottom: 32px;">Hi {{name}}, wishing you a wonderful holiday season filled with joy and prosperity. We're grateful to be part of your journey this year.</p>
+          <hr style="border: 0; border-top: 1px solid #f1f5f9; margin-bottom: 32px;" />
+          <p style="font-size: 14px; font-style: italic; color: #94a3b8;">"May your home be filled with laughter and your heart with peace."</p>
+          <p style="margin-top: 32px; font-size: 16px; font-weight: 700; color: #111827;">Warmly,<br>{{agent_name}}</p>
+        </div>
+      </div>
+    `
+  },
+  {
+    id: 'agent-anniversary',
+    name: 'Home Anniversary (The Celebration)',
+    subject: 'Happy 1-Year House-versary! 🏠🍰',
+    category: 'Marketing',
+    tags: ['anniversary', 'loyalty'],
+    imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 48px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+        <h1 style="font-size: 48px; margin-bottom: 24px;">🏠</h1>
+        <h2 style="font-size: 32px; font-weight: 900; margin: 0 0 16px 0;">Happy Anniversary!</h2>
+        <p style="font-size: 18px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">Hi {{name}}, can you believe it's been a whole year since you moved into <strong>{{address}}</strong>? We hope you've been building wonderful memories.</p>
+        <div style="background: #fdf2f2; padding: 24px; border-radius: 16px; margin-bottom: 32px;">
+          <p style="margin: 0; font-weight: 800; color: #be185d;">Average Equity Gained in your area: +$42,000 ✨</p>
+        </div>
+        <p style="font-size: 14px; color: #64748b;">Curious about what your home is worth today? Reply "VALUE" and I'll send you a fresh report!</p>
+      </div>
+    `
+  },
+  {
+    id: 'agent-price-reduction',
+    name: 'Price Reduction (The Urgent)',
+    subject: 'PRICE REDUCED: {{address}} is now a steal! 🔥',
+    category: 'Sales',
+    tags: ['price-drop', 'urgent'],
+    imageUrl: 'https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <div style="background: #ef4444; padding: 12px; text-align: center;">
+          <span style="color: white; font-weight: 900; letter-spacing: 2px; font-size: 12px;">HUGE SAVINGS</span>
+        </div>
+        <img src="{{header_image}}" style="width: 100%; height: 280px; object-fit: cover; display: block;" />
+        <div style="padding: 40px; text-align: center;">
+          <h2 style="font-size: 28px; font-weight: 900; margin: 0 0 8px 0; color: #1e293b;">Significant Price Drop</h2>
+          <p style="font-size: 16px; color: #64748b; margin-bottom: 24px;">The seller of <strong>{{address}}</strong> has just authorized a major price reduction. This is now the best value in <strong>{{area}}</strong>.</p>
+          <div style="background: #fef2f2; padding: 24px; border-radius: 20px; border: 1px solid #fecaca; margin-bottom: 32px;">
+             <span style="display: block; font-size: 14px; text-decoration: line-through; color: #9ca3af; margin-bottom: 4px;">Original: $485,000</span>
+             <span style="display: block; font-size: 42px; font-weight: 900; color: #ef4444;">Now: $450,000</span>
           </div>
-          <p>Hi {{name}},</p>
-          <p>I'm reaching out because I understand the stress that comes with difficult financial situations. If you're exploring your options for your property at <strong>{{address}}</strong>, I want you to know you have more paths forward than you might think.</p>
-          <p><strong>I specialize in helping homeowners avoid foreclosure with:</strong></p>
-          <ul>
-            <li><strong>Quick Cash Sale:</strong> We can close before the trustee sale date.</li>
-            <li><strong>Subject-To:</strong> We take over payments, solving the immediate debt issue.</li>
-            <li><strong>Loan Modification:</strong> Assistance with re-negotiating with your lender.</li>
-          </ul>
-          <p>Everything we discuss is 100% confidential and free of charge. Would you like to sit down and explore which path protects your credit and equity best?</p>
-          <p>Best regards,<br><strong>{{agent_name}}</strong></p>
+          <a href="#" style="display: block; width: 100%; padding: 18px; background: #ef4444; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Request a Walkthrough</a>
         </div>
       </div>
-    `,
-    category: 'Sales',
-    tags: ['pre-foreclosure', 'distressed']
+    `
   },
   {
-    id: 'agent-fsbo-intro',
-    name: 'FSBO Introduction',
-    subject: 'Saw your For Sale By Owner listing at {{address}}',
-    body: `Hi {{name}},\n\nI saw your FSBO listing for {{address}} and wanted to reach out. I respect the decision to sell on your own — it can definitely save you money.`,
+    id: 'agent-new-listing',
+    name: 'New Listing (The Hero)',
+    subject: 'Just Listed: The home you\'ve been waiting for! 🏠',
+    category: 'Sales',
+    tags: ['new-listing', 'sales'],
+    imageUrl: 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?auto=format&fit=crop&q=80&w=800&h=450',
     html: `
-      <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-        <div style="padding: 30px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff;">
-          <p>Hi {{name}},</p>
-          <p>I saw your <strong>For Sale By Owner</strong> listing for <strong>{{address}}</strong> and wanted to reach out. I respect the decision to sell on your own — in this market, it's definitely a viable option to save on commissions.</p>
-          <p>I focus exclusively on <strong>{{area}}</strong> and I have a pool of pre-approved buyers who have missed out on local bids recently. If you'd be open to a simple buyer referral (one-time minimal commission), I could bring these buyers through your home.</p>
-          <p>No listings, no long-term contracts — just a buyer for your home.</p>
-          <p>Interested in a quick tour so I can describe the layout to my buyers?</p>
-          <p>Best regards,<br><strong>{{agent_name}}</strong></p>
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 32px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+        <img src="{{header_image}}" style="width: 100%; height: 400px; object-fit: cover; display: block;" />
+        <div style="padding: 40px;">
+          <div style="background: #ede9fe; color: #6366f1; padding: 6px 12px; border-radius: 8px; display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: 1px; margin-bottom: 20px;">NEW LISTING</div>
+          <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 0 0 8px 0;">Stunning Modern Retreat</h2>
+          <p style="font-size: 18px; color: #6b7280; font-weight: 500; margin-bottom: 24px;">{{address}}</p>
+          <div style="height: 1px; background: #f1f5f9; margin-bottom: 24px;"></div>
+          <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">This architectural masterpiece features floor-to-ceiling windows, a gourmet kitchen, and panoramic views of <strong>{{area}}</strong>. Truly a one-of-a-kind opportunity.</p>
+          <div style="display: flex; gap: 16px;">
+            <a href="#" style="flex: 1; padding: 18px; background: #6366f1; color: white; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900;">View Full Gallery</a>
+            <a href="#" style="flex: 1; padding: 18px; background: #111827; color: white; text-align: center; text-decoration: none; border-radius: 16px; font-weight: 900;">Ask a Question</a>
+          </div>
         </div>
       </div>
-    `,
+    `
+  },
+  {
+    id: 'agent-buyer-consultation',
+    name: 'Consultation Confirmation (The Expert)',
+    subject: 'Confirmed: Our Consultation for {{area}} ☕',
     category: 'Sales',
-    tags: ['fsbo', 'intro']
+    tags: ['consultation', 'confirmation'],
+    imageUrl: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; padding: 48px;">
+        <h2 style="font-size: 28px; font-weight: 900; margin: 0 0 16px 0;">Coffee is on me! ☕</h2>
+        <p style="font-size: 16px; line-height: 1.6; color: #4b5563; margin-bottom: 32px;">Hi {{name}}, I'm looking forward to our strategy session tomorrow. We'll go over your goals, the current market in <strong>{{area}}</strong>, and mapping out your success plan.</p>
+        <div style="background: #f8fafc; padding: 24px; border-radius: 16px; margin-bottom: 32px;">
+           <p style="margin: 0; font-size: 14px; font-weight: 900; color: #64748b; text-transform: uppercase;">APPOINTMENT DETAILS</p>
+           <p style="margin: 12px 0 0 0; font-size: 18px; font-weight: 700;">Tomorrow at 10:00 AM</p>
+           <p style="margin: 4px 0 0 0; font-size: 14px; color: #64748b;">Starbucks on 4th & Main (or via Zoom)</p>
+        </div>
+        <p style="font-size: 14px; color: #94a3b8;">If anything changes, please let me know at least 2 hours in advance. Talk soon!</p>
+      </div>
+    `
+  },
+  {
+    id: 'agent-seller-followup',
+    name: 'Seller Follow-up (The Persistent)',
+    subject: 'Still thinking about selling {{address}}? 🏠',
+    category: 'Sales',
+    tags: ['follow-up', 'seller'],
+    imageUrl: 'https://images.unsplash.com/photo-1516156008625-3a9d6067fab5?auto=format&fit=crop&q=80&w=800&h=450',
+    html: `
+      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 24px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <div style="padding: 40px; text-align: left;">
+          <h2 style="font-size: 32px; font-weight: 900; letter-spacing: -1px; margin: 0 0 16px 0;">Thinking ahead...</h2>
+          <p style="font-size: 16px; line-height: 1.6; color: #374151; margin-bottom: 32px;">Hi {{name}}, I know life gets busy, but I wanted to keep <strong>{{address}}</strong> on your radar. With the current low inventory, homes in your neighborhood are selling for <strong>record premiums</strong>.</p>
+          <div style="background: #fdf2f2; border-left: 4px solid #ef4444; padding: 20px; border-radius: 0 12px 12px 0; margin-bottom: 32px;">
+             <p style="margin: 0; font-weight: 800; color: #991b1b;">Active Buyers in your zip code: 42</p>
+             <p style="margin: 4px 0 0 0; font-size: 14px; color: #991b1b;">Waiting for a home exactly like yours.</p>
+          </div>
+          <a href="#" style="display: block; width: 100%; padding: 18px; background: #111827; color: white; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">Get an Instant Value Report</a>
+        </div>
+        <img src="{{header_image}}" style="width: 100%; height: 200px; object-fit: cover; display: block;" />
+      </div>
+    `
   }
 ];

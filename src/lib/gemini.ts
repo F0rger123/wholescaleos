@@ -356,6 +356,30 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
 }
 
 /**
+ * Local AI Processing Fallback
+ * Tries to handle the prompt locally before falling back to external APIs.
+ */
+export async function processWithLocalAI(prompt: string): Promise<GeminiResponse | null> {
+  const localResult = recognizeIntent(prompt);
+  
+  if (localResult.confidence >= 0.7) {
+    console.log(`[⚡ Local AI] Handling intent: ${localResult.intent} (${Math.round(localResult.confidence * 100)}%)`);
+    const executionResult = await executeTask(localResult.intent, localResult.entities);
+    const responseText = generateResponse(localResult.intent, executionResult);
+    
+    saveConversation(responseText, 'assistant');
+    
+    return {
+      intent: localResult.intent,
+      response: responseText,
+      data: { ...localResult.entities, ...executionResult.data }
+    };
+  }
+  
+  return null;
+}
+
+/**
  * Sends a prompt and context to the Gemini API and returns a parsed intent and response.
  * Strictly requires a user-configured API key from settings.
  */
@@ -366,28 +390,14 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   // Save user message to local memory
   saveConversation(prompt, 'user');
 
-  // ── LOCAL AI ENGINE (INTENT FIRST) ──────────────────────────────────
+  // ── LOCAL AI ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
-    const localResult = recognizeIntent(prompt);
-    
-    // Confidence-based fallback: Only use local if >= 0.7
-    if (localResult.confidence >= 0.7) {
-      console.log(`[⚡ Local AI] Executing intent: ${localResult.intent} (Confidence: ${localResult.confidence})`);
-      const executionResult = await executeTask(localResult.intent, localResult.entities);
-      const responseText = generateResponse(localResult.intent, executionResult);
-      
-      saveConversation(responseText, 'assistant');
-      
-      return {
-        intent: localResult.intent,
-        response: responseText,
-        data: localResult.entities
-      };
-    }
-    
-    console.log(`[⚡ Local AI] Low confidence (${localResult.confidence}), falling back to API...`);
+    const localResponse = await processWithLocalAI(prompt);
+    if (localResponse) return localResponse;
+    console.log(`[⚡ Local AI] Low confidence, falling back to external API...`);
   }
   // ───────────────────────────────────────────────────────────────────────
+
 
 
   

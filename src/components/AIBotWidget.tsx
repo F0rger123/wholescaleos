@@ -709,7 +709,10 @@ export function AIBotWidget() {
                 <LayoutIcon size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
               </button>
               <button 
-                onClick={() => { setAiOpen(false); }}
+                onClick={() => { 
+                  setAiDocked(true);
+                  setAiOpen(false); 
+                }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
                 title="Close"
               >

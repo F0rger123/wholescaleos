@@ -384,6 +384,9 @@ function ThreadList({ threads, selectedId, onSelect, formatDate, searchQuery }: 
 }
 
 function TemplatesList({ templates, onRefresh, onEdit, onAdd }: { templates: dbEmailTemplate[], onRefresh: () => void, onEdit: (t: dbEmailTemplate) => void, onAdd: () => void }) {
+  const [activeTab, setActiveTab] = useState<'mine' | 'pro'>('pro');
+  const [selectedPreview, setSelectedPreview] = useState<AgentTemplate | dbEmailTemplate | null>(null);
+
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm('Delete this template?')) {
@@ -393,31 +396,89 @@ function TemplatesList({ templates, onRefresh, onEdit, onAdd }: { templates: dbE
   };
 
   return (
-    <div className="p-3 space-y-2">
-      <button 
-        onClick={onAdd}
-        className="w-full p-3 flex items-center justify-center gap-2 border-2 border-dashed border-[var(--t-border)] text-[var(--t-text-muted)] hover:border-[var(--t-primary-dim)] hover:text-[var(--t-primary)] rounded-xl transition-all font-bold text-xs"
-      >
-        <Plus size={14} /> Add Template
-      </button>
+    <div className="p-3 space-y-4">
+      <div className="flex bg-[var(--t-surface-dim)] p-1 rounded-xl border border-[var(--t-border)]">
+        <button 
+          onClick={() => setActiveTab('pro')}
+          className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${activeTab === 'pro' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+        >
+          PRO LIBRARY
+        </button>
+        <button 
+          onClick={() => setActiveTab('mine')}
+          className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${activeTab === 'mine' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+        >
+          MY TEMPLATES
+        </button>
+      </div>
 
-      {templates.length === 0 ? (
-        <div className="py-12 text-center text-[var(--t-text-muted)]">
-          <p className="text-xs">No templates found.</p>
-        </div>
-      ) : (
-        templates.map(tmp => (
-          <div key={tmp.id} onClick={() => onEdit(tmp)} className="p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] transition-all cursor-pointer group">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <h4 className="text-sm font-bold truncate group-hover:text-[var(--t-primary)] transition-colors">{tmp.name}</h4>
-              <div className="flex items-center gap-1">
-                 <button onClick={(e) => { e.stopPropagation(); onEdit(tmp); }} className="p-1 hover:text-[var(--t-primary)] transition-colors"><Edit2 size={14} /></button>
-                 <button onClick={(e) => handleDelete(tmp.id, e)} className="p-1 hover:text-red-400 transition-colors"><Trash size={14} /></button>
+      {activeTab === 'mine' && (
+        <button 
+          onClick={onAdd}
+          className="w-full p-3 flex items-center justify-center gap-2 border-2 border-dashed border-[var(--t-border)] text-[var(--t-text-muted)] hover:border-[var(--t-primary-dim)] hover:text-[var(--t-primary)] rounded-xl transition-all font-bold text-xs"
+        >
+          <Plus size={14} /> Create Custom Template
+        </button>
+      )}
+
+      <div className="space-y-2">
+        {activeTab === 'pro' ? (
+          AGENT_EMAIL_TEMPLATES.map(tmp => (
+            <div 
+              key={tmp.id} 
+              onClick={() => setSelectedPreview(tmp)}
+              className="group flex items-center gap-3 p-2 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] transition-all cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--t-surface-hover)] border border-[var(--t-border)] shrink-0">
+                {tmp.imageUrl ? <img src={tmp.imageUrl} className="w-full h-full object-cover" /> : <Mail size={16} className="m-auto text-[var(--t-text-muted)]" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="text-[11px] font-bold truncate group-hover:text-[var(--t-primary)] transition-colors">{tmp.name}</h4>
+                  <span className="text-[7px] font-bold px-1 py-0.5 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded uppercase shrink-0">{tmp.category}</span>
+                </div>
+                <p className="text-[9px] text-[var(--t-text-muted)] truncate">{tmp.subject}</p>
               </div>
             </div>
-            <p className="text-[10px] text-[var(--t-text-muted)] truncate">{tmp.subject}</p>
+          ))
+        ) : templates.length === 0 ? (
+          <div className="py-12 text-center text-[var(--t-text-muted)]">
+            <p className="text-xs">No custom templates found.</p>
           </div>
-        ))
+        ) : (
+          templates.map(tmp => (
+            <div key={tmp.id} onClick={() => onEdit(tmp)} className="p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] transition-all cursor-pointer group">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h4 className="text-sm font-bold truncate group-hover:text-[var(--t-primary)] transition-colors">{tmp.name}</h4>
+                <div className="flex items-center gap-1">
+                   <button onClick={(e) => { e.stopPropagation(); onEdit(tmp); }} className="p-1 hover:text-[var(--t-primary)] transition-colors"><Edit2 size={14} /></button>
+                   <button onClick={(e) => handleDelete(tmp.id, e)} className="p-1 hover:text-red-400 transition-colors"><Trash size={14} /></button>
+                </div>
+              </div>
+              <p className="text-[10px] text-[var(--t-text-muted)] truncate">{tmp.subject}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      {selectedPreview && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4" onClick={() => setSelectedPreview(null)}>
+           <div className="w-full max-w-xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface-dim)]/50">
+                 <div>
+                    <h3 className="text-sm font-bold">{selectedPreview.name}</h3>
+                    <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest">Template Preview</p>
+                 </div>
+                 <button onClick={() => setSelectedPreview(null)} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"><X size={18} /></button>
+              </div>
+              <div className="h-[500px] overflow-y-auto p-6 bg-white custom-scrollbar">
+                 <div dangerouslySetInnerHTML={{ __html: ((selectedPreview as any).html || selectedPreview.body || '').replace(/{{header_image}}/g, (selectedPreview as any).imageUrl || '').replace(/{{name}}/g, 'John Doe').replace(/{{address}}/g, '123 Main St').replace(/{{agent_name}}/g, 'Sarah Agent').replace(/{{area}}/g, 'Beverly Hills').replace(/{{city}}/g, 'Los Angeles') }} />
+              </div>
+              <div className="p-4 border-t border-[var(--t-border)] flex justify-end gap-3 bg-[var(--t-surface-dim)]/50">
+                <button onClick={() => setSelectedPreview(null)} className="px-6 py-2 text-xs font-bold text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] rounded-xl transition-all">Close Preview</button>
+              </div>
+           </div>
+        </div>
       )}
     </div>
   );
