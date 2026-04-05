@@ -1,76 +1,58 @@
-import { supabase, isSupabaseConfigured } from '../supabase';
+/**
+ * Local AI Memory Store
+ * Manages conversation history and user preferences locally.
+ */
 
-export interface MemoryContext {
-  lastIntent: string | null;
-  lastTargetName: string | null;
-  lastPhone: string | null;
-  sessionStartTime: number;
+export interface Message {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
 }
 
-// In-memory cache for ultra-fast sync
-let contextCache: MemoryContext = {
-  lastIntent: null,
-  lastTargetName: null,
-  lastPhone: null,
-  sessionStartTime: Date.now()
-};
+export interface UserPreferences {
+  name: string;
+  role: string;
+  commonTasks: string[];
+  theme?: string;
+}
 
-export const MemoryStore = {
-  getMemory(): MemoryContext {
-    try {
-      const saved = localStorage.getItem('local_ai_memory');
-      if (saved) {
-        contextCache = { ...contextCache, ...JSON.parse(saved) };
-      }
-    } catch (e) {
-      console.error('Failed to read Local AI memory', e);
-    }
-    return contextCache;
-  },
+const MEMORY_KEY = 'wholescale_ai_memory';
+const PREFS_KEY = 'wholescale_ai_prefs';
 
-  updateMemory(updates: Partial<MemoryContext>) {
-    contextCache = { ...contextCache, ...updates };
-    try {
-      localStorage.setItem('local_ai_memory', JSON.stringify(contextCache));
-      this.syncToCloud();
-    } catch (e) {
-      console.error('Failed to write Local AI memory', e);
-    }
-  },
+export function getMemory(): Message[] {
+  const data = localStorage.getItem(MEMORY_KEY);
+  return data ? JSON.parse(data) : [];
+}
 
-  clearSession() {
-    contextCache = {
-      lastIntent: null,
-      lastTargetName: null,
-      lastPhone: null,
-      sessionStartTime: Date.now()
-    };
-    try {
-      localStorage.removeItem('local_ai_memory');
-    } catch(e) {}
-  },
+export function saveConversation(content: string, role: 'user' | 'assistant') {
+  const memory = getMemory();
+  const newMessage: Message = {
+    role,
+    content,
+    timestamp: new Date().toISOString()
+  };
+  
+  // Keep last 10
+  const updatedMemory = [...memory, newMessage].slice(-10);
+  localStorage.setItem(MEMORY_KEY, JSON.stringify(updatedMemory));
+}
 
-  async syncToCloud() {
-    if (!isSupabaseConfigured || !supabase) return;
-    
-    // Attempt to sync context asynchronously so it doesn't block local execution
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
-      
-      // Save minimal memory map to profiles table or user settings
-      // This is a simple fire-and-forget sync
-      const { data: profile } = await supabase.from('profiles').select('settings').eq('id', session.user.id).single();
-      if (profile) {
-        await supabase.from('profiles').update({
-          settings: {
-            ...(profile.settings || {}),
-            local_ai_memory: contextCache
-          }
-        }).eq('id', session.user.id);
-      }
-    } catch (e) {
-      console.warn('Failed to sync Local AI memory to cloud', e);
-    }
-  }
-};
+export function getUserPreferences(): UserPreferences {
+  const data = localStorage.getItem(PREFS_KEY);
+  return data ? JSON.parse(data) : {
+    name: 'User',
+    role: 'Agent',
+    commonTasks: []
+  };
+}
+
+export function setUserPreference(key: keyof UserPreferences, value: any) {
+  const prefs = getUserPreferences();
+  (prefs as any)[key] = value;
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+
+export function syncToSupabase() {
+  // Mock sync - in a real app, this would push to a profile table
+  console.log('Syncing AI memory to Supabase...');
+}

@@ -1,134 +1,142 @@
+/**
+ * Local AI Intent Engine
+ * Handles intent recognition and entity extraction locally.
+ */
+
 export interface IntentResult {
   intent: string;
+  entities: Record<string, any>;
   confidence: number;
-  data?: any;
-  response?: string;
 }
 
+export function recognizeIntent(text: string): IntentResult {
+  const normalized = text.toLowerCase().trim();
+
+  // 1. Navigation / Show
+  if (normalized.match(/^(show|go to|take me to|open)\s+(dashboard|home)/)) {
+    return { intent: 'show_dashboard', entities: {}, confidence: 0.95 };
+  }
+  if (normalized.match(/^(show|go to|take me to|open)\s+(leads|contacts|prospects)/)) {
+    return { intent: 'show_leads', entities: {}, confidence: 0.95 };
+  }
+  if (normalized.match(/^(show|go to|take me to|open)\s+(tasks|todo|calendar|schedule)/)) {
+    return { intent: 'show_tasks', entities: {}, confidence: 0.95 };
+  }
+
+  // 2. Create Lead
+  const leadMatch = normalized.match(/(?:create|add|new)\s+(?:lead|contact)\s+([\w\s]+)(?:\s+email\s+([\w.@+-]+))?(?:\s+phone\s+([\d+-]+))?(?:\s+company\s+([\w\s]+))?/);
+  if (leadMatch) {
+    return {
+      intent: 'create_lead',
+      entities: {
+        name: leadMatch[1]?.trim(),
+        email: leadMatch[2],
+        phone: leadMatch[3],
+        company: leadMatch[4]?.trim()
+      },
+      confidence: 0.9
+    };
+  }
+
+  // 3. Create Task
+  const taskMatch = normalized.match(/(?:create|add|new)\s+task\s+([\w\s]+)(?:\s+due\s+([\w\s\d,/-]+))?(?:\s+priority\s+(low|medium|high))?/);
+  if (taskMatch) {
+    return {
+      intent: 'create_task',
+      entities: {
+        title: taskMatch[1]?.trim(),
+        dueDate: taskMatch[2]?.trim(),
+        priority: taskMatch[3] || 'medium'
+      },
+      confidence: 0.9
+    };
+  }
+
+  // 4. Send SMS
+  const smsMatch = normalized.match(/(?:send|message|sms)\s+(?:to\s+)?([\d+-]+)\s+(?:saying\s+)?(.*)/);
+  if (smsMatch) {
+    return {
+      intent: 'send_sms',
+      entities: {
+        phone: smsMatch[1],
+        message: smsMatch[2]?.trim()
+      },
+      confidence: 0.9
+    };
+  }
+
+  // 5. Search Leads
+  const searchMatch = normalized.match(/(?:search|find|find lead|look up)\s+([\w\s]+)/);
+  if (searchMatch) {
+    return {
+      intent: 'search_leads',
+      entities: { query: searchMatch[1]?.trim() },
+      confidence: 0.85
+    };
+  }
+
+  // 6. Update Lead Status
+  const statusMatch = normalized.match(/(?:update|change)\s+(?:lead\s+)?status\s+(?:to\s+)?(new|hot|warm|cold|closed)\s+(?:for\s+)?([\w\s]+)/);
+  if (statusMatch) {
+    return {
+      intent: 'update_lead_status',
+      entities: {
+        status: statusMatch[1],
+        leadName: statusMatch[2]?.trim()
+      },
+      confidence: 0.85
+    };
+  }
+
+  // 7. Add Note
+  const noteMatch = normalized.match(/(?:add|write)\s+note\s+(?:to\s+)?([\w\s]+)\s+(?:saying\s+)?(.*)/);
+  if (noteMatch) {
+    return {
+      intent: 'add_note',
+      entities: {
+        leadName: noteMatch[1]?.trim(),
+        note: noteMatch[2]?.trim()
+      },
+      confidence: 0.85
+    };
+  }
+
+  // 8. Remind Me
+  const remindMatch = normalized.match(/(?:remind|reminder|set reminder)\s+(?:me\s+)?(?:to\s+)?(.*)\s+(?:at|on|tomorrow|today|in)\s+(.*)/);
+  if (remindMatch) {
+    return {
+      intent: 'remind_me',
+      entities: {
+        task: remindMatch[1]?.trim(),
+        time: remindMatch[2]?.trim()
+      },
+      confidence: 0.85
+    };
+  }
+
+  // 9. What is my schedule
+  if (normalized.match(/^(what is|show|tell me|view)\s+(my|today's|this week's)\s+(schedule|calendar|agenda|plans)/)) {
+    return { intent: 'what_is_my_schedule', entities: {}, confidence: 0.95 };
+  }
+
+  // 10. Help
+  if (normalized.match(/^(help|what can you do|how do I use|available commands)/)) {
+    return { intent: 'help', entities: {}, confidence: 0.95 };
+  }
+
+  return { intent: 'unknown', entities: {}, confidence: 0 };
+}
 export const LOCAL_INTENTS = [
   'create_lead',
   'create_task',
   'send_sms',
-  'update_status',
-  'navigate',
-  'general_response',
-  'show_hot_leads',
-  'get_analytics'
+  'show_dashboard',
+  'show_leads',
+  'show_tasks',
+  'search_leads',
+  'update_lead_status',
+  'add_note',
+  'remind_me',
+  'what_is_my_schedule',
+  'help'
 ];
-
-export function detectIntent(prompt: string): IntentResult {
-  const cleanPrompt = prompt.toLowerCase().trim();
-
-  // 1. Check Custom Training Rules First
-  try {
-    const savedRules = localStorage.getItem('ai_training_rules');
-    const customRules = savedRules ? JSON.parse(savedRules) : [];
-    
-    // Exact match for custom rules gives highest confidence (0.99)
-    for (const rule of customRules) {
-      if (cleanPrompt.includes(rule.trigger.toLowerCase())) {
-        return applyRuleAction(rule.action, cleanPrompt);
-      }
-    }
-  } catch (e) {
-    console.error('Error parsing custom training rules', e);
-  }
-
-  // 2. Complex Regex patterns for core CRM features
-  
-  // Create Lead: "add a lead named john doe" or "create lead for 123 main st"
-  const createLeadMatch = cleanPrompt.match(/(?:add|create|new) (?:a )?lead (?:named |for )?(.*)/);
-  if (createLeadMatch && createLeadMatch[1]) {
-    const dataStr = createLeadMatch[1];
-    return {
-      intent: 'create_lead',
-      confidence: 0.85,
-      data: { name: extractNameOrAddress(dataStr) }
-    };
-  }
-
-  // Create Task: "remind me to call bob tomorrow" or "create task to sign contract"
-  const createTaskMatch = cleanPrompt.match(/(?:remind me to|create (?:a )?task to|add (?:a )?task to) (.*)/);
-  if (createTaskMatch && createTaskMatch[1]) {
-    return {
-      intent: 'create_task',
-      confidence: 0.85,
-      data: { title: createTaskMatch[1] }
-    };
-  }
-
-  // Send SMS: "text john hello" or "send sms to 555-5555 saying hi"
-  const sendSmsMatch = cleanPrompt.match(/(?:text|send (?:an )?sms to|message) ([^ ]+) (?:saying |that )?(.*)/);
-  if (sendSmsMatch && sendSmsMatch[1] && sendSmsMatch[2]) {
-    return {
-      intent: 'send_sms',
-      confidence: 0.9,
-      data: { target: sendSmsMatch[1], message: sendSmsMatch[2] }
-    };
-  }
-
-  // Navigate: "go to dashboard" or "open settings"
-  const navMatch = cleanPrompt.match(/(?:go to|open|show me) (dashboard|leads|tasks|calendar|settings|analytics|sms)/);
-  if (navMatch && navMatch[1]) {
-    const dest = navMatch[1];
-    let path = '/';
-    if (dest !== 'dashboard') path = `/${dest}`;
-    return {
-      intent: 'navigate',
-      confidence: 0.9,
-      data: { path }
-    };
-  }
-
-  // Update Status: "mark john as qualified"
-  const updateMatch = cleanPrompt.match(/(?:mark|set|update) (.*) as (new|contacted|qualified|negotiating|closed-won|closed-lost)/);
-  if (updateMatch && updateMatch[1] && updateMatch[2]) {
-    return {
-      intent: 'update_status',
-      confidence: 0.8,
-      data: { targetName: updateMatch[1], newStatus: updateMatch[2] }
-    };
-  }
-
-  // Analytics/Reporting
-  if (cleanPrompt.includes('analytics') || cleanPrompt.includes('report') || cleanPrompt.includes('performance')) {
-    return { intent: 'get_analytics', confidence: 0.8 };
-  }
-  
-  if (cleanPrompt.includes('hot lead') || cleanPrompt.includes('best lead')) {
-    return { intent: 'show_hot_leads', confidence: 0.85 };
-  }
-
-  // 3. Very fuzzy fallback matching
-  if (cleanPrompt.includes('lead')) return { intent: 'navigate', confidence: 0.5, data: { path: '/leads' } };
-  if (cleanPrompt.includes('task')) return { intent: 'navigate', confidence: 0.5, data: { path: '/tasks' } };
-  
-  // 4. Default Unknown
-  return {
-    intent: 'unknown',
-    confidence: 0.1
-  };
-}
-
-function applyRuleAction(action: string, prompt: string): IntentResult {
-  let mappedIntent = 'general_response';
-
-  if (action === 'navigate_tasks') return { intent: 'navigate', confidence: 0.99, data: { path: '/tasks' } };
-  if (action === 'navigate_settings') return { intent: 'navigate', confidence: 0.99, data: { path: '/settings' } };
-  if (action === 'navigate_calendar') return { intent: 'navigate', confidence: 0.99, data: { path: '/calendar' } };
-  if (action === 'navigate_dashboard') return { intent: 'navigate', confidence: 0.99, data: { path: '/' } };
-  if (action === 'navigate_leads') return { intent: 'navigate', confidence: 0.99, data: { path: '/leads' } };
-  if (action === 'navigate_sms') return { intent: 'navigate', confidence: 0.99, data: { path: '/sms' } };
-  if (action === 'navigate_analytics') return { intent: 'navigate', confidence: 0.99, data: { path: '/analytics' } };
-  if (action === 'show_hot_leads') return { intent: 'show_hot_leads', confidence: 0.99 };
-  if (action === 'create_task') return { intent: 'create_task', confidence: 0.95, data: { title: prompt } };
-  if (action === 'send_sms') return { intent: 'send_sms', confidence: 0.95, data: { target: 'Unknown' } };
-
-  return { intent: mappedIntent, confidence: 0.99, data: { rawAction: action } };
-}
-
-function extractNameOrAddress(str: string) {
-  // Simple heuristic: if it has numbers, it's probably an address
-  if (/\d/.test(str)) return str;
-  return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}

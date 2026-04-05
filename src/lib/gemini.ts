@@ -2,7 +2,10 @@ import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '
 import type { Lead } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { sendSMS } from './sms-service';
-import { detectIntent, executeTask, generateResponse } from './local-ai';
+import { recognizeIntent } from './local-ai/intent-engine';
+import { executeTask } from './local-ai/task-executor';
+import { generateResponse } from './local-ai/response-generator';
+import { saveConversation } from './local-ai/memory-store';
 
 export interface GeminiResponse {
   intent: string;
@@ -356,144 +359,33 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * Sends a prompt and context to the Gemini API and returns a parsed intent and response.
  * Strictly requires a user-configured API key from settings.
  */
-import { PREBUILT_RULES, getEnabledPrebuiltRules } from './prebuilt-rules';
-
 export async function processPrompt(prompt: string, context: Record<string, any> = {}, modelOverride?: string, signal?: AbortSignal): Promise<GeminiResponse> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   
-  // ── LOCAL AI TASK ENGINE (NO API CREDITS) ──────────────────────────────
-  const cleanPrompt = prompt.toLowerCase().trim();
-  
-  if (!context?.test) { // Do not intercept internal system test prompts
-    // 1. Intercept "create a rule" requests
-    const ruleMatch = cleanPrompt.match(/create a rule that when i say ['"]?(.*?)['"]?,? (.*)/) 
-                   || cleanPrompt.match(/create a rule that (.*?) then (.*)/);
-                   
-    if (ruleMatch) {
-      const trigger = ruleMatch[1].trim();
-      let rawAction = ruleMatch[2].trim().replace(/['"]/g, '');
-      
-      // Auto-map natural language to internal action intents
-      let actionIntent = 'navigate_dashboard';
-      if (rawAction.includes('task')) actionIntent = 'navigate_tasks';
-      else if (rawAction.includes('calendar') || rawAction.includes('meeting')) actionIntent = 'navigate_calendar';
-      else if (rawAction.includes('setting')) actionIntent = 'navigate_settings';
-      else if (rawAction.includes('hot lead')) actionIntent = 'show_hot_leads';
-      else if (rawAction.includes('text') || rawAction.includes('sms')) actionIntent = 'navigate_sms';
-      else if (rawAction.includes('lead')) actionIntent = 'navigate_leads';
-      
-      try {
-        const savedRules = localStorage.getItem('ai_training_rules');
-        const customRules = savedRules ? JSON.parse(savedRules) : [];
-        customRules.push({ trigger, action: actionIntent });
-        localStorage.setItem('ai_training_rules', JSON.stringify(customRules));
-        window.dispatchEvent(new CustomEvent('ai-settings-updated'));
-        
-        return {
-          intent: 'general_response',
-          response: `[⚡ Local Rules] Successfully created a new training rule! When you say "${trigger}", I will execute "${actionIntent}".`
-        };
-      } catch (e) {
-        console.error('Failed to save AI rule:', e);
-      }
-    }
+  // Save user message to local memory
+  saveConversation(prompt, 'user');
 
-    // 2. Execute Local Rules (Supports multi-step via 'and')
-    const commands = cleanPrompt.split(/\s+and\s+/);
-    let matchedActions: { intent: string, response: string, data?: any }[] = [];
+  // ── LOCAL AI ENGINE (INTENT FIRST) ──────────────────────────────────
+  if (!context?.test) {
+    const localResult = recognizeIntent(prompt);
     
-    try {
-      const activePrebuilt = getEnabledPrebuiltRules();
-      const savedRules = localStorage.getItem('ai_training_rules');
-      const customRules = savedRules ? JSON.parse(savedRules) : [];
+    // Confidence-based fallback: Only use local if >= 0.7
+    if (localResult.confidence >= 0.7) {
+      console.log(`[⚡ Local AI] Executing intent: ${localResult.intent} (Confidence: ${localResult.confidence})`);
+      const executionResult = await executeTask(localResult.intent, localResult.entities);
+      const responseText = generateResponse(localResult.intent, executionResult);
       
-      const allRules = [
-        ...PREBUILT_RULES.filter(r => activePrebuilt.includes(r.id)), 
-        ...customRules
-      ];
+      saveConversation(responseText, 'assistant');
       
-      // Also inject implicit fallback rules
-      allRules.push(
-        { trigger: 'hot lead', action: 'show_hot_leads' },
-        { trigger: 'best lead', action: 'show_hot_leads' },
-        { trigger: 'my task', action: 'navigate_tasks' },
-        { trigger: 'sms setting', action: 'navigate_settings_sms' },
-        { trigger: 'text setting', action: 'navigate_settings_sms' },
-        { trigger: 'analytics', action: 'navigate_analytics' },
-        { trigger: 'summary', action: 'show_summary' },
-        { trigger: 'performance', action: 'navigate_analytics' },
-        { trigger: 'report', action: 'navigate_analytics' }
-      );
-
-      for (const cmd of commands) {
-        const matchedRule = allRules.find(r => cmd.includes(r.trigger));
-        if (matchedRule) {
-          // INTERCEPTION GUARD: If the command is much longer than the trigger, 
-          // it likely contains specific data (names, numbers, messages).
-          // Local rules are simple triggers; data extraction requires the real AI.
-          const isSimpleTrigger = cmd.length < (matchedRule.trigger.length + 5);
-          
-          if (!isSimpleTrigger && matchedRule.action !== 'navigate_dashboard' && matchedRule.action !== 'navigate_tasks') {
-             // Pass to real AI for data extraction
-             continue;
-          }
-
-          if (matchedRule.action === 'navigate_tasks') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening tasks.', data: { path: '/tasks' } });
-          } else if (matchedRule.action === 'navigate_settings') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening settings.', data: { path: '/settings' } });
-          } else if (matchedRule.action === 'navigate_settings_sms') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening SMS settings.', data: { path: '/settings/sms' } });
-          } else if (matchedRule.action === 'navigate_calendar') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Accessing calendar schedule.', data: { path: '/calendar' } });
-          } else if (matchedRule.action === 'navigate_dashboard') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Going to Dashboard.', data: { path: '/' } });
-          } else if (matchedRule.action === 'navigate_leads') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening Leads.', data: { path: '/leads' } });
-          } else if (matchedRule.action === 'navigate_sms') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening SMS Inbox.', data: { path: '/sms' } });
-          } else if (matchedRule.action === 'navigate_analytics') {
-            matchedActions.push({ intent: 'navigate', response: '[⚡ Local Rules] Opening Analytics Dashboard.', data: { path: '/analytics' } });
-          } else if (matchedRule.action === 'show_summary') {
-            const lc = store.leads?.length || 0;
-            const tc = store.tasks?.filter(t => t.status === 'todo').length || 0;
-            matchedActions.push({ 
-              intent: 'general_response', 
-              response: `[⚡ Local Rules] You have ${lc} total leads and ${tc} pending tasks. I recommend checking your hot leads in the pipeline.` 
-            });
-          } else if (matchedRule.action === 'show_hot_leads') {
-            const hl = store.leads?.filter((l:any) => {
-              const s = String(l.status);
-              return s === 'negotiating' || s === 'qualified';
-            }) || [];
-            matchedActions.push({ intent: 'general_response', response: `[⚡ Local Rules] You have ${hl.length} hot leads ready for engagement.` });
-          } else if (matchedRule.action === 'create_task') {
-            // Only use local task creation for VERY simple prompts
-            if (cmd === matchedRule.trigger) {
-              matchedActions.push({ intent: 'create_task', response: '[⚡ Local Rules] Initiated task creation.', data: { title: cmd, priority: 'medium' } });
-            } else continue;
-          } else if (matchedRule.action === 'send_sms') {
-            // Only use local SMS flow if NO target is provided in the prompt
-            if (cmd === matchedRule.trigger || cmd === 'text') {
-              matchedActions.push({ intent: 'send_sms', response: '[⚡ Local Rules] Preparing to send text. What phone number or lead name should I text?', data: {} });
-            } else continue;
-          }
-        }
-      }
-      
-      if (matchedActions.length === 1) {
-        return matchedActions[0];
-      } else if (matchedActions.length > 1) {
-        return {
-          intent: 'multi_action',
-          response: `[⚡ Local Rules] Executing ${matchedActions.length} chained local actions sequentially.`,
-          data: { actions: matchedActions }
-        };
-      }
-    } catch (e) {
-      console.error('Error in local AI task engine:', e);
+      return {
+        intent: localResult.intent,
+        response: responseText,
+        data: localResult.entities
+      };
     }
+    
+    console.log(`[⚡ Local AI] Low confidence (${localResult.confidence}), falling back to API...`);
   }
   // ───────────────────────────────────────────────────────────────────────
 
@@ -571,21 +463,22 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   }
 
   // 1.5 - Intercept Local Provider
-  if (provider === 'local') {
-    const intentResult = detectIntent(prompt);
+  if (provider === 'local' || provider === (null as any)) {
+    const localResult = recognizeIntent(prompt);
     let executionResult;
     
-    // Only execute if intent confidence is high enough
-    if (intentResult.confidence > 0.4) {
-      executionResult = await executeTask(intentResult);
+    if (localResult.confidence > 0.4) {
+      executionResult = await executeTask(localResult.intent, localResult.entities);
     }
 
-    const textResponse = generateResponse(intentResult, executionResult);
+    const responseText = generateResponse(localResult.intent, executionResult);
+    
+    saveConversation(responseText, 'assistant');
     
     return {
-      intent: intentResult.intent,
-      response: textResponse,
-      data: intentResult.data || executionResult?.data || null
+      intent: localResult.intent,
+      response: responseText,
+      data: localResult.entities || executionResult?.data || null
     };
   }
 

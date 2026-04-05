@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Bot, Database, Mic, User, Target, Save, Loader2, Sparkles, BrainCircuit, Headphones, Plus, Trash2 } from 'lucide-react';
 import { TrainingManager, LocalTrainingRule, LOCAL_INTENTS } from '../lib/local-ai';
 
-const AITrainingStudio: React.FC = () => {
+const AITrainingStudio = () => {
   const [activeSection, setActiveSection] = useState('model');
   const [saving, setSaving] = useState(false);
 
@@ -145,7 +145,7 @@ const AITrainingStudio: React.FC = () => {
                           onChange={e => setNewAction(e.target.value)}
                           className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all text-sm"
                         >
-                          {LOCAL_INTENTS.map(intent => (
+                          {LOCAL_INTENTS.map((intent: string) => (
                             <option key={intent} value={intent}>{intent.replace('_', ' ').toUpperCase()}</option>
                           ))}
                         </select>

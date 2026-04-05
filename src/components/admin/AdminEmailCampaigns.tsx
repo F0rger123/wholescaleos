@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Plus, Mail, Send, X, Trash2, Play, Loader2,
   CheckCircle, Layout, Sparkles,
-  Copy
+  Copy, ChevronDown
 } from 'lucide-react';
 import { 
   dbEmailTemplate, dbEmailCampaign, fetchEmailTemplates, 
@@ -412,23 +412,22 @@ const AdminEmailCampaigns = () => {
         </div>
       )}
 
-      {/* Template Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-6xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between">
-              <h2 className="text-xl font-black uppercase tracking-wider">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="w-full max-w-4xl bg-black/40 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-500">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+              <h2 className="text-xl font-black uppercase tracking-wider text-white">
                 {editingTemplate?.id ? 'Edit Template' : 'New Template'}
               </h2>
               <button 
                 onClick={() => setShowTemplateModal(false)}
-                className="p-2 hover:bg-black/20 rounded-full transition-colors"
+                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
               >
                 <X size={24} />
               </button>
             </div>
             
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
@@ -526,61 +525,63 @@ const AdminEmailCampaigns = () => {
         </div>
       )}
 
-      {/* Campaign Modal */}
       {showCampaignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="w-full max-w-lg bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl">
-            <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between">
-              <h2 className="text-xl font-black uppercase tracking-wider">New Campaign</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="w-full max-w-xl bg-black/40 border border-white/10 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 duration-500">
+            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/5">
+              <h2 className="text-xl font-black uppercase tracking-wider text-white">New Campaign</h2>
               <button 
                 onClick={() => setShowCampaignModal(false)}
-                className="p-2 hover:bg-black/20 rounded-full transition-colors"
+                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white"
               >
                 <X size={24} />
               </button>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div>
-                <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
+                <label className="block text-[10px] font-black uppercase text-white/40 tracking-widest mb-2">
                   Campaign Name
                 </label>
                 <input
                   type="text"
                   value={editingCampaign?.name || ''}
                   onChange={e => setEditingCampaign({...editingCampaign, name: e.target.value})}
-                  className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none text-white"
                   placeholder="e.g., Q1 Product Update"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
+                <label className="block text-[10px] font-black uppercase text-white/40 tracking-widest mb-2">
                   Select Template
                 </label>
-                <select
-                  value={editingCampaign?.template_id || ''}
-                  onChange={e => setEditingCampaign({...editingCampaign, template_id: e.target.value})}
-                  className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none appearance-none"
-                >
-                  <option value="">Select a template...</option>
-                  {templates.map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    value={editingCampaign?.template_id || ''}
+                    onChange={e => setEditingCampaign({...editingCampaign, template_id: e.target.value})}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none appearance-none text-white"
+                  >
+                    <option value="" className="bg-zinc-900">Select a template...</option>
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id} className="bg-zinc-900">{t.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-white/20" size={16} />
+                </div>
               </div>
             </div>
 
-            <div className="p-6 border-t border-[var(--t-border)] flex justify-end gap-3">
+            <div className="p-6 border-t border-white/5 flex justify-end gap-3 bg-white/5">
               <button
                 onClick={() => setShowCampaignModal(false)}
-                className="px-6 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs border border-[var(--t-border)] hover:bg-black/20 transition-colors"
+                className="px-6 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs border border-white/10 text-white/70 hover:bg-white/10 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveCampaign}
-                className="px-8 py-2.5 bg-[var(--t-primary)] text-white rounded-xl font-black uppercase tracking-wider text-xs hover:scale-105 active:scale-95 transition-all shadow-lg"
+                className="px-8 py-2.5 bg-[var(--t-primary)] text-white rounded-xl font-black uppercase tracking-wider text-xs hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(var(--t-primary-rgb),0.3)]"
               >
                 Create Campaign
               </button>

@@ -12,10 +12,10 @@ import {
   LayoutDashboard, Users, 
   Settings, Search,
   Indent, AlignLeft,
-  Bot, Smartphone, StickyNote, Minimize2,
+  Bot, Smartphone, StickyNote,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, Download, UserCog, Map,
-  Building2, ChevronDown, ArrowRightLeft, Plus, X
+  Building2, ChevronDown, ArrowRightLeft, Plus
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
@@ -36,9 +36,9 @@ export function Layout() {
     shortcutsEnabled,
     currentTheme, setTheme,
     showQuickNotes,
-    quickNotes, setQuickNotes,
     isQuickNotesOpen, setQuickNotesOpen,
     notesDocked, setNotesDocked,
+    showFloatingAIWidget,
     searchResults, performSearch,
     aiName, isAiDocked, setAiDocked,
     isAiOpen, setAiOpen,
@@ -186,15 +186,6 @@ export function Layout() {
     }
   }, [showQuickNotes]);
 
-  // Quick Notes drag handler
-  const startNotesDrag = (e: React.MouseEvent) => {
-    // Only drag from the header bar, not buttons
-    if ((e.target as HTMLElement).closest('button')) return;
-    setIsNotesDragging(true);
-    const curX = notesPos.x === -1 ? window.innerWidth / 2 - 225 : notesPos.x;
-    const curY = notesPos.y === -1 ? window.innerHeight / 2 - 275 : notesPos.y;
-    notesDragStart.current = { x: e.clientX, y: e.clientY, posX: curX, posY: curY };
-  };
 
   useEffect(() => {
     if (!isNotesDragging) return;
@@ -546,7 +537,7 @@ export function Layout() {
 
           <div className="flex items-center gap-4">
             {/* AI Bookshelf Docking Bar */}
-            {(notesDocked || isQuickNotesOpen) && (
+            {showQuickNotes && (notesDocked || isQuickNotesOpen) && (
               <div 
                 className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
                 onClick={() => { 
@@ -558,7 +549,7 @@ export function Layout() {
                     setQuickNotesOpen(true);
                   }
                 }}
-                title={isQuickNotesOpen ? "Dock Quick Notes" : "Open Quick Notes"}
+                title={isQuickNotesOpen ? "Close Quick Notes" : "Open Quick Notes"}
               >
                 <div className={`flex items-center gap-2 pr-4 h-8 rounded-full transition-all duration-300 ${isQuickNotesOpen ? 'bg-[var(--t-primary)] border-[var(--t-primary)] pl-4' : 'bg-[var(--t-primary-dim)] border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] pl-2'}`}>
                   {!isQuickNotesOpen && (
@@ -567,12 +558,12 @@ export function Layout() {
                     </div>
                   )}
                   <span className={`text-[10px] font-black tracking-tighter uppercase leading-none ${isQuickNotesOpen ? 'text-white' : 'text-[var(--t-primary)] group-hover:text-white'}`}>
-                    {isQuickNotesOpen ? 'Open' : 'Notes'}
+                    {isQuickNotesOpen ? 'Close' : 'Notes'}
                   </span>
                 </div>
               </div>
             )}
-            {(isAiDocked || isAiOpen) && (
+            {showFloatingAIWidget && (isAiDocked || isAiOpen) && (
               <div 
                 className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 delay-300 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
                 onClick={() => {
@@ -606,7 +597,7 @@ export function Layout() {
             )}
             <div className="flex items-center gap-2 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
               {/* Bot Toggle Button */}
-              {!(isAiDocked || isAiOpen) && (
+              {showFloatingAIWidget && !(isAiDocked || isAiOpen) && (
                 <button
                   onClick={() => setAiOpen(true)}
                   className="p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]"
@@ -616,12 +607,12 @@ export function Layout() {
                 </button>
               )}
 
-              {!(isAiDocked || isAiOpen) && !(notesDocked || isQuickNotesOpen) && (
+              {showFloatingAIWidget && !(isAiDocked || isAiOpen) && !(notesDocked || isQuickNotesOpen) && (
                 <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5" />
               )}
 
               {/* Notes Toggle Button */}
-              {!(notesDocked || isQuickNotesOpen) && (
+              {showQuickNotes && !(notesDocked || isQuickNotesOpen) && (
                 <button
                   onClick={() => setQuickNotesOpen(true)}
                   className="p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]"

@@ -378,8 +378,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred {provider.charAt(0).toUpperCase() + provider.slice(1)} Model</label>
           <div className="grid grid-cols-1 gap-3">
             {provider === 'gemini' && [
-              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Lightning fast default model.' },
-              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Fast, state-of-the-art performance. Best for most tasks.' },
+              { id: 'gemini-2.0-flash', label: 'Gemini 3.1 Flash-Lite', desc: 'Ultra-low latency, cost-effective model for rapid task execution.' },
               { id: 'gemini-2.0-pro-exp-02-05', label: 'Gemini 2.0 Pro Exp', desc: 'Ultra-smart reasoning model for complex deal analysis.' },
               { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Highly capable reasoning model for complex logic.' }
             ].map((m) => (

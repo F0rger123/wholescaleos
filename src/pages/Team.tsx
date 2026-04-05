@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, BarChart2, Calendar as CalendarIcon, LayoutDashboard, Target, Activity } from 'lucide-react';
+import { BarChart2, Calendar as CalendarIcon, LayoutDashboard } from 'lucide-react';
 import { TeamOverviewTab } from '../components/team/TeamOverviewTab';
 import { TeamAnalyticsTab } from '../components/team/TeamAnalyticsTab';
 import { TeamCalendarTab } from '../components/team/TeamCalendarTab';
