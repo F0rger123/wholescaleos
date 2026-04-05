@@ -18,6 +18,7 @@ import {
   Building2, ChevronDown, ArrowRightLeft, Plus, X
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
+import { QuickNotes } from './QuickNotes';
 import { LeadFormModal } from './LeadFormModal';
 import { Logo } from './Logo';
 
@@ -545,50 +546,55 @@ export function Layout() {
 
           <div className="flex items-center gap-4">
             {/* AI Bookshelf Docking Bar */}
-            {notesDocked && (
+            {(notesDocked || isQuickNotesOpen) && (
               <div 
                 className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
-                onClick={() => { setNotesDocked(false); setQuickNotesOpen(true); }}
-                title="Open Quick Notes"
+                onClick={() => { 
+                  if (isQuickNotesOpen) {
+                    setNotesDocked(true);
+                    setQuickNotesOpen(false);
+                  } else {
+                    setNotesDocked(false);
+                    setQuickNotesOpen(true);
+                  }
+                }}
+                title={isQuickNotesOpen ? "Dock Quick Notes" : "Open Quick Notes"}
               >
-                <div className="flex items-center gap-2 pl-2 pr-4 h-8 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] transition-all duration-300">
-                  <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
-                    <StickyNote size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
-                  </div>
-                  <span className="text-[10px] font-black tracking-tighter text-[var(--t-primary)] group-hover:text-white uppercase leading-none">Notes</span>
-                </div>
-                
-                {/* Active Indicator */}
-                <div className="flex items-center gap-1.5 px-2 mr-2">
-                  <div className="relative flex">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />
-                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-[var(--t-primary)] animate-ping opacity-75" />
-                  </div>
-                  <span className="text-[9px] font-bold text-[var(--t-text-muted)] group-hover:text-[var(--t-text)] transition-colors uppercase tracking-widest">Active</span>
+                <div className={`flex items-center gap-2 pr-4 h-8 rounded-full transition-all duration-300 ${isQuickNotesOpen ? 'bg-[var(--t-primary)] border-[var(--t-primary)] pl-4' : 'bg-[var(--t-primary-dim)] border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] pl-2'}`}>
+                  {!isQuickNotesOpen && (
+                    <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
+                      <StickyNote size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
+                    </div>
+                  )}
+                  <span className={`text-[10px] font-black tracking-tighter uppercase leading-none ${isQuickNotesOpen ? 'text-white' : 'text-[var(--t-primary)] group-hover:text-white'}`}>
+                    {isQuickNotesOpen ? 'Open' : 'Notes'}
+                  </span>
                 </div>
               </div>
             )}
-            {isAiDocked && (
+            {(isAiDocked || isAiOpen) && (
               <div 
                 className="flex items-center gap-2 p-1 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] shadow-[0_4px_20px_rgba(0,0,0,0.1)] animate-in slide-in-from-top-4 duration-700 delay-300 cursor-pointer group hover:border-[var(--t-primary)] transition-all overflow-hidden hover:scale-105 active:scale-95"
-                onClick={() => setAiDocked(false)}
-                title="Restore OS Bot"
+                onClick={() => {
+                  if (isAiOpen) {
+                    setAiDocked(true);
+                    setAiOpen(false);
+                  } else {
+                    setAiDocked(false);
+                    setAiOpen(true);
+                  }
+                }}
+                title={isAiOpen ? "Dock OS Bot" : "Open OS Bot"}
               >
-                {/* AI Book Element */}
-                <div className="flex items-center gap-2 pl-2 pr-4 h-8 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] transition-all duration-300">
-                  <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
-                    <Bot size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
-                  </div>
-                  <span className="text-[10px] font-black tracking-tighter text-[var(--t-primary)] group-hover:text-white uppercase leading-none">{aiName}</span>
-                </div>
-                
-                {/* Active Indicator */}
-                <div className="flex items-center gap-1.5 px-2 mr-2">
-                  <div className="relative flex">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)]" />
-                    <div className="absolute inset-0 w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-ping opacity-75" />
-                  </div>
-                  <span className="text-[9px] font-bold text-[var(--t-text-muted)] group-hover:text-[var(--t-text)] transition-colors uppercase tracking-widest">Docked</span>
+                <div className={`flex items-center gap-2 pr-4 h-8 rounded-full transition-all duration-300 ${isAiOpen ? 'bg-[var(--t-primary)] border-[var(--t-primary)] pl-4' : 'bg-[var(--t-primary-dim)] border-[var(--t-primary)]/20 group-hover:bg-[var(--t-primary)] pl-2'}`}>
+                  {!isAiOpen && (
+                    <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white/10 group-hover:bg-white/20 transition-colors">
+                      <Bot size={12} className="text-[var(--t-primary)] group-hover:text-white transition-colors" />
+                    </div>
+                  )}
+                  <span className={`text-[10px] font-black tracking-tighter uppercase leading-none ${isAiOpen ? 'text-white' : 'text-[var(--t-primary)] group-hover:text-white'}`}>
+                    {isAiOpen ? 'Open' : aiName}
+                  </span>
                 </div>
               </div>
             )}
@@ -600,42 +606,30 @@ export function Layout() {
             )}
             <div className="flex items-center gap-2 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
               {/* Bot Toggle Button */}
-              <button
-                onClick={() => setAiOpen(!isAiOpen)}
-                className={`p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 ${
-                  isAiOpen 
-                    ? 'bg-[var(--t-primary-dim)] text-[var(--t-primary)] shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.3)] ring-1 ring-[var(--t-primary)]/30' 
-                    : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
-                }`}
-                title={`${isAiOpen ? 'Close' : 'Open'} OS Bot`}
-              >
-                <Bot size={18} className={isAiOpen ? 'animate-pulse' : ''} />
-              </button>
+              {!(isAiDocked || isAiOpen) && (
+                <button
+                  onClick={() => setAiOpen(true)}
+                  className="p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]"
+                  title="Open OS Bot"
+                >
+                  <Bot size={18} />
+                </button>
+              )}
 
-              <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5" />
+              {!(isAiDocked || isAiOpen) && !(notesDocked || isQuickNotesOpen) && (
+                <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5" />
+              )}
 
-              {/* Notes Toggle Button — mirrors OS Bot: open → dock, closed → open */}
-              <button
-                onClick={() => {
-                  if (isQuickNotesOpen) {
-                    setNotesDocked(true);
-                    setQuickNotesOpen(false);
-                  } else if (notesDocked) {
-                    setNotesDocked(false);
-                    setQuickNotesOpen(true);
-                  } else {
-                    setQuickNotesOpen(true);
-                  }
-                }}
-                className={`p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 ${
-                  isQuickNotesOpen 
-                    ? 'bg-[var(--t-primary-dim)] text-[var(--t-primary)] shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.3)] ring-1 ring-[var(--t-primary)]/30' 
-                    : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
-                }`}
-                title={`${isQuickNotesOpen ? 'Dock' : 'Open'} Quick Notes`}
-              >
-                <StickyNote size={18} />
-              </button>
+              {/* Notes Toggle Button */}
+              {!(notesDocked || isQuickNotesOpen) && (
+                <button
+                  onClick={() => setQuickNotesOpen(true)}
+                  className="p-2 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]"
+                  title="Open Quick Notes"
+                >
+                  <StickyNote size={18} />
+                </button>
+              )}
 
               <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
               
@@ -689,56 +683,7 @@ export function Layout() {
       {showJoinModal && <JoinTeamModal isOpen={showJoinModal} onClose={() => setShowJoinModal(false)} />}
       {showCreateModal && <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />}
 
-      {isQuickNotesOpen && !notesDocked && (
-        <div 
-          className="fixed shadow-2xl flex flex-col w-[450px] h-[550px] z-[150]"
-          style={{ 
-            maxWidth: '500px', 
-            maxHeight: '80vh',
-            left: notesPos.x === -1 ? '50%' : `${notesPos.x}px`,
-            top: notesPos.y === -1 ? '50%' : `${notesPos.y}px`,
-            transform: notesPos.x === -1 ? 'translate(-50%, -50%)' : 'none',
-            transition: isNotesDragging ? 'none' : 'box-shadow 0.3s ease'
-          }}
-        >
-          <div className="w-full h-full bg-black/80 backdrop-blur-3xl overflow-hidden flex flex-col border border-white/10 rounded-3xl">
-            <div 
-              className="bg-white/5 border-b border-white/10 px-6 py-4 flex items-center justify-between shrink-0 cursor-move select-none"
-              onMouseDown={startNotesDrag}
-            >
-              <div className="flex items-center gap-3">
-                <StickyNote size={18} className="text-purple-400" />
-                <h3 className="text-sm font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>Quick Notes</h3>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button 
-                  onClick={() => setNotesDocked(true)} 
-                  className="p-2 hover:bg-white/10 rounded-lg text-[var(--t-text-muted)] hover:text-white transition-colors"
-                  title="Dock to Bookshelf"
-                >
-                  <Minimize2 size={16} />
-                </button>
-                <button 
-                  onClick={() => setQuickNotesOpen(false)} 
-                  className="p-2 hover:bg-white/10 rounded-lg text-red-400/70 hover:text-red-400 transition-colors"
-                  title="Close"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 p-6">
-              <textarea 
-                value={quickNotes} 
-                onChange={(e) => setQuickNotes(e.target.value)} 
-                placeholder="Type thoughts..." 
-                className="w-full h-full bg-transparent border-none focus:outline-none resize-none custom-scrollbar" 
-                style={{ color: 'var(--t-text)' }} 
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <QuickNotes />
     </div>
   );
 }

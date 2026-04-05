@@ -1666,6 +1666,8 @@ interface AppState {
   setAiName: (name: string) => void;
   aiModel: string;
   setAiModel: (model: string) => void;
+  premiumMessagesLeft: number;
+  decrementPremiumMessages: () => void;
   aiPersonality: string;
   setAiPersonality: (personality: string) => void;
   isAiFirstUse: boolean;
@@ -1811,6 +1813,7 @@ export const useStore = create<AppState>((set, get) => ({
   // —— AI State ——————————————————————————————————————————————
   aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
   aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'gemini-2.0-flash',
+  premiumMessagesLeft: typeof window !== 'undefined' ? parseInt(localStorage.getItem('wholescale-premium-messages') || '20', 10) : 20,
   aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
   aiUsage: (() => {
     try {
@@ -4445,6 +4448,13 @@ export const useStore = create<AppState>((set, get) => ({
         });
     }
   },
+  decrementPremiumMessages: () => set((state) => {
+    const newCount = Math.max(0, state.premiumMessagesLeft - 1);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-premium-messages', newCount.toString());
+    }
+    return { premiumMessagesLeft: newCount };
+  }),
   setAiModel: (model: string) => {
     const { currentUser } = get();
     if (typeof window !== 'undefined') {

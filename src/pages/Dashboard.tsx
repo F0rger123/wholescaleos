@@ -155,6 +155,13 @@ export default function Dashboard() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const presetsRef = useRef<HTMLDivElement>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Live clock
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const DEFAULT_LAYOUT = [
     'quick-board',
@@ -358,7 +365,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-6">
                  <div className="text-right">
                     <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Current Session</p>
-                    <p className="text-xl font-black text-[var(--t-text)] italic">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-xl font-black text-[var(--t-text)] italic">{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</p>
                  </div>
                  <div className="w-px h-10 bg-[var(--t-border)]" />
                  <button 

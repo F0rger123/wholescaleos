@@ -30,6 +30,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     tasks: true,
     drive: false
   });
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
   const { 
     aiName: storeAiName, 
@@ -66,9 +67,11 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             .select('provider, refresh_token, access_token')
             .eq('user_id', currentUser.id);
 
-          if (connections) {
-            connections.forEach(conn => {
-              if (conn.provider === 'gemini') {
+            if (connections) {
+              connections.forEach(conn => {
+                if (conn.provider === 'google') {
+                  setIsGoogleConnected(true);
+                } else if (conn.provider === 'gemini') {
                 setGeminiKey(conn.refresh_token || '');
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
                   setModel(conn.access_token || 'gemini-2.0-flash');
@@ -279,7 +282,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     // Use the native Google OAuth service instead of Supabase Auth to avoid dashboard configuration errors.
     // This allows the ecosystem to connect even if "Google" is not enabled as a primary login method.
     try {
-      const url = GoogleCalendarService.getInstance().getAuthUrl();
+      // Pass the current path in the state so the callback knows where to redirect
+      const state = `calendar-sync:${window.location.pathname}`;
+      const url = GoogleCalendarService.getInstance().getAuthUrl(state);
       if (!url) throw new Error('Could not generate Google Auth URL');
       window.location.assign(url);
     } catch (err) {
@@ -547,12 +552,20 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             <Layout className="w-5 h-5 text-[var(--t-primary)]" />
             Google Ecosystem Management
           </h2>
-          <button 
-            onClick={handleReconnectGoogle}
-            className="px-3 py-1 bg-[var(--t-primary)]/10 text-[var(--t-primary)] text-[10px] font-black rounded-lg border border-[var(--t-primary)]/20 uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all"
-          >
-            Reconnect Ecosystem
-          </button>
+          <div className="flex items-center gap-2">
+            {isGoogleConnected && (
+              <span className="flex items-center gap-1 px-2 py-1 bg-[var(--t-success)]/10 text-[var(--t-success)] text-[9px] font-black rounded border border-[var(--t-success)]/20 uppercase tracking-tighter">
+                <Check size={8} strokeWidth={4} />
+                Connected
+              </span>
+            )}
+            <button 
+              onClick={handleReconnectGoogle}
+              className="px-3 py-1 bg-[var(--t-primary)]/10 text-[var(--t-primary)] text-[10px] font-black rounded-lg border border-[var(--t-primary)]/20 uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all"
+            >
+              {isGoogleConnected ? 'Update Connection' : 'Connect Ecosystem'}
+            </button>
+          </div>
         </div>
 
         <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">

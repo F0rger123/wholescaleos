@@ -311,6 +311,9 @@ export function App() {
         {/* Email confirmation — accessible with or without auth */}
         <Route path="/email-confirmed" element={<PublicRoute checking={checking} isMfaRequired={isMfaRequired}><EmailConfirmed /></PublicRoute>} />
 
+        {/* OAuth Callback */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
+
         {/* Team selection — after login, before main app. Also gated by MFA. */}
         <Route path="/team-selection" element={
           <ProtectedRoute checking={checking} isMfaRequired={isMfaRequired}>

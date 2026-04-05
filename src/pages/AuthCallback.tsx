@@ -148,8 +148,12 @@ export function AuthCallback() {
             let redirectPath = '/calendar';
             if (state && state !== 'calendar-sync') {
               try {
-                // If it's a full URL, extract path
-                if (state.startsWith('http')) {
+                // Handle our custom state format 'calendar-sync:/path'
+                if (state.startsWith('calendar-sync:')) {
+                  redirectPath = state.split(':')[1] || '/calendar';
+                }
+                // Handle standard URL or straight path redirects
+                else if (state.startsWith('http')) {
                   redirectPath = new URL(state).pathname + new URL(state).search + new URL(state).hash;
                 } else {
                   redirectPath = decodeURIComponent(state);

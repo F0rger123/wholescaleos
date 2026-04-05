@@ -3,7 +3,7 @@ import {
   Bold, Italic, Underline, List, ListOrdered, 
   Link as LinkIcon, Image as ImageIcon, Type, 
   AlignLeft, AlignCenter, AlignRight, 
-  Maximize2, Loader2
+  Maximize2, Loader2, Palette
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -108,6 +108,25 @@ export default function RichTextEditor({ value, onChange, placeholder, minHeight
           <button onClick={() => execCommand('justifyLeft')} className={toolbarButtonClass} title="Align Left"><AlignLeft size={16} /></button>
           <button onClick={() => execCommand('justifyCenter')} className={toolbarButtonClass} title="Align Center"><AlignCenter size={16} /></button>
           <button onClick={() => execCommand('justifyRight')} className={toolbarButtonClass} title="Align Right"><AlignRight size={16} /></button>
+        </div>
+
+        <div className="flex items-center gap-1 pr-2 border-r border-[var(--t-border)] mr-1">
+          <label className={toolbarButtonClass + " cursor-pointer relative overflow-hidden"} title="Text Color">
+            <Palette size={16} />
+            <input 
+              type="color" 
+              className="absolute -inset-1 opacity-0 cursor-pointer w-20 h-20"
+              onChange={(e) => execCommand('foreColor', e.target.value)}
+            />
+          </label>
+          <label className={toolbarButtonClass + " cursor-pointer relative overflow-hidden bg-[var(--t-text)] text-[var(--t-bg)] p-1 rounded"} title="Background Color">
+            <Palette size={14} />
+            <input 
+              type="color" 
+              className="absolute -inset-1 opacity-0 cursor-pointer w-20 h-20"
+              onChange={(e) => execCommand('hiliteColor', e.target.value)}
+            />
+          </label>
         </div>
 
         <div className="flex items-center gap-1">

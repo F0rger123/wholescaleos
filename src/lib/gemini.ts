@@ -554,7 +554,12 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   }
 
   // CRITICAL: Final safeguard against model name mismatch in URL construction
-  if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+  if (provider === 'gemini') {
+    // Map unsupported/hallucinated model strings (like gemini-3.x) to functional alternatives
+    if (model.includes('3.1-flash-lite') || !model.startsWith('gemini')) {
+      model = 'gemini-2.0-flash';
+    }
+  }
   if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
   if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
 

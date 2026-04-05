@@ -327,18 +327,20 @@ export const DEFAULT_TEMPLATES: AgentTemplate[] = [
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: auto; background: #ffffff; color: #000000; padding: 40px; border-radius: 24px; border: 1px solid #e5e7eb;">
         <h2 style="font-size: 24px; font-weight: 900; margin-bottom: 20px;">Market Trend Report: {{name}}</h2>
-        <p style="color: #4b5563; margin-bottom: 30px;">The real estate market is shifting. Here's a quick update on current trends in your area to help you make informed decisions.</p>
-        <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-          <div style="background: #f9fafb; padding: 15px; border-radius: 12px; text-align: center;">
-            <p style="margin: 0; font-size: 10px; font-weight: 900; color: #6b7280; text-transform: uppercase;">Avg Sale Price</p>
-            <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: 800; color: #059669;">+4.2% ↑</p>
-          </div>
-          <div style="background: #f9fafb; padding: 15px; border-radius: 12px; text-align: center;">
-            <p style="margin: 0; font-size: 10px; font-weight: 900; color: #6b7280; text-transform: uppercase;">Inventory</p>
-            <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: 800; color: #dc2626;">-12.5% ↓</p>
-          </div>
-        </div>
-        <a href="https://wholescaleos.com/map" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">View Local Heatmap</a>
+        <p style="color: #4b5563; margin-bottom: 30px;">The real estate market is shifting. Here are the current trends in your area:</p>
+        <table width="100%" cellPadding="15" cellSpacing="0" style="margin-bottom: 30px; border-collapse: separate; border-spacing: 20px 0;">
+          <tr>
+            <td style="background: #f9fafb; border-radius: 12px; text-align: center; width: 50%;">
+              <p style="margin: 0; font-size: 10px; font-weight: 900; color: #6b7280; text-transform: uppercase;">Avg Sale Price</p>
+              <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: 800; color: #059669;">+4.2% ↑</p>
+            </td>
+            <td style="background: #f9fafb; border-radius: 12px; text-align: center; width: 50%;">
+              <p style="margin: 0; font-size: 10px; font-weight: 900; color: #6b7280; text-transform: uppercase;">Inventory</p>
+              <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: 800; color: #dc2626;">-12.5% ↓</p>
+            </td>
+          </tr>
+        </table>
+        <a href="https://wholescaleos.com/map" style="display: block; width: 100%; padding: 16px; background: #000000; color: #ffffff; text-align: center; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase;">View Local Trends</a>
       </div>
     `
   },

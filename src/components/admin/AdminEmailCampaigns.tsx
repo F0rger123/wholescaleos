@@ -258,9 +258,19 @@ const AdminEmailCampaigns = () => {
             {templates.map(tpl => (
               <div
                 key={tpl.id}
-                className="group p-5 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl transition-all hover:border-[var(--t-primary)]/50"
+                className="group p-5 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl transition-all hover:border-[var(--t-primary)]/50 flex gap-6"
               >
-                <div className="flex items-start justify-between">
+                {/* HTML Preview Thumbnail */}
+                <div className="w-24 h-32 rounded-lg border border-[var(--t-border)] bg-white overflow-hidden flex-shrink-0 relative">
+                  <div 
+                    className="absolute inset-0 origin-top-left scale-[0.25] w-[400%] h-[400%] p-8 bg-white pointer-events-none"
+                    dangerouslySetInnerHTML={{ __html: tpl.html_content || '' }}
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+                </div>
+
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-black uppercase tracking-wider text-lg">{tpl.name}</h3>
@@ -289,6 +299,7 @@ const AdminEmailCampaigns = () => {
                     >
                       <Trash2 size={18} />
                     </button>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -403,8 +414,8 @@ const AdminEmailCampaigns = () => {
 
       {/* Template Modal */}
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-4xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-6xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between">
               <h2 className="text-xl font-black uppercase tracking-wider">
                 {editingTemplate?.id ? 'Edit Template' : 'New Template'}
@@ -517,7 +528,7 @@ const AdminEmailCampaigns = () => {
 
       {/* Campaign Modal */}
       {showCampaignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="w-full max-w-lg bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl">
             <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between">
               <h2 className="text-xl font-black uppercase tracking-wider">New Campaign</h2>

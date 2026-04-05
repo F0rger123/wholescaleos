@@ -35,50 +35,16 @@ const initialNodes: Node[] = [
   {
     id: '1',
     type: 'automation',
-    position: { x: 250, y: 50 },
+    position: { x: 250, y: 150 },
     data: { 
-      label: 'New Lead Trigger', 
+      label: 'New Trigger', 
       type: 'trigger',
-      description: 'Fires when a new lead is added via API or manual entry.'
+      description: 'Start your automation here.'
     },
-  },
-  {
-    id: '2',
-    type: 'automation',
-    position: { x: 250, y: 250 },
-    data: { 
-      label: 'AI Intent Analysis', 
-      type: 'ai',
-      description: 'Analyze lead source and notes to determine priority.'
-    },
-  },
-  {
-    id: '3',
-    type: 'automation',
-    position: { x: 100, y: 450 },
-    data: { 
-      label: 'Send High-Priority SMS', 
-      type: 'sms',
-      description: 'Immediate SMS response for high-priority leads.'
-    },
-  },
-  {
-    id: '4',
-    type: 'automation',
-    position: { x: 400, y: 450 },
-    data: { 
-      label: 'Add to Drip Campaign', 
-      type: 'action',
-      description: 'Standard email sequence for general inquiries.'
-    },
-  },
+  }
 ];
 
-const initialEdges: Edge[] = [
-  { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: 'var(--t-primary)' } },
-  { id: 'e2-3', source: '2', target: '3', label: 'Priority > 80', style: { stroke: 'var(--t-success)' } },
-  { id: 'e2-4', source: '2', target: '4', label: 'Default', style: { stroke: 'var(--t-border)' } },
-];
+const initialEdges: Edge[] = [];
 
 export default function AutomationsHub() {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
@@ -198,9 +164,8 @@ export default function AutomationsHub() {
     setNodes(template.nodes);
     setEdges(template.edges);
     setWorkflowName(template.name);
-    setWorkflowId(null); // It's a new unsaved instance of a template
+    setWorkflowId(null);
     setIsLibraryOpen(false);
-    toast.success(`Loaded ${template.name} template`);
   };
 
   const addNode = (type: string) => {
@@ -452,7 +417,7 @@ export default function AutomationsHub() {
               </div>
 
               <div className="p-4 flex gap-2 overflow-x-auto border-b border-[var(--t-border)] bg-[var(--t-bg)]">
-                {['All', 'Lead Gen', 'AI', 'Comms', 'CRM'].map(cat => (
+                {['All', 'Lead Gen', 'Email', 'AI', 'Comms', 'CRM'].map(cat => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}

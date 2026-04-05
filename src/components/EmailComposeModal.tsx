@@ -5,6 +5,7 @@ import { Lead, useStore } from '../store/useStore';
 import { sendEmail } from '../lib/email';
 import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, AgentTemplate } from '../lib/default-templates';
 import { BookOpenText } from 'lucide-react';
+import RichTextEditor from './admin/RichTextEditor';
 
 interface EmailComposeModalProps {
   isOpen: boolean;
@@ -390,11 +391,11 @@ export default function EmailComposeModal({
                 </div>
               )}
 
-              <textarea 
+              <RichTextEditor 
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={setBody}
                 placeholder="Write your message here..."
-                className="w-full h-64 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl p-4 text-sm text-[var(--t-text)] focus:ring-2 focus:ring-[var(--t-primary)] outline-none resize-none transition-all"
+                minHeight="250px"
               />
 
               {isAttachmentLoading && (

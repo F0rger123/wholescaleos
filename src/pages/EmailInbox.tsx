@@ -16,6 +16,7 @@ import {
 } from '../lib/email';
 import { analyzeConversation } from '../lib/ai-reply-service';
 import EmailComposeModal from '../components/EmailComposeModal';
+import RichTextEditor from '../components/admin/RichTextEditor';
 import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES, AgentTemplate } from '../lib/default-templates';
 
 type EmailView = 'inbox' | 'sent' | 'starred' | 'trash' | 'templates' | 'campaigns' | 'scheduled';
@@ -595,10 +596,10 @@ function TemplateModal({ template, onClose, onSave }: { template: dbEmailTemplat
           </div>
           <div>
             <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block mb-1">HTML Body Content</label>
-            <textarea 
-              value={body} onChange={e => setBody(e.target.value)}
-              className="w-full h-64 px-4 py-3 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none font-mono"
+            <RichTextEditor 
+              value={body} onChange={setBody}
               placeholder="<p>Hello {{name}}!</p>"
+              minHeight="250px"
             />
           </div>
           <div className="bg-[var(--t-primary-dim)]/10 p-3 rounded-xl">
@@ -1015,11 +1016,11 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
           </div>
         )}
         <div className="relative group">
-          <textarea 
+          <RichTextEditor 
             value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
+            onChange={setReplyText}
             placeholder="Write your reply..."
-            className="w-full h-32 p-4 bg-[var(--t-bg)] border border-[var(--t-border)] rounded-2xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none resize-none transition-all group-focus-within:border-[var(--t-primary-dim)]"
+            minHeight="120px"
           />
           <div className="absolute right-3 bottom-3 flex items-center gap-2">
              <button 

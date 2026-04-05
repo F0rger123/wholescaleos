@@ -4,7 +4,7 @@ export interface AutomationTemplate {
   id: string;
   name: string;
   description: string;
-  category: 'Lead Gen' | 'AI' | 'Comms' | 'CRM';
+  category: 'Lead Gen' | 'AI' | 'Comms' | 'CRM' | 'Email';
   nodes: Node[];
   edges: Edge[];
 }
@@ -310,6 +310,256 @@ export const automationTemplates: AutomationTemplate[] = [
     edges: [
       { id: 'e1-2', source: '1', target: '2', animated: true },
       { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+
+  // ── EMAIL AUTOMATION TEMPLATES ───────────────────────────────────────────────
+  {
+    id: 'email-new-lead-followup',
+    name: 'New Lead Email Follow-up',
+    description: 'Sends a personalized welcome email within 5 minutes of a new lead entering the CRM.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'New Lead Created', type: 'trigger', description: 'Fires when lead status = New' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: '5-Min Delay', type: 'delay', description: 'Wait to avoid seeming robotic' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Send Welcome Email', type: 'action', description: 'Personalized intro using lead name and property' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true, style: { stroke: 'var(--t-primary)' } },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'email-abandoned-cart',
+    name: 'Abandoned Inquiry Recovery',
+    description: 'Re-engage leads who started but never completed a property inquiry form.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Form Abandoned', type: 'trigger', description: 'Partial form submission detected' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: '1-Hour Delay', type: 'delay', description: 'Give time to return naturally' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Recovery Email', type: 'action', description: 'Friendly nudge with property photos' } },
+      { id: '4', type: 'automation', position: { x: 250, y: 450 }, data: { label: 'Log to CRM', type: 'database', description: 'Mark as re-engaged' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true },
+      { id: 'e3-4', source: '3', target: '4', animated: true }
+    ]
+  },
+  {
+    id: 'email-post-closing',
+    name: 'Post-Closing Thank You',
+    description: 'Automated thank-you email sequence after a deal closes, requesting a review.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Deal Closed-Won', type: 'trigger', description: 'Status changed to Won' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Thank You Email', type: 'action', description: 'Congratulations + next steps' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: '7-Day Delay', type: 'delay', description: 'Wait for satisfaction' } },
+      { id: '4', type: 'automation', position: { x: 250, y: 450 }, data: { label: 'Review Request', type: 'action', description: 'Google review link email' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true },
+      { id: 'e3-4', source: '3', target: '4', animated: true }
+    ]
+  },
+  {
+    id: 'email-drip-nurture',
+    name: 'Email Drip Nurture Series',
+    description: '5-email nurture series over 30 days for leads not yet ready to commit.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Lead Added to Drip', type: 'trigger', description: 'Manual or auto-enrollment' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 120 }, data: { label: 'Email 1: Value Prop', type: 'action', description: 'Introduce your services' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 240 }, data: { label: '7-Day Wait', type: 'delay', description: 'Spacing for best engagement' } },
+      { id: '4', type: 'automation', position: { x: 250, y: 360 }, data: { label: 'Email 2: Case Study', type: 'action', description: 'Share a success story' } },
+      { id: '5', type: 'automation', position: { x: 250, y: 480 }, data: { label: 'Email 3: CTA Offer', type: 'action', description: 'Free consultation offer' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true },
+      { id: 'e3-4', source: '3', target: '4', animated: true },
+      { id: 'e4-5', source: '4', target: '5', animated: true }
+    ]
+  },
+  {
+    id: 'email-welcome-sequence',
+    name: 'Welcome Email Sequence',
+    description: 'Multi-step onboarding emails for new contacts entering your database.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Contact Created', type: 'trigger', description: 'New contact via any source' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Welcome Email', type: 'action', description: 'Brand intro + what to expect' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: '3-Day Wait', type: 'delay', description: 'Let them explore' } },
+      { id: '4', type: 'automation', position: { x: 250, y: 450 }, data: { label: 'Resource Guide Email', type: 'action', description: 'Buying/selling guide PDF' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true },
+      { id: 'e3-4', source: '3', target: '4', animated: true }
+    ]
+  },
+  {
+    id: 'email-birthday',
+    name: 'Birthday Greeting Email',
+    description: 'Auto-sends a birthday email to clients on their special day.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Birthday Trigger', type: 'trigger', description: 'Date matches contact birthday' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Personalize', type: 'ai', description: 'Generate warm birthday message' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Send Birthday Email', type: 'action', description: 'Festive template with discount' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'email-market-update',
+    name: 'Monthly Market Update Email',
+    description: 'Automated monthly market report email to your entire database.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: '1st of Month', type: 'trigger', description: 'Monthly schedule trigger' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Market Analysis', type: 'ai', description: 'Generate stats and insights' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Broadcast Email', type: 'action', description: 'Send to all active contacts' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'email-open-house-invite',
+    name: 'Open House Email Invite',
+    description: 'Targeted email invitations for upcoming open house events.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Open House Scheduled', type: 'trigger', description: 'Calendar event created' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Filter by Area', type: 'condition', description: 'Match leads by zip code' } },
+      { id: '3', type: 'automation', position: { x: 100, y: 300 }, data: { label: 'Send Invite Email', type: 'action', description: 'Property photos + RSVP CTA' } },
+      { id: '4', type: 'automation', position: { x: 400, y: 300 }, data: { label: 'Skip Inactive', type: 'action', description: 'Do not email cold leads' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', label: 'Match', style: { stroke: 'var(--t-success)' } },
+      { id: 'e2-4', source: '2', target: '4', label: 'No Match', style: { stroke: 'var(--t-border)' } }
+    ]
+  },
+  {
+    id: 'email-just-sold',
+    name: 'Just Sold Announcement',
+    description: 'Broadcast a "Just Sold" email to generate social proof and new leads.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Deal Closed-Won', type: 'trigger', description: 'Won status detected' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Generate Announcement', type: 'ai', description: 'Create just-sold copy with stats' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Email Blast', type: 'action', description: 'Send to neighbors + sphere' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'email-pre-approval',
+    name: 'Pre-Approval Nudge Email',
+    description: 'Gentle email nudge for leads who expressed buying interest but lack pre-approval.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Buyer Lead Tagged', type: 'trigger', description: 'Intent = Buy, No pre-approval' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: '2-Day Wait', type: 'delay', description: 'Allow natural engagement' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Pre-Approval Email', type: 'action', description: 'Lender partner intro + benefits' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'email-appraisal-complete',
+    name: 'Appraisal Complete Notification',
+    description: 'Email alert when appraisal results are in, with next steps for the client.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Appraisal Logged', type: 'trigger', description: 'Appraisal doc uploaded' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'Send Results Email', type: 'action', description: 'Summary + next steps' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Update CRM Stage', type: 'database', description: 'Move to Negotiating' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'email-anniversary-checkin',
+    name: 'Home Anniversary Check-in',
+    description: 'Annual email on the purchase anniversary with equity update.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Purchase Anniversary', type: 'trigger', description: 'Date-based annual event' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: 'AI Equity Estimate', type: 'ai', description: 'Calculate current home value' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Anniversary Email', type: 'action', description: 'Happy home-versary + equity report' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'email-referral-request',
+    name: 'Referral Request Series',
+    description: 'Automated email sequence asking for referrals after a successful transaction.',
+    category: 'Email',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 250, y: 0 }, data: { label: 'Deal Closed-Won', type: 'trigger', description: 'Closed status trigger' } },
+      { id: '2', type: 'automation', position: { x: 250, y: 150 }, data: { label: '14-Day Wait', type: 'delay', description: 'Wait for settle-in period' } },
+      { id: '3', type: 'automation', position: { x: 250, y: 300 }, data: { label: 'Request Email', type: 'action', description: 'Review + Referral link' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true }
+    ]
+  },
+  {
+    id: 'complex-seller-scoring',
+    name: 'Advanced Seller Scoring',
+    description: 'Complex AI-driven lead scoring and routing for high-value seller prospects.',
+    category: 'AI',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 400, y: 0 }, data: { label: 'Seller Inquiry', type: 'trigger', description: 'Inbound seller lead' } },
+      { id: '2', type: 'automation', position: { x: 400, y: 150 }, data: { label: 'AI Motivation Scan', type: 'ai', description: 'Scan for distress/urgency' } },
+      { id: '3', type: 'automation', position: { x: 400, y: 300 }, data: { label: 'Score Check', type: 'condition', description: 'Is Score > 80?' } },
+      { id: '4', type: 'automation', position: { x: 200, y: 450 }, data: { label: 'Priority Call', type: 'action', description: 'Auto-dial for agent' } },
+      { id: '5', type: 'automation', position: { x: 600, y: 450 }, data: { label: 'Nurture SMS', type: 'sms', description: 'Warm intro' } },
+      { id: '6', type: 'automation', position: { x: 200, y: 600 }, data: { label: 'Admin Alert', type: 'action', description: 'Slack #priority-leads' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true },
+      { id: 'e3-4', source: '3', target: '4', label: 'Match', style: { stroke: 'var(--t-success)' } },
+      { id: 'e3-5', source: '3', target: '5', label: 'Low', style: { stroke: 'var(--t-border)' } },
+      { id: 'e4-6', source: '4', target: '6', animated: true }
+    ]
+  },
+  {
+    id: 'open-house-multi-channel',
+    name: 'Open House Omni-Channel',
+    description: 'Follow up with open house attendees via SMS, Email, and CRM task creation.',
+    category: 'Comms',
+    nodes: [
+      { id: '1', type: 'automation', position: { x: 300, y: 0 }, data: { label: 'Guest Registered', type: 'trigger', description: 'QR Scan or manual entry' } },
+      { id: '2', type: 'automation', position: { x: 100, y: 150 }, data: { label: 'Immediate SMS', type: 'sms', description: 'Digital property brochure' } },
+      { id: '3', type: 'automation', position: { x: 500, y: 150 }, data: { label: 'Send Welcome Email', type: 'action', description: 'Full property details' } },
+      { id: '4', type: 'automation', position: { x: 300, y: 300 }, data: { label: '24h Follow-up AI', type: 'ai', description: 'Check feedback response' } },
+      { id: '5', type: 'automation', position: { x: 300, y: 450 }, data: { label: 'Create CRM Task', type: 'action', description: 'Personal call reminder' } }
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e1-3', source: '1', target: '3', animated: true },
+      { id: 'e2-4', source: '2', target: '4', animated: true },
+      { id: 'e3-4', source: '3', target: '4', animated: true },
+      { id: 'e4-5', source: '4', target: '5', animated: true }
     ]
   }
 ];

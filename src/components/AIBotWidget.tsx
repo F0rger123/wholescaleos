@@ -41,7 +41,7 @@ export function AIBotWidget() {
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiName, aiModel, setAiModel, isAiDocked, setAiDocked,
-    sidebarOpen
+    sidebarOpen, premiumMessagesLeft, decrementPremiumMessages
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -305,6 +305,15 @@ export function AIBotWidget() {
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!prompt.trim() || loading || !hasKey) return;
+
+    const isPremiumModel = aiModel.includes('gpt-4o') || aiModel.includes('claude-3-5') || aiModel.includes('claude-3-opus') || aiModel.includes('o1');
+    if (isPremiumModel) {
+      if (premiumMessagesLeft <= 0) {
+        setShowRateLimitModal(true);
+        return;
+      }
+      decrementPremiumMessages();
+    }
 
     const userText = prompt.trim();
     const userMsg: ChatMessage = {
@@ -659,7 +668,7 @@ export function AIBotWidget() {
           
           {/* Header */}
           <div 
-            className="p-3 border-b flex items-center justify-between cursor-move"
+            className={`p-3 flex items-center justify-between cursor-move ${position.y < 200 ? 'order-last border-t rounded-b-2xl' : 'border-b rounded-t-2xl'}`}
             style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}
             onMouseDown={startDrag}
           >
@@ -712,7 +721,7 @@ export function AIBotWidget() {
           {/* Messages Area */}
           <div 
             ref={scrollRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4"
+            className={`flex-1 overflow-y-auto p-4 space-y-4 ${position.y < 200 ? 'order-1' : ''}`}
             style={{ background: 'var(--t-background)' }}
           >
             {/* Proactive Insights */}
@@ -824,10 +833,21 @@ export function AIBotWidget() {
           </div>
 
           {/* Input Area */}
-          <form onSubmit={handleSubmit} className="p-3 border-t flex gap-2"
+          <form onSubmit={handleSubmit} className={`p-3 border-t flex flex-col gap-2 ${position.y < 200 ? 'order-2 border-t-0' : ''}`}
             style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}
           >
-            <div className="relative flex-1">
+            {(aiModel.includes('gpt-4o') || aiModel.includes('claude-3-5') || aiModel.includes('claude-3-opus') || aiModel.includes('o1')) && (
+              <div className="flex justify-between items-center px-1">
+                <span className="text-[10px] font-bold text-[var(--t-text-muted)]">
+                  {premiumMessagesLeft} messages remaining on {aiModel.replace('gpt-4o', 'GPT-4o').replace('claude-3-5-sonnet-20241022', 'Claude 3.5 Sonnet')}
+                </span>
+                {premiumMessagesLeft <= 5 && (
+                  <span className="text-[10px] font-bold text-[var(--t-warning)] animate-pulse">Running low</span>
+                )}
+              </div>
+            )}
+            <div className="flex gap-2 w-full relative">
+              <div className="relative flex-1">
               <input
                 type="text"
                 value={prompt}
@@ -852,13 +872,14 @@ export function AIBotWidget() {
                 <Mic size={14} />
               </button>
             </div>
-            <button
-              disabled={loading || !prompt.trim()}
-              className="p-2 rounded-lg disabled:opacity-50 transition-colors"
-              style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
-            >
-              <Send size={16} />
-            </button>
+              <button
+                disabled={loading || !prompt.trim()}
+                className="p-2 rounded-lg disabled:opacity-50 transition-colors"
+                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+              >
+                <Send size={16} />
+              </button>
+            </div>
           </form>
         </div>
       )}
