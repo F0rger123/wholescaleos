@@ -74,6 +74,40 @@ export class GoogleCalendarService {
     return url;
   }
 
+  getTasksAuthUrl(returnTo?: string): string {
+    const clientId = "497223138488-fkvh9a1p58rdmjvnmn23v9hvdl2r7jab.apps.googleusercontent.com";
+    const redirectUri = typeof window !== 'undefined' 
+      ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? 'http://localhost:5173/auth/callback'
+          : 'https://wholescaleos.com/auth/callback')
+      : "https://wholescaleos.com/auth/callback";
+    
+    const params = {
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: [
+        'https://www.googleapis.com/auth/tasks',
+        'https://www.googleapis.com/auth/calendar', // Keep calendar to ensure we don't lose it
+        'https://www.googleapis.com/auth/calendar.events'
+      ].join(' '),
+      access_type: 'offline',
+      prompt: 'consent',
+      include_granted_scopes: 'true',
+      state: `tasks-reconnect:${returnTo || '/settings'}`,
+    };
+    
+    let url = 'https://accounts.google.com/o/oauth2/v2/auth?';
+    for (const [key, value] of Object.entries(params)) {
+      if (value) {
+        url += `${encodeURIComponent(key)}=${encodeURIComponent(value)}&`;
+      }
+    }
+    url = url.slice(0, -1);
+    
+    return url;
+  }
+
   async getAccessToken(userId: string): Promise<string | null> {
     try {
       const { data, error } = await supabase

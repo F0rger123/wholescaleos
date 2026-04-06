@@ -55,6 +55,11 @@ export function GoogleCalendarConnect() {
     window.location.href = authUrl;
   };
 
+  const handleReconnectTasks = () => {
+    const authUrl = service.getTasksAuthUrl(window.location.pathname);
+    window.location.href = authUrl;
+  };
+
   const handleDisconnect = async () => {
     if (!currentUser?.id) return;
     await service.disconnect(currentUser.id);
@@ -134,7 +139,7 @@ export function GoogleCalendarConnect() {
                 <div className="mt-4 p-3 bg-[var(--t-error)]/5 rounded-xl border border-[var(--t-error)]/20">
                   <p className="text-[10px] text-[var(--t-error)] font-bold mb-2 uppercase tracking-tight">Tasks Sync Permission Missing</p>
                   <button 
-                    onClick={handleConnect}
+                    onClick={handleReconnectTasks}
                     className="w-full py-2 bg-[var(--t-error)]/10 hover:bg-[var(--t-error)]/20 text-[var(--t-error)] rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
                   >
                     Grant Tasks Access

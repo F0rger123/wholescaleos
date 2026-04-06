@@ -467,7 +467,7 @@ export function AIBotWidget() {
             timestamp: new Date().toISOString(),
             intent: response.intent,
             data: d,
-            systemLog: "✨ Gemini AI"
+            systemLog: response.systemLog || "✨ Gemini AI"
           }]);
         } else {
           // Missing info — start SMS session to collect it conversationally
@@ -486,7 +486,7 @@ export function AIBotWidget() {
             content: response.response,
             timestamp: new Date().toISOString(),
             intent: 'ask_question',
-            systemLog: "✨ Gemini AI"
+            systemLog: response.systemLog || "✨ Gemini AI"
           }]);
         }
 

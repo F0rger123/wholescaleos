@@ -140,7 +140,12 @@ function GeneralTab() {
   };
 
   const handleReconnectGoogle = () => {
-    const url = GoogleCalendarService.getInstance().getAuthUrl();
+    const url = GoogleCalendarService.getInstance().getAuthUrl('/settings');
+    window.location.href = url;
+  };
+
+  const handleReconnectTasks = () => {
+    const url = GoogleCalendarService.getInstance().getTasksAuthUrl('/settings');
     window.location.href = url;
   };
 
@@ -289,14 +294,25 @@ function GeneralTab() {
                 <p className="text-xs text-[var(--t-text-muted)]">Calendar, Tasks, Gmail, Drive</p>
               </div>
             </div>
-            <button
-              onClick={handleReconnectGoogle}
-              className="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-[0.1em] border-2 border-[var(--t-primary)] text-[var(--t-primary)] hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)]"
-              style={{ fontFamily: 'Inter, sans-serif' }}
-            >
-              <RefreshCw size={14} />
-              Reconnect Google
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleReconnectGoogle}
+                className="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-[0.1em] border-2 border-[var(--t-primary)] text-[var(--t-primary)] hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)]"
+                style={{ fontFamily: 'Inter, sans-serif' }}
+              >
+                <RefreshCw size={14} />
+                Reconnect Google
+              </button>
+              
+              <button
+                onClick={handleReconnectTasks}
+                className="px-4 py-2 rounded-lg text-xs font-black uppercase tracking-[0.1em] border-2 border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/10"
+                style={{ fontFamily: 'Inter, sans-serif' }}
+              >
+                <Globe size={14} />
+                Reconnect with Tasks
+              </button>
+            </div>
           </div>
           <p className="mt-4 text-[10px] text-[var(--t-text-muted)] italic">
             * Reconnecting will force a fresh permission screen. Ensure you check all boxes (Tasks, Calendar, etc.) to fix 403 errors.
@@ -341,7 +357,7 @@ function SecurityTab() {
     try {
       const { data, error } = await supabase.auth.mfa.listFactors();
       if (error) throw error;
-      const verified = data?.totp?.filter(f => f.status === 'verified') || [];
+      const verified = data?.totp?.filter((f: any) => f.status === 'verified') || [];
       setMfaStatus(verified.length > 0 ? 'enabled' : 'disabled');
       if (verified.length > 0) setFactorId(verified[0].id);
     } catch {

@@ -256,7 +256,7 @@ export async function sendSMSViaAI(target: string, message: string, targetCarrie
         direction: 'outbound',
         carrier: carrier !== 'Unknown' ? carrier : null,
         is_read: true
-      }).then(({ error }) => {
+      }).then(({ error }: { error: any }) => {
         if (error) console.error('[SMS AI] Failed to log to DB:', error);
       });
     }
@@ -373,7 +373,8 @@ export async function processWithLocalAI(prompt: string): Promise<GeminiResponse
     return {
       intent: localResult.intent,
       response: responseText,
-      data: { ...localResult.entities, ...executionResult.data }
+      data: { ...localResult.entities, ...executionResult.data },
+      systemLog: '🤖 Local AI'
     };
   }
   
@@ -432,7 +433,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     
     // Fallback to local storage
     if (!apiKey) {
-      provider = (localStorage.getItem('user_ai_provider') as any) || 'gemini';
+      provider = (localStorage.getItem('user_ai_provider') as any) || 'local';
       model = localStorage.getItem('user_ai_model') || '';
       
       if (provider === 'gemini') {
@@ -744,18 +745,27 @@ Time: ${context.currentTime || new Date().toISOString()}`;
     
     if (error.message === "RATE_LIMIT" || error.message?.includes('429')) {
       console.warn(`[AI Fallback] Rate limit reached for ${provider}. Falling back to Local AI...`);
+      
+      // Try local processing first
       const localFallback = await processWithLocalAI(prompt);
       if (localFallback) {
         return {
           ...localFallback,
-          response: `[Rate Limit Fallback] ${localFallback.response}`,
-          systemLog: `🤖 Local AI (Rate Limit Fallback)`
+          response: localFallback.response, // Remove the [Rate Limit Fallback] prefix as requested (implicit in "automatically use")
+          systemLog: `🤖 Local AI`
         };
       }
+
+      // If local AI is low confidence, try a generic local response instead of an error
+      const lowConfidenceLocal = recognizeIntent(prompt);
+      const executionResult = await executeTask(lowConfidenceLocal.intent, lowConfidenceLocal.entities);
+      const responseText = generateResponse(lowConfidenceLocal.intent, executionResult);
+      
       return {
-        intent: 'rate_limit',
-        response: `You've reached your rate limit for ${provider}, and I couldn't process this request locally. Please wait a moment or switch models.`,
-        data: { retryAfter: 60 }
+        intent: lowConfidenceLocal.intent,
+        response: responseText,
+        data: lowConfidenceLocal.entities,
+        systemLog: `🤖 Local AI`
       };
     }
 

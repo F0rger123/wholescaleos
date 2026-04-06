@@ -69,13 +69,13 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             .eq('user_id', currentUser.id);
 
             if (connections) {
-              connections.forEach(conn => {
+              connections.forEach((conn: any) => {
                 if (conn.provider === 'google') {
                   setIsGoogleConnected(true);
                 } else if (conn.provider === 'gemini') {
                 setGeminiKey(conn.refresh_token || '');
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
-                  setModel(conn.access_token || 'gemini-3.1-flash-lite');
+                  setModel(conn.access_token || 'gemini-2.0-flash');
                 }
               } else if (conn.provider === 'openai') {
                 setOpenaiKey(conn.refresh_token || '');
@@ -431,7 +431,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             ))}
 
             {provider === 'local' && [
-              { id: 'native-intent', label: 'System Native (No Internet)', desc: 'Built-in regex intent engine. Handles CRM tasks with 100% privacy and zero latency.' },
+              { id: 'native-intent', label: 'Our Coded AI (Local, Fast, Free)', desc: 'Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.' },
               { id: 'ollama-bridge', label: 'External Local (Ollama/LM Studio)', desc: 'Connect to a locally running large language model via OpenAI-compatible API.' }
             ].map((m) => (
               <button

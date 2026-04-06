@@ -143,14 +143,21 @@ export function AuthCallback() {
           if (success && mounted) {
             addDebug('✅ Tokens stored successfully!');
             setStatus('success');
-            setMessage('Google Workspace successfully connected. Calendar, Gmail, and Tasks are now synchronized.');
+            
+            if (state?.startsWith('tasks-reconnect')) {
+              setMessage('Google Tasks synchronization successfully restored. Your task lists are now updated.');
+            } else {
+              setMessage('Google Workspace successfully connected. Calendar, Gmail, and Tasks are now synchronized.');
+            }
             
             let redirectPath = '/calendar';
             if (state && state !== 'calendar-sync') {
               try {
-                // Handle our custom state format 'calendar-sync:/path'
+                // Handle our custom state format 'calendar-sync:/path' or 'tasks-reconnect:/path'
                 if (state.startsWith('calendar-sync:')) {
                   redirectPath = state.split(':')[1] || '/calendar';
+                } else if (state.startsWith('tasks-reconnect:')) {
+                  redirectPath = state.split(':')[1] || '/settings';
                 }
                 // Handle standard URL or straight path redirects
                 else if (state.startsWith('http')) {
