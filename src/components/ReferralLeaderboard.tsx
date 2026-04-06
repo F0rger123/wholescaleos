@@ -28,12 +28,12 @@ export function RevenueShareLeaderboard() {
         if (error) throw error;
         
         // Mock referral counts for the leaderboard based on earnings
-        const processed = data.map((d: any) => ({
+        const processed = (data || []).map((d: any) => ({
           ...d,
           avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${d.id}`,
           referralCount: Math.floor((d.total_earnings || 0) / 25) || 0
-        })).filter(h => h.total_earnings > 0 || h.referralCount > 0)
-        .sort((a, b) => b.referralCount - a.referralCount);
+        })).filter((h: any) => h.total_earnings > 0 || h.referralCount > 0)
+        .sort((a: any, b: any) => b.referralCount - a.referralCount);
 
         setLeaders(processed);
       } catch (err) {

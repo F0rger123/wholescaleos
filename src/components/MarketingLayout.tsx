@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Building2, Menu, X, ArrowRight, Github, Twitter, 
+  Menu, X, ArrowRight, Github, Twitter, 
   Linkedin, LayoutDashboard, LogOut, Settings, User, 
   ChevronDown
 } from 'lucide-react';

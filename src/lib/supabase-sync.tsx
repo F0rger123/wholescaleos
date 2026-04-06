@@ -301,7 +301,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
         console.log('[SupabaseSync] Preferred team from storage:', preferredTeamId);
         let membership = teamMemberships[0];
         if (preferredTeamId) {
-          const preferred = teamMemberships.find(m => m.team_id === preferredTeamId);
+          const preferred = teamMemberships.find((m: any) => m.team_id === preferredTeamId);
           if (preferred) {
             membership = preferred;
           }
@@ -352,23 +352,23 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
         // ── Step 3: Group timeline and status history by lead_id ──────
         const timelineByLead: Record<string, TimelineEntry[]> = {};
         for (const row of (timelineRes.data || [])) {
-          const leadId = row.lead_id as string;
+          const leadId = (row as any).lead_id as string;
           if (!timelineByLead[leadId]) timelineByLead[leadId] = [];
-          timelineByLead[leadId].push(dbTimelineToStore(row));
+          timelineByLead[leadId].push(dbTimelineToStore(row as any));
         }
 
         const statusHistByLead: Record<string, StatusHistoryEntry[]> = {};
         for (const row of (statusHistRes.data || [])) {
-          const leadId = row.lead_id as string;
+          const leadId = (row as any).lead_id as string;
           if (!statusHistByLead[leadId]) statusHistByLead[leadId] = [];
-          statusHistByLead[leadId].push(dbStatusHistoryToStore(row));
+          statusHistByLead[leadId].push(dbStatusHistoryToStore(row as any));
         }
 
         // ── Step 4: Convert all data ─────────────────────────────────
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const leads: Lead[] = (leadsRes.data || [])
           .map((row: any) => dbLeadToStore(row, timelineByLead[row.id as string] || [], statusHistByLead[row.id as string] || []))
-          .filter((l): l is Lead => l !== null);
+          .filter((l: Lead | null): l is Lead => l !== null);
 
         // Enrich team members with deal counts from leads
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -384,7 +384,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
               .reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0);
             return member;
           })
-          .filter((m): m is TeamMember => m !== null);
+          .filter((m: TeamMember | null): m is TeamMember => m !== null);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tasks: Task[] = (tasksRes.data || []).map((row: any) => dbTaskToStore(row));
@@ -400,7 +400,6 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
           const memberIds = ((chRow.channel_members as Array<{ user_id: string }>) || []).map(cm => cm.user_id);
           channels.push(dbChannelToStore(chRow, memberIds));
 
-          // Fetch messages for this channel
           const { data: msgData } = await supabase!
             .from('messages')
             .select('*')
@@ -486,7 +485,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'leads',
         filter: `team_id=eq.${teamId}`,
-      }, (payload) => {
+      }, (payload: { eventType: string; new: any; old: any }) => {
         const { eventType, new: newRow, old: oldRow } = payload;
         const state = useStore.getState();
 
@@ -521,7 +520,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
     const messagesChannel = supabase.channel(`sync-messages-${teamId}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'messages',
-      }, (payload) => {
+      }, (payload: { eventType: string; new: any; old: any }) => {
         const { eventType, new: newRow, old: oldRow } = payload;
         const state = useStore.getState();
 
@@ -584,7 +583,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'tasks',
         filter: `team_id=eq.${teamId}`,
-      }, (payload) => {
+      }, (payload: { eventType: string; new: any; old: any }) => {
         const { eventType, new: newRow, old: oldRow } = payload;
         const state = useStore.getState();
 
@@ -609,7 +608,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'notifications',
         filter: `user_id=eq.${userId}`,
-      }, (payload) => {
+      }, (payload: { new: any }) => {
         const newRow = payload.new;
         if (!newRow) return;
         const state = useStore.getState();
@@ -628,7 +627,7 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'team_members',
         filter: `team_id=eq.${teamId}`,
-      }, (payload) => {
+      }, (payload: { new: any }) => {
         const newRow = payload.new;
         if (!newRow) return;
         const state = useStore.getState();

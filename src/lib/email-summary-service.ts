@@ -1,6 +1,4 @@
 import { useStore } from '../store/useStore';
-import { v4 as uuidv4 } from 'uuid';
-import { AGENT_EMAIL_TEMPLATES } from '../data/emailTemplates';
 
 export const emailSummaryService = {
   /**
@@ -17,19 +15,19 @@ export const emailSummaryService = {
     // 1. Revenue & Deals (last 24h)
     const dailyDeals = leads.filter(l => 
       l.status === 'closed-won' && 
-      new Date(l.updatedAt || l.updated_at || "").getTime() >= startOfToday.getTime()
+      new Date(l.updatedAt || "").getTime() >= startOfToday.getTime()
     );
-    const dailyRevenue = dailyDeals.reduce((sum, l) => sum + (Number(l.propertyValue || l.estimatedValue || 0) * 0.03), 0);
+    const dailyRevenue = dailyDeals.reduce((sum, l) => sum + (Number(l.estimatedValue || 0) * 0.03), 0);
 
     // 2. New Leads (last 24h)
     const newLeadsCount = leads.filter(l => 
-      new Date(l.createdAt || l.created_at || "").getTime() >= startOfToday.getTime()
+      new Date(l.createdAt || "").getTime() >= startOfToday.getTime()
     ).length;
 
     // 3. Tasks Completed (last 24h)
     const tasksCompletedCount = tasks.filter(t => 
       t.status === 'done' && 
-      t.completed_at && new Date(t.completed_at).getTime() >= startOfToday.getTime()
+      t.completedAt && new Date(t.completedAt).getTime() >= startOfToday.getTime()
     ).length;
 
     // 4. Upcoming Events (Today)
@@ -63,18 +61,18 @@ export const emailSummaryService = {
 
     const weeklyDeals = leads.filter(l => 
       l.status === 'closed-won' && 
-      new Date(l.updatedAt || l.updated_at || "").getTime() >= weekAgo.getTime()
+      new Date(l.updatedAt || "").getTime() >= weekAgo.getTime()
     );
-    const weeklyRevenue = weeklyDeals.reduce((sum, l) => sum + (Number(l.propertyValue || l.estimatedValue || 0) * 0.03), 0);
+    const weeklyRevenue = weeklyDeals.reduce((sum, l) => sum + (Number(l.estimatedValue || 0) * 0.03), 0);
     
     const wonCount = weeklyDeals.length;
     const lostCount = leads.filter(l => 
       l.status === 'closed-lost' && 
-      new Date(l.updatedAt || l.updated_at || "").getTime() >= weekAgo.getTime()
+      new Date(l.updatedAt || "").getTime() >= weekAgo.getTime()
     ).length;
 
     const newLeads = leads.filter(l => 
-      new Date(l.createdAt || l.created_at || "").getTime() >= weekAgo.getTime()
+      new Date(l.createdAt || "").getTime() >= weekAgo.getTime()
     );
     
     const conversionRate = newLeads.length > 0 ? (wonCount / newLeads.length) * 100 : 0;
@@ -97,20 +95,16 @@ export const emailSummaryService = {
 
     let subject = '';
     let reportData: any = null;
-    let templateId = '';
 
     if (type === 'daily') {
       reportData = await this.generateDailySummary(userId);
       subject = `Daily Performance Summary - ${new Date().toLocaleDateString()}`;
-      templateId = 'DAILY_SUMMARY_REPORT';
     } else if (type === 'weekly') {
       reportData = await this.generateWeeklySummary(userId);
       subject = `Weekly Performance Summary - Week of ${new Date().toLocaleDateString()}`;
-      templateId = 'WEEKLY_SUMMARY_REPORT';
     } else if (type === 'calendar') {
       reportData = await this.generateDailySummary(userId); // Reuse daily for now
       subject = `Today's Schedule: ${new Date().toLocaleDateString()}`;
-      templateId = 'CALENDAR_DIGEST_REPORT';
     }
 
     if (!reportData) return;
@@ -145,16 +139,16 @@ export const emailSummaryService = {
     this.updateLastSent(userId, type);
   },
 
-  async updateLastSent(userId: string, type: 'daily' | 'weekly') {
+  async updateLastSent(_userId: string, type: 'daily' | 'weekly' | 'calendar') {
     const { updateProfile, currentUser } = useStore.getState();
     if (!currentUser) return;
     
     const settings = currentUser.settings || {};
     const automatedReports = settings.automated_reports || {};
     
-    const key = type === 'daily' ? 'lastDailySent' : 'lastWeeklySent';
+    const key = type === 'daily' ? 'lastDailySent' : type === 'weekly' ? 'lastWeeklySent' : 'lastCalendarSent';
     
-    updateProfile(userId, {
+    updateProfile({
       settings: {
         ...settings,
         automated_reports: {

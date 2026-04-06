@@ -14,10 +14,9 @@ import {
   fetchEmailCampaigns, saveEmailCampaign, deleteEmailCampaign,
   fetchEmailSchedules, deleteEmailSchedule, dbEmailSchedule, dbEmailTemplate, dbEmailCampaign
 } from '../lib/email';
-import { analyzeConversation } from '../lib/ai-reply-service';
 import EmailComposeModal from '../components/EmailComposeModal';
 import RichTextEditor from '../components/admin/RichTextEditor';
-import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES, AgentTemplate } from '../lib/default-templates';
+import { AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES, AgentTemplate } from '../lib/default-templates';
 
 type EmailView = 'inbox' | 'sent' | 'starred' | 'trash' | 'templates' | 'campaigns' | 'scheduled';
 
@@ -36,7 +35,6 @@ export default function EmailInbox() {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   
   // AI states
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showLeadAssign, setShowLeadAssign] = useState(false);
   const [replyConfig, setReplyConfig] = useState<{ 
     isOpen: boolean; 

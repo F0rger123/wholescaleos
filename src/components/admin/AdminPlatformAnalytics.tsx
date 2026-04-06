@@ -45,7 +45,7 @@ export default function AdminPlatformAnalytics() {
       const [
         { count: userCount },
         { count: leadCount },
-        { data: profiles }
+        { data: allProfiles }
       ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('leads').select('*', { count: 'exact', head: true }),
@@ -64,7 +64,7 @@ export default function AdminPlatformAnalytics() {
       let activeSubs = 0;
       const monthlyBuckets: Record<string, { users: number; revenue: number }> = {};
 
-      profiles?.forEach(p => {
+      allProfiles?.forEach((p: any) => {
         const tier = p.subscription_tier || 'Free';
         const revenue = pricing[tier] || 0;
         
@@ -107,7 +107,7 @@ export default function AdminPlatformAnalytics() {
         return `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`;
       };
 
-      const suspendedCount = profiles?.filter(p => p.subscription_status === 'suspended').length || 0;
+      const suspendedCount = allProfiles?.filter((p: any) => p.subscription_status === 'suspended').length || 0;
       const avgLeads = userCount ? (leadCount || 0) / userCount : 0;
       const churnRate = activeSubs ? (suspendedCount / (activeSubs + suspendedCount)) * 100 : 0;
 
@@ -126,7 +126,7 @@ export default function AdminPlatformAnalytics() {
         churnRate: `${churnRate.toFixed(1)}%`
       } as any);
 
-      setProfiles(profiles || []);
+      setProfiles(allProfiles || []);
       setHistoricalData(last6Months);
 
     } catch (err) {

@@ -357,7 +357,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
             
             // Safely extract verified factors from the response structure
             const totpFactors = factorData?.totp || [];
-            const verifiedFactor = totpFactors.find(f => f.status === 'verified');
+            const verifiedFactor = totpFactors.find((f: any) => f.status === 'verified');
 
             // Force MFA if we have a verified factor and the session is only AAL1
             if (verifiedFactor && aalData?.currentLevel !== 'aal2') {

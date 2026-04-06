@@ -1,0 +1,52 @@
+﻿src/components/admin/AdminSystemSettings.tsx(25,22): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/components/AIBotWidget.tsx(22,1): error TS6133: 'getBotIdentity' is declared but its value is never read.
+src/components/Logo.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/MarketingLayout.tsx(5,3): error TS6133: 'Building2' is declared but its value is never read.
+src/components/OSMessages.tsx(2,18): error TS6133: 'AnimatePresence' is declared but its value is never read.
+src/components/OSMessages.tsx(3,10): error TS6133: 'Bell' is declared but its value is never read.
+src/components/OSMessages.tsx(3,16): error TS6133: 'Mail' is declared but its value is never read.
+src/components/OSMessages.tsx(3,59): error TS6133: 'Info' is declared but its value is never read.
+src/components/OSMessages.tsx(37,13): error TS6198: All destructured elements are unused.
+src/components/ReferralLeaderboard.tsx(35,20): error TS7006: Parameter 'h' implicitly has an 'any' type.
+src/components/ReferralLeaderboard.tsx(36,16): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/components/ReferralLeaderboard.tsx(36,19): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/components/team/TeamActivityFeed.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/team/TeamActivityFeed.tsx(3,3): error TS6133: 'User' is declared but its value is never read.
+src/components/team/TeamActivityFeed.tsx(4,18): error TS6133: 'AlertCircle' is declared but its value is never read.
+src/components/team/TeamActivityFeed.tsx(45,35): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/components/team/TeamActivityFeed.tsx(53,31): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/components/UsageLimitModal.tsx(4,26): error TS6133: 'TIER_LIMITS' is declared but its value is never read.
+src/lib/email-summary-service.ts(2,1): error TS6133: 'uuidv4' is declared but its value is never read.
+src/lib/email-summary-service.ts(3,1): error TS6133: 'AGENT_EMAIL_TEMPLATES' is declared but its value is never read.
+src/lib/email-summary-service.ts(10,27): error TS2339: Property 'calendarEvents' does not exist on type 'AppState'.
+src/lib/email-summary-service.ts(10,43): error TS2339: Property 'mergedGoogleEvents' does not exist on type 'AppState'.
+src/lib/email-summary-service.ts(20,33): error TS2551: Property 'updated_at' does not exist on type 'Lead'. Did you mean 'updatedAt'?
+src/lib/email-summary-service.ts(22,72): error TS2339: Property 'propertyValue' does not exist on type 'Lead'.
+src/lib/email-summary-service.ts(26,33): error TS2551: Property 'created_at' does not exist on type 'Lead'. Did you mean 'createdAt'?
+src/lib/email-summary-service.ts(32,9): error TS2551: Property 'completed_at' does not exist on type 'Task'. Did you mean 'completedAt'?
+src/lib/email-summary-service.ts(32,36): error TS2551: Property 'completed_at' does not exist on type 'Task'. Did you mean 'completedAt'?
+src/lib/email-summary-service.ts(66,33): error TS2551: Property 'updated_at' does not exist on type 'Lead'. Did you mean 'updatedAt'?
+src/lib/email-summary-service.ts(68,74): error TS2339: Property 'propertyValue' does not exist on type 'Lead'.
+src/lib/email-summary-service.ts(73,33): error TS2551: Property 'updated_at' does not exist on type 'Lead'. Did you mean 'updatedAt'?
+src/lib/email-summary-service.ts(77,33): error TS2551: Property 'created_at' does not exist on type 'Lead'. Did you mean 'createdAt'?
+src/lib/email-summary-service.ts(100,9): error TS6133: 'templateId' is declared but its value is never read.
+src/lib/email-summary-service.ts(145,33): error TS2345: Argument of type '"calendar" | "daily" | "weekly"' is not assignable to parameter of type '"daily" | "weekly"'.
+  Type '"calendar"' is not assignable to type '"daily" | "weekly"'.
+src/lib/email-summary-service.ts(157,27): error TS2554: Expected 1 arguments, but got 2.
+src/lib/gemini.ts(5,10): error TS2305: Module '"./local-ai/intent-engine"' has no exported member 'recognizeIntent'.
+src/lib/referral-service.ts(118,44): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(304,50): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(371,20): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(387,20): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(489,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(524,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(587,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(612,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(631,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/usage-tracking.ts(58,15): error TS6133: 'newUsage' is declared but its value is never read.
+src/pages/AITrainingStudio.tsx(3,46): error TS2305: Module '"../lib/local-ai"' has no exported member 'LOCAL_INTENTS'.
+src/pages/Calendar.tsx(163,22): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/pages/EmailInbox.tsx(17,1): error TS6133: 'analyzeConversation' is declared but its value is never read.
+src/pages/EmailInbox.tsx(20,10): error TS6133: 'DEFAULT_TEMPLATES' is declared but its value is never read.
+src/pages/EmailInbox.tsx(39,10): error TS6133: 'isAnalyzing' is declared but its value is never read.
+src/pages/EmailInbox.tsx(39,23): error TS6133: 'setIsAnalyzing' is declared but its value is never read.

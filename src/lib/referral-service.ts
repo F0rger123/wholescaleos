@@ -115,7 +115,7 @@ export const referralService = {
 
       if (earningsErr) throw earningsErr;
 
-      const activeCount = referrals.filter(r => r.status === 'active').length;
+      const activeCount = referrals.filter((r: { status: string }) => r.status === 'active').length;
       const tier = getReferralTier(activeCount);
 
       return {

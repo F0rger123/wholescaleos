@@ -11,11 +11,14 @@ import { processPrompt, hasUserApiKey, createTask, updateLeadStatusViaAI, create
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SaveLeadModal } from './SaveLeadModal';
 import { RateLimitModal } from './RateLimitModal';
-import { parseIntent } from '../lib/ai/intent-parser';
 import { actionHandlers } from '../lib/ai/action-handlers';
 import { formatTemplate } from '../lib/ai/template-engine';
 import { UserLearningManager } from '../lib/ai/user-learning';
 import { voiceService } from '../lib/voice-service';
+import { usageTracker, UsageData } from '../lib/usage-tracking';
+import { UsageLimitModal } from './UsageLimitModal';
+import { recognizeIntent } from '../lib/local-ai';
+import { wrapResponse } from '../lib/local-ai/personality-engine';
 
 interface ChatMessage {
   id: string;
@@ -23,8 +26,24 @@ interface ChatMessage {
   content: string;
   timestamp: string;
   intent?: string;
-  data?: any;
+  data?: unknown;
   systemLog?: string;
+}
+
+export interface GeminiResponse {
+  intent: string;
+  response: string;
+  data?: unknown;
+  systemLog?: string;
+}
+
+interface DisambiguationData {
+  originalIntent: {
+    intent: {
+      action: string;
+    };
+    params: any;
+  };
 }
 
 export function AIBotWidget() {
@@ -36,6 +55,8 @@ export function AIBotWidget() {
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [showUsageModal, setShowUsageModal] = useState(false);
   
   const { 
     isAiOpen, setAiOpen,
@@ -154,6 +175,10 @@ export function AIBotWidget() {
       setHasKey(keyExists);
 
       if (isSupabaseConfigured && supabase) {
+        // Fetch usage data
+        const usageData = await usageTracker.getUsage();
+        setUsage(usageData);
+        
         await supabase
           .from('profiles')
           .select('settings')
@@ -306,6 +331,12 @@ export function AIBotWidget() {
     e?.preventDefault();
     if (!prompt.trim() || loading || !hasKey) return;
 
+    // Check Usage Limits
+    if (usage?.hasExceeded) {
+      setShowUsageModal(true);
+      return;
+    }
+
     const userText = prompt.trim();
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -367,9 +398,14 @@ export function AIBotWidget() {
         return;
       }
 
-      // ── LOCAL RULE-BASED MATCHING ──────────────────────────────────────────
-      const matched = parseIntent(userText);
+      // ── LOCAL RULE-BASED MATCHING (OS BOT 2.0) ───────────────────────────
+      const matched = recognizeIntent(userText);
       if (matched) {
+        // Increment usage for OS Bot too (if desired, or leave free for local only)
+        await usageTracker.incrementUsage();
+        const updatedUsage = await usageTracker.getUsage();
+        setUsage(updatedUsage);
+
         // Handle Confidence Disambiguation
         if (matched.confidence > 40 && matched.confidence < 80) {
           setMessages(prev => [...prev, {
@@ -418,7 +454,7 @@ export function AIBotWidget() {
             setMessages(prev => [...prev, {
               id: (Date.now() + 1).toString(),
               role: 'ai',
-              content: formatted,
+              content: wrapResponse(formatted, 'success'),
               timestamp: new Date().toISOString(),
               intent: matched.intent.name,
               data: res.data,
@@ -429,6 +465,11 @@ export function AIBotWidget() {
           }
         }
       }
+
+      // Increment Usage for AI Model processing
+      await usageTracker.incrementUsage();
+      const usageAfter = await usageTracker.getUsage();
+      setUsage(usageAfter);
 
       // ── Normal AI processing ──────────────────────────────────────────────
       const response = await processPrompt(userText, { 
@@ -521,7 +562,7 @@ export function AIBotWidget() {
         if (response.intent === 'navigate' && response.data?.path) {
           navigate(response.data.path);
         } else if (response.intent === 'multi_action' && response.data?.actions) {
-          response.data.actions.forEach((act: any) => {
+          response.data.actions.forEach((act: { intent: string; data?: any }) => {
             if (act.intent === 'navigate' && act.data?.path) {
               navigate(act.data.path);
             } else if (act.intent === 'create_task') {
@@ -677,8 +718,15 @@ export function AIBotWidget() {
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </button>
               <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{aiName}</span>
-              <div className="flex gap-1">
+              <div className="flex gap-1 items-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-pulse" />
+                {usage && (
+                  <span className={`text-[9px] font-black italic uppercase tracking-tight ml-2 px-1.5 py-0.5 rounded border border-white/5 bg-white/5 ${
+                    usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-text-muted)]')
+                  }`}>
+                    {usage.remaining} / {usage.limit} LEFT
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -781,11 +829,11 @@ export function AIBotWidget() {
                       </div>
                     )}
                     
-                    {msg.intent === 'disambiguation' && msg.data?.originalIntent && (
+                    {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (
                       <div className="mt-2 flex gap-2">
                         <button
                           onClick={() => {
-                            const matched = msg.data.originalIntent;
+                            const matched = (msg.data as DisambiguationData).originalIntent;
                             handleExecuteAction(matched.intent.action, matched.params);
                             // Mark as resolved
                             setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, intent: 'resolved' } : m));
@@ -951,6 +999,13 @@ export function AIBotWidget() {
         isOpen={saveContactModal.isOpen}
         phone={saveContactModal.phone}
         onClose={() => setSaveContactModal(prev => ({ ...prev, isOpen: false }))}
+      />
+      
+      <UsageLimitModal
+        isOpen={showUsageModal}
+        onClose={() => setShowUsageModal(false)}
+        tier={usage?.tier || 'Free'}
+        limit={usage?.limit || 10}
       />
     </div>
   );

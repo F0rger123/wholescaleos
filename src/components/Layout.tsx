@@ -15,12 +15,13 @@ import {
   Bot, Smartphone, StickyNote,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, Download, UserCog, Map,
-  Building2, ChevronDown, ArrowRightLeft, Plus
+  Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
 import { LeadFormModal } from './LeadFormModal';
 import { Logo } from './Logo';
+import { OSMessages } from './OSMessages';
 
 interface UserTeam {
   teamId: string;
@@ -111,6 +112,7 @@ export function Layout() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isOSMessagesOpen, setIsOSMessagesOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Quick Notes drag state
@@ -174,6 +176,36 @@ export function Layout() {
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  // Daily OS Summary Generation Logic
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const checkSummary = async () => {
+      const lastSummaryKey = `os_last_summary_${currentUser.id}`;
+      const lastSummaryDate = localStorage.getItem(lastSummaryKey);
+      const today = new Date().toISOString().split('T')[0];
+
+      if (lastSummaryDate !== today) {
+        // Trigger Summary Generation
+        console.log('Generating daily OS summary...');
+        try {
+          // This would ideally call a Cloud Function, but we can mock the insertion logic for now
+          // or just show a "New Summary" notification if it's the first time today.
+          localStorage.setItem(lastSummaryKey, today);
+          
+          // Emit event or update store if needed
+          window.dispatchEvent(new CustomEvent('os-summary-generated'));
+        } catch (err) {
+          console.error('Summary generation failed:', err);
+        }
+      }
+    };
+
+    checkSummary();
+    const interval = setInterval(checkSummary, 1000 * 60 * 60); // Check every hour
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
 
   // Sync Quick Notes Setting to Visibility - REMOVED AUTO-OPEN
   useEffect(() => {
@@ -598,6 +630,15 @@ export function Layout() {
               {/* Theme & Notifications */}
               <div className="hover:scale-110 transition-transform"><ThemeSwitcher /></div>
               <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
+              <button 
+                onClick={() => setIsOSMessagesOpen(true)}
+                className="p-1.5 hover:bg-[var(--t-surface-hover)] rounded-lg text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-all relative"
+                title="OS Messages"
+              >
+                <MessageSquare size={18} />
+                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" />
+              </button>
+              <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
               <div className="hover:scale-110 transition-transform"><NotificationPanel /></div>
             </div>
             <div className="hover:scale-105 active:scale-95 transition-all">
@@ -647,6 +688,7 @@ export function Layout() {
       {showCreateModal && <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />}
 
       <QuickNotes />
+      <OSMessages isOpen={isOSMessagesOpen} onClose={() => setIsOSMessagesOpen(false)} />
     </div>
   );
 }

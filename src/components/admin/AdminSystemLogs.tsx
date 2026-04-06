@@ -63,12 +63,12 @@ export default function AdminSystemLogs() {
 
       const errorFreq = last7Days.map(date => ({
         date: new Date(date).toLocaleDateString('default', { weekday: 'short' }),
-        count: data?.filter(l => l.level === 'error' && l.created_at.startsWith(date)).length || 0
+        count: data?.filter((l: any) => l.level === 'error' && l.created_at.startsWith(date)).length || 0
       }));
 
       const activeUserTrend = last7Days.map(date => ({
         date: new Date(date).toLocaleDateString('default', { weekday: 'short' }),
-        users: data?.filter(l => l.created_at.startsWith(date)).reduce((acc: any, l) => acc.add(l.user_id), new Set()).size || 0
+        users: data?.filter((l: any) => l.created_at.startsWith(date)).reduce((acc: any, l: any) => acc.add(l.user_id), new Set()).size || 0
       }));
 
       setHealthStats(prev => ({
@@ -253,7 +253,7 @@ export default function AdminSystemLogs() {
               </thead>
               <tbody className="divide-y" style={{ borderColor: 'var(--t-border)' }}>
                 {loading ? (
-                  [1, 2, 3, 4, 5].map(i => (
+                  [1, 2, 3, 4, 5].map((i: number) => (
                     <tr key={i} className="animate-pulse">
                       <td colSpan={5} className="px-6 py-4 h-16 bg-white/5"></td>
                     </tr>
@@ -262,7 +262,7 @@ export default function AdminSystemLogs() {
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-[var(--t-text-muted)] italic text-sm">No logs found matching your criteria.</td>
                   </tr>
-                ) : filteredLogs.map(log => (
+                ) : filteredLogs.map((log: any) => (
                   <tr key={log.id} className="hover:bg-white/5 transition-colors group">
                     <td className="px-6 py-4 text-xs font-mono text-[var(--t-text-muted)] whitespace-nowrap">
                       {new Date(log.created_at).toLocaleString()}

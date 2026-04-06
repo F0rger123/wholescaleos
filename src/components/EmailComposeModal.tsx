@@ -60,6 +60,8 @@ export default function EmailComposeModal({
   const [templateImages, setTemplateImages] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [showHtmlPreview, setShowHtmlPreview] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
   const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
   const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
@@ -72,7 +74,7 @@ export default function EmailComposeModal({
   // Filter leads for selection
   const filteredLeads = useMemo(() => {
     const q = searchQuery.toLowerCase();
-    return leads.filter(l => 
+    return (leads as Lead[]).filter((l: Lead) => 
       (l.name || '').toLowerCase().includes(q) || 
       (l.email || '').toLowerCase().includes(q) ||
       (l.propertyAddress || '').toLowerCase().includes(q)
@@ -82,7 +84,7 @@ export default function EmailComposeModal({
   const filteredContacts = useMemo(() => {
     const q = searchQuery.toLowerCase();
     const { contacts } = useStore.getState();
-    return (contacts || []).filter(c => 
+    return (contacts || []).filter((c: any) => 
       (c.name || '').toLowerCase().includes(q) || 
       (c.email || '').toLowerCase().includes(q)
     ).slice(0, 5);
@@ -142,6 +144,30 @@ export default function EmailComposeModal({
     setShowTemplates(false);
   };
 
+  const handleSaveAsTemplate = async () => {
+    if (!body || !subject) return;
+    setIsSavingTemplate(true);
+    try {
+      const { error } = await supabase
+        .from('user_email_templates')
+        .insert([{
+          name: `Custom: ${subject.slice(0, 20)}...`,
+          subject,
+          body,
+          category: 'Custom',
+          user_id: currentUser?.id
+        }]);
+      
+      if (error) throw error;
+      alert('Template saved successfully!');
+    } catch (err) {
+      console.error('Save template error:', err);
+      alert('Failed to save template.');
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
   const handleAIRecommend = async () => {
     setIsGeneratingAI(true);
     
@@ -165,7 +191,11 @@ export default function EmailComposeModal({
           RECIPIENT: ${selectedLead?.name || to}
           MY IDENTITY: ${currentUser?.name || 'an expert agent'}
           
-          Provide ONLY the email body text. Do not include subject lines or greetings like 'Sure, here is a response'.`;
+          Provide ONLY the email body text. Do not include subject lines or greetings like 'Sure, here is a response'. 
+          Use HTML tags like <p>, <br>, <strong> for formatting if needed, as this will be sent as an HTML email.
+          
+          If there are specific deal points mentioned in the thread (prices, dates), incorporate them.
+          If the user is asking for a showing, suggest 2 possible times.`;
 
           const result = await processPrompt(aiPrompt, {}, 'os_bot');
           aiResponseText = result.response;
@@ -387,7 +417,7 @@ export default function EmailComposeModal({
                       <div className="max-h-60 overflow-y-auto">
                         {activeTab === 'leads' ? (
                           filteredLeads.length > 0 ? (
-                            filteredLeads.map(l => (
+                            filteredLeads.map((l: Lead) => (
                               <button
                                 key={l.id}
                                 onClick={() => handleSelectLead(l, 'lead')}
@@ -407,7 +437,7 @@ export default function EmailComposeModal({
                           )
                         ) : (
                           filteredContacts.length > 0 ? (
-                            filteredContacts.map(c => (
+                            filteredContacts.map((c: any) => (
                               <button
                                 key={c.id}
                                 onClick={() => handleSelectLead(c, 'contact')}
@@ -589,12 +619,38 @@ export default function EmailComposeModal({
                 </div>
               )}
 
-              <RichTextEditor 
-                value={body}
-                onChange={setBody}
-                placeholder="Write your message here..."
-                minHeight="250px"
-              />
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setShowHtmlPreview(!showHtmlPreview)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${showHtmlPreview ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)]' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)]'}`}
+                  >
+                    <Eye size={14} />
+                    {showHtmlPreview ? 'Edit Mode' : 'Live HTML Preview'}
+                  </button>
+                  <button 
+                    onClick={handleSaveAsTemplate}
+                    disabled={isSavingTemplate}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-success-dim)]/10 hover:bg-[var(--t-success-dim)]/20 text-[var(--t-success)] rounded-lg text-xs font-bold transition-all border border-[var(--t-success-dim)]/20"
+                  >
+                    {isSavingTemplate ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                    Save as Template
+                  </button>
+                </div>
+              </div>
+
+              {showHtmlPreview ? (
+                <div className="border border-[var(--t-border)] rounded-xl overflow-hidden bg-white min-h-[300px] p-8">
+                  <div className="prose prose-sm max-w-none text-black" dangerouslySetInnerHTML={{ __html: body }} />
+                </div>
+              ) : (
+                <RichTextEditor 
+                  value={body}
+                  onChange={setBody}
+                  placeholder="Write your message here..."
+                  minHeight="250px"
+                />
+              )}
 
               {isAttachmentLoading && (
                 <div className="flex items-center gap-3 p-3 bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-xl animate-pulse">

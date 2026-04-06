@@ -411,11 +411,11 @@ export default function SMSInbox() {
             direction: 'outbound',
             carrier: carrierToRecord,
             is_read: true
-          }).select().single().then(({ data: inserted, error: insertError }) => {
-            if (!insertError && inserted) {
+          }).select().single().then(({ data: inserted, error: insertErr }: { data: any, error: any }) => {
+            if (!insertErr && inserted) {
               setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? inserted : m));
-            } else if (insertError) {
-              console.warn('[SMS Inbox] DB insert error (message still sent):', insertError.message);
+            } else if (insertErr) {
+              console.warn('[SMS Inbox] DB insert error (message still sent):', insertErr.message);
             }
           });
         }

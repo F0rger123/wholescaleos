@@ -1,0 +1,7 @@
+﻿
+> react-vite-tailwind@0.0.0 build
+> vite build && node -e "require('fs').copyFileSync('_routes.json', 'dist/_routes.json'); require('fs').copyFileSync('_redirects', 'dist/_redirects')"
+
+[36mvite v7.2.4 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 3835 modules transformed.

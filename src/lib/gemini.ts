@@ -362,20 +362,19 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * Tries to handle the prompt locally before falling back to external APIs.
  */
 export async function processWithLocalAI(prompt: string): Promise<GeminiResponse | null> {
-  const leads = useStore.getState().leads || [];
-  const localResult = recognizeIntent(prompt, leads);
+  const localResult = recognizeIntent(prompt);
   
-  if (localResult.confidence >= 0.4 || (localStorage.getItem('user_ai_provider') === 'local')) {
-    console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent} (${Math.round(localResult.confidence * 100)}%)`);
-    const executionResult = await executeTask(localResult.intent, localResult.entities);
-    const responseText = generateResponse(localResult.intent, executionResult);
+  if (localResult && (localResult.confidence >= 0.4 || (localStorage.getItem('user_ai_provider') === 'local'))) {
+    console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent.name} (${Math.round(localResult.confidence * 100)}%)`);
+    const executionResult = await executeTask(localResult.intent.name, localResult.params);
+    const responseText = generateResponse(localResult.intent.name, executionResult);
     
     saveMessage('assistant', responseText);
     
     return {
-      intent: localResult.intent,
+      intent: localResult.intent.name,
       response: responseText,
-      data: { ...localResult.entities, ...executionResult.data },
+      data: { ...localResult.params, ...executionResult.data },
       systemLog: '🤖 OS Bot'
     };
   }
@@ -485,22 +484,21 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
   // 1.5 - Intercept Local Provider
   if (provider === 'local' || provider === (null as any)) {
-    const leads = useStore.getState().leads || [];
-    const localResult = recognizeIntent(prompt, leads);
+    const localResult = recognizeIntent(prompt);
     let executionResult;
     
-    if (localResult.confidence > 0.4) {
-      executionResult = await executeTask(localResult.intent, localResult.entities);
+    if (localResult && localResult.confidence > 0.4) {
+      executionResult = await executeTask(localResult.intent.name, localResult.params);
     }
 
-    const responseText = generateResponse(localResult.intent, executionResult);
+    const responseText = generateResponse(localResult ? localResult.intent.name : 'unknown', executionResult);
     
     saveMessage('assistant', responseText);
     
     return {
-      intent: localResult.intent,
+      intent: localResult ? localResult.intent.name : 'unknown',
       response: responseText,
-      data: localResult.entities || executionResult?.data || null,
+      data: localResult ? { ...localResult.params, ...executionResult?.data } : (executionResult?.data || null),
       systemLog: '🤖 OS Bot'
     };
   }
@@ -770,15 +768,18 @@ Time: ${context.currentTime || new Date().toISOString()}`;
 
       // If OS Bot is low confidence, try a generic local response instead of an error
       const lowConfidenceLocal = recognizeIntent(prompt);
-      const executionResult = await executeTask(lowConfidenceLocal.intent, lowConfidenceLocal.entities);
-      const responseText = generateResponse(lowConfidenceLocal.intent, executionResult);
       
-      return {
-        intent: lowConfidenceLocal.intent,
-        response: responseText,
-        data: lowConfidenceLocal.entities,
-        systemLog: `🤖 OS Bot`
-      };
+      if (lowConfidenceLocal) {
+        const executionResult = await executeTask(lowConfidenceLocal.intent.name, lowConfidenceLocal.params);
+        const responseText = generateResponse(lowConfidenceLocal.intent.name, executionResult);
+        
+        return {
+          intent: lowConfidenceLocal.intent.name,
+          response: responseText,
+          data: lowConfidenceLocal.params,
+          systemLog: `🤖 OS Bot`
+        };
+      }
     }
 
     if (error.name === 'AbortError') {

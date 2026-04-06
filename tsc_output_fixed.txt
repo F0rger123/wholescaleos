@@ -1,0 +1,38 @@
+﻿src/components/Logo.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/lib/gemini.ts(366,47): error TS2554: Expected 1 arguments, but got 2.
+src/lib/gemini.ts(368,7): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(369,49): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(369,83): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(370,47): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(370,47): error TS2345: Argument of type 'Intent' is not assignable to parameter of type 'string'.
+src/lib/gemini.ts(370,67): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(370,79): error TS2339: Property 'entities' does not exist on type 'ParsedIntent'.
+src/lib/gemini.ts(371,43): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(371,43): error TS2345: Argument of type 'Intent' is not assignable to parameter of type 'string'.
+src/lib/gemini.ts(376,7): error TS2322: Type 'Intent' is not assignable to type 'string'.
+src/lib/gemini.ts(376,15): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(378,18): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(378,30): error TS2339: Property 'entities' does not exist on type 'ParsedIntent'.
+src/lib/gemini.ts(489,49): error TS2554: Expected 1 arguments, but got 2.
+src/lib/gemini.ts(492,9): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(493,43): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(493,43): error TS2345: Argument of type 'Intent' is not assignable to parameter of type 'string'.
+src/lib/gemini.ts(493,63): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(493,75): error TS2339: Property 'entities' does not exist on type 'ParsedIntent'.
+src/lib/gemini.ts(496,43): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(496,43): error TS2345: Argument of type 'Intent' is not assignable to parameter of type 'string'.
+src/lib/gemini.ts(501,7): error TS2322: Type 'Intent' is not assignable to type 'string'.
+src/lib/gemini.ts(501,15): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(503,13): error TS18047: 'localResult' is possibly 'null'.
+src/lib/gemini.ts(503,25): error TS2339: Property 'entities' does not exist on type 'ParsedIntent'.
+src/lib/gemini.ts(773,49): error TS18047: 'lowConfidenceLocal' is possibly 'null'.
+src/lib/gemini.ts(773,49): error TS2345: Argument of type 'Intent' is not assignable to parameter of type 'string'.
+src/lib/gemini.ts(773,76): error TS18047: 'lowConfidenceLocal' is possibly 'null'.
+src/lib/gemini.ts(773,95): error TS2339: Property 'entities' does not exist on type 'ParsedIntent'.
+src/lib/gemini.ts(774,45): error TS18047: 'lowConfidenceLocal' is possibly 'null'.
+src/lib/gemini.ts(774,45): error TS2345: Argument of type 'Intent' is not assignable to parameter of type 'string'.
+src/lib/gemini.ts(777,9): error TS2322: Type 'Intent' is not assignable to type 'string'.
+src/lib/gemini.ts(777,17): error TS18047: 'lowConfidenceLocal' is possibly 'null'.
+src/lib/gemini.ts(779,15): error TS18047: 'lowConfidenceLocal' is possibly 'null'.
+src/lib/gemini.ts(779,34): error TS2339: Property 'entities' does not exist on type 'ParsedIntent'.
+src/lib/usage-tracking.ts(58,15): error TS6133: 'newUsage' is declared but its value is never read.

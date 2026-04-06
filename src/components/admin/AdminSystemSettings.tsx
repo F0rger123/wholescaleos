@@ -22,7 +22,7 @@ export default function AdminSystemSettings() {
     try {
       const { data } = await supabase.from('system_settings').select('key, value');
       if (data) {
-        data.forEach(item => {
+        data.forEach((item: any) => {
           if (item.key === 'benchmarks') setBenchmarks(item.value);
           if (item.key === 'referral_rates') setReferralRates(item.value);
           if (item.key === 'feature_flags') setFlags(item.value);
@@ -118,7 +118,7 @@ export default function AdminSystemSettings() {
           </button>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          {Object.entries(referralRates).map(([tier, rate]) => (
+          {Object.entries(referralRates).map(([tier, rate]: [string, number]) => (
             <div key={tier} className="space-y-1">
               <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)]">{tier}</label>
               <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function AdminSystemSettings() {
           <Flag className="text-orange-500" size={20} /> Feature Toggles
         </h3>
         <div className="space-y-4">
-          {Object.entries(flags).map(([flag, enabled]) => (
+          {Object.entries(flags).map(([flag, enabled]: [string, boolean]) => (
             <div key={flag} className="flex items-center justify-between p-4 rounded-2xl bg-[var(--t-surface-dim)] border border-[var(--t-border)]">
               <div className="text-sm font-bold capitalize">{flag.replace('_', ' ')}</div>
               <button 

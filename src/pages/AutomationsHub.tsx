@@ -94,7 +94,7 @@ function AutomationsHubContent() {
         }
 
         const { data, error } = await supabase
-          .from('workflows')
+          .from('user_automations')
           .select('*')
           .order('updated_at', { ascending: false })
           .limit(1)
@@ -157,12 +157,12 @@ function AutomationsHubContent() {
       let error;
       if (workflowId) {
         ({ error } = await supabase
-          .from('workflows')
+          .from('user_automations')
           .update(workflowData)
           .eq('id', workflowId));
       } else {
         const { data, error: insertError } = await supabase
-          .from('workflows')
+          .from('user_automations')
           .insert([workflowData])
           .select()
           .single();

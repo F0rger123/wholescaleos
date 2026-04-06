@@ -1617,6 +1617,12 @@ interface AppState {
   timeframe: Timeframe;
   setTimeframe: (tf: Timeframe) => void;
 
+  // Calendar State (Synchronized with localStorage for AI context)
+  calendarEvents: any[];
+  mergedGoogleEvents: any[];
+  setCalendarEvents: (events: any[]) => void;
+  setMergedGoogleEvents: (events: any[]) => void;
+
   // AI Usage Tracking
   aiUsage: Record<string, AIUsage>;
   incrementAiUsage: (model: string) => void;
@@ -1766,6 +1772,12 @@ const calculateSmartLeadScore = (lead: any): number => {
 };
 
 export const useStore = create<AppState>((set, get) => ({
+  // —— Calendar State ———————————————————————————————————————
+  calendarEvents: [],
+  mergedGoogleEvents: [],
+  setCalendarEvents: (events) => set({ calendarEvents: events }),
+  setMergedGoogleEvents: (events) => set({ mergedGoogleEvents: events }),
+
   // —— Auth ——————————————————————————————————————————————————
   isAuthenticated: false,
   currentUser: null,

@@ -66,11 +66,11 @@ export default function Pricing() {
       desc: 'Perfect for individual agents getting started.',
       features: [
         'Dashboard, Leads & Map',
-        'Basic AI (50 credits/mo)',
+        '10 OS Bot messages/day',
+        'Basic AI (50 total credits/mo)',
         'Email sending (Gmail)',
         'SMS (Gmail gateway)',
-        '1 team member',
-        'Standard Support'
+        '1 team member'
       ],
       cta: 'Sign Up',
       popular: false,
@@ -82,11 +82,11 @@ export default function Pricing() {
       desc: 'Advanced tools for the solo power user.',
       features: [
         'Everything in Free',
+        '500 OS Bot messages/day',
         'Unlimited AI credits',
         'SMS (Brevo/Twilio ready)',
         'Voice AI & Call Scripts',
-        'Email Templates',
-        'Lead Scoring Engine'
+        'Email Templates'
       ],
       cta: 'Sign Up Solo',
       popular: false,
@@ -98,10 +98,10 @@ export default function Pricing() {
       desc: 'The sweet spot for growing teams.',
       features: [
         'Everything in Solo',
+        '5,000 OS Bot messages/day',
         'Up to 5 team members',
         'Analytics Dashboard',
         'Advanced AI Automations',
-        'API Access',
         'Priority Support'
       ],
       cta: 'Sign Up Pro',
@@ -114,11 +114,11 @@ export default function Pricing() {
       desc: 'High-velocity collaboration for agencies.',
       features: [
         'Everything in Pro',
+        '50,000 OS Bot messages/day',
         'Up to 20 members',
         'Team Leaderboard',
         'Role-based Permissions',
-        'White Labeling (Partial)',
-        'Dedicated Account Manager'
+        'White Labeling (Partial)'
       ],
       cta: 'Sign Up Team',
       popular: false,
@@ -130,11 +130,11 @@ export default function Pricing() {
       desc: 'Full-scale enterprise infrastructure.',
       features: [
         'Everything in Team',
+        '500,000 OS Bot messages/day',
         'Unlimited members',
         'Full White Label (Branded)',
-        'Custom Domain Integration',
         'API Priority & SLA',
-        'Custom Training & Onboarding'
+        'Custom Onboarding'
       ],
       cta: 'Sign Up Agency',
       popular: false,
@@ -352,6 +352,7 @@ export default function Pricing() {
             </thead>
             <tbody className="text-sm text-gray-400">
               {[
+                { label: 'OS Bot Messaging', values: ['10/day', '500/day', '5,000/day', '50,000/day', '500,000/day'] },
                 { label: 'AI Triage Credits', values: ['50/mo', 'Unlimited', 'Unlimited', 'Unlimited', 'Unlimited'] },
                 { label: 'Team Members', values: ['1', '1', '5', '20', 'Unlimited'] },
                 { label: 'Lead Management', values: ['Basic', 'Pro', 'Elite', 'Elite', 'Custom'] },

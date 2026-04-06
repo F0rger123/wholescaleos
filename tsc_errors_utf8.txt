@@ -1,6 +1,29 @@
-﻿src/pages/Calendar.tsx(141,21): error TS6133: 'error' is declared but its value is never read.
-src/pages/Calendar.tsx(141,37): error TS18047: 'supabase' is possibly 'null'.
-src/pages/Calendar.tsx(149,11): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{}'.
-src/pages/Calendar.tsx(306,29): error TS18047: 'supabase' is possibly 'null'.
-src/pages/Calendar.tsx(416,13): error TS18047: 'currentUser' is possibly 'null'.
-src/pages/Calendar.tsx(497,15): error TS18047: 'supabase' is possibly 'null'.
+﻿src/components/AIBotWidget.tsx(22,1): error TS6133: 'getBotIdentity' is declared but its value is never read.
+src/components/Logo.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/MarketingLayout.tsx(5,3): error TS6133: 'Building2' is declared but its value is never read.
+src/components/OSMessages.tsx(2,18): error TS6133: 'AnimatePresence' is declared but its value is never read.
+src/components/OSMessages.tsx(3,10): error TS6133: 'Bell' is declared but its value is never read.
+src/components/OSMessages.tsx(3,16): error TS6133: 'Mail' is declared but its value is never read.
+src/components/OSMessages.tsx(3,59): error TS6133: 'Info' is declared but its value is never read.
+src/components/OSMessages.tsx(37,13): error TS6198: All destructured elements are unused.
+src/components/team/TeamActivityFeed.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/team/TeamActivityFeed.tsx(3,3): error TS6133: 'User' is declared but its value is never read.
+src/components/team/TeamActivityFeed.tsx(4,18): error TS6133: 'AlertCircle' is declared but its value is never read.
+src/components/UsageLimitModal.tsx(4,26): error TS6133: 'TIER_LIMITS' is declared but its value is never read.
+src/lib/gemini.ts(5,10): error TS2305: Module '"./local-ai/intent-engine"' has no exported member 'recognizeIntent'.
+src/lib/referral-service.ts(118,44): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(304,50): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(371,20): error TS7006: Parameter 'l' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(387,20): error TS7006: Parameter 'm' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(489,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(524,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(587,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(612,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/supabase-sync.tsx(631,11): error TS7006: Parameter 'payload' implicitly has an 'any' type.
+src/lib/usage-tracking.ts(58,15): error TS6133: 'newUsage' is declared but its value is never read.
+src/pages/AITrainingStudio.tsx(3,46): error TS2305: Module '"../lib/local-ai"' has no exported member 'LOCAL_INTENTS'.
+src/pages/Calendar.tsx(163,22): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/pages/EmailInbox.tsx(17,1): error TS6133: 'analyzeConversation' is declared but its value is never read.
+src/pages/EmailInbox.tsx(20,10): error TS6133: 'DEFAULT_TEMPLATES' is declared but its value is never read.
+src/pages/EmailInbox.tsx(39,10): error TS6133: 'isAnalyzing' is declared but its value is never read.
+src/pages/EmailInbox.tsx(39,23): error TS6133: 'setIsAnalyzing' is declared but its value is never read.

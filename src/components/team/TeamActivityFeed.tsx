@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  User, Mail, Phone, FileText, CheckCircle2, 
-  MessageSquare, AlertCircle, Clock, Zap
+  Mail, Phone, FileText, CheckCircle2, 
+  MessageSquare, Zap, Clock
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
@@ -42,7 +42,7 @@ export function TeamActivityFeed() {
 
         // Combine and sort
         const combined = [
-          ...(timeline || []).map(t => ({
+          ...(timeline || []).map((t: any) => ({
             id: t.id,
             type: t.type,
             content: t.content,
@@ -50,7 +50,7 @@ export function TeamActivityFeed() {
             created_at: t.created_at,
             metadata: t.metadata
           })),
-          ...(logs || []).map(l => ({
+          ...(logs || []).map((l: any) => ({
             id: l.id,
             type: 'system',
             content: `${l.action}: ${l.component}`,
@@ -98,7 +98,7 @@ export function TeamActivityFeed() {
 
   if (isLoading) return (
     <div className="flex flex-col gap-4">
-      {[1, 2, 3].map(i => (
+      {[1, 2, 3].map((i: number) => (
         <div key={i} className="h-16 w-full animate-pulse bg-[var(--t-surface-dim)] rounded-xl" />
       ))}
     </div>

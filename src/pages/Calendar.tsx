@@ -35,6 +35,12 @@ interface Lead {
   name: string;
 }
 
+interface StoreState {
+  currentUser: any;
+  leads: any[];
+  tasks: any[];
+}
+
 function Calendar() {
   console.log('🔥 Calendar loading...');
   const { currentUser } = useStore();
@@ -44,7 +50,7 @@ function Calendar() {
   const googleService = GoogleCalendarService.getInstance();
   
   // Get leads from store
-  const leads: Lead[] = useStore((state: any) => {
+  const leads: Lead[] = useStore((state: StoreState) => {
     return Array.isArray(state.leads) ? state.leads : [];
   });
   
@@ -160,7 +166,7 @@ function Calendar() {
         
       if (data) {
         const enrichMap: Record<string, any> = {};
-        data.forEach(item => {
+        data.forEach((item: any) => {
           enrichMap[item.google_event_id] = item;
         });
         setEnrichments(enrichMap);
