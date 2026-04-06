@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Calendar, AlertCircle, CheckCircle2, Sparkles, MessageSquare, 
-  Clock, Mail, Users, ArrowRightLeft, Bot, 
-  Smartphone, Plus, X, Send, Target, Zap
+  Calendar, AlertCircle, CheckCircle2, Clock, Mail, Users, Bot, 
+  Smartphone, Plus, X, Send, Target, Zap, Settings
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
-import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 
 export interface OSMessage {
@@ -22,9 +20,7 @@ export interface OSMessage {
 }
 
 export function OSMessages() {
-  const [messages, setMessages] = useState<OSMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'messages' | 'settings'>('messages');
   const [prefs, setPrefs] = useState<any>(null);
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [customMsg, setCustomMsg] = useState({
@@ -39,16 +35,13 @@ export function OSMessages() {
 
   useEffect(() => {
     if (currentUser) {
-      if (view === 'messages') {
-        fetchMessages();
-      } else {
-        fetchPreferences();
-      }
+      fetchPreferences();
     }
-  }, [currentUser, view]);
+  }, [currentUser]);
 
   const fetchPreferences = async () => {
     if (!supabase || !currentUser) return;
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('user_os_messages_preferences')
@@ -85,6 +78,8 @@ export function OSMessages() {
       }
     } catch (err) {
       console.error('Fetch preferences error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,32 +102,6 @@ export function OSMessages() {
       console.error('Update preferences error:', err);
       toast.error('Failed to update preference');
     }
-  };
-
-  const fetchMessages = async () => {
-    setLoading(true);
-    try {
-      if (!supabase || !currentUser) return;
-      
-      const { data } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-        
-      if (data) setMessages(data);
-    } catch (err) {
-      console.error('Fetch messages error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const markAsRead = async (id: string) => {
-    if (!supabase) return;
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
-    await supabase.from('notifications').update({ read: true }).eq('id', id);
   };
 
   const handleCreateCustom = async () => {
@@ -163,268 +132,189 @@ export function OSMessages() {
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-4">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-[var(--t-primary-dim)] text-[var(--t-primary)] rounded-2xl shadow-xl shadow-[var(--t-primary-dim)]/20">
-            <MessageSquare size={32} />
+            <Settings size={32} />
           </div>
           <div>
             <h1 className="text-3xl font-black text-[var(--t-text)] tracking-tight">OS Messages</h1>
-            <p className="text-sm text-[var(--t-text-muted)] font-bold uppercase tracking-[0.2em]">Intelligent Automation Hub</p>
+            <p className="text-sm text-[var(--t-text-muted)] font-bold uppercase tracking-[0.2em]">Configuration Engine</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setShowCustomModal(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-[var(--t-primary)] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[var(--t-primary)]/20"
-          >
-            <Plus size={16} />
-            Create Custom
-          </button>
-
-          <div className="flex items-center gap-2 p-1 bg-[var(--t-surface-subtle)] rounded-2xl border border-[var(--t-border)]">
-            <button 
-              onClick={() => setView('messages')}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'messages' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
-            >
-              Activity
-            </button>
-            <button 
-              onClick={() => setView('settings')}
-              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
-            >
-              Preferences
-            </button>
-          </div>
-        </div>
+        <button 
+          onClick={() => setShowCustomModal(true)}
+          className="flex items-center gap-3 px-8 py-3 bg-[var(--t-primary)] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[var(--t-primary)]/20 group"
+        >
+          <Plus size={18} className="group-hover:rotate-90 transition-transform" />
+          Create Custom Template
+        </button>
       </div>
 
-      {/* Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-12 space-y-6">
-          {view === 'messages' ? (
-            <div className="space-y-4">
-              {loading ? (
-                <div className="py-24 astral-glass border border-[var(--t-border)] rounded-[2.5rem] flex flex-col items-center justify-center gap-4">
-                  <div className="w-12 h-12 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin" />
-                  <p className="text-sm font-black text-[var(--t-text-muted)] uppercase tracking-widest">Aggregating Global Activity...</p>
-                </div>
-              ) : messages.length > 0 ? (
-                messages.map((msg) => (
-                  <motion.div 
-                    layout
-                    key={msg.id}
-                    onClick={() => markAsRead(msg.id)}
-                    className={`p-6 rounded-[2rem] astral-glass border transition-all cursor-pointer group relative ${
-                      msg.read ? 'border-[var(--t-border)] opacity-60' : 'border-[var(--t-primary-dim)]/40 bg-[var(--t-primary-dim)]/5 shadow-2xl'
-                    }`}
-                  >
-                    {!msg.read && (
-                      <div className="absolute top-6 right-6 w-3 h-3 rounded-full bg-[var(--t-primary)] shadow-[0_0_15px_var(--t-primary)]" />
-                    )}
-                    
-                    <div className="flex gap-6">
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
-                        msg.type === 'summary' ? 'bg-blue-500/20 text-blue-400' :
-                        msg.type === 'alert' ? 'bg-red-500/20 text-red-400' :
-                        msg.type === 'reminder' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-[var(--t-primary-dim)] text-[var(--t-primary)]'
-                      }`}>
-                        {msg.type === 'summary' ? <Calendar size={24} /> :
-                         msg.type === 'alert' ? <AlertCircle size={24} /> :
-                         msg.type === 'reminder' ? <Clock size={24} /> :
-                         <Sparkles size={24} />}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <p className="text-lg font-black text-[var(--t-text)]">{msg.title}</p>
-                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest bg-[var(--t-surface-subtle)] px-2 py-1 rounded-md">{format(new Date(msg.created_at), 'MMM d, h:mm a')}</p>
-                        </div>
-                        <p className="text-sm text-[var(--t-text-secondary)] leading-relaxed">{msg.message}</p>
-                        
-                        {msg.link && (
-                          <div className="pt-2">
-                            <span className="text-[10px] font-black text-[var(--t-primary)] uppercase tracking-widest hover:underline cursor-pointer flex items-center gap-1 group">
-                              View Details <ArrowRightLeft size={10} className="group-hover:rotate-12 transition-transform" />
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
-              ) : (
-                <div className="py-24 text-center astral-glass border border-[var(--t-border)] rounded-[2.5rem] space-y-6">
-                  <div className="w-20 h-20 bg-[var(--t-surface-subtle)] rounded-full flex items-center justify-center mx-auto text-[var(--t-text-muted)] shadow-inner">
-                    <CheckCircle2 size={40} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-[var(--t-text)]">Optimal Silence</h3>
-                    <p className="text-sm text-[var(--t-text-muted)] font-medium">Your WholeScale network is operating at peak efficiency.</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-12 animate-in slide-in-from-right-8 duration-500 pb-20">
-              {/* Daily/Weekly Reports */}
-              <section className="space-y-6">
-                <CategoryHeader icon={<Mail size={20} />} title="Automated Reporting" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <SettingToggle 
-                    icon={<Clock size={18} />}
-                    title="Daily Summary"
-                    description="Leads, tasks, and revenue digest (8:00 AM)"
-                    enabled={prefs?.daily_summary_enabled ?? false}
-                    onToggle={() => updatePreference('daily_summary_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Calendar size={18} />}
-                    title="Weekly Summary"
-                    description="Trends and conversion rates (Monday 9:00 AM)"
-                    enabled={prefs?.weekly_summary_enabled ?? false}
-                    onToggle={() => updatePreference('weekly_summary_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Target size={18} />}
-                    title="Monthly Report"
-                    description="Full performance report (1st of month)"
-                    enabled={prefs?.monthly_performance_report_enabled ?? false}
-                    onToggle={() => updatePreference('monthly_performance_report_enabled')}
-                  />
-                </div>
-              </section>
-
-              {/* Deal Alerts */}
-              <section className="space-y-6">
-                <CategoryHeader icon={<Zap size={20} />} title="Deal Momentum" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <SettingToggle 
-                    icon={<CheckCircle2 size={18} />}
-                    title="Deal Closed"
-                    description="Alert when a deal is won"
-                    enabled={prefs?.deal_closed_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('deal_closed_alerts_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Send size={18} />}
-                    title="Offer Made"
-                    description="Notification for new offers"
-                    enabled={prefs?.offer_made_alert_enabled ?? false}
-                    onToggle={() => updatePreference('offer_made_alert_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Zap size={18} />}
-                    title="Offer Accepted"
-                    description="Alert on accepted offers"
-                    enabled={prefs?.offer_accepted_alert_enabled ?? false}
-                    onToggle={() => updatePreference('offer_accepted_alert_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<CheckCircle2 size={18} />}
-                    title="Contract Signed"
-                    description="Final commitment alert"
-                    enabled={prefs?.contract_signed_alert_enabled ?? false}
-                    onToggle={() => updatePreference('contract_signed_alert_enabled')}
-                  />
-                </div>
-              </section>
-
-              {/* Calendar & Tasks */}
-              <section className="space-y-6">
-                <CategoryHeader icon={<Calendar size={20} />} title="Schedule & Focus" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <SettingToggle 
-                    icon={<Calendar size={18} />}
-                    title="Calendar Digest"
-                    description="Morning schedule brief (7:00 AM)"
-                    enabled={prefs?.calendar_digest_enabled ?? false}
-                    onToggle={() => updatePreference('calendar_digest_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Clock size={18} />}
-                    title="Task Reminder"
-                    description="30 minutes before task due time"
-                    enabled={prefs?.task_reminders_enabled ?? false}
-                    onToggle={() => updatePreference('task_reminders_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<AlertCircle size={18} />}
-                    title="Task Overdue"
-                    description="Immediate alert for missed deadlines"
-                    enabled={prefs?.task_overdue_alert_enabled ?? false}
-                    onToggle={() => updatePreference('task_overdue_alert_enabled')}
-                  />
-                </div>
-              </section>
-
-              {/* Lead Management */}
-              <section className="space-y-6">
-                <CategoryHeader icon={<Users size={20} />} title="Lead Intelligence" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <SettingToggle 
-                    icon={<Plus size={18} />}
-                    title="New Lead Notif"
-                    description="Real-time alert for new captures"
-                    enabled={prefs?.new_lead_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('new_lead_alerts_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Clock size={18} />}
-                    title="Inactivity Alert"
-                    description="7 days with no outbound contact"
-                    enabled={prefs?.lead_inactivity_alert_enabled ?? false}
-                    onToggle={() => updatePreference('lead_inactivity_alert_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Zap size={18} />}
-                    title="Lead Score High"
-                    description="Alert when lead score > 80"
-                    enabled={prefs?.lead_score_high_alert_enabled ?? false}
-                    onToggle={() => updatePreference('lead_score_high_alert_enabled')}
-                  />
-                </div>
-              </section>
-
-              {/* Team & Engagement */}
-              <section className="space-y-6">
-                <CategoryHeader icon={<Bot size={20} />} title="Team & Engagement" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <SettingToggle 
-                    icon={<Smartphone size={18} />}
-                    title="Goal Milestones"
-                    description="Team progress achievements"
-                    enabled={prefs?.goal_milestone_alert_enabled ?? false}
-                    onToggle={() => updatePreference('goal_milestone_alert_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Users size={18} />}
-                    title="Activity Digest"
-                    description="Collaborative work summary"
-                    enabled={prefs?.team_activity_summary_enabled ?? false}
-                    onToggle={() => updatePreference('team_activity_summary_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Mail size={18} />}
-                    title="Email Opens"
-                    description="Alert when lead opens email"
-                    enabled={prefs?.email_open_notification_enabled ?? false}
-                    onToggle={() => updatePreference('email_open_notification_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<Smartphone size={18} />}
-                    title="SMS Received"
-                    description="Real-time alert for incoming SMS"
-                    enabled={prefs?.sms_received_alert_enabled ?? false}
-                    onToggle={() => updatePreference('sms_received_alert_enabled')}
-                  />
-                </div>
-              </section>
-            </div>
-          )}
+      {/* Preferences Grid */}
+      {loading ? (
+        <div className="py-24 astral-glass border border-[var(--t-border)] rounded-[2.5rem] flex flex-col items-center justify-center gap-4">
+          <div className="w-12 h-12 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-black text-[var(--t-text-muted)] uppercase tracking-widest">Initialising Automation Core...</p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-12 animate-in slide-in-from-bottom-8 duration-500 pb-20 px-4">
+          {/* Daily/Weekly Reports */}
+          <section className="space-y-6">
+            <CategoryHeader icon={<Mail size={20} />} title="Automated Reporting" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <SettingToggle 
+                icon={<Clock size={18} />}
+                title="Daily Summary"
+                description="Leads, tasks, and revenue digest (8:00 AM)"
+                enabled={prefs?.daily_summary_enabled ?? false}
+                onToggle={() => updatePreference('daily_summary_enabled')}
+              />
+              <SettingToggle 
+                icon={<Calendar size={18} />}
+                title="Weekly Summary"
+                description="Trends and conversion rates (Monday 9:00 AM)"
+                enabled={prefs?.weekly_summary_enabled ?? false}
+                onToggle={() => updatePreference('weekly_summary_enabled')}
+              />
+              <SettingToggle 
+                icon={<Target size={18} />}
+                title="Monthly Report"
+                description="Full performance report (1st of month)"
+                enabled={prefs?.monthly_performance_report_enabled ?? false}
+                onToggle={() => updatePreference('monthly_performance_report_enabled')}
+              />
+            </div>
+          </section>
+
+          {/* Deal Alerts */}
+          <section className="space-y-6">
+            <CategoryHeader icon={<Zap size={20} />} title="Deal Momentum" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <SettingToggle 
+                icon={<CheckCircle2 size={18} />}
+                title="Deal Closed"
+                description="Alert when a deal is won"
+                enabled={prefs?.deal_closed_alerts_enabled ?? false}
+                onToggle={() => updatePreference('deal_closed_alerts_enabled')}
+              />
+              <SettingToggle 
+                icon={<Send size={18} />}
+                title="Offer Made"
+                description="Notification for new offers"
+                enabled={prefs?.offer_made_alert_enabled ?? false}
+                onToggle={() => updatePreference('offer_made_alert_enabled')}
+              />
+              <SettingToggle 
+                icon={<Zap size={18} />}
+                title="Offer Accepted"
+                description="Alert on accepted offers"
+                enabled={prefs?.offer_accepted_alert_enabled ?? false}
+                onToggle={() => updatePreference('offer_accepted_alert_enabled')}
+              />
+              <SettingToggle 
+                icon={<CheckCircle2 size={18} />}
+                title="Contract Signed"
+                description="Final commitment alert"
+                enabled={prefs?.contract_signed_alert_enabled ?? false}
+                onToggle={() => updatePreference('contract_signed_alert_enabled')}
+              />
+            </div>
+          </section>
+
+          {/* Calendar & Tasks */}
+          <section className="space-y-6">
+            <CategoryHeader icon={<Calendar size={20} />} title="Schedule & Focus" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <SettingToggle 
+                icon={<Calendar size={18} />}
+                title="Calendar Digest"
+                description="Morning schedule brief (7:00 AM)"
+                enabled={prefs?.calendar_digest_enabled ?? false}
+                onToggle={() => updatePreference('calendar_digest_enabled')}
+              />
+              <SettingToggle 
+                icon={<Clock size={18} />}
+                title="Task Reminder"
+                description="30 minutes before task due time"
+                enabled={prefs?.task_reminders_enabled ?? false}
+                onToggle={() => updatePreference('task_reminders_enabled')}
+              />
+              <SettingToggle 
+                icon={<AlertCircle size={18} />}
+                title="Task Overdue"
+                description="Immediate alert for missed deadlines"
+                enabled={prefs?.task_overdue_alert_enabled ?? false}
+                onToggle={() => updatePreference('task_overdue_alert_enabled')}
+              />
+            </div>
+          </section>
+
+          {/* Lead Management */}
+          <section className="space-y-6">
+            <CategoryHeader icon={<Users size={20} />} title="Lead Intelligence" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <SettingToggle 
+                icon={<Plus size={18} />}
+                title="New Lead Notif"
+                description="Real-time alert for new captures"
+                enabled={prefs?.new_lead_alerts_enabled ?? false}
+                onToggle={() => updatePreference('new_lead_alerts_enabled')}
+              />
+              <SettingToggle 
+                icon={<Clock size={18} />}
+                title="Inactivity Alert"
+                description="7 days with no outbound contact"
+                enabled={prefs?.lead_inactivity_alert_enabled ?? false}
+                onToggle={() => updatePreference('lead_inactivity_alert_enabled')}
+              />
+              <SettingToggle 
+                icon={<Zap size={18} />}
+                title="Lead Score High"
+                description="Alert when lead score > 80"
+                enabled={prefs?.lead_score_high_alert_enabled ?? false}
+                onToggle={() => updatePreference('lead_score_high_alert_enabled')}
+              />
+            </div>
+          </section>
+
+          {/* Team & Engagement */}
+          <section className="space-y-6">
+            <CategoryHeader icon={<Bot size={20} />} title="Team & Engagement" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <SettingToggle 
+                icon={<Smartphone size={18} />}
+                title="Goal Milestones"
+                description="Team progress achievements"
+                enabled={prefs?.goal_milestone_alert_enabled ?? false}
+                onToggle={() => updatePreference('goal_milestone_alert_enabled')}
+              />
+              <SettingToggle 
+                icon={<Users size={18} />}
+                title="Activity Digest"
+                description="Collaborative work summary"
+                enabled={prefs?.team_activity_summary_enabled ?? false}
+                onToggle={() => updatePreference('team_activity_summary_enabled')}
+              />
+              <SettingToggle 
+                icon={<Mail size={18} />}
+                title="Email Opens"
+                description="Alert when lead opens email"
+                enabled={prefs?.email_open_notification_enabled ?? false}
+                onToggle={() => updatePreference('email_open_notification_enabled')}
+              />
+              <SettingToggle 
+                icon={<Smartphone size={18} />}
+                title="SMS Received"
+                description="Real-time alert for incoming SMS"
+                enabled={prefs?.sms_received_alert_enabled ?? false}
+                onToggle={() => updatePreference('sms_received_alert_enabled')}
+              />
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Custom Message Modal */}
       <AnimatePresence>
