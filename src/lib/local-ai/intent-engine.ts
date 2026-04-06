@@ -1,6 +1,6 @@
 /**
- * Local AI Intent Engine
- * Handles intent recognition and entity extraction locally.
+ * OS Bot Intent Engine (v2.0)
+ * Handles complex intent recognition and entity extraction locally.
  */
 
 export interface IntentResult {
@@ -28,49 +28,89 @@ export function recognizeIntent(text: string): IntentResult {
     return { intent: 'show_tasks', entities: {}, confidence: 0.95 };
   }
 
-  // 3. Create Lead
-  // Pattern: create lead [Name] email [Email] phone [Phone] company [Company]
-  const leadMatch = normalized.match(/(?:create|add|new)\s+(?:lead|contact)\s+([^@\d\n]+?)(?:\s+email\s+([\w.@+-]+))?(?:\s+phone\s+([\d+-]+))?(?:\s+company\s+(.+))?$/i);
-  if (leadMatch) {
-    return {
-      intent: 'create_lead',
-      entities: {
-        name: leadMatch[1]?.trim(),
-        email: leadMatch[2],
-        phone: leadMatch[3],
-        company: leadMatch[4]?.trim()
-      },
-      confidence: 0.9
-    };
+  // 3. Create Lead (Enhanced)
+  // Patterns: 
+  // "add lead John Smith"
+  // "add lead John Smith from California"
+  // "add lead john.smith@email.com"
+  // "add lead 555-1234"
+  const leadPatterns = [
+    // Full: add lead [Name] from [Location]
+    /(?:create|add|new)\s+(?:lead|contact)\s+([^@\d\n]+?)\s+from\s+([^@\d\n]+)/i,
+    // Name only: add lead [Name]
+    /(?:create|add|new)\s+(?:lead|contact)\s+([^@\d\n]+)$/i,
+    // Email: add lead [Email]
+    /(?:create|add|new)\s+(?:lead|contact)\s+([\w.@+-]+)$/i,
+    // Phone: add lead [Phone]
+    /(?:create|add|new)\s+(?:lead|contact)\s+([\d+-]+)$/i
+  ];
+
+  for (const pattern of leadPatterns) {
+    const match = normalized.match(pattern);
+    if (match) {
+      const entities: any = {};
+      const val = match[1]?.trim();
+      
+      if (val.includes('@')) {
+        entities.email = val;
+        entities.name = val.split('@')[0];
+      } else if (val.match(/^[\d+-]+$/)) {
+        entities.phone = val;
+        entities.name = 'New Contact';
+      } else {
+        entities.name = val;
+      }
+
+      if (match[2]) {
+        entities.location = match[2].trim();
+        entities.propertyAddress = entities.location;
+      }
+
+      return { intent: 'create_lead', entities, confidence: 0.9 };
+    }
   }
 
-  // 4. Create Task
-  // Pattern: create task [Title] due [Date] priority [Priority]
-  const taskMatch = normalized.match(/(?:create|add|new)\s+task\s+([\w\s]+?)(?:\s+due\s+([\w\s\d,/-]+))?(?:\s+priority\s+(low|medium|high|urgent))?$/i);
-  if (taskMatch) {
-    return {
-      intent: 'create_task',
-      entities: {
-        title: taskMatch[1]?.trim(),
-        dueDate: taskMatch[2]?.trim(),
-        priority: taskMatch[3] || 'medium'
-      },
-      confidence: 0.9
-    };
+  // 4. Create Task (Enhanced)
+  // Pattern: create task [Title] tomorrow/today/next week/etc
+  const taskPatterns = [
+    /(?:create|add|new|set)\s+task\s+(.+?)(?:\s+(tomorrow|today|next week|on Monday|on Tuesday|on Wednesday|on Thursday|on Friday|on Saturday|on Sunday))?$/i,
+    /(?:remind|reminder|set reminder)\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(tomorrow|today|next week|on Monday|on Tuesday|on Wednesday|on Thursday|on Friday|on Saturday|on Sunday))?$/i
+  ];
+
+  for (const pattern of taskPatterns) {
+    const match = normalized.match(pattern);
+    if (match) {
+      return {
+        intent: 'create_task',
+        entities: {
+          title: match[1]?.trim(),
+          dueDateRaw: match[2]?.trim() || 'today',
+          priority: 'medium'
+        },
+        confidence: 0.9
+      };
+    }
   }
 
-  // 5. Send SMS
-  // Pattern: send sms to [Phone/Name] saying [Message]
-  const smsMatch = normalized.match(/(?:send|message|sms)\s+(?:to\s+)?([\d+-]+|[\w\s]+?)\s+(?:saying|content|message)\s+(.*)/i);
-  if (smsMatch) {
-    return {
-      intent: 'send_sms',
-      entities: {
-        target: smsMatch[1]?.trim(),
-        message: smsMatch[2]?.trim()
-      },
-      confidence: 0.9
-    };
+  // 5. Send SMS (Enhanced)
+  // Pattern: send SMS to [Phone/Name] saying [Message]
+  const smsPatterns = [
+    /(?:send|message|sms)\s+(?:to\s+)?([\d+-]+|[\w\s]+?)\s+(?:saying|content|message)\s+(.*)/i,
+    /(?:text|sms)\s+([\d+-]+|[\w\s]+?)\s+(.*)/i
+  ];
+
+  for (const pattern of smsPatterns) {
+    const match = normalized.match(pattern);
+    if (match) {
+      return {
+        intent: 'send_sms',
+        entities: {
+          target: match[1]?.trim(),
+          message: match[2]?.trim()
+        },
+        confidence: 0.95
+      };
+    }
   }
 
   // 6. Search Leads
@@ -84,39 +124,13 @@ export function recognizeIntent(text: string): IntentResult {
   }
 
   // 7. Update Lead Status
-  const statusMatch = normalized.match(/(?:update|change)\s+(?:lead\s+)?status\s+(?:to\s+)?(new|hot|warm|cold|closed|contacted|qualified|negotiating|lost)\s+(?:for|of)\s+([\w\s]+)/i);
+  const statusMatch = normalized.match(/(?:update|change)\s+(?:lead\s+)?status\s+(?:to\s+)?(new|hot|warm|cold|closed|contacted|qualified|negotiating|lost|closed-won|closed-lost)\s+(?:for|of)\s+([\w\s]+)/i);
   if (statusMatch) {
     return {
       intent: 'update_lead_status',
       entities: {
         status: statusMatch[1],
         leadName: statusMatch[2]?.trim()
-      },
-      confidence: 0.85
-    };
-  }
-
-  // 8. Add Note
-  const noteMatch = normalized.match(/(?:add|write|save)\s+note\s+(?:to|for)\s+([\w\s]+)\s+(?:saying|content)\s+(.*)/i);
-  if (noteMatch) {
-    return {
-      intent: 'add_note',
-      entities: {
-        leadName: noteMatch[1]?.trim(),
-        note: noteMatch[2]?.trim()
-      },
-      confidence: 0.85
-    };
-  }
-
-  // 9. Remind Me
-  const remindMatch = normalized.match(/(?:remind|reminder|set reminder)\s+(?:me\s+)?(?:to\s+)?(.*)\s+(?:at|on|tomorrow|today|in)\s+(.*)/i);
-  if (remindMatch) {
-    return {
-      intent: 'remind_me',
-      entities: {
-        task: remindMatch[1]?.trim(),
-        time: remindMatch[2]?.trim()
       },
       confidence: 0.85
     };
@@ -139,9 +153,8 @@ export const LOCAL_INTENTS = [
   'show_tasks',
   'search_leads',
   'update_lead_status',
-  'add_note',
-  'remind_me',
   'what_is_my_schedule',
   'help'
 ];
+
 

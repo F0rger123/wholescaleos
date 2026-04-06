@@ -1,7 +1,9 @@
 /**
- * Local AI Memory Store
- * Manages conversation history and user preferences locally.
+ * OS Bot Memory Store
+ * Manages conversation history, context, and user preferences locally.
  */
+
+import { useStore } from '../../store/useStore';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -9,15 +11,15 @@ export interface Message {
   timestamp: string;
 }
 
-export interface UserPreferences {
-  name: string;
-  role: string;
-  commonTasks: string[];
-  theme?: string;
+export interface ConversationContext {
+  lastLeadId?: string;
+  lastLeadName?: string;
+  lastIntent?: string;
+  recentEntities: Record<string, any>;
 }
 
-const MEMORY_KEY = 'wholescale_ai_memory';
-const PREFS_KEY = 'wholescale_ai_prefs';
+const MEMORY_KEY = 'wholescale_os_bot_memory';
+const CONTEXT_KEY = 'wholescale_os_bot_context';
 
 export function getMemory(): Message[] {
   const data = localStorage.getItem(MEMORY_KEY);
@@ -32,27 +34,45 @@ export function saveConversation(content: string, role: 'user' | 'assistant') {
     timestamp: new Date().toISOString()
   };
   
-  // Keep last 10
-  const updatedMemory = [...memory, newMessage].slice(-10);
+  // Keep last 20 for better context
+  const updatedMemory = [...memory, newMessage].slice(-20);
   localStorage.setItem(MEMORY_KEY, JSON.stringify(updatedMemory));
 }
 
-export function getUserPreferences(): UserPreferences {
-  const data = localStorage.getItem(PREFS_KEY);
-  return data ? JSON.parse(data) : {
-    name: 'User',
-    role: 'Agent',
-    commonTasks: []
+export function getContext(): ConversationContext {
+  const data = localStorage.getItem(CONTEXT_KEY);
+  return data ? JSON.parse(data) : { recentEntities: {} };
+}
+
+export function updateContext(updates: Partial<ConversationContext>) {
+  const current = getContext();
+  const updated = {
+    ...current,
+    ...updates,
+    recentEntities: { ...current.recentEntities, ...(updates.recentEntities || {}) }
   };
+  localStorage.setItem(CONTEXT_KEY, JSON.stringify(updated));
 }
 
-export function setUserPreference(key: keyof UserPreferences, value: any) {
-  const prefs = getUserPreferences();
-  (prefs as any)[key] = value;
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+export function clearMemory() {
+  localStorage.removeItem(MEMORY_KEY);
+  localStorage.removeItem(CONTEXT_KEY);
 }
 
-export function syncToSupabase() {
-  // Mock sync - in a real app, this would push to a profile table
-  console.log('Syncing AI memory to Supabase...');
+/**
+ * Syncs memory and context to Supabase profile settings if needed.
+ */
+export async function syncMemoryToCloud() {
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  if (!userId) return;
+
+  const memory = getMemory();
+  const context = getContext();
+
+  console.log('[OS Bot] Syncing memory to cloud...', { messages: memory.length });
+  
+  // In a real implementation, we would update the 'profiles' table 'settings' column
+  // with this memory to allow cross-device continuity.
 }
+

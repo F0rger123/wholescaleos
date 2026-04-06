@@ -317,7 +317,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           { id: 'gemini', label: 'Google Gemini', icon: '✨' },
           { id: 'openai', label: 'OpenAI (GPT)', icon: '🤖' },
           { id: 'anthropic', label: 'Anthropic (Claude)', icon: '🎭' },
-          { id: 'local', label: 'Local AI', icon: '🏠' }
+          { id: 'local', label: 'OS Bot', icon: '🤖' }
         ].map((p) => (
           <button
             key={p.id}
@@ -431,7 +431,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             ))}
 
             {provider === 'local' && [
-              { id: 'native-intent', label: 'Our Coded AI (Local, Fast, Free)', desc: 'Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.' },
+            { id: 'os-bot', label: 'OS Bot (Built-in AI)', desc: 'Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.' },
               { id: 'ollama-bridge', label: 'External Local (Ollama/LM Studio)', desc: 'Connect to a locally running large language model via OpenAI-compatible API.' }
             ].map((m) => (
               <button

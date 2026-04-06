@@ -770,6 +770,15 @@ export function AIBotWidget() {
                   }}>
                     {msg.content}
                     
+                    {msg.role === 'ai' && (
+                      <div className="mt-1 flex items-center">
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" 
+                          style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)', opacity: 0.8 }}>
+                          🤖 {msg.systemLog || 'OS Bot'}
+                        </span>
+                      </div>
+                    )}
+                    
                     {msg.intent === 'disambiguation' && msg.data?.originalIntent && (
                       <div className="mt-2 flex gap-2">
                         <button

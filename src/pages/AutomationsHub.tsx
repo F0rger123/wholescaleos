@@ -13,7 +13,9 @@ import {
   OnEdgesChange,
   OnConnect,
   BackgroundVariant,
-  Panel
+  Panel,
+  useReactFlow,
+  ReactFlowProvider
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { 
@@ -47,7 +49,7 @@ const initialNodes: Node[] = [
 
 const initialEdges: Edge[] = [];
 
-export default function AutomationsHub() {
+function AutomationsHubContent() {
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
   const [isCreating, setIsCreating] = useState(false);
@@ -61,6 +63,7 @@ export default function AutomationsHub() {
   const [isActive, setIsActive] = useState(true);
 
   const { isAutomationRunning } = useStore();
+  const { fitView } = useReactFlow();
 
   // Load existing workflow on mount
   useEffect(() => {
@@ -72,16 +75,19 @@ export default function AutomationsHub() {
 
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          setIsLoading(false);
+          return;
+        }
 
         const { data, error } = await supabase
           .from('workflows')
           .select('*')
           .order('updated_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 is 'no rows returned'
+        if (error) {
           console.error('Error loading workflow:', error);
           toast.error('Failed to load workflow.');
         } else if (data) {
@@ -90,6 +96,11 @@ export default function AutomationsHub() {
           setNodes(data.nodes as Node[]);
           setEdges(data.edges as Edge[]);
           setIsActive(data.is_active ?? true);
+          
+          // Delayed fitView to allow React Flow to initialize nodes
+          setTimeout(() => {
+            fitView({ duration: 800, padding: 0.2 });
+          }, 200);
         }
       } catch (err) {
         console.error('Load Error:', err);
@@ -99,9 +110,9 @@ export default function AutomationsHub() {
     }
 
     loadWorkflow();
-  }, []);
+  }, [fitView]);
 
-  const saveWorkflow = async () => {
+  const saveWorkflow = async (forcedIsActive?: boolean) => {
     if (!isSupabaseConfigured || !supabase) {
       toast.error('Supabase is not configured.');
       return;
@@ -116,12 +127,14 @@ export default function AutomationsHub() {
         return;
       }
 
+      const activeStatus = forcedIsActive !== undefined ? forcedIsActive : isActive;
+
       const workflowData = {
         user_id: user.id,
         name: workflowName, 
         nodes,
         edges,
-        is_active: isActive,
+        is_active: activeStatus,
         updated_at: new Date().toISOString(),
       };
 
@@ -142,7 +155,12 @@ export default function AutomationsHub() {
       }
 
       if (error) throw error;
-      toast.success('Workflow saved successfully!');
+      
+      if (forcedIsActive !== undefined) {
+          toast.success(`Workflow ${activeStatus ? 'Activated' : 'Deactivated'}`);
+      } else {
+          toast.success('Workflow saved successfully!');
+      }
     } catch (err) {
       console.error('Save Error:', err);
       toast.error('Failed to save workflow.');
@@ -167,24 +185,36 @@ export default function AutomationsHub() {
   );
 
   const loadTemplate = (template: AutomationTemplate) => {
-    setNodes(template.nodes);
-    setEdges(template.edges);
+    // Deep clone nodes and edges to avoid reference issues
+    const newNodes = JSON.parse(JSON.stringify(template.nodes));
+    const newEdges = JSON.parse(JSON.stringify(template.edges));
+    
+    setNodes(newNodes);
+    setEdges(newEdges);
     setWorkflowName(template.name);
-    setWorkflowId(null);
+    setWorkflowId(null); // Reset ID so it saves as new
     setIsActive(true);
     setIsLibraryOpen(false);
+    
+    // Zoom to fit the loaded template
+    setTimeout(() => {
+      fitView({ duration: 800, padding: 0.2 });
+      toast.success(`Loaded Template: ${template.name}`);
+    }, 100);
   };
 
   const addNode = (type: string) => {
-    const id = (nodes.length + 1).toString();
+    const id = `node-${Date.now()}`;
     const newNode: Node = {
       id,
       type: 'automation',
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
+      position: { x: Math.random() * 200 + 100, y: Math.random() * 200 + 100 },
       data: { 
         label: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`, 
         type,
-        description: 'Configure this node in settings.'
+        description: 'Configure this node in settings.',
+        actionType: type === 'ai' ? 'ai_process' : (type === 'action' ? 'notify' : undefined),
+        triggerType: type === 'trigger' ? 'new_lead' : undefined
       },
     };
     setNodes((nds) => [...nds, newNode]);
@@ -249,13 +279,17 @@ export default function AutomationsHub() {
               <div className="flex items-center gap-3 text-[9px] font-bold text-white/40 uppercase tracking-widest pl-0.5">
                 <span className="flex items-center gap-1"><Save size={8} /> Autosave On</span>
                 <span className="w-1 h-1 rounded-full bg-green-500/50" />
-                <span>v1.0.4</span>
+                <span>v1.1.0</span>
               </div>
             </div>
 
             <div className="flex items-center gap-3 ml-4 bg-white/5 p-1.5 rounded-2xl border border-white/10">
               <button
-                onClick={() => setIsActive(!isActive)}
+                onClick={() => {
+                  const next = !isActive;
+                  setIsActive(next);
+                  if (workflowId) saveWorkflow(next);
+                }}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-black uppercase tracking-tighter text-[10px] transition-all ${
                   isActive 
                     ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]' 
@@ -293,7 +327,7 @@ export default function AutomationsHub() {
                 <Bot size={14} className="text-purple-400 group-hover:scale-110 transition-transform" />
               </button>
               <button 
-                onClick={saveWorkflow}
+                onClick={() => saveWorkflow()}
                 disabled={isLoading}
                 className="ml-2 px-4 py-2.5 rounded-xl bg-[var(--t-primary)] hover:bg-[var(--t-primary)]/80 text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-[var(--t-primary)]/20 flex items-center gap-2 font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
               >
@@ -396,7 +430,12 @@ export default function AutomationsHub() {
                       id: '1',
                       type: 'automation',
                       position: { x: 250, y: 50 },
-                      data: { label: 'Start Trigger', type: 'trigger', description: createDesc.trim() || 'Configure your workflow starting point.' }
+                      data: { 
+                          label: 'Start Trigger', 
+                          type: 'trigger', 
+                          triggerType: 'new_lead',
+                          description: createDesc.trim() || 'Configure your workflow starting point.' 
+                      }
                     }]);
                     setEdges([]);
                     setIsActive(true);
@@ -404,6 +443,7 @@ export default function AutomationsHub() {
                     setCreateName('');
                     setCreateDesc('');
                     toast.success(`Created new workflow: ${name}`);
+                    setTimeout(() => fitView({ duration: 800 }), 100);
                   }}
                   className="flex-1 px-6 py-3 bg-[var(--t-primary)] text-white rounded-2xl font-bold shadow-lg shadow-[var(--t-primary-dim)] hover:scale-[1.02] transition-all"
                 >
@@ -501,5 +541,13 @@ export default function AutomationsHub() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function AutomationsHub() {
+  return (
+    <ReactFlowProvider>
+      <AutomationsHubContent />
+    </ReactFlowProvider>
   );
 }

@@ -34,7 +34,7 @@ export async function generateLeadInsight(lead: Lead): Promise<string> {
                      isHot ? 'Active deal - prioritize this lead.' : 'Monitor for future opportunities.';
   const valNote = lead.estimatedValue > 250000 ? ` High-value target ($${lead.estimatedValue.toLocaleString()}).` : '';
   
-  return `[⚡ Local] ${statusNote}${valNote} Review their notes and reach out when ready.`;
+  return `🤖 OS Bot: ${statusNote}${valNote} Review their notes and reach out when ready.`;
 }
 
 export async function generatePageInsights(_page: string): Promise<string[]> {
@@ -47,13 +47,14 @@ export async function generatePageInsights(_page: string): Promise<string[]> {
   const tasksDue = store.tasks?.filter(t => t.status === 'todo').length || 0;
   
   const insights = [];
-  insights.push(`[⚡ Local] You have ${hotLeads} hot leads out of ${leadsCount} total leads.`);
-  if (tasksDue > 0) insights.push(`[⚡ Local] Focus on clearing your ${tasksDue} pending tasks today.`);
-  else insights.push(`[⚡ Local] Your task list is clear. Great time to prospect!`);
-  insights.push(`[⚡ Local] Consider reviewing any leads stuck in "Contacted" status.`);
+  insights.push(`🤖 OS Bot: You have ${hotLeads} hot leads out of ${leadsCount} total leads.`);
+  if (tasksDue > 0) insights.push(`🤖 OS Bot: Focus on clearing your ${tasksDue} pending tasks today.`);
+  else insights.push(`🤖 OS Bot: Your task list is clear. Great time to prospect!`);
+  insights.push(`🤖 OS Bot: Consider reviewing any leads stuck in "Contacted" status.`);
 
   return insights;
 }
+
 
 export interface CallScriptTemplate {
   name: string;
@@ -357,14 +358,14 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
 }
 
 /**
- * Local AI Processing Fallback
+ * OS Bot Processing Fallback
  * Tries to handle the prompt locally before falling back to external APIs.
  */
 export async function processWithLocalAI(prompt: string): Promise<GeminiResponse | null> {
   const localResult = recognizeIntent(prompt);
   
   if (localResult.confidence >= 0.7) {
-    console.log(`[⚡ Local AI] Handling intent: ${localResult.intent} (${Math.round(localResult.confidence * 100)}%)`);
+    console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent} (${Math.round(localResult.confidence * 100)}%)`);
     const executionResult = await executeTask(localResult.intent, localResult.entities);
     const responseText = generateResponse(localResult.intent, executionResult);
     
@@ -374,7 +375,7 @@ export async function processWithLocalAI(prompt: string): Promise<GeminiResponse
       intent: localResult.intent,
       response: responseText,
       data: { ...localResult.entities, ...executionResult.data },
-      systemLog: '🤖 Local AI'
+      systemLog: '🤖 OS Bot'
     };
   }
   
@@ -392,11 +393,11 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   // Save user message to local memory
   saveConversation(prompt, 'user');
 
-  // ── LOCAL AI ENGINE (PRIORITY) ──────────────────────────────────────
+  // ── OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
     const localResponse = await processWithLocalAI(prompt);
     if (localResponse) return localResponse;
-    console.log(`[⚡ Local AI] Low confidence, falling back to external API...`);
+    console.log(`[🤖 OS Bot] Low confidence, falling back to external API...`);
   }
   // ───────────────────────────────────────────────────────────────────────
 
@@ -744,19 +745,18 @@ Time: ${context.currentTime || new Date().toISOString()}`;
     console.error(`Error processing prompt with ${provider}:`, error);
     
     if (error.message === "RATE_LIMIT" || error.message?.includes('429')) {
-      console.warn(`[AI Fallback] Rate limit reached for ${provider}. Falling back to Local AI...`);
+      console.warn(`[AI Fallback] Rate limit reached for ${provider}. Falling back to OS Bot...`);
       
       // Try local processing first
       const localFallback = await processWithLocalAI(prompt);
       if (localFallback) {
         return {
           ...localFallback,
-          response: localFallback.response, // Remove the [Rate Limit Fallback] prefix as requested (implicit in "automatically use")
-          systemLog: `🤖 Local AI`
+          systemLog: `🤖 OS Bot`
         };
       }
 
-      // If local AI is low confidence, try a generic local response instead of an error
+      // If OS Bot is low confidence, try a generic local response instead of an error
       const lowConfidenceLocal = recognizeIntent(prompt);
       const executionResult = await executeTask(lowConfidenceLocal.intent, lowConfidenceLocal.entities);
       const responseText = generateResponse(lowConfidenceLocal.intent, executionResult);
@@ -765,7 +765,7 @@ Time: ${context.currentTime || new Date().toISOString()}`;
         intent: lowConfidenceLocal.intent,
         response: responseText,
         data: lowConfidenceLocal.entities,
-        systemLog: `🤖 Local AI`
+        systemLog: `🤖 OS Bot`
       };
     }
 

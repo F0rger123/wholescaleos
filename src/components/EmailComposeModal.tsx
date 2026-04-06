@@ -21,6 +21,9 @@ interface EmailComposeModalProps {
   } | null;
   isAttachmentLoading?: boolean;
   onSuccess?: () => void;
+  isReply?: boolean;
+  threadId?: string;
+  replyTo?: string;
 }
 
 export default function EmailComposeModal({ 
@@ -31,7 +34,10 @@ export default function EmailComposeModal({
   initialBody = '',
   attachment,
   isAttachmentLoading = false,
-  onSuccess
+  onSuccess,
+  isReply = false,
+  threadId,
+  replyTo
 }: EmailComposeModalProps) {
 
   const { currentUser, updateLead, leads } = useStore();
@@ -66,9 +72,9 @@ export default function EmailComposeModal({
   const filteredLeads = useMemo(() => {
     const q = searchQuery.toLowerCase();
     return leads.filter(l => 
-      l.name.toLowerCase().includes(q) || 
-      l.email?.toLowerCase().includes(q) ||
-      l.propertyAddress.toLowerCase().includes(q)
+      (l.name || '').toLowerCase().includes(q) || 
+      (l.email || '').toLowerCase().includes(q) ||
+      (l.propertyAddress || '').toLowerCase().includes(q)
     ).slice(0, 5);
   }, [leads, searchQuery]);
 
@@ -76,8 +82,8 @@ export default function EmailComposeModal({
     const q = searchQuery.toLowerCase();
     const { contacts } = useStore.getState();
     return (contacts || []).filter(c => 
-      c.name.toLowerCase().includes(q) || 
-      c.email?.toLowerCase().includes(q)
+      (c.name || '').toLowerCase().includes(q) || 
+      (c.email || '').toLowerCase().includes(q)
     ).slice(0, 5);
   }, [searchQuery]);
 
@@ -198,7 +204,9 @@ export default function EmailComposeModal({
         to,
         subject,
         html: body.replace(/\n/g, '<br>'),
-        attachments: attachment ? [attachment] : []
+        attachments: attachment ? [attachment] : [],
+        threadId,
+        replyTo
       });
 
       if (result.success) {
@@ -264,7 +272,7 @@ export default function EmailComposeModal({
               <Mail size={20} />
             </div>
             <h3 className="text-lg font-bold text-[var(--t-text)]">
-              {showConfirm ? 'Confirm Selection' : 'New Message'}
+              {showConfirm ? 'Confirm Selection' : (isReply ? 'Reply to Thread' : 'New Message')}
             </h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl text-[var(--t-text-muted)] transition-colors">
@@ -335,7 +343,7 @@ export default function EmailComposeModal({
                                 className="w-full flex items-center gap-3 p-3 hover:bg-[var(--t-surface-hover)] transition-colors text-left"
                               >
                                 <div className="w-8 h-8 rounded-full bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)] text-xs font-bold">
-                                  {l.name[0]}
+                                  {(l.name || '?')[0]}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-[var(--t-text)] truncate">{l.name}</p>
@@ -355,7 +363,7 @@ export default function EmailComposeModal({
                                 className="w-full flex items-center gap-3 p-3 hover:bg-[var(--t-surface-hover)] transition-colors text-left"
                               >
                                 <div className="w-8 h-8 rounded-full bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)] text-xs font-bold">
-                                  {c.name[0]}
+                                  {(c.name || '?')[0]}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-[var(--t-text)] truncate">{c.name}</p>

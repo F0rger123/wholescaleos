@@ -14,6 +14,8 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
+import { automationEngine } from './automation-engine';
+
 
 // ─── Connection Status ────────────────────────────────────────────────────────
 
@@ -98,6 +100,10 @@ export const leadsService = {
       console.error('❌ Supabase leadsService.create error:', error);
       throw error;
     }
+    
+    // Trigger automation engine
+    automationEngine.trigger('LEAD_CREATED', data).catch(console.error);
+    
     return data;
   },
 
@@ -110,6 +116,14 @@ export const leadsService = {
     if (error) {
       console.error('❌ Supabase leadsService.update error:', error);
       throw error;
+    }
+
+    // Trigger automation engine if status changed
+    if (updates.status) {
+      automationEngine.trigger('LEAD_STATUS_CHANGED', { id, status: updates.status, ...updates }).catch(console.error);
+    }
+    if (updates.deal_score || updates.dealScore) {
+       automationEngine.trigger('LEAD_SCORE_HIGH', { id, ...updates }).catch(console.error);
     }
   },
 
@@ -199,6 +213,11 @@ export const tasksService = {
     if (error) {
       console.error('❌ Supabase tasksService.update error:', error);
       throw error;
+    }
+
+    // Trigger automation engine if status changed
+    if (updates.status) {
+      automationEngine.trigger('TASK_STATUS_CHANGED', { id, ...updates }).catch(console.error);
     }
   },
 

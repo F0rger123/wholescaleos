@@ -9,7 +9,7 @@ import {
 import { motion } from 'framer-motion';
 import { useStore } from '../store/useStore';
 import { 
-  listThreads, getThread, sendEmail, EmailThread, 
+  listThreads, getThread, EmailThread, 
   fetchEmailTemplates, saveEmailTemplate, updateEmailTemplate, deleteEmailTemplate,
   fetchEmailCampaigns, saveEmailCampaign, deleteEmailCampaign,
   fetchEmailSchedules, deleteEmailSchedule, dbEmailSchedule, dbEmailTemplate, dbEmailCampaign
@@ -29,8 +29,6 @@ export default function EmailInbox() {
   const [schedules, setSchedules] = useState<dbEmailSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
   // Templates & Campaigns State
@@ -39,8 +37,12 @@ export default function EmailInbox() {
   
   // AI states
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [showLeadAssign, setShowLeadAssign] = useState(false);
+  const [replyConfig, setReplyConfig] = useState<{ 
+    isOpen: boolean; 
+    thread?: EmailThread;
+    isReply?: boolean;
+  }>({ isOpen: false });
   
   const { currentUser } = useStore();
   
@@ -92,50 +94,18 @@ export default function EmailInbox() {
       const thread = await getThread(threadId);
       if (thread) {
         setSelectedThread(thread);
-        runAIAnalysis(thread);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const runAIAnalysis = async (thread: EmailThread) => {
-    setIsAnalyzing(true);
-    try {
-      const messages = thread.messages.slice(-5).map(m => ({
-        role: m.from.email.includes(currentUser?.email || 'me') ? 'assistant' : 'user' as 'assistant' | 'user',
-        content: m.snippet
-      }));
-      const analysis = await analyzeConversation(messages, 'email');
-      if (analysis?.suggestedReplies && analysis.suggestedReplies.length > 0) {
-        setAiSuggestions(analysis.suggestedReplies);
-      }
-    } catch (err) {
-      console.error('AI Analysis error:', err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleSendReply = async () => {
-    if (!replyText.trim() || !selectedThread || isSending) return;
-    
-    setIsSending(true);
-    try {
-      const result = await sendEmail({
-        to: selectedThread.participants[0],
-        subject: selectedThread.subject.startsWith('Re:') ? selectedThread.subject : `Re: ${selectedThread.subject}`,
-        html: `<p>${replyText.replace(/\n/g, '<br/>')}</p>`,
-        threadId: selectedThread.id
-      });
-      
-      if (result.success) {
-        setReplyText('');
-        handleSelectThread(selectedThread.id);
-      }
-    } finally {
-      setIsSending(false);
-    }
+  const handleRespond = (thread: EmailThread) => {
+    setReplyConfig({
+      isOpen: true,
+      thread,
+      isReply: true
+    });
   };
 
   const formatDate = (dateStr: string) => {
@@ -259,14 +229,8 @@ export default function EmailInbox() {
             <ThreadDetail 
               thread={selectedThread} 
               onClose={() => setSelectedThread(null)}
-              replyText={replyText}
-              setReplyText={setReplyText}
-              handleSendReply={handleSendReply}
-              isSending={isSending}
-              aiSuggestions={aiSuggestions}
-              isAnalyzing={isAnalyzing}
-              onRunAI={() => runAIAnalysis(selectedThread)}
               onAssignLead={() => setShowLeadAssign(true)}
+              onRespond={() => handleRespond(selectedThread)}
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
@@ -287,6 +251,18 @@ export default function EmailInbox() {
         <EmailComposeModal 
           isOpen={isComposeOpen} 
           onClose={() => setIsComposeOpen(false)} 
+        />
+      )}
+
+      {replyConfig.isOpen && replyConfig.thread && (
+        <EmailComposeModal 
+          isOpen={replyConfig.isOpen}
+          onClose={() => setReplyConfig({ isOpen: false })}
+          threadId={replyConfig.thread.id}
+          initialSubject={replyConfig.thread.subject.startsWith('Re:') ? replyConfig.thread.subject : `Re: ${replyConfig.thread.subject}`}
+          replyTo={replyConfig.thread.participants[0]}
+          isReply={true}
+          onSuccess={() => handleSelectThread(replyConfig.thread!.id)}
         />
       )}
 
@@ -348,7 +324,10 @@ function SidebarItem({ active, icon, label, onClick, badge }: { active: boolean,
 }
 
 function ThreadList({ threads, selectedId, onSelect, formatDate, searchQuery }: any) {
-  const filtered = threads.filter((t: any) => t.snippet.toLowerCase().includes(searchQuery.toLowerCase()) || t.subject.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filtered = threads.filter((t: any) => 
+    (t.snippet || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (t.subject || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
   
   if (filtered.length === 0) return (
     <div className="p-12 text-center text-[var(--t-text-muted)]">
@@ -960,22 +939,12 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
   );
 }
 
-function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendReply, isSending, aiSuggestions, isAnalyzing, onRunAI, onAssignLead }: any) {
+function ThreadDetail({ thread, onClose, onAssignLead, onRespond }: any) {
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [templateCategory, setTemplateCategory] = useState<string>('All');
-
-  const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
-  const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
-
-  const filteredTemplates = useMemo(() => {
-    if (templateCategory === 'All') return allTemplates;
-    return allTemplates.filter(t => t.category === templateCategory);
-  }, [allTemplates, templateCategory]);
   
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [thread.messages.length]);
+  }, [thread?.messages?.length]);
 
   return (
     <>
@@ -992,6 +961,13 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button 
+            onClick={onRespond}
+            className="flex items-center gap-2 px-4 py-2 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-xs shadow-lg shadow-[var(--t-primary-dim)] transition-all mr-2"
+          >
+            <Send size={14} className="rotate-[-45deg] translate-y-[-1px]" />
+            Respond
+          </button>
           <button onClick={onAssignLead} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl text-[var(--t-text-muted)] hover:text-[var(--t-text)] transition-colors"><UserPlus size={18} /></button>
           <button className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl text-[var(--t-text-muted)] hover:text-[var(--t-text)] transition-colors"><Trash2 size={18} /></button>
         </div>
@@ -1020,87 +996,21 @@ function ThreadDetail({ thread, onClose, replyText, setReplyText, handleSendRepl
         <div ref={chatEndRef} />
       </div>
 
-      <div className="p-6 border-t border-[var(--t-border)] bg-[var(--t-surface-dim)]/30 space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <button 
-            onClick={() => setShowTemplates(!showTemplates)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all ${showTemplates ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] border-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)] text-[var(--t-primary)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
-          >
-            <BookOpenText size={12} />
-            Templates
-          </button>
-
-          {aiSuggestions.length > 0 && (
-            <>
-              <div className="w-px h-6 bg-[var(--t-border)] mx-1" />
-              {aiSuggestions.map((s: string, i: number) => (
-                <button 
-                  key={i} 
-                  onClick={() => setReplyText(s)}
-                  className="px-3 py-1.5 bg-[var(--t-primary-dim)]/20 border border-[var(--t-primary-dim)] text-[var(--t-primary)] rounded-full text-[10px] font-medium hover:bg-[var(--t-primary-dim)]/40 transition-all"
-                >
-                  {s}
-                </button>
-              ))}
-            </>
-          )}
+      <div className="p-8 border-t border-[var(--t-border)] bg-[var(--t-surface-dim)]/30 flex flex-col items-center justify-center space-y-4">
+        <div className="w-12 h-12 rounded-full bg-[var(--t-primary-dim)]/20 flex items-center justify-center text-[var(--t-primary)]">
+           <Mail size={24} />
         </div>
-
-        {showTemplates && (
-          <div className="space-y-3 p-3 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-xl animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar no-scrollbar text-xs">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setTemplateCategory(cat)}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all whitespace-nowrap ${templateCategory === cat ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)]' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-              {filteredTemplates.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => { setReplyText(t.body || t.html || ''); setShowTemplates(false); }}
-                  className="p-3 text-left bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl hover:border-[var(--t-primary-dim)] hover:shadow-md transition-all group"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <p className="text-[10px] font-bold text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors truncate">{t.name}</p>
-                    <span className="text-[8px] font-bold px-1 py-0.5 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded uppercase">{t.category[0]}</span>
-                  </div>
-                  <p className="text-[9px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="relative group">
-          <RichTextEditor 
-            value={replyText}
-            onChange={setReplyText}
-            placeholder="Write your reply..."
-            minHeight="120px"
-          />
-          <div className="absolute right-3 bottom-3 flex items-center gap-2">
-             <button 
-               onClick={onRunAI}
-               disabled={isAnalyzing}
-               className="p-2.5 bg-[var(--t-primary-dim)]/20 text-[var(--t-primary)] hover:bg-[var(--t-primary-dim)]/40 rounded-xl transition-all disabled:opacity-50"
-             >
-               {isAnalyzing ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-             </button>
-             <button 
-               onClick={handleSendReply}
-               disabled={!replyText.trim() || isSending}
-               className="flex items-center gap-2 px-5 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-xs shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-50"
-             >
-               {isSending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-               Send Reply
-             </button>
-          </div>
+        <div className="text-center">
+           <p className="text-sm font-bold text-[var(--t-text)]">End of Conversation</p>
+           <p className="text-xs text-[var(--t-text-muted)]">No more messages in this thread.</p>
         </div>
+        <button 
+          onClick={onRespond}
+          className="flex items-center gap-2 px-8 py-3 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-xl shadow-[var(--t-primary-dim)] transition-all hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <Send size={18} className="rotate-[-45deg] translate-y-[-1px]" />
+          Write a Response
+        </button>
       </div>
     </>
   );
@@ -1111,8 +1021,8 @@ function LeadAssignModal({ onClose, onAssign }: { onClose: () => void; onAssign:
   const [search, setSearch] = useState('');
 
   const filteredLeads = leads.filter(l => 
-    l.name.toLowerCase().includes(search.toLowerCase()) || 
-    l.propertyAddress.toLowerCase().includes(search.toLowerCase())
+    (l.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (l.propertyAddress || '').toLowerCase().includes(search.toLowerCase())
   );
 
   return (
