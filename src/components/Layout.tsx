@@ -78,10 +78,10 @@ export function Layout() {
         { to: '/email', label: 'Email', icon: Mail },
         { to: '/sms', label: 'Text (SMS)', icon: Smartphone },
         { to: '/calendar', label: 'Calendar', icon: Calendar },
-        { to: '/os-messages', label: 'OS Messages', icon: MessageSquare },
       ],
       TEAM: [
         { to: '/team', label: 'Team Dashboard', icon: UserCog },
+        { to: '/team-chat', label: 'Team Chat', icon: MessageSquare },
         { to: '/settings', label: 'Settings', icon: Settings },
       ],
     };

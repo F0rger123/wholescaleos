@@ -21,7 +21,8 @@ import '@xyflow/react/dist/style.css';
 import { 
   Plus, Save, 
   Settings,
-  Webhook, X, Bot
+  Webhook, X, Bot,
+  Zap, Mail, Clock, Calendar, Target, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AutomationNode } from '../components/AutomationNode';
@@ -74,6 +75,8 @@ function AutomationsHubContent() {
   const [isActive, setIsActive] = useState(true);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
+  const [prefs, setPrefs] = useState<any>(null);
 
   const { isAutomationRunning } = useStore();
   const { fitView } = useReactFlow();
@@ -123,7 +126,74 @@ function AutomationsHubContent() {
     }
 
     loadWorkflow();
+    fetchPreferences();
   }, [fitView]);
+
+  const fetchPreferences = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_os_messages_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (data) {
+        setPrefs(data);
+      } else {
+        const defaultPrefs = {
+          user_id: user.id,
+          daily_summary_enabled: true,
+          weekly_summary_enabled: true,
+          monthly_performance_report_enabled: true,
+          deal_closed_alerts_enabled: true,
+          offer_made_alert_enabled: true,
+          offer_accepted_alert_enabled: true,
+          contract_signed_alert_enabled: true,
+          calendar_digest_enabled: true,
+          task_reminders_enabled: true,
+          task_overdue_alert_enabled: true,
+          new_lead_alerts_enabled: true,
+          lead_inactivity_alert_enabled: true,
+          lead_score_high_alert_enabled: true,
+          email_open_notification_enabled: true,
+          sms_received_alert_enabled: true,
+          goal_milestone_alert_enabled: true,
+          team_activity_summary_enabled: true,
+          birthday_greeting_enabled: true
+        };
+        setPrefs(defaultPrefs);
+        await supabase.from('user_os_messages_preferences').insert(defaultPrefs);
+      }
+    } catch (err) {
+      console.error('Fetch preferences error:', err);
+    }
+  };
+
+  const updatePreference = async (key: string) => {
+    if (!isSupabaseConfigured || !supabase || !prefs) return;
+    try {
+      const newValue = !prefs[key];
+      const newPrefs = { ...prefs, [key]: newValue };
+      setPrefs(newPrefs);
+      
+      const { error } = await supabase
+        .from('user_os_messages_preferences')
+        .upsert(newPrefs);
+        
+      if (error) throw error;
+      toast.success(`${key.replace(/_/g, ' ')} updated`, {
+        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+      });
+    } catch (err) {
+      console.error('Update preferences error:', err);
+      toast.error('Failed to update preference');
+    }
+  };
 
   const saveWorkflow = async (forcedIsActive?: boolean, overrideNodes?: Node[], overrideEdges?: Edge[], overrideName?: string) => {
     if (!isSupabaseConfigured || !supabase) {
@@ -283,6 +353,17 @@ function AutomationsHubContent() {
           <p className="text-[var(--t-text-muted)] text-sm">Design and deploy autonomous real estate workflows.</p>
         </div>
         <div className="flex gap-3">
+          <button 
+            onClick={() => setIsGlobalSettingsOpen(!isGlobalSettingsOpen)}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all border ${
+              isGlobalSettingsOpen 
+                ? 'bg-[var(--t-primary-dim)] border-[var(--t-primary)] text-[var(--t-primary)]' 
+                : 'bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
+            }`}
+          >
+            <Zap size={20} />
+            Global Alerts
+          </button>
           <button 
             onClick={() => setIsLibraryOpen(!isLibraryOpen)}
             className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all border ${
@@ -667,6 +748,108 @@ function AutomationsHubContent() {
         )}
       </AnimatePresence>
 
+      {/* Global Settings Sidebar */}
+      <AnimatePresence>
+        {isGlobalSettingsOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsGlobalSettingsOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99]"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-[var(--t-bg)] border-l border-[var(--t-border)] z-[100] shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface)]/50 backdrop-blur-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)]">
+                    <Zap size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
+                      Global <span className="text-[var(--t-primary)]">Alerts</span>
+                    </h2>
+                    <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">Unified Notification Hub</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsGlobalSettingsOpen(false)}><X size={24} /></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                {/* Reporting */}
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-[var(--t-border)] pb-2">
+                    <Mail size={16} className="text-[var(--t-primary)]" />
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Reporting Core</h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    <HubSettingToggle 
+                      icon={<Clock size={16} />}
+                      title="Daily Summary"
+                      description="Leads, tasks, and revenue digest (8:00 AM)"
+                      enabled={prefs?.daily_summary_enabled}
+                      onToggle={() => updatePreference('daily_summary_enabled')}
+                    />
+                    <HubSettingToggle 
+                      icon={<Calendar size={16} />}
+                      title="Weekly Summary"
+                      description="Trends and conversion rates"
+                      enabled={prefs?.weekly_summary_enabled}
+                      onToggle={() => updatePreference('weekly_summary_enabled')}
+                    />
+                  </div>
+                </section>
+
+                {/* Real-time Alerts */}
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-[var(--t-border)] pb-2">
+                    <Zap size={16} className="text-[var(--t-primary)]" />
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Real-time Signals</h3>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    <HubSettingToggle 
+                      icon={<Target size={16} />}
+                      title="New Lead Alerts"
+                      description="Instant notification for new captures"
+                      enabled={prefs?.new_lead_alerts_enabled}
+                      onToggle={() => updatePreference('new_lead_alerts_enabled')}
+                    />
+                    <HubSettingToggle 
+                      icon={<CheckCircle2 size={16} />}
+                      title="Deal Won"
+                      description="Alert when a deal status set to Closed Won"
+                      enabled={prefs?.deal_closed_alerts_enabled}
+                      onToggle={() => updatePreference('deal_closed_alerts_enabled')}
+                    />
+                    <HubSettingToggle 
+                      icon={<AlertCircle size={16} />}
+                      title="Task Overdue"
+                      description="Immediate alert for missed deadlines"
+                      enabled={prefs?.task_overdue_alert_enabled}
+                      onToggle={() => updatePreference('task_overdue_alert_enabled')}
+                    />
+                  </div>
+                </section>
+              </div>
+
+              <div className="p-6 border-t border-[var(--t-border)] bg-[var(--t-surface)]/50">
+                <button 
+                  onClick={() => setIsGlobalSettingsOpen(false)}
+                  className="w-full py-4 bg-[var(--t-primary)] text-white rounded-2xl font-bold transition-all hover:scale-[1.02] shadow-xl shadow-[var(--t-primary-dim)]"
+                >
+                  Confirm Settings
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Library Sidebar */}
       <AnimatePresence>
         {isLibraryOpen && (
@@ -710,6 +893,36 @@ function AutomationsHubContent() {
           </>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+function HubSettingToggle({ icon, title, description, enabled, onToggle }: { 
+  icon: React.ReactNode; 
+  title: string; 
+  description: string; 
+  enabled: boolean; 
+  onToggle: () => void;
+}) {
+  return (
+    <div 
+      onClick={onToggle}
+      className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none group ${
+        enabled ? 'border-[var(--t-primary-dim)] bg-[var(--t-primary-dim)]/5' : 'border-[var(--t-border)] hover:border-[var(--t-primary-dim)]/40 hover:bg-[var(--t-surface-subtle)]'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`p-2.5 rounded-xl transition-all ${enabled ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary)]/20' : 'bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)]'}`}>
+          {icon}
+        </div>
+        <div>
+          <p className={`text-xs font-black transition-colors ${enabled ? 'text-[var(--t-text)]' : 'text-[var(--t-text-muted)] group-hover:text-[var(--t-text-secondary)]'}`}>{title}</p>
+          <p className="text-[9px] text-[var(--t-text-muted)] font-medium leading-tight">{description}</p>
+        </div>
+      </div>
+      <div className={`w-10 h-5 rounded-full transition-all relative shrink-0 ${enabled ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-border)]'}`}>
+        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${enabled ? 'left-6 shadow-lg shadow-black/20' : 'left-1'}`} />
+      </div>
     </div>
   );
 }

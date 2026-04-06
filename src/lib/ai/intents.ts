@@ -194,5 +194,23 @@ export const intents: Intent[] = [
     patterns: ["train:", "learn:", "when I say"],
     action: "trainAI",
     template: "✅ Learned: '{phrase}' means '{meaning}'"
+  },
+  {
+    name: "greeting",
+    patterns: ["hi", "hello", "yo", "hey", "hola", "greetings", "good morning", "good afternoon"],
+    action: "greeting",
+    template: "Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. How can I help you today?"
+  },
+  {
+    name: "capabilities",
+    patterns: ["what can you do", "capabilities", "features", "what are you", "who are you"],
+    action: "capabilities",
+    template: "I can manage your leads, send SMS, create tasks, query your pipeline, and help you navigate the platform. Try asking 'show my hot leads' or 'text John saying hello'."
+  },
+  {
+    name: "help",
+    patterns: ["help", "commands", "how to use", "examples"],
+    action: "help",
+    template: "Here are some things I can do:\n- 'Show my hot leads'\n- 'Text [Name] saying [Message]'\n- 'Create task: Call back John tomorrow'\n- 'Go to calendar'\n- 'How many deals are closing this month?'"
   }
 ];

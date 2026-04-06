@@ -7,6 +7,7 @@ import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, AgentTemplate } from '../lib/
 import RichTextEditor from './admin/RichTextEditor';
 import { supabase } from '../lib/supabase';
 import { processPrompt } from '../lib/gemini';
+import { toast } from 'react-hot-toast';
 
 interface EmailComposeModalProps {
   isOpen: boolean;
@@ -63,6 +64,8 @@ export default function EmailComposeModal({
   const [showHtmlPreview, setShowHtmlPreview] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
   const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
@@ -226,6 +229,48 @@ export default function EmailComposeModal({
       console.error('AI Recommendation Error:', err);
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      alert('Please enter an AI prompt first.');
+      return;
+    }
+
+    setIsAiGenerating(true);
+    try {
+      const prompt = `You are "OS Bot", an expert real estate AI. 
+      Generate a professional email based on this request: "${aiPrompt}"
+      
+      Target Recipient: ${selectedLead?.name || to || 'Prospect'}
+      Property Context: ${selectedLead?.propertyAddress || 'N/A'}
+      
+      Output Format (IMPORTANT):
+      Provide the response as a JSON object with "subject" and "body" keys. 
+      The body should be formatted as professional HTML for an email (use <p>, <strong>, etc.).
+      Do not include any other text before or after the JSON.`;
+
+      const result = await processPrompt(prompt, {}, 'os_bot');
+      
+      try {
+        // AI might wrap response in backticks or start with text, let's try to extract JSON
+        const jsonStr = result.response.match(/\{[\s\S]*\}/)?.[0] || result.response;
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.subject) setSubject(parsed.subject);
+        if (parsed.body) setBody(parsed.body);
+        setAiPrompt('');
+        toast.success('AI Template Generated!');
+      } catch (e) {
+        // If not JSON, just put it in the body
+        setBody(result.response);
+        toast.success('Content generated (Plain Text)');
+      }
+    } catch (err) {
+      console.error('AI Generation Error:', err);
+      toast.error('Failed to generate AI content.');
+    } finally {
+      setIsAiGenerating(false);
     }
   };
 
@@ -507,7 +552,6 @@ export default function EmailComposeModal({
                   <BookOpenText size={14} />
                   {showTemplates ? 'Hide Templates' : 'Use Agent Template'}
                 </button>
-                
                 <button 
                   onClick={handleAIRecommend}
                   disabled={isGeneratingAI}
@@ -520,6 +564,37 @@ export default function EmailComposeModal({
                   )}
                   {isGeneratingAI ? 'OS Bot Thinking...' : 'AI Recommended Response'}
                 </button>
+              </div>
+
+              {/* AI Prompt Section */}
+              <div className="p-4 bg-zinc-900/40 border border-zinc-800 rounded-2xl space-y-3 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                      <Sparkles size={14} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">AI Assistant</span>
+                  </div>
+                  <span className="text-[9px] font-bold text-zinc-500 italic uppercase">Powered by 🤖 OS Bot</span>
+                </div>
+                <div className="flex gap-2">
+                  <input 
+                    type="text"
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAIGenerate()}
+                    placeholder="e.g. Write a friendly follow-up for a new lead from Austin..."
+                    className="flex-1 bg-zinc-950/50 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-zinc-600"
+                  />
+                  <button 
+                    onClick={handleAIGenerate}
+                    disabled={isAiGenerating || !aiPrompt.trim()}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+                  >
+                    {isAiGenerating ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                    {isAiGenerating ? '...' : 'Draft'}
+                  </button>
+                </div>
               </div>
 
               {showTemplates && (

@@ -105,38 +105,69 @@ class AutomationEngine {
     if (!userId) return;
 
     try {
+      // Fetch user preferences
+      const { data: prefs, error } = await supabase
+        .from('user_os_messages_preferences')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows found"
+
+      // Default to true if no prefs found (standard system behavior)
+      const preferences = prefs || {
+        lead_alerts: true,
+        deal_alerts: true,
+        task_reminders: true,
+        calendar_sync: true,
+        marketing_automation: true,
+        ai_recommendations: true
+      };
+
       switch (eventType) {
         case 'LEAD_CREATED':
-          await emailSummaryService.sendLeadAlert(userId, leadId, 'new');
+          if (preferences.lead_alerts) {
+            await emailSummaryService.sendLeadAlert(userId, leadId, 'new');
+          }
           break;
         case 'LEAD_SCORE_HIGH':
-          await emailSummaryService.sendLeadAlert(userId, leadId, 'high-score');
+          if (preferences.lead_alerts) {
+            await emailSummaryService.sendLeadAlert(userId, leadId, 'high-score');
+          }
           break;
         case 'LEAD_STATUS_CHANGED':
-          if (data.status === 'closed-won') {
+          if (data.status === 'closed-won' && preferences.deal_alerts) {
             await emailSummaryService.sendDealAlert(userId, leadId, 'closed');
           }
           break;
         case 'OFFER_SUBMITTED':
-          await emailSummaryService.sendOfferAlert(userId, leadId, 'made');
+          if (preferences.deal_alerts) {
+            await emailSummaryService.sendOfferAlert(userId, leadId, 'made');
+          }
           break;
         case 'OFFER_ACCEPTED':
-          await emailSummaryService.sendOfferAlert(userId, leadId, 'accepted');
+          if (preferences.deal_alerts) {
+            await emailSummaryService.sendOfferAlert(userId, leadId, 'accepted');
+          }
           break;
         case 'CONTRACT_SIGNED':
-          await emailSummaryService.sendContractAlert(userId, leadId);
+          if (preferences.deal_alerts) {
+            await emailSummaryService.sendContractAlert(userId, leadId);
+          }
           break;
         case 'TASK_STATUS_CHANGED':
-          if (data.status === 'overdue') {
+          if (data.status === 'overdue' && preferences.task_reminders) {
             const taskId = data.id || data.taskId;
             if (taskId) await emailSummaryService.sendTaskAlert(userId, taskId, 'overdue');
           }
           break;
         case 'LEAD_INACTIVITY':
-          await emailSummaryService.checkLeadInactivity(userId);
+          if (preferences.lead_alerts) {
+            await emailSummaryService.checkLeadInactivity(userId);
+          }
           break;
         case 'CALENDAR_EVENT_CREATED':
-          // Optional: send logic for new events if requested
+          // Optional: handle calendar preferences if needed
           break;
       }
     } catch (err) {

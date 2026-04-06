@@ -94,6 +94,27 @@ export function recognizeIntent(input: string): ParsedIntent | null {
         /^how many tasks are overdue$/i
       ],
       params: (matches: string[]) => ({ overdueOnly: matches[0].toLowerCase().includes('overdue') })
+    },
+    {
+      intent: 'greeting',
+      patterns: [
+        /^(?:hi|hello|yo|hey|hola|good morning|good afternoon|good evening)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'capabilities',
+      patterns: [
+        /^(?:what can you do\??|what are you\??|who are you\??|what features do you have\??|capabilities\??)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'help',
+      patterns: [
+        /^(?:help\??|commands|show examples|give me examples)$/i
+      ],
+      params: () => ({})
     }
   ];
 

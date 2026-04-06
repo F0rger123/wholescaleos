@@ -36,7 +36,7 @@ import LeadManagement from './pages/LeadManagement';
 import { startSMSPolling, stopSMSPolling } from './lib/sms-polling';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminPromos from './pages/AdminPromos';
-import { OSMessages } from './pages/OSMessages';
+import { CRM } from './pages/CRM';
 
 import { MarketingLayout } from './components/MarketingLayout';
 import { DeepSpaceLoader } from './components/DeepSpaceLoader';
@@ -344,6 +344,7 @@ export function App() {
             <Route path="/automations" element={<AutomationsHub />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/team-chat" element={<Chat />} />
             <Route path="/imports" element={<Imports />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
@@ -358,7 +359,7 @@ export function App() {
             <Route path="/sms" element={<SMSInbox />} />
             <Route path="/email" element={<EmailInbox />} />
             <Route path="/notifications" element={<NotificationInbox />} />
-            <Route path="/os-messages" element={<OSMessages />} />
+
           </Route>
         </Route>
 

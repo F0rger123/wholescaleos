@@ -48,12 +48,11 @@ export function AIBotWidget() {
   const [prompt, setPrompt] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [usage, setUsage] = useState<UsageData | null>(null);
+  const [showUsageModal, setShowUsageModal] = useState(false);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
   const [insightsLoading, setInsightsLoading] = useState(false);
-  const [usage, setUsage] = useState<UsageData | null>(null);
-  const [showUsageModal, setShowUsageModal] = useState(false);
-  
   const { 
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
@@ -74,6 +73,20 @@ export function AIBotWidget() {
   const [isDragging, setIsDragging] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [bars, setBars] = useState<number[]>(new Array(20).fill(5));
+
+  // Fetch usage on mount and after every response
+  const fetchUsage = async () => {
+    try {
+      const data = await usageTracker.getUsage();
+      setUsage(data);
+    } catch (err) {
+      console.error('Failed to fetch AI usage:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsage();
+  }, []);
 
   // Simulate voice bars animation
   useEffect(() => {
@@ -172,17 +185,13 @@ export function AIBotWidget() {
 
       if (isSupabaseConfigured && supabase) {
         // Fetch usage data
-        const usageData = await usageTracker.getUsage();
-        setUsage(usageData);
+        await fetchUsage();
         
         await supabase
           .from('profiles')
           .select('settings')
           .eq('id', currentUser.id)
           .maybeSingle();
-        
-        // No longer using local aiName setAiName since it's global
-        // if (data?.settings?.ai_name) setAiName(data.settings.ai_name);
         
         // Load chat history if available
         const savedHistory = localStorage.getItem(`ai_widget_history_${currentUser.id}`);
@@ -194,7 +203,7 @@ export function AIBotWidget() {
             setMessages([{
               id: 'welcome',
               role: 'ai',
-              content: `Hi there! I'm OS Bot. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
+              content: `Hi there! I'm 🤖 OS Bot. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
               timestamp: new Date().toISOString(),
               systemLog: "🤖 OS Bot"
             }]);
@@ -205,11 +214,6 @@ export function AIBotWidget() {
 
     window.addEventListener('ai-settings-updated', loadPrefs);
     
-    // Sync initial docked state
-    if (isAiDocked) {
-      // Do something if needed on mount when docked
-    }
-
     return () => window.removeEventListener('ai-settings-updated', loadPrefs);
   }, [currentUser?.id]);
 
@@ -255,13 +259,11 @@ export function AIBotWidget() {
   useEffect(() => {
     voiceService.setCallbacks(
       (transcript) => setPrompt(prev => prev + transcript),
-      // Auto submit when recording stops and prompt is not empty
       (isRec) => {
          setIsRecording(isRec);
       },
       (err) => {
          console.warn(err);
-         // setMessages(prev => [...prev, { id: Date.now().toString(), role: 'ai', content: err, timestamp: new Date().toISOString() }]);
       }
     );
   }, []);
@@ -275,7 +277,6 @@ export function AIBotWidget() {
   // Handle auto-submit on recording end
   useEffect(() => {
     if (!isRecording && promptRef.current.trim().length > 0 && !loading) {
-      // Simulate form submit
       const dummyEvent = { preventDefault: () => {} } as React.FormEvent;
       handleSubmit(dummyEvent);
     }
@@ -329,7 +330,7 @@ export function AIBotWidget() {
     if (!prompt.trim() || loading || !hasKey) return;
 
     // Check Usage Limits
-    if (usage?.hasExceeded) {
+    if (usage && usage.remaining <= 0) {
       setShowUsageModal(true);
       return;
     }
@@ -398,10 +399,9 @@ export function AIBotWidget() {
       // ── LOCAL RULE-BASED MATCHING (OS BOT 2.0) ───────────────────────────
       const matched = recognizeIntent(userText);
       if (matched) {
-        // Increment usage for OS Bot too (if desired, or leave free for local only)
+        // Increment usage for OS Bot
         await usageTracker.incrementUsage();
-        const updatedUsage = await usageTracker.getUsage();
-        setUsage(updatedUsage);
+        await fetchUsage();
 
         // Handle Confidence Disambiguation
         if (matched.confidence > 40 && matched.confidence < 80) {
@@ -436,11 +436,6 @@ export function AIBotWidget() {
         }
       }
 
-      // Increment Usage for AI Model processing
-      await usageTracker.incrementUsage();
-      const usageAfter = await usageTracker.getUsage();
-      setUsage(usageAfter);
-
       // ── Normal AI processing ──────────────────────────────────────────────
       const response = await processPrompt(userText, { 
         page: location.pathname,
@@ -459,6 +454,10 @@ export function AIBotWidget() {
         setLoading(false);
         return;
       }
+
+      // Increment Usage for AI Model processing
+      await usageTracker.incrementUsage();
+      await fetchUsage();
 
       if (response.intent !== 'error' && response.intent !== 'rate_limit' && !response.systemLog?.includes('OS Bot')) {
         incrementAiUsage(aiModel);
@@ -545,7 +544,7 @@ export function AIBotWidget() {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        content: "Sorry, I encountered an error. Please check your connection.",
+        content: "I'm not sure how to handle that request yet. Try asking for 'help' to see what I can do!",
         timestamp: new Date().toISOString(),
         systemLog: "🤖 OS Bot"
       }]);
@@ -563,6 +562,9 @@ export function AIBotWidget() {
         result = { success: true, message: `Successfully created task: ${data.title}` };
       } else if (intent === 'update_status' && data?.leadId) {
         result = updateLeadStatusViaAI(data.leadId, data.newStatus);
+        if (result?.success) {
+          useStore.getState().updateLeadStatus(data.leadId, data.newStatus, currentUser?.id || 'system');
+        }
       } else if (intent === 'create_lead') {
         result = createLeadViaAI(data);
       } else if (intent === 'update_lead' && data?.leadId) {
@@ -578,7 +580,6 @@ export function AIBotWidget() {
         } else {
           setLoading(true);
           try {
-            console.log(`[AIBotWidget] Executing send_sms to ${target}`);
             result = await sendSMSViaAI(target.toString(), message, data?.targetCarrier);
           } catch (smsErr: any) {
             result = { success: false, message: smsErr?.message || 'SMS send failed. Check Google connection in Settings.' };
@@ -594,6 +595,10 @@ export function AIBotWidget() {
           result = { success: false, message: 'Invalid confirmation target.' };
         }
       }
+
+      // Increment usage if successful
+      await usageTracker.incrementUsage();
+      await fetchUsage();
 
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
@@ -689,14 +694,13 @@ export function AIBotWidget() {
               >
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </button>
-              <span className="text-sm font-black tracking-tight" style={{ color: 'var(--t-text)' }}>🤖 OS Bot</span>
-              <div className="flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-pulse" />
+              <div className="flex flex-col">
+                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">🤖 OS Bot</h2>
                 {usage && (
-                  <span className={`text-[9px] font-black italic uppercase tracking-tight ml-2 px-1.5 py-0.5 rounded border border-white/5 bg-white/5 ${
-                    usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-text)] opacity-80')
+                  <span className={`text-[9px] font-bold mt-0.5 ${
+                    usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
                   }`}>
-                    🔋 {usage.remaining} messages remaining
+                    🔋 {usage.remaining} left today
                   </span>
                 )}
               </div>
@@ -790,8 +794,6 @@ export function AIBotWidget() {
                     borderColor: msg.role === 'user' ? 'transparent' : 'var(--t-border)',
                     color: msg.role === 'user' ? 'var(--t-on-primary)' : 'var(--t-text)'
                   }}>
-                    {msg.content}
-                    
                     {msg.role === 'ai' && (
                       <div className="mt-1 flex items-center">
                         <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm" 

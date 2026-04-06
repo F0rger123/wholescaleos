@@ -174,6 +174,24 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       };
     }
 
+    case 'greeting':
+      return { 
+        success: true, 
+        message: "Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and can help you manage leads, send text messages, create tasks, and more. How can I help you today?" 
+      };
+
+    case 'capabilities':
+      return { 
+        success: true, 
+        message: "I'm a native WholeScale OS feature! I can:\n- 🎯 **Manage Leads**: Create, update, or delete leads.\n- 💬 **Send SMS**: Text your leads directly using your connected number.\n- 📅 **Task & Calendar**: Create reminders or check your daily schedule.\n- 📊 **Query Data**: Ask me how many hot leads or overdue tasks you have.\n- 🧭 **Navigation**: Ask me to open any page like 'Go to Calendar'." 
+      };
+
+    case 'help':
+      return { 
+        success: true, 
+        message: "Here are some things you can try saying:\n- 'Show me my hot leads'\n- 'Text John saying I have an update on the property'\n- 'Create a task to call Sarah on Friday'\n- 'Go to the team dashboard'\n- 'What's on my calendar today?'" 
+      };
+
     default:
       return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
   }
