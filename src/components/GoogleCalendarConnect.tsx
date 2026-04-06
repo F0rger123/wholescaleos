@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { GoogleCalendarService } from '../lib/google-calendar';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
 import { Calendar, LogOut, RefreshCw, ChevronDown, Check } from 'lucide-react';
 
 export function GoogleCalendarConnect() {
@@ -55,7 +57,28 @@ export function GoogleCalendarConnect() {
     window.location.href = authUrl;
   };
 
-  const handleReconnectTasks = () => {
+  const handleReconnectTasks = async () => {
+    // Issue 1 Fix: Clear old Google tokens before re-authenticating with Tasks scope
+    // This forces a full re-auth with the correct scopes, fixing the 403 error
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      try {
+        toast.loading('Clearing old tokens...', { id: 'tasks-reconnect' });
+        
+        // Delete old Google connection to force fresh tokens
+        await supabase
+          .from('user_connections')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('provider', 'google');
+        
+        toast.success('Redirecting to Google for fresh authorization...', { id: 'tasks-reconnect' });
+      } catch (err) {
+        console.error('[Tasks Reconnect] Failed to clear tokens:', err);
+        toast.error('Could not clear old tokens. Trying anyway...', { id: 'tasks-reconnect' });
+      }
+    }
+    
+    // Redirect with full scope including Tasks - prompt: 'consent' forces new token
     const authUrl = service.getTasksAuthUrl(window.location.pathname);
     window.location.href = authUrl;
   };
@@ -138,11 +161,12 @@ export function GoogleCalendarConnect() {
               {!permissions.tasks && isConnected && (
                 <div className="mt-4 p-3 bg-[var(--t-error)]/5 rounded-xl border border-[var(--t-error)]/20">
                   <p className="text-[10px] text-[var(--t-error)] font-bold mb-2 uppercase tracking-tight">Tasks Sync Permission Missing</p>
+                  <p className="text-[9px] text-[var(--t-text-muted)] mb-2">This will clear your old tokens and re-authenticate with fresh Tasks permissions.</p>
                   <button 
                     onClick={handleReconnectTasks}
                     className="w-full py-2 bg-[var(--t-error)]/10 hover:bg-[var(--t-error)]/20 text-[var(--t-error)] rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors"
                   >
-                    Grant Tasks Access
+                    🔄 Reconnect with Tasks
                   </button>
                 </div>
               )}

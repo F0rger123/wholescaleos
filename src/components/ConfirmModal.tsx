@@ -65,9 +65,10 @@ export function ConfirmModal({
               onConfirm();
               onClose();
             }}
-            className="flex-1 py-2 rounded-xl text-white text-xs font-bold transition-all shadow-lg active:scale-95"
+            className="flex-1 py-2 rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95"
             style={{ 
-              background: variant === 'danger' ? 'var(--t-error)' : 'var(--t-primary)'
+              background: variant === 'danger' ? 'var(--t-error)' : 'var(--t-primary)',
+              color: variant === 'danger' ? '#ffffff' : 'var(--t-on-primary)'
             }}
           >
             {confirmLabel}

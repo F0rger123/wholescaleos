@@ -7,12 +7,11 @@ import { Key, Loader2, Check, AlertCircle, Save, Sparkles, Layout, ExternalLink 
 import { getEnabledPrebuiltRules } from '../lib/prebuilt-rules';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
-  const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic' | 'local'>('local');
+  const [provider, setProvider] = useState<'gemini' | 'local'>('local');
   const [geminiKey, setGeminiKey] = useState('');
-  const [openaiKey, setOpenaiKey] = useState('');
-  const [anthropicKey, setAnthropicKey] = useState('');
   const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/v1');
-  const [model, setModel] = useState('native-intent');
+  const [model, setModel] = useState('os-bot');
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,20 +76,10 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
                   setModel(conn.access_token || 'gemini-2.0-flash');
                 }
-              } else if (conn.provider === 'openai') {
-                setOpenaiKey(conn.refresh_token || '');
-                if (localStorage.getItem('user_ai_provider') === 'openai') {
-                  setModel(conn.access_token || 'gpt-4o');
-                }
-              } else if (conn.provider === 'anthropic') {
-                setAnthropicKey(conn.refresh_token || '');
-                if (localStorage.getItem('user_ai_provider') === 'anthropic') {
-                  setModel(conn.access_token || 'claude-3-5-sonnet');
-                }
               } else if (conn.provider === 'local') {
                 setLocalEndpoint(conn.refresh_token || 'http://localhost:11434/v1');
                 if (localStorage.getItem('user_ai_provider') === 'local') {
-                  setModel(conn.access_token || 'llama3');
+                  setModel(conn.access_token || 'os-bot');
                 }
               }
             });
@@ -122,8 +111,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       } else {
         // Fallback to local storage for demo mode
         setGeminiKey(localStorage.getItem('user_gemini_api_key') || '');
-        setOpenaiKey(localStorage.getItem('user_openai_api_key') || '');
-        setAnthropicKey(localStorage.getItem('user_anthropic_api_key') || '');
         setLocalEndpoint(localStorage.getItem('user_local_ai_endpoint') || 'http://localhost:11434/v1');
         
         const localProvider = localStorage.getItem('user_ai_provider') as any;
@@ -157,53 +144,28 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   }, [currentUser]);
 
   const handleTestKey = async () => {
-    const key = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'anthropic' ? anthropicKey : 'local';
-    if (!key.trim() && provider !== 'local') return;
+    if (provider === 'gemini' && !geminiKey.trim()) return;
     setTesting(true);
     setTestResult(null);
 
     try {
       if (provider === 'gemini') {
         const apiVersion = (model.includes('1.5') || model.includes('2.0') || model.includes('exp')) ? 'v1beta' : 'v1';
-        const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${key}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${geminiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] })
         });
         if (res.ok) setTestResult({ success: true, message: 'Gemini connection successful!' });
         else throw new Error('Invalid key or model');
-      } else if (provider === 'openai') {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-          body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: 'hi' }], max_tokens: 5 })
-        });
-        if (res.ok) setTestResult({ success: true, message: 'OpenAI connection successful!' });
-        else {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err?.error?.message || 'Invalid key or model');
-        }
-      } else if (provider === 'anthropic') {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json', 
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'dangerously-allow-browser': 'true'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-5-sonnet',
-            messages: [{ role: 'user', content: 'hi' }],
-            max_tokens: 1
-          })
-        });
-        if (res.ok) setTestResult({ success: true, message: 'Anthropic connection successful!' });
-        else throw new Error('Key validation failed. Anthropic keys usually require a proxy for browser-based testing.');
       } else if (provider === 'local') {
-        const res = await fetch(`${localEndpoint}/models`);
-        if (res.ok) setTestResult({ success: true, message: 'Local AI connection successful!' });
-        else throw new Error('Local endpoint not reachable. Ensure Local provider is running.');
+        if (model === 'os-bot') {
+          setTestResult({ success: true, message: 'OS Bot is always ready! No connection test needed.' });
+        } else {
+          const res = await fetch(`${localEndpoint}/models`);
+          if (res.ok) setTestResult({ success: true, message: 'Local AI connection successful!' });
+          else throw new Error('Local endpoint not reachable.');
+        }
       }
     } catch (err: any) {
       setTestResult({ success: false, message: `Connection failed: ${err.message}` });
@@ -216,7 +178,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     if (!currentUser?.id) return;
     setSaving(true);
 
-    const key = provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'anthropic' ? anthropicKey : localEndpoint;
+    const key = provider === 'gemini' ? geminiKey : localEndpoint;
 
     if (isSupabaseConfigured && supabase) {
       try {
@@ -263,8 +225,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       }
     } else {
       localStorage.setItem('user_gemini_api_key', geminiKey);
-      localStorage.setItem('user_openai_api_key', openaiKey);
-      localStorage.setItem('user_anthropic_api_key', anthropicKey);
       localStorage.setItem('user_ai_provider', provider);
       localStorage.setItem('user_ai_model', model);
       localStorage.setItem('user_ai_name', aiName);
@@ -311,22 +271,18 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         </div>
       )}
 
-      {/* Provider Selection */}
-      <div className="grid grid-cols-4 gap-3">
+      {/* Provider Selection — OS Bot first, Gemini second. No other providers. */}
+      <div className="grid grid-cols-2 gap-3">
         {[
-          { id: 'gemini', label: 'Google Gemini', icon: '✨' },
-          { id: 'openai', label: 'OpenAI (GPT)', icon: '🤖' },
-          { id: 'anthropic', label: 'Anthropic (Claude)', icon: '🎭' },
-          { id: 'local', label: 'OS Bot', icon: '🤖' }
+          { id: 'local', label: 'OS Bot (Built-in AI)', icon: '🤖', desc: 'Free, unlimited, zero-latency' },
+          { id: 'gemini', label: 'Google Gemini', icon: '✨', desc: 'Requires API key' }
         ].map((p) => (
           <button
             key={p.id}
             onClick={() => {
               setProvider(p.id as any);
               if (p.id === 'gemini') setModel('gemini-3.1-flash-lite');
-              else if (p.id === 'openai') setModel('gpt-4o');
-              else if (p.id === 'anthropic') setModel('claude-3-5-sonnet-latest');
-              else if (p.id === 'local') setModel('llama3');
+              else if (p.id === 'local') setModel('os-bot');
               setTestResult(null);
             }}
             className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
@@ -337,6 +293,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           >
             <span className="text-2xl">{p.icon}</span>
             <span className={`text-[10px] font-black uppercase tracking-tight ${provider === p.id ? 'text-[var(--t-on-primary)]' : 'text-[var(--t-text-muted)]'}`}>{p.label}</span>
+            <span className="text-[9px] text-[var(--t-text-muted)]">{p.desc}</span>
           </button>
         ))}
       </div>
@@ -345,27 +302,26 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       <div className="bg-[var(--t-surface)]/50 rounded-2xl border border-[var(--t-border)] p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Key className="w-5 h-5 text-[var(--t-primary)]" />
-          Setup Instructions: {provider.toUpperCase()}
+          {provider === 'local' ? 'OS Bot — Ready to Go' : 'Setup Instructions: GEMINI'}
         </h2>
         
         <div className="space-y-3 text-[var(--t-text-muted)] text-sm">
           {provider === 'gemini' && (
-            <p>Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Google AI Studio</a>.</p>
-          )}
-          {provider === 'openai' && (
-            <p>Generate your API key from the <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">OpenAI Dashboard</a>.</p>
-          )}
-          {provider === 'anthropic' && (
-            <p>Create keys in the <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Anthropic Console</a>.</p>
+            <>
+              <p>Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Google AI Studio</a>.</p>
+              <ol className="list-decimal list-inside space-y-2 ml-2">
+                <li>Sign in to your developer console.</li>
+                <li>Create or copy your secret API key.</li>
+                <li>Paste it into the configuration field below and click Save.</li>
+              </ol>
+            </>
           )}
           {provider === 'local' && (
-            <p>Connect to local providers like <strong>Ollama</strong> or <strong>LM Studio</strong>. Ensure the server is running with the <code>openai</code> format API enabled. <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Download Ollama</a>.</p>
+            <div className="bg-[var(--t-success)]/5 border border-[var(--t-success)]/20 rounded-xl p-4">
+              <p className="text-[var(--t-success)] font-bold text-sm mb-1">✅ No setup needed!</p>
+              <p>OS Bot is powered by our custom-built AI. Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.</p>
+            </div>
           )}
-          <ol className="list-decimal list-inside space-y-2 ml-2">
-            <li>{provider === 'local' ? 'Ensure your local server is running.' : 'Sign in to your developer console.'}</li>
-            <li>{provider === 'local' ? 'Copy your API endpoint URL.' : 'Create or copy your secret API key.'}</li>
-            <li>Paste it into the configuration field below and click Save.</li>
-          </ol>
         </div>
       </div>
 
@@ -376,92 +332,39 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           General AI Settings
         </h2>
         <div>
-          <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred {provider.charAt(0).toUpperCase() + provider.slice(1)} Model</label>
+          <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred Model</label>
           <div className="grid grid-cols-1 gap-3">
-            {provider === 'gemini' && [
-              { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', desc: 'High-performance alternative (mapped to 2.0 Flash)' },
-              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Ultra-low latency, cost-effective model for rapid task execution.' },
-              { id: 'gemini-2.0-pro-exp-02-05', label: 'Gemini 2.0 Pro Exp', desc: 'Ultra-smart reasoning model for complex deal analysis.' },
-              { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Highly capable reasoning model for complex logic.' }
-            ].map((m) => (
+            {/* OS Bot — always first */}
+            {provider === 'local' && (
               <button
-                key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
+                onClick={() => setModel('os-bot')}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === 'os-bot' ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
-                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
+                  <div className={`w-2 h-2 rounded-full ${model === 'os-bot' ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
+                  <span className={`font-medium ${model === 'os-bot' ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>🤖 OS Bot (Built-in AI)</span>
                 </div>
-                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
+                <span className="text-xs text-[var(--t-text-muted)]">Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.</span>
               </button>
-            ))}
-
-            {provider === 'openai' && [
-              { id: 'gpt-4o', label: 'GPT-4o', desc: 'Most capable model, great for complex logic and reasoning.' },
-              { id: 'gpt-4o-mini', label: 'GPT-4o Mini', desc: 'Efficient and fast, best for simple tasks.' }
-            ].map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-error)]/10 border-[var(--t-error)] ring-1 ring-[var(--t-error)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-error)]' : 'bg-[var(--t-surface-dim)]'}`} />
-                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
-                </div>
-                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
-              </button>
-            ))}
-
-            {provider === 'anthropic' && [
-              { id: 'claude-3-5-sonnet', label: 'Claude 3.5 Sonnet', desc: 'Outstanding coding and reasoning capabilities.' }
-            ].map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-warning)]/10 border-[var(--t-warning)] ring-1 ring-[var(--t-warning)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-warning)]' : 'bg-[var(--t-surface-dim)]'}`} />
-                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
-                </div>
-                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
-              </button>
-            ))}
-
-            {provider === 'local' && [
-            { id: 'os-bot', label: 'OS Bot (Built-in AI)', desc: 'Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.' },
-              { id: 'ollama-bridge', label: 'External Local (Ollama/LM Studio)', desc: 'Connect to a locally running large language model via OpenAI-compatible API.' }
-            ].map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
-                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
-                </div>
-                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
-              </button>
-            ))}
-
-            {provider === 'local' && model === 'ollama-bridge' && (
-              <div className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)]/50 space-y-4">
-                <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
-                  Enter the model name exactly as it appears in your local provider (e.g. <code>llama3</code>, <code>mistral</code>) and use the endpoint field below.
-                </p>
-                <input
-                  type="text"
-                  value={model === 'ollama-bridge' ? '' : model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="e.g. llama3"
-                  className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all font-mono text-sm"
-                />
-              </div>
             )}
 
+            {/* Gemini models */}
+            {provider === 'gemini' && [
+              { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', desc: 'High-performance alternative (mapped to 2.0 Flash)' },
+              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Ultra-low latency, cost-effective model for rapid task execution.' }
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setModel(m.id)}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
+                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
+                </div>
+                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
+              </button>
+            ))}
           </div>
         </div>
 
@@ -516,34 +419,35 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         </div>
       </div>
 
-      {/* Configuration Card */}
+      {/* Configuration Card — hide API endpoint for OS Bot (Issue 5) */}
       <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">
-            {provider === 'local' ? 'API Endpoint URL' : `${provider.charAt(0).toUpperCase() + provider.slice(1)} API Key`}
-          </label>
-          <div className="flex gap-2">
-            <input
-              type={provider === 'local' ? 'text' : 'password'}
-              value={provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : provider === 'anthropic' ? anthropicKey : localEndpoint}
-              onChange={(e) => {
-                if (provider === 'gemini') setGeminiKey(e.target.value);
-                else if (provider === 'openai') setOpenaiKey(e.target.value);
-                else if (provider === 'anthropic') setAnthropicKey(e.target.value);
-                else setLocalEndpoint(e.target.value);
-              }}
-              placeholder={provider === 'local' ? 'http://localhost:11434/v1' : `Paste your ${provider} key here...`}
-              className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
-            />
-            <button
-              onClick={handleTestKey}
-              disabled={testing || (provider !== 'local' && !(provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : anthropicKey))}
-              className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-white rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2 disabled:opacity-50 font-semibold"
-            >
-              {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
-            </button>
+        {/* Only show API key/endpoint when NOT using OS Bot */}
+        {!(provider === 'local' && model === 'os-bot') && (
+          <div>
+            <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">
+              {provider === 'local' ? 'API Endpoint URL' : 'Gemini API Key'}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type={provider === 'local' ? 'text' : 'password'}
+                value={provider === 'gemini' ? geminiKey : localEndpoint}
+                onChange={(e) => {
+                  if (provider === 'gemini') setGeminiKey(e.target.value);
+                  else setLocalEndpoint(e.target.value);
+                }}
+                placeholder={provider === 'local' ? 'http://localhost:11434/v1' : 'Paste your Gemini key here...'}
+                className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
+              />
+              <button
+                onClick={handleTestKey}
+                disabled={testing || (provider === 'gemini' && !geminiKey)}
+                className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-white rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2 disabled:opacity-50 font-semibold"
+              >
+                {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {testResult && (
           <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-[var(--t-success)]/10 border border-[var(--t-success)]/20 text-[var(--t-success)]' : 'bg-[var(--t-error)]/10 border border-[var(--t-error)]/20 text-[var(--t-error)]'}`}>
@@ -552,14 +456,24 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           </div>
         )}
 
+        {/* Save button with Issue 4: toast + green checkmark */}
         <div className="pt-4 border-t border-[var(--t-border)]">
           <button
-            onClick={handleSaveKey}
-            disabled={saving || (provider !== 'local' && !(provider === 'gemini' ? geminiKey : provider === 'openai' ? openaiKey : anthropicKey))}
-            className="w-full bg-[var(--t-primary)] hover:bg-[var(--t-primary)] text-[var(--t-on-primary)] font-black uppercase tracking-widest py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-[var(--t-primary-dim)] disabled:opacity-50"
+            onClick={async () => {
+              await handleSaveKey();
+              setSaveSuccess(true);
+              toast.success('AI Settings saved successfully!', { icon: '✅' });
+              setTimeout(() => setSaveSuccess(false), 2000);
+            }}
+            disabled={saving || (provider === 'gemini' && !geminiKey)}
+            className={`w-full font-black uppercase tracking-widest py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg disabled:opacity-50 ${
+              saveSuccess 
+                ? 'bg-[var(--t-success)] text-white' 
+                : 'bg-[var(--t-primary)] hover:bg-[var(--t-primary)] text-[var(--t-on-primary)] hover:shadow-[var(--t-primary-dim)]'
+            }`}
           >
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Save AI Settings
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : saveSuccess ? <Check className="w-5 h-5 animate-bounce" /> : <Save className="w-5 h-5" />}
+            {saveSuccess ? 'Saved ✓' : 'Save AI Settings'}
           </button>
         </div>
       </div>

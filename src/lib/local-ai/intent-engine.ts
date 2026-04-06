@@ -1,12 +1,60 @@
 /**
- * OS Bot Intent Engine (v2.0)
- * Handles complex intent recognition and entity extraction locally.
+ * OS Bot Intent Engine (v3.0)
+ * Handles complex intent recognition, entity extraction, and CRM contact mapping.
  */
 
 export interface IntentResult {
   intent: string;
   entities: Record<string, any>;
   confidence: number;
+}
+
+/**
+ * Try to resolve a contact name to a phone number from the CRM leads store.
+ * This is called when the user says "text Luke" or "send sms to John".
+ */
+function resolveContactFromLeads(name: string): { phone?: string; fullName?: string } {
+  try {
+    // Access the Zustand store's persisted data from localStorage
+    const stored = localStorage.getItem('wholescale-crm-storage');
+    if (!stored) return {};
+    
+    const parsed = JSON.parse(stored);
+    const leads: any[] = parsed?.state?.leads || [];
+    
+    if (leads.length === 0) return {};
+    
+    const lowerName = name.toLowerCase().trim();
+    
+    // Try exact match first, then partial match
+    const exactMatch = leads.find((l: any) => 
+      l.name?.toLowerCase() === lowerName ||
+      l.name?.toLowerCase().split(' ')[0] === lowerName // first name match
+    );
+    
+    if (exactMatch) {
+      return { 
+        phone: exactMatch.phone || exactMatch.phoneNumber || undefined, 
+        fullName: exactMatch.name 
+      };
+    }
+    
+    // Fuzzy: partial name contains
+    const partialMatch = leads.find((l: any) =>
+      l.name?.toLowerCase().includes(lowerName) ||
+      lowerName.includes(l.name?.toLowerCase().split(' ')[0])
+    );
+    
+    if (partialMatch) {
+      return { 
+        phone: partialMatch.phone || partialMatch.phoneNumber || undefined, 
+        fullName: partialMatch.name 
+      };
+    }
+  } catch (err) {
+    console.error('[IntentEngine] Failed to resolve contact:', err);
+  }
+  return {};
 }
 
 export function recognizeIntent(text: string): IntentResult {
@@ -29,11 +77,6 @@ export function recognizeIntent(text: string): IntentResult {
   }
 
   // 3. Create Lead (Enhanced)
-  // Patterns: 
-  // "add lead John Smith"
-  // "add lead John Smith from California"
-  // "add lead john.smith@email.com"
-  // "add lead 555-1234"
   const leadPatterns = [
     // Full: add lead [Name] from [Location]
     /(?:create|add|new)\s+(?:lead|contact)\s+([^@\d\n]+?)\s+from\s+([^@\d\n]+)/i,
@@ -71,7 +114,6 @@ export function recognizeIntent(text: string): IntentResult {
   }
 
   // 4. Create Task (Enhanced)
-  // Pattern: create task [Title] tomorrow/today/next week/etc
   const taskPatterns = [
     /(?:create|add|new|set)\s+task\s+(.+?)(?:\s+(tomorrow|today|next week|on Monday|on Tuesday|on Wednesday|on Thursday|on Friday|on Saturday|on Sunday))?$/i,
     /(?:remind|reminder|set reminder)\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(tomorrow|today|next week|on Monday|on Tuesday|on Wednesday|on Thursday|on Friday|on Saturday|on Sunday))?$/i
@@ -92,22 +134,58 @@ export function recognizeIntent(text: string): IntentResult {
     }
   }
 
-  // 5. Send SMS (Enhanced)
-  // Pattern: send SMS to [Phone/Name] saying [Message]
+  // 5. Send SMS (Enhanced with CRM contact mapping)
+  // Patterns:
+  // "send SMS to 555-1234 saying hello"
+  // "text Luke for me"
+  // "text Luke saying hey man"
+  // "message John hello world"
+  // "send sms to John Smith saying meet at 3pm"
   const smsPatterns = [
-    /(?:send|message|sms)\s+(?:to\s+)?([\d+-]+|[\w\s]+?)\s+(?:saying|content|message)\s+(.*)/i,
-    /(?:text|sms)\s+([\d+-]+|[\w\s]+?)\s+(.*)/i
+    // "text [Name/Phone] saying [Message]"
+    /(?:send\s+(?:sms|text|message)\s+to|text|message|sms)\s+(\+?[\d\s-]{7,})\s+(?:saying|content|message|with)\s+(.*)/i,
+    // "text [Name] saying [Message]"
+    /(?:send\s+(?:sms|text|message)\s+to|text|message|sms)\s+([\w\s]+?)\s+(?:saying|content|message|with)\s+(.*)/i,
+    // "text [Name] for me" (no explicit message)
+    /(?:text|message|sms)\s+([\w\s]+?)\s+(?:for\s+me|real quick|about\s+.+)/i,
+    // "text [Phone] [Message]" (no keyword like 'saying')
+    /(?:send\s+(?:sms|text|message)\s+to|text|sms)\s+(\+?[\d\s-]{7,})\s+(.*)/i,
+    // "text [Name] [Message]" (shortest match, must have at least some text after name)
+    /(?:send\s+(?:sms|text|message)\s+to|text|sms)\s+([\w]+)\s+([\w].*)/i
   ];
 
   for (const pattern of smsPatterns) {
     const match = normalized.match(pattern);
     if (match) {
+      const targetRaw = match[1]?.trim();
+      const messageRaw = match[2]?.trim() || '';
+      
+      const entities: any = {
+        target: targetRaw,
+        message: messageRaw
+      };
+      
+      // Determine if target is a phone or a name
+      const isPhone = /^[\d\s+()-]{7,}$/.test(targetRaw);
+      
+      if (isPhone) {
+        entities.phone = targetRaw.replace(/[\s()-]/g, '');
+      } else {
+        // Try to resolve the name to a phone number from CRM
+        const contact = resolveContactFromLeads(targetRaw);
+        if (contact.phone) {
+          entities.phone = contact.phone;
+          entities.resolvedName = contact.fullName || targetRaw;
+          entities.crmResolved = true;
+        } else {
+          entities.contactName = targetRaw;
+          entities.crmResolved = false;
+        }
+      }
+      
       return {
         intent: 'send_sms',
-        entities: {
-          target: match[1]?.trim(),
-          message: match[2]?.trim()
-        },
+        entities,
         confidence: 0.95
       };
     }
@@ -156,5 +234,3 @@ export const LOCAL_INTENTS = [
   'what_is_my_schedule',
   'help'
 ];
-
-
