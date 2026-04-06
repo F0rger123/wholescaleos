@@ -10,6 +10,7 @@ import {
   PRIORITY_COLORS, TASK_STATUS_COLORS,
 } from '../store/useStore';
 import { googleEcosystem } from '../lib/google-ecosystem';
+import { GoogleCalendarService } from '../lib/google-calendar';
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -53,6 +54,7 @@ export default function Tasks() {
   const [viewMode, setViewMode] = useState<'list' | 'board'>('list');
   const [showFilters, setShowFilters] = useState(false);
   const [syncingTasks, setSyncingTasks] = useState(false);
+  const [isAuthError, setIsAuthError] = useState(false);
 
   useEffect(() => {
     if (taskId) {
@@ -160,12 +162,21 @@ export default function Tasks() {
         }
       });
       alert(`Synced ${newTasks} new tasks from Google!`);
+      setIsAuthError(false);
     } catch (err: any) {
       console.error(err);
+      if (err.message.includes('403')) {
+        setIsAuthError(true);
+      }
       alert('Failed to sync tasks: ' + err.message);
     } finally {
       setSyncingTasks(false);
     }
+  };
+
+  const handleReconnect = () => {
+    const authUrl = GoogleCalendarService.getInstance().getTasksAuthUrl('/tasks');
+    window.location.href = authUrl;
   };
 
   const getDueLabel = (d: string) => {
@@ -325,6 +336,23 @@ export default function Tasks() {
             <RefreshCw size={12} className={syncingTasks ? 'animate-spin' : ''} />
             Sync
           </button>
+
+          {isAuthError && (
+            <button
+              onClick={handleReconnect}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all border shadow-lg hover:scale-105 active:scale-95 animate-pulse"
+              style={{ 
+                background: 'var(--t-error)', 
+                color: 'white',
+                borderColor: 'var(--t-error-border)',
+                fontFamily: 'Inter, sans-serif'
+              }}
+            >
+              <AlertTriangle size={12} />
+              Reconnect Google
+            </button>
+          )}
+
           <div className="flex bg-[var(--t-background)] rounded-xl p-1 border border-[var(--t-border)] shadow-inner">
             <button
               onClick={() => setViewMode('list')}

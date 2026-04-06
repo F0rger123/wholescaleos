@@ -86,7 +86,33 @@ export function parseIntent(input: string): ParsedIntent | null {
 
   // Logic for specific intents
   if (matchedIntent.name === 'send_sms') {
-    params.message = remaining.replace(params.number || "", "").trim();
+    // Handle "text [name] saying [message]" or "text [name] [message]"
+    const cleanRemaining = remaining.replace(/^to\s+/i, '').trim();
+    const sayingMatch = cleanRemaining.match(/(.*?)\s+saying\s+(.*)/i);
+    
+    if (sayingMatch) {
+      params.number = params.number || sayingMatch[1].trim(); // Name or number
+      params.message = sayingMatch[2].trim();
+    } else {
+      // split by first space if no "saying"
+      const firstSpace = cleanRemaining.indexOf(' ');
+      if (firstSpace !== -1) {
+        params.number = params.number || cleanRemaining.substring(0, firstSpace).trim();
+        params.message = cleanRemaining.substring(firstSpace).trim();
+      } else {
+        params.number = params.number || cleanRemaining;
+        params.message = "";
+      }
+    }
+    
+    // If we have a number/name but NO message, downgrade to partial
+    if (params.number && !params.message) {
+      return {
+        intent: intents.find(i => i.name === 'send_sms_partial')!,
+        params,
+        confidence: bestMatch.confidence
+      };
+    }
   } else if (matchedIntent.name === 'add_task') {
     params.description = remaining || normalized;
   } else if (matchedIntent.name === 'create_lead') {

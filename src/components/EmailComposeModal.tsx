@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
-import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles } from 'lucide-react';
+import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles, BookOpenText, ImageIcon, Upload, Link as LinkIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
-import { sendEmail } from '../lib/email';
+import { sendEmail, getThread } from '../lib/email';
 import { DEFAULT_TEMPLATES, AGENT_EMAIL_TEMPLATES, AgentTemplate } from '../lib/default-templates';
-import { BookOpenText, ImageIcon, Upload, Link as LinkIcon } from 'lucide-react';
 import RichTextEditor from './admin/RichTextEditor';
 import { supabase } from '../lib/supabase';
+import { processPrompt } from '../lib/gemini';
 
 interface EmailComposeModalProps {
   isOpen: boolean;
@@ -145,23 +145,52 @@ export default function EmailComposeModal({
   const handleAIRecommend = async () => {
     setIsGeneratingAI(true);
     
-    // Simulate AI "Thinking"
-    await new Promise(resolve => setTimeout(resolve, 1200));
-
     try {
-      // Find a suitable template based on search or lead status
-      let recommendedId = 'follow-up-1'; // Default
+      let aiResponseText = "";
       
-      if (selectedLead) {
-        if (selectedLead.status === 'new') recommendedId = 'intro-seller';
-        else if (selectedLead.status === 'contract-in' || selectedLead.status === 'under-contract') recommendedId = 'offer-followup';
-        else if (selectedLead.status === 'closed-lost') recommendedId = 'zombie-lead-revival';
-        else if (selectedLead.status === 'closed-won') recommendedId = 'post-closing-followup';
-        else recommendedId = 'follow-up-1';
+      if (threadId) {
+        // 1. Fetch Thread History for context
+        const thread = await getThread(threadId);
+        if (thread && thread.messages.length > 0) {
+          const historyContext = thread.messages.map(m => 
+            `${m.from.name || m.from.email}: ${m.snippet}`
+          ).join('\n');
+
+          const aiPrompt = `You are an expert real estate assistant. Based on the following email thread history, suggest a professional and effective reply to the last message. 
+          Keep it concise, friendly, and focused on moving the deal forward.
+          
+          HISTORY:
+          ${historyContext}
+          
+          RECIPIENT: ${selectedLead?.name || to}
+          MY IDENTITY: ${currentUser?.name || 'an expert agent'}
+          
+          Provide ONLY the email body text. Do not include subject lines or greetings like 'Sure, here is a response'.`;
+
+          const result = await processPrompt(aiPrompt, {}, 'os_bot');
+          aiResponseText = result.response;
+        }
       }
 
-      const template = allTemplates.find(t => t.id === recommendedId) || allTemplates[0];
-      handleApplyTemplate(template);
+      if (aiResponseText) {
+        // Use the AI generated text
+        setBody(aiResponseText);
+        setShowTemplates(false);
+      } else {
+        // Fallback to template selection based on lead status
+        let recommendedId = 'follow-up-1'; 
+        
+        if (selectedLead) {
+          if (selectedLead.status === 'new') recommendedId = 'intro-seller';
+          else if (selectedLead.status === 'contract-in' || selectedLead.status === 'under-contract') recommendedId = 'offer-followup';
+          else if (selectedLead.status === 'closed-lost') recommendedId = 'zombie-lead-revival';
+          else if (selectedLead.status === 'closed-won') recommendedId = 'post-closing-followup';
+          else recommendedId = 'follow-up-1';
+        }
+
+        const template = allTemplates.find(t => t.id === recommendedId) || allTemplates[0];
+        handleApplyTemplate(template);
+      }
     } catch (err) {
       console.error('AI Recommendation Error:', err);
     } finally {

@@ -365,7 +365,7 @@ export async function processWithLocalAI(prompt: string): Promise<GeminiResponse
   const leads = useStore.getState().leads || [];
   const localResult = recognizeIntent(prompt, leads);
   
-  if (localResult.confidence >= 0.7) {
+  if (localResult.confidence >= 0.4 || (localStorage.getItem('user_ai_provider') === 'local')) {
     console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent} (${Math.round(localResult.confidence * 100)}%)`);
     const executionResult = await executeTask(localResult.intent, localResult.entities);
     const responseText = generateResponse(localResult.intent, executionResult);
@@ -397,8 +397,15 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   // ── OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
     const localResponse = await processWithLocalAI(prompt);
-    if (localResponse) return localResponse;
-    console.log(`[🤖 OS Bot] Low confidence, falling back to external API...`);
+    // If user explicitly chose os_bot, we return the local response even if confidence is low, 
+    // unless it's a completely unknown intent AND they have an API key for fallback.
+    if (localResponse && (localResponse.intent !== 'unknown' || modelOverride === 'os_bot' || localStorage.getItem('user_ai_provider') === 'local')) {
+      return {
+        ...localResponse,
+        systemLog: '🤖 OS Bot'
+      };
+    }
+    console.log(`[🤖 OS Bot] Incomplete or low confidence, falling back to external API if configured...`);
   }
   // ───────────────────────────────────────────────────────────────────────
 
@@ -463,7 +470,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   if (provider === 'gemini') {
     // Map unsupported/hallucinated model strings (like gemini-3.x) to functional alternatives
     if (model.includes('3.1-flash-lite') || !model.startsWith('gemini')) {
-      model = 'gemini-2.0-flash';
+      model = 'gemini-1.5-flash';
     }
   }
   if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
@@ -721,13 +728,15 @@ Time: ${context.currentTime || new Date().toISOString()}`;
       return {
         intent: parsed.intent || 'unknown',
         response: finalResponse,
-        data: parsed.data
+        data: parsed.data,
+        systemLog: (modelOverride === 'os_bot') ? '🤖 OS Bot' : (provider === 'gemini' ? '✨ Google Gemini' : provider === 'openai' ? '🧠 OpenAI GPT' : '🦾 Anthropic Claude')
       };
     } catch (parseError) {
       console.error(`Failed to parse ${provider} response as JSON:`, textData);
       return {
         intent: 'unknown',
-        response: textData
+        response: textData,
+        systemLog: (modelOverride === 'os_bot') ? '🤖 OS Bot' : (provider === 'gemini' ? '✨ Google Gemini' : provider === 'openai' ? '🧠 OpenAI GPT' : '🦾 Anthropic Claude')
       };
     }
 

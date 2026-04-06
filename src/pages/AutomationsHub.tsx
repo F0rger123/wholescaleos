@@ -34,6 +34,18 @@ const nodeTypes = {
   automation: AutomationNode,
 };
 
+interface AutomationNodeData extends Record<string, unknown> {
+  label?: string;
+  type?: string;
+  description?: string;
+  triggerType?: string;
+  actionType?: string;
+  status?: string;
+  threshold?: number;
+  message?: string;
+  subject?: string;
+}
+
 const initialNodes: Node[] = [
   {
     id: '1',
@@ -57,7 +69,6 @@ function AutomationsHubContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workflowName, setWorkflowName] = useState('My New Automation');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [createName, setCreateName] = useState('');
   const [createDesc, setCreateDesc] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -114,7 +125,7 @@ function AutomationsHubContent() {
     loadWorkflow();
   }, [fitView]);
 
-  const saveWorkflow = async (forcedIsActive?: boolean) => {
+  const saveWorkflow = async (forcedIsActive?: boolean, overrideNodes?: Node[], overrideEdges?: Edge[], overrideName?: string) => {
     if (!isSupabaseConfigured || !supabase) {
       toast.error('Supabase is not configured.');
       return;
@@ -130,12 +141,15 @@ function AutomationsHubContent() {
       }
 
       const activeStatus = forcedIsActive !== undefined ? forcedIsActive : isActive;
+      const finalNodes = overrideNodes || nodes;
+      const finalEdges = overrideEdges || edges;
+      const finalName = overrideName || workflowName;
 
       const workflowData = {
         user_id: user.id,
-        name: workflowName, 
-        nodes,
-        edges,
+        name: finalName, 
+        nodes: finalNodes,
+        edges: finalEdges,
         is_active: activeStatus,
         updated_at: new Date().toISOString(),
       };
@@ -191,6 +205,8 @@ function AutomationsHubContent() {
     setIsSettingsOpen(true);
   }, []);
 
+  const selectedNodeData = selectedNode?.data as AutomationNodeData | undefined;
+
   const updateNodeData = (nodeId: string, newData: any) => {
     setNodes((nds) =>
       nds.map((node) => {
@@ -224,10 +240,13 @@ function AutomationsHubContent() {
     setIsActive(true);
     setIsLibraryOpen(false);
     
+    // Auto-save the template to the database
+    saveWorkflow(true, newNodes, newEdges, template.name);
+    
     // Zoom to fit the loaded template
     setTimeout(() => {
       fitView({ duration: 800, padding: 0.2 });
-      toast.success(`Loaded Template: ${template.name}`);
+      toast.success(`Loaded & Saved Template: ${template.name}`);
     }, 100);
   };
 
@@ -511,7 +530,7 @@ function AutomationsHubContent() {
                     <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
                       Node <span className="text-[var(--t-primary)]">Settings</span>
                     </h2>
-                    <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">Configure {selectedNode.data.type} Step</p>
+                    <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">Configure {selectedNodeData?.type || 'Node'} Step</p>
                   </div>
                 </div>
                 <button 
@@ -528,7 +547,7 @@ function AutomationsHubContent() {
                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Step Label</label>
                     <input 
                       type="text" 
-                      value={selectedNode.data.label || ''}
+                      value={selectedNodeData?.label || ''}
                       onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
                       className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
                     />
@@ -536,7 +555,7 @@ function AutomationsHubContent() {
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Description</label>
                     <textarea 
-                      value={selectedNode.data.description || ''}
+                      value={selectedNodeData?.description || ''}
                       onChange={(e) => updateNodeData(selectedNode.id, { description: e.target.value })}
                       rows={2}
                       className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 resize-none"
@@ -546,12 +565,12 @@ function AutomationsHubContent() {
 
                 <div className="h-px bg-[var(--t-border)]" />
 
-                {selectedNode.data.type === 'trigger' && (
+                {selectedNodeData?.type === 'trigger' && (
                   <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Trigger Event</label>
                       <select 
-                        value={selectedNode.data.triggerType || ''}
+                        value={selectedNodeData?.triggerType || ''}
                         onChange={(e) => updateNodeData(selectedNode.id, { triggerType: e.target.value })}
                         className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 appearance-none cursor-pointer"
                       >
@@ -562,11 +581,11 @@ function AutomationsHubContent() {
                       </select>
                     </div>
 
-                    {selectedNode.data.triggerType === 'status_change' && (
+                    {selectedNodeData?.triggerType === 'status_change' && (
                       <div>
                         <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Target Status</label>
                         <select 
-                          value={selectedNode.data.status || ''}
+                          value={selectedNodeData?.status || ''}
                           onChange={(e) => updateNodeData(selectedNode.id, { status: e.target.value })}
                           className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
                         >
@@ -578,12 +597,12 @@ function AutomationsHubContent() {
                       </div>
                     )}
 
-                    {selectedNode.data.triggerType === 'high_score' && (
+                    {selectedNodeData?.triggerType === 'high_score' && (
                       <div>
                         <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Score Threshold</label>
                         <input 
                           type="number" 
-                          value={selectedNode.data.threshold || 80}
+                          value={selectedNodeData?.threshold ?? 80}
                           onChange={(e) => updateNodeData(selectedNode.id, { threshold: parseInt(e.target.value) })}
                           className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
                         />
@@ -592,14 +611,14 @@ function AutomationsHubContent() {
                   </div>
                 )}
 
-                {(['action', 'sms', 'email', 'ai'].includes(selectedNode.data.type)) && (
+                {(['action', 'sms', 'email', 'ai'].includes(selectedNodeData?.type || '')) && (
                   <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Action Type</label>
                       <select 
-                        value={selectedNode.data.actionType || ''}
+                        value={selectedNodeData?.actionType || ''}
                         onChange={(e) => updateNodeData(selectedNode.id, { actionType: e.target.value })}
-                        className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 appearance-none cursor-pointer"
+                        className="w-full px-4 py-3 bg-[var(--t-surface)] border border(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 appearance-none cursor-pointer"
                       >
                         <option value="send_sms">Send SMS Message</option>
                         <option value="send_email">Send Email Template</option>
@@ -608,11 +627,11 @@ function AutomationsHubContent() {
                       </select>
                     </div>
 
-                    {(['send_sms', 'notify', 'send_chat'].includes(selectedNode.data.actionType)) && (
+                    {(['send_sms', 'notify', 'send_chat'].includes(selectedNodeData?.actionType || '')) && (
                       <div>
                         <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Message Template</label>
                         <textarea 
-                          value={selectedNode.data.message || ''}
+                          value={selectedNodeData?.message || ''}
                           onChange={(e) => updateNodeData(selectedNode.id, { message: e.target.value })}
                           placeholder="Use {{name}} for personalization."
                           rows={4}

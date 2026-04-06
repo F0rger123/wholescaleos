@@ -386,6 +386,22 @@ export function AIBotWidget() {
         }
 
         const handler = (actionHandlers as any)[matched.intent.action];
+        if (matched.intent.name === 'send_sms_partial') {
+          setSmsSession({
+            active: true,
+            waitingFor: 'target'
+          });
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: "Sure! Who would you like to text?",
+            timestamp: new Date().toISOString(),
+            systemLog: "🤖 OS Bot"
+          }]);
+          setLoading(false);
+          return;
+        }
+
         if (handler && matched.confidence >= 80) {
           const res = await handler(matched.params);
           if (res.success) {
@@ -760,7 +776,7 @@ export function AIBotWidget() {
                       <div className="mt-1 flex items-center">
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" 
                           style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)', opacity: 0.8 }}>
-                          🤖 {msg.systemLog || 'OS Bot'}
+                          {msg.systemLog === '🤖 OS Bot' || !msg.systemLog ? '🤖 OS Bot' : msg.systemLog}
                         </span>
                       </div>
                     )}

@@ -38,10 +38,16 @@ export const intents: Intent[] = [
   },
   {
     name: "send_sms",
-    patterns: ["send text", "send sms", "text"],
+    patterns: ["send text to", "send sms to", "text", "message", "send a message to", "sms"],
     action: "sendSMS",
     required_params: ["number", "message"],
     template: "✅ SMS sent to {number}"
+  },
+  {
+    name: "send_sms_partial",
+    patterns: ["send text", "send sms", "text someone", "send a message", "write a text"],
+    action: "sendSMSPartial",
+    template: "Who would you like to text?"
   },
   {
     name: "who_online",

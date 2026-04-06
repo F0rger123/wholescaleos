@@ -125,6 +125,7 @@ export function recognizeIntent(text: string, leads: any[] = []): IntentResult {
   // 2. Send SMS (Enhanced with Contact Lookup)
   const smsMatch = normalized.match(/(?:text|message|sms)\s+([\w\s]+?)\s+(?:saying|content|message|with|that)\s+(.*)/i) ||
                   normalized.match(/(?:send\s+sms\s+to|send\s+text\s+to)\s+([\w\s]+?)\s+(?:saying|content|message|with|that)\s+(.*)/i);
+  
   if (smsMatch) {
     const target = smsMatch[1].trim();
     const contact = resolveContactFromLeads(target, leads);
@@ -139,6 +140,19 @@ export function recognizeIntent(text: string, leads: any[] = []): IntentResult {
       },
       confidence: 0.95
     };
+  }
+
+  // 1.5. Partial SMS (New - for multi-turn prompting)
+  if (normalized.match(/^(text|sms|send\s+sms|send\s+text|message|send\s+a\s+message)\b/i)) {
+    // If it's just "text someone" or "text" or "send message"
+    const isGenericSms = normalized.length < 25 && !normalized.includes('saying') && !normalized.includes('content');
+    if (isGenericSms || normalized === 'text' || normalized === 'sms') {
+      return { 
+        intent: 'send_sms_partial', 
+        entities: { ...entities }, 
+        confidence: 0.9 
+      };
+    }
   }
 
   // 3. Create Lead (Major Overhaul)
@@ -213,6 +227,7 @@ export const LOCAL_INTENTS = [
   'create_lead',
   'create_task',
   'send_sms',
+  'send_sms_partial',
   'email_compose',
   'show_leads',
   'show_tasks',
