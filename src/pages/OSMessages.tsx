@@ -71,7 +71,8 @@ export function OSMessages() {
           email_open_notification_enabled: true,
           sms_received_alert_enabled: true,
           goal_milestone_alert_enabled: true,
-          team_activity_summary_enabled: true
+          team_activity_summary_enabled: true,
+          birthday_greeting_enabled: true
         };
         setPrefs(defaultPrefs);
         await supabase.from('user_os_messages_preferences').insert(defaultPrefs);
@@ -310,6 +311,20 @@ export function OSMessages() {
                 description="Real-time alert for incoming SMS"
                 enabled={prefs?.sms_received_alert_enabled ?? false}
                 onToggle={() => updatePreference('sms_received_alert_enabled')}
+              />
+            </div>
+          </section>
+          
+          {/* Relationship Management */}
+          <section className="space-y-6">
+            <CategoryHeader icon={<Plus size={20} />} title="Relationship Management" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SettingToggle 
+                icon={<Bot size={18} />}
+                title="Client Birthday Greeting"
+                description="Automated HBD email to leads on their birthday"
+                enabled={prefs?.birthday_greeting_enabled ?? false}
+                onToggle={() => updatePreference('birthday_greeting_enabled')}
               />
             </div>
           </section>

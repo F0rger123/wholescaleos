@@ -16,6 +16,9 @@ export type AutomationEventType =
   | 'LEAD_INACTIVITY' 
   | 'CALENDAR_EVENT_CREATED' 
   | 'DOCUMENT_SIGNED' 
+  | 'OFFER_SUBMITTED'
+  | 'OFFER_ACCEPTED'
+  | 'CONTRACT_SIGNED'
   | 'SCHEDULED_MONTHLY'
   | 'UNSUBSCRIBED'
   | 'FACEBOOK_LEAD';
@@ -109,8 +112,19 @@ class AutomationEngine {
         case 'LEAD_SCORE_HIGH':
           await emailSummaryService.sendLeadAlert(userId, leadId, 'high-score');
           break;
-        case 'DEAL_WON':
-          await emailSummaryService.sendDealAlert(userId, leadId, 'closed');
+        case 'LEAD_STATUS_CHANGED':
+          if (data.status === 'closed-won') {
+            await emailSummaryService.sendDealAlert(userId, leadId, 'closed');
+          }
+          break;
+        case 'OFFER_SUBMITTED':
+          await emailSummaryService.sendOfferAlert(userId, leadId, 'made');
+          break;
+        case 'OFFER_ACCEPTED':
+          await emailSummaryService.sendOfferAlert(userId, leadId, 'accepted');
+          break;
+        case 'CONTRACT_SIGNED':
+          await emailSummaryService.sendContractAlert(userId, leadId);
           break;
         case 'TASK_STATUS_CHANGED':
           if (data.status === 'overdue') {
@@ -118,11 +132,11 @@ class AutomationEngine {
             if (taskId) await emailSummaryService.sendTaskAlert(userId, taskId, 'overdue');
           }
           break;
+        case 'LEAD_INACTIVITY':
+          await emailSummaryService.checkLeadInactivity(userId);
+          break;
         case 'CALENDAR_EVENT_CREATED':
           // Optional: send logic for new events if requested
-          break;
-        case 'LEAD_INACTIVITY':
-          // Optional: logic for inactivity warning
           break;
       }
     } catch (err) {

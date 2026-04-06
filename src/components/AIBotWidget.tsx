@@ -546,7 +546,8 @@ export function AIBotWidget() {
         id: (Date.now() + 1).toString(),
         role: 'ai',
         content: "Sorry, I encountered an error. Please check your connection.",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        systemLog: "🤖 OS Bot"
       }]);
     } finally {
       setLoading(false);
@@ -615,7 +616,8 @@ export function AIBotWidget() {
         id: Date.now().toString(),
         role: 'ai',
         content: `❌ ${err?.message || "Couldn't complete that action. Please check your Google/SMS settings."}`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        systemLog: "🤖 OS Bot"
       }]);
     }
   };

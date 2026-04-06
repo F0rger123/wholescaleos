@@ -1,6 +1,6 @@
 import { Intent, intents } from '../ai/intents';
 import { spellCheck } from './spell-checker';
-import { resolveEntityFromContext } from './memory-store';
+import { resolveEntityFromContext, getMemory, setActiveState } from './memory-store';
 
 export interface ParsedIntent {
   intent: Intent;
@@ -11,91 +11,89 @@ export interface ParsedIntent {
 export const LOCAL_INTENTS = intents.map(i => i.name);
 
 export function recognizeIntent(input: string): ParsedIntent | null {
-  // 1. Spell Check & Normalize
+  const memory = getMemory();
   const checked = spellCheck(input);
-  let normalized = checked.toLowerCase().trim();
-
-  // 2. Resolve multi-turn entity (pronouns)
+  const normalized = checked.toLowerCase().trim();
   const activeEntity = resolveEntityFromContext(normalized);
 
-  // 3. PRIORITY REGEX MATCHING
+  // 1. CHECK MULTI-TURN STATE
+  if (memory.activeState?.type === 'AWAITING_SMS_MESSAGE') {
+    const target = memory.activeState.data?.target || memory.activeEntity?.name || 'someone';
+    const intentObj = intents.find(i => i.name === 'send_sms');
+    if (intentObj) {
+      // Clear state once fulfilled
+      setActiveState(null);
+      return { 
+        intent: intentObj, 
+        params: { target, message: input, is_followup: true }, 
+        confidence: 100 
+      };
+    }
+  }
+
+  // 2. PRIORITY REGEX HANDLERS (v5.0 - Smarter, Better Extractors)
   const handlers = [
-    // --- SMS / Messaging ---
     {
       intent: 'send_sms',
       patterns: [
         /^(?:text|textt|txt|send text to|send sms to|message|send a message to|shoot a text to|tell)\s+([a-zA-Z\s]+)\s+(?:saying|that says|message|with the message|telling them|that)\s+(.*)$/i,
-        /^(?:text|textt|txt|message|tell)\s+([a-zA-Z\s]+)\s*(?:[,:]\s*)?(.*)$/i
+        /^(?:text|textt|txt|message|tell)\s+([a-zA-Z0-9\s]+)\s*[:|,]\s*(.*)$/i,
+        /^(?:text|textt|txt)\s+([a-zA-Z0-9\s]+)\s+(.*)$/i
       ],
       params: (matches: string[]) => ({ target: matches[1].trim(), message: matches[2].trim() })
     },
     {
       intent: 'send_sms_partial',
       patterns: [
-        /^(?:text|textt|txt|send text to|send sms to|message|send a message to|shoot a text to|tell)\s+([a-zA-Z\s]+)$/i,
-        /^(?:text someone for me|can you text for me|send a text|send sms|text someone|write a text|send a message|i want to text someone)$/i
+        /^(?:text|textt|txt|message|tell|shoot a text to|send message to)\s+([a-zA-Z0-9\s]+)$/i,
+        /^(?:send a text|send sms|write a message)$/i
       ],
       params: (matches: string[]) => ({ target: matches[1]?.trim() })
     },
-
-    // --- Lead Management ---
-    {
-      intent: 'create_lead',
-      patterns: [
-        /^(?:add|create|new)\s+lead\s+([a-zA-Z\s]+)\s+from\s+(.*)$/i,
-        /^(?:add|create|new)\s+lead\s+([a-zA-Z\s]+)$/i,
-        /^(?:add|create)\s+([a-zA-Z\s]+)\s+as\s+a\s+lead$/i
-      ],
-      params: (matches: string[]) => ({ name: matches[1].trim(), location: matches[2]?.trim() })
-    },
-
-    // --- Task Management ---
-    {
-      intent: 'add_task',
-      patterns: [
-        /^(?:create task|add task|remind me to|set a reminder for)\s+(.*?)\s+(?:for|on|due|at)\s+(.*)$/i,
-        /^(?:create task|add task|remind me to|set a reminder for)\s+(.*)$/i
-      ],
-      params: (matches: string[]) => ({ title: matches[1].trim(), dueDate: matches[2]?.trim() })
-    },
-
-    // --- Navigation ---
     {
       intent: 'navigate',
       patterns: [
-        /^(?:go to|show me|open|take me to)\s+(leads|tasks|calendar|dashboard|settings|inbox)$/i
+        /^(?:go to|show|open|take me to|take me home|view|navigate to)\s+(leads?|tasks?|calendar|dashboard|settings|inbox|messages|summaries|ai|training)$/i,
+        /^(?:show|view|open)\s+(?:my\s+)?(leads?|tasks?|calendar|deals?|pipeline)$/i
       ],
-      params: (matches: string[]) => ({ path: matches[1].toLowerCase() })
+      params: (matches: string[]) => {
+        let p = matches[1].toLowerCase().replace(/s$/, ''); // singularize
+        if (p === 'deal' || p === 'pipeline') p = 'leads';
+        return { path: p };
+      }
     },
-
-    // --- Queries ---
+    {
+      intent: 'create_lead',
+      patterns: [
+        /^(?:add|create|new|register)\s+(?:a\s+)?lead\s+(?:for\s+)?([a-zA-Z\s]+)$/i,
+        /^(?:add|create|new)\s+([a-zA-Z\s]+)\s+as\s+(?:a\s+)?lead$/i
+      ],
+      params: (matches: string[]) => ({ name: matches[1].trim() })
+    },
+    {
+      intent: 'add_task',
+      patterns: [
+        /^(?:create task|add task|remind me to|set reminder|remind me)\s+(?:to\s+)?(.*?)(?:\s+(?:for|on|due|at|by)\s+(.*))?$/i
+      ],
+      params: (matches: string[]) => ({ title: matches[1].trim(), dueDate: matches[2]?.trim() })
+    },
     {
       intent: 'lead_query',
       patterns: [
-        /^how many leads(?: do i have)?$/i,
-        /^show my recent deals$/i,
-        /^what's my top lead$/i
+        /^(?:how many|what is my|show)?\s*(?:total\s+)?leads?(?:\s+do i have)?$/i,
+        /^(?:show|how many)\s*(?:of my\s+)?deals?\s*(?:are\s+)?(?:closing|closed|active)?$/i,
+        /^what's my lead count$/i
       ],
       params: () => ({})
     },
     {
       intent: 'task_query',
       patterns: [
-        /^how many tasks(?: do i have)?$/i,
-        /^how many tasks are overdue$/i,
-        /^(?:what are|show)? my overdue tasks$/i
+        /^(?:how many|what are my|show)\s*(?:all\s+)?tasks?(?:\s+do i have)?$/i,
+        /^(?:how many|what are my|show)\s*(?:overdue|late|missed)\s*tasks?$/i,
+        /^how many tasks are overdue$/i
       ],
-      params: () => ({})
-    },
-    {
-      intent: 'schedule',
-      patterns: [
-        /^what's on my calendar today$/i,
-        /^show my schedule for today$/i,
-        /^what meetings do i have today$/i,
-        /^when is my next appointment$/i
-      ],
-      params: () => ({})
+      params: (matches: string[]) => ({ overdueOnly: matches[0].toLowerCase().includes('overdue') })
     }
   ];
 
@@ -105,7 +103,7 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       if (match) {
         const intentObj = intents.find(i => i.name === h.intent);
         if (intentObj) {
-          const params = h.params(match) as Record<string, any>;
+          const params = h.params(match as string[]) as Record<string, any>;
           
           // Inject context if target is a pronoun
           if (params.target && activeEntity && ['him', 'her', 'them', 'it', 'his', 'hers', 'their'].includes(params.target.toLowerCase())) {
@@ -118,58 +116,26 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     }
   }
 
-  // 4. FALLBACK: Keyword Matching (Confidence Scoring)
-  let bestMatch: { intent: Intent, pattern: string, confidence: number } | null = null;
-
+  // 3. FALLBACK: Keyword / Confidence matching
+  let bestMatch: { intent: Intent, confidence: number } | null = null;
   for (const intent of intents) {
     for (const pattern of intent.patterns) {
       const p = pattern.toLowerCase();
       if (normalized === p) {
-        bestMatch = { intent, pattern, confidence: 100 };
-        break;
-      }
-      if (normalized.startsWith(p + ' ')) {
-        bestMatch = { intent, pattern, confidence: 95 };
+        bestMatch = { intent, confidence: 100 };
         break;
       }
       if (normalized.includes(p)) {
         const score = (p.length / normalized.length) * 85;
         if (!bestMatch || score > bestMatch.confidence) {
-          bestMatch = { intent, pattern, confidence: Math.round(score) };
+          bestMatch = { intent, confidence: Math.round(score) };
         }
       }
     }
     if (bestMatch?.confidence === 100) break;
   }
 
-  if (!bestMatch || bestMatch.confidence < 45) return null;
+  if (!bestMatch || bestMatch.confidence < 40) return null;
 
-  const matchedIntent = bestMatch.intent;
-  const params: Record<string, any> = { ...matchedIntent.params };
-
-  const patternUsed = bestMatch.pattern.toLowerCase();
-  const index = normalized.indexOf(patternUsed);
-  const remaining = normalized.substring(index + patternUsed.length).trim();
-
-  // 5. Robust Parameter Extraction for other intents
-  if (matchedIntent.name === 'add_task') {
-    params.description = remaining || normalized;
-  } else if (matchedIntent.name === 'create_lead') {
-    params.name = remaining;
-  } else if (matchedIntent.name === 'update_status') {
-    const toMatch = remaining.match(/(.*?)\s+to\s+(.*)/i);
-    if (toMatch) {
-      params.leadName = toMatch[1].replace(/^for\s+/i, '').trim();
-      params.status = toMatch[2].trim();
-    } else {
-      params.leadName = remaining.replace(/^for\s+/i, '').trim();
-    }
-  }
-
-  return {
-    intent: matchedIntent,
-    params,
-    confidence: bestMatch.confidence
-  };
+  return { intent: bestMatch.intent, params: {}, confidence: bestMatch.confidence };
 }
-

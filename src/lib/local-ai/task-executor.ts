@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
-import { trackLead, setActiveEntity } from './memory-store';
+import { trackLead, setActiveEntity, setActiveState, getMemory } from './memory-store';
 
 export interface TaskResponse {
   success: boolean;
@@ -15,12 +15,20 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'navigate':
       const path = entities.path?.toLowerCase();
       const routes: Record<string, string> = {
+        'lead': '#/leads',
         'leads': '#/leads',
+        'task': '#/tasks',
         'tasks': '#/tasks',
         'calendar': '#/calendar',
         'dashboard': '#/dashboard',
         'settings': '#/settings',
-        'inbox': '#/inbox'
+        'inbox': '#/inbox',
+        'message': '#/os-messages',
+        'messages': '#/os-messages',
+        'summary': '#/os-messages',
+        'summaries': '#/os-messages',
+        'ai': '#/ai-bot',
+        'training': '#/ai-training'
       };
       if (routes[path]) {
         window.location.hash = routes[path];
@@ -60,8 +68,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
         return { 
           success: result.success, 
-          message: result.success ? `✅ Created lead for ${entities.name}.` : 'Failed to create lead.',
-          data: { id: result.id }
+          message: result.success ? `✅ Created lead for ${entities.name}.` : 'Failed to create lead.'
         };
       } catch (e) {
         return { success: false, message: 'Lead creation error.' };
@@ -86,10 +93,16 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'sendSMS':
       try {
-        const target = entities.target;
-        if (!target) throw new Error('No contact specified');
+        let target = entities.target;
+        const memory = getMemory();
         
-        // Find lead by name first
+        // Handle multi-turn target resolution
+        if (!target && memory.activeState?.type === 'AWAITING_SMS_MESSAGE') {
+          target = memory.activeState.data?.target;
+        }
+
+        if (!target) return { success: false, message: "Who should I text?" };
+        
         const lead = store.leads.find(l => l.name.toLowerCase().includes(target.toLowerCase()));
         const phone = lead?.phone || target;
         
@@ -100,6 +113,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         const res = await sendSMS(phone, entities.message);
         if (res.success && lead) {
             setActiveEntity(lead.id, lead.name, 'lead');
+            setActiveState(null); // Clear state
         }
 
         return { 
@@ -111,32 +125,56 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
     case 'sendSMSPartial':
-      return { success: true, message: entities.target ? `What would you like to say to ${entities.target}?` : "Who would you like to text?" };
-
-    case 'queryLeads':
-      const leadCount = store.leads.length;
-      const recentNames = store.leads.slice(0, 3).map(l => l.name).join(', ');
+      setActiveState('AWAITING_SMS_MESSAGE', { target: entities.target });
       return { 
-          success: true, 
-          message: `You have ${leadCount} leads in your pipeline. Recent ones include: ${recentNames}.` 
+        success: true, 
+        message: entities.target 
+          ? `Sure! What would you like to say to ${entities.target}?` 
+          : "I can help with that. Who would you like to text?" 
       };
 
-    case 'queryTasks':
-      const taskCount = store.tasks.filter(t => t.status === 'todo').length;
-      return { 
-          success: true, 
-          message: `You have ${taskCount} active tasks remaining for today.` 
-      };
+    case 'queryLeads': {
+      const leads = store.leads;
+      const count = leads.length;
+      const hotLeads = leads.filter(l => (l.dealScore || 0) >= 80).length;
+      const statusCounts = leads.reduce((acc: any, l) => {
+        acc[l.status] = (acc[l.status] || 0) + 1;
+        return acc;
+      }, {});
 
-    case 'getCalendar':
-        // Mock calendar response using localStorage or store if available
-        return {
-            success: true,
-            message: "📅 Checking your schedule... You have 3 appointments today. Next one is at 2:00 PM."
-        };
+      let msg = `You have ${count} leads in your database.`;
+      if (hotLeads > 0) msg += ` ${hotLeads} are marked as 'Hot' (score > 80).`;
+      if (statusCounts['closed-won']) msg += ` You've closed ${statusCounts['closed-won']} deals!`;
+      
+      return { success: true, message: msg };
+    }
+
+    case 'queryTasks': {
+      const tasks = store.tasks.filter(t => t.status !== 'done');
+      const overdue = tasks.filter(t => new Date(t.dueDate) < new Date()).length;
+      
+      let msg = `You have ${tasks.length} active tasks.`;
+      if (overdue > 0) msg += ` ${overdue} are currently overdue! ⚠️`;
+      else msg += ` Everything is on track.`;
+      
+      return { success: true, message: msg };
+    }
+
+    case 'getCalendar': {
+      const today = new Date().toISOString().split('T')[0];
+      const todayEvents = store.calendarEvents?.filter(e => e.start?.includes(today)) || [];
+      
+      if (todayEvents.length === 0) {
+        return { success: true, message: "Your calendar is clear for today!" };
+      }
+
+      return { 
+        success: true, 
+        message: `You have ${todayEvents.length} events today. Your next one is "${todayEvents[0].title}" starting soon.` 
+      };
+    }
 
     default:
-      return { success: false, message: `Intent "${action}" recognized but no executor found.` };
+      return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
   }
 }
-

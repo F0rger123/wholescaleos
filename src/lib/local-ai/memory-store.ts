@@ -17,6 +17,7 @@ export interface ConversationContext {
   lastLeadId?: string;
   lastLeadName?: string;
   activeEntity?: { id: string; name: string; type: 'lead' | 'contact' };
+  activeState?: { type: string; data: any };
   recentLeads: Array<{ id: string; name: string }>;
   history: Message[];
 }
@@ -76,6 +77,17 @@ export function setActiveEntity(id: string, name: string, type: 'lead' | 'contac
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
     ...memory,
     activeEntity: { id, name, type }
+  }));
+}
+
+/**
+ * Sets the currently active conversation state (for multi-turn)
+ */
+export function setActiveState(type: string | null, data: any = {}) {
+  const memory = getMemory();
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    activeState: type ? { type, data } : undefined
   }));
 }
 
