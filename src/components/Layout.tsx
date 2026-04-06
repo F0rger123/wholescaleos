@@ -21,7 +21,7 @@ import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
 import { LeadFormModal } from './LeadFormModal';
 import { Logo } from './Logo';
-import { OSMessages } from './OSMessages';
+import { OSMessages } from '../pages/OSMessages';
 
 interface UserTeam {
   teamId: string;
