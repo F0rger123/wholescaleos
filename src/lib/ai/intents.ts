@@ -25,27 +25,27 @@ export const intents: Intent[] = [
   },
   {
     name: "add_task",
-    patterns: ["add task", "create task", "remind me to"],
+    patterns: ["add task", "create task", "remind me to", "set a reminder for"],
     action: "createTask",
-    required_params: ["description"],
-    template: "✅ Task added: {description}"
+    required_params: ["title"],
+    template: "✅ Task added: {title}"
   },
   {
     name: "show_tasks",
-    patterns: ["show tasks", "my tasks", "what do I need to do", "pending tasks"],
+    patterns: ["show tasks", "my tasks", "what do I need to do", "pending tasks", "list tasks"],
     action: "listTasks",
     template: "You have {count} pending tasks. {list}"
   },
   {
     name: "send_sms",
-    patterns: ["send text to", "send sms to", "text", "message", "send a message to", "sms"],
+    patterns: ["send text to", "send sms to", "text", "message", "send a message to", "sms", "tell", "shoot a text to"],
     action: "sendSMS",
-    required_params: ["number", "message"],
-    template: "✅ SMS sent to {number}"
+    required_params: ["target", "message"],
+    template: "✅ SMS sent to {target}"
   },
   {
     name: "send_sms_partial",
-    patterns: ["send text", "send sms", "text someone", "send a message", "write a text"],
+    patterns: ["send text", "send sms", "text someone", "send a message", "write a text", "can you text for me"],
     action: "sendSMSPartial",
     template: "Who would you like to text?"
   },
@@ -57,7 +57,7 @@ export const intents: Intent[] = [
   },
   {
     name: "schedule",
-    patterns: ["what's on my calendar", "show schedule", "my calendar"],
+    patterns: ["what's on my calendar", "show schedule", "my calendar", "get schedule", "view appointments", "when is my next appointment"],
     action: "getCalendar",
     template: "Today: {list}"
   },
@@ -70,10 +70,29 @@ export const intents: Intent[] = [
   },
   {
     name: "create_lead",
-    patterns: ["add lead", "create lead", "new lead"],
+    patterns: ["add lead", "create lead", "new lead", "add as a lead"],
     action: "createLead",
     required_params: ["name"],
     template: "✅ New lead created: {name}"
+  },
+  {
+    name: "navigate",
+    patterns: ["go to", "show me", "open", "take me to"],
+    action: "navigate",
+    required_params: ["path"],
+    template: "Navigating to {path}..."
+  },
+  {
+    name: "lead_query",
+    patterns: ["how many leads", "show my recent deals", "what's my top lead"],
+    action: "queryLeads",
+    template: "{response}"
+  },
+  {
+    name: "task_query",
+    patterns: ["how many tasks", "overdue tasks", "tasks due today"],
+    action: "queryTasks",
+    template: "{response}"
   },
   {
     name: "lead_details",

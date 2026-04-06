@@ -11,14 +11,10 @@ import { processPrompt, hasUserApiKey, createTask, updateLeadStatusViaAI, create
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { SaveLeadModal } from './SaveLeadModal';
 import { RateLimitModal } from './RateLimitModal';
-import { actionHandlers } from '../lib/ai/action-handlers';
-import { formatTemplate } from '../lib/ai/template-engine';
-import { UserLearningManager } from '../lib/ai/user-learning';
 import { voiceService } from '../lib/voice-service';
 import { usageTracker, UsageData } from '../lib/usage-tracking';
 import { UsageLimitModal } from './UsageLimitModal';
-import { recognizeIntent } from '../lib/local-ai';
-import { wrapResponse } from '../lib/local-ai/personality-engine';
+import { recognizeIntent, executeTask, wrapResponse } from '../lib/local-ai';
 
 interface ChatMessage {
   id: string;
@@ -61,7 +57,7 @@ export function AIBotWidget() {
   const { 
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
-    aiName, aiModel, isAiDocked, setAiDocked,
+    aiModel, isAiDocked, setAiDocked,
     sidebarOpen
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
@@ -195,12 +191,13 @@ export function AIBotWidget() {
             setMessages(JSON.parse(savedHistory));
           } catch (e) {}
         } else {
-          setMessages([{
-            id: 'welcome',
-            role: 'ai',
-            content: `Hi there! I'm ${aiName}. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
-            timestamp: new Date().toISOString()
-          }]);
+            setMessages([{
+              id: 'welcome',
+              role: 'ai',
+              content: `Hi there! I'm OS Bot. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
+              timestamp: new Date().toISOString(),
+              systemLog: "🤖 OS Bot"
+            }]);
         }
       }
     }
@@ -421,46 +418,13 @@ export function AIBotWidget() {
           return;
         }
 
-        const handler = (actionHandlers as any)[matched.intent.action];
-        if (matched.intent.name === 'send_sms_partial') {
-          const target = matched.params.number || null;
-          setSmsSession({
-            active: true,
-            waitingFor: target ? 'message' : 'target',
-            target: target,
-            message: ''
-          });
-          const nextAsk = target 
-            ? `Got it! What message should I send to ${target}?`
-            : "Sure! Who would you like to text?";
-          setMessages(prev => [...prev, {
-            id: (Date.now() + 1).toString(),
-            role: 'ai',
-            content: nextAsk,
-            timestamp: new Date().toISOString(),
-            systemLog: "🤖 OS Bot"
-          }]);
-          setLoading(false);
-          return;
-        }
-
-        if (handler && matched.confidence >= 80) {
-          const res = await handler(matched.params);
+        if (matched.confidence >= 80) {
+          const res = await executeTask(matched.intent.action, matched.params);
           if (res.success) {
-            const prefs = UserLearningManager.getPreferences();
-            let formatted = formatTemplate(matched.intent.template, res.data);
-            
-            // Adjust based on style preference
-            if (prefs.responseStyle === 'concise') {
-              formatted = `Done: ${formatted.split(':').pop()?.trim() || formatted}`;
-            } else if (prefs.responseStyle === 'friendly') {
-              formatted = `Sure thing! ${formatted}`;
-            }
-
             setMessages(prev => [...prev, {
               id: (Date.now() + 1).toString(),
               role: 'ai',
-              content: wrapResponse(formatted, 'success'),
+              content: wrapResponse(res.message, 'success'),
               timestamp: new Date().toISOString(),
               intent: matched.intent.name,
               data: res.data,
@@ -723,14 +687,14 @@ export function AIBotWidget() {
               >
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </button>
-              <span className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{aiName}</span>
+              <span className="text-sm font-black tracking-tight" style={{ color: 'var(--t-text)' }}>🤖 OS Bot</span>
               <div className="flex gap-1 items-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--t-success)] animate-pulse" />
                 {usage && (
                   <span className={`text-[9px] font-black italic uppercase tracking-tight ml-2 px-1.5 py-0.5 rounded border border-white/5 bg-white/5 ${
-                    usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-text-muted)]')
+                    usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-text)] opacity-80')
                   }`}>
-                    🔋 {usage.remaining} messages remaining today
+                    🔋 {usage.remaining} messages remaining
                   </span>
                 )}
               </div>
@@ -828,9 +792,9 @@ export function AIBotWidget() {
                     
                     {msg.role === 'ai' && (
                       <div className="mt-1 flex items-center">
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" 
-                          style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)', opacity: 0.8 }}>
-                          {msg.systemLog === '🤖 OS Bot' || !msg.systemLog ? '🤖 OS Bot' : msg.systemLog}
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm" 
+                          style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}>
+                          🤖 OS Bot
                         </span>
                       </div>
                     )}
@@ -866,14 +830,7 @@ export function AIBotWidget() {
                       </div>
                     )}
                   </div>
-                  {msg.role === 'ai' && msg.systemLog && (
-                    <div className="flex gap-2 items-center mt-1 px-1">
-                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border" 
-                        style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)', borderColor: 'var(--t-border)' }}>
-                        {msg.systemLog}
-                      </span>
-                    </div>
-                  )}
+
                 </div>
               </div>
             ))}

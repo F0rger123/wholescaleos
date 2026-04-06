@@ -62,6 +62,7 @@ export default function EmailComposeModal({
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [showHtmlPreview, setShowHtmlPreview] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
   const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
@@ -652,21 +653,38 @@ export default function EmailComposeModal({
                 </div>
 
                 {showHtmlPreview && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
-                      <Layout size={12} />
-                      Live HTML Preview
+                  <div className="space-y-4 flex flex-col h-full">
+                    <div className="flex items-center justify-between text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
+                      <div className="flex items-center gap-2">
+                        <Layout size={12} />
+                        Live HTML Preview
+                      </div>
+                      <div className="flex bg-black/5 rounded-lg p-1 border border-[var(--t-border)]">
+                        <button 
+                          onClick={() => setPreviewDevice('desktop')}
+                          className={`px-2 py-1 rounded-md transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)]' : 'hover:bg-black/5'}`}
+                        >
+                          Desktop
+                        </button>
+                        <button 
+                          onClick={() => setPreviewDevice('mobile')}
+                          className={`px-2 py-1 rounded-md transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)]' : 'hover:bg-black/5'}`}
+                        >
+                          Mobile
+                        </button>
+                      </div>
                     </div>
-                    <div className="bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden flex-1 min-h-[500px] flex flex-col">
-                      <div className="p-3 bg-zinc-100 border-b border-zinc-200 flex items-center gap-2">
-                        <div className="flex gap-1.5">
+                    <div className={`bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'w-full'} min-h-[500px] flex-1`}>
+                      <div className="p-3 bg-zinc-100 border-b border-zinc-200 flex items-center justify-between gap-2">
+                        <div className="flex gap-1.5 shrink-0">
                           <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
                           <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
                           <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
                         </div>
-                        <div className="flex-1 bg-white rounded px-2 py-0.5 text-[8px] text-zinc-400 truncate border border-zinc-200">
+                        <div className="flex-1 bg-white rounded px-2 py-0.5 text-[8px] text-zinc-400 truncate border border-zinc-200 text-center">
                           {subject || 'No Subject'}
                         </div>
+                        <div className="w-10" />
                       </div>
                       <div className="flex-1 p-8 overflow-y-auto bg-white">
                         <div 
@@ -675,6 +693,9 @@ export default function EmailComposeModal({
                         />
                       </div>
                     </div>
+                    <p className="text-[10px] text-center text-[var(--t-text-muted)] font-bold uppercase tracking-widest opacity-50">
+                      * Real variables will be injected on delivery.
+                    </p>
                   </div>
                 )}
               </div>

@@ -727,14 +727,14 @@ Time: ${context.currentTime || new Date().toISOString()}`;
         intent: parsed.intent || 'unknown',
         response: finalResponse,
         data: parsed.data,
-        systemLog: (modelOverride === 'os_bot') ? '🤖 OS Bot' : (provider === 'gemini' ? '✨ Google Gemini' : provider === 'openai' ? '🧠 OpenAI GPT' : '🦾 Anthropic Claude')
+        systemLog: '🤖 OS Bot'
       };
     } catch (parseError) {
       console.error(`Failed to parse ${provider} response as JSON:`, textData);
       return {
         intent: 'unknown',
         response: textData,
-        systemLog: (modelOverride === 'os_bot') ? '🤖 OS Bot' : (provider === 'gemini' ? '✨ Google Gemini' : provider === 'openai' ? '🧠 OpenAI GPT' : '🦾 Anthropic Claude')
+        systemLog: '🤖 OS Bot'
       };
     }
 

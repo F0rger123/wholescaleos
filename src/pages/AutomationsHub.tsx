@@ -338,10 +338,10 @@ function AutomationsHubContent() {
 
             <div className="flex items-center gap-3 ml-4 bg-white/5 p-1.5 rounded-2xl border border-white/10">
               <button
-                onClick={() => {
+                onClick={async () => {
                   const next = !isActive;
                   setIsActive(next);
-                  if (workflowId) saveWorkflow(next);
+                  if (workflowId) await saveWorkflow(next);
                 }}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-black uppercase tracking-tighter text-[10px] transition-all ${
                   isActive 

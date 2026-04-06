@@ -14,7 +14,7 @@ import {
   Indent, AlignLeft,
   Bot, Smartphone, StickyNote,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
-  Undo2, Redo2, Download, UserCog, Map,
+  Undo2, Redo2, Download, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
@@ -78,7 +78,8 @@ export function Layout() {
       COMMUNICATIONS: [
         { to: '/email', label: 'Email', icon: Mail },
         { to: '/sms', label: 'Text (SMS)', icon: Smartphone },
-        { to: '/calendar', label: 'Calendar', icon: Map },
+        { to: '/calendar', label: 'Calendar', icon: Calendar },
+        { to: '/os-messages', label: 'OS Messages', icon: MessageSquare },
       ],
       TEAM: [
         { to: '/team', label: 'Team Dashboard', icon: UserCog },
@@ -629,16 +630,7 @@ export function Layout() {
 
               {/* Theme & Notifications */}
               <div className="hover:scale-110 transition-transform"><ThemeSwitcher /></div>
-              <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
-              <button 
-                onClick={() => setIsOSMessagesOpen(true)}
-                className="p-1.5 hover:bg-[var(--t-surface-hover)] rounded-lg text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-all relative"
-                title="OS Messages"
-              >
-                <MessageSquare size={18} />
-                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" />
-              </button>
-              <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1" />
+
               <div className="hover:scale-110 transition-transform"><NotificationPanel /></div>
             </div>
             <div className="hover:scale-105 active:scale-95 transition-all">

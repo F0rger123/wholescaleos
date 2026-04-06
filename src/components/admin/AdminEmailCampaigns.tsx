@@ -47,6 +47,7 @@ const AdminEmailCampaigns = () => {
   const [editingCampaign, setEditingCampaign] = useState<Partial<dbEmailCampaign> | null>(null);
   const [activeTab, setActiveTab] = useState<'templates' | 'campaigns'>('templates');
   const [isSending, setIsSending] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   useEffect(() => {
     loadData();
@@ -526,26 +527,46 @@ const AdminEmailCampaigns = () => {
 
                 {/* Preview Column */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
-                    <Layout size={12} />
-                    Live Preview
+                  <div className="flex items-center justify-between text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
+                    <div className="flex items-center gap-2">
+                       <Layout size={12} />
+                       Live Preview
+                    </div>
+                    <div className="flex bg-black/20 rounded-lg p-1 border border-white/5">
+                       <button 
+                         onClick={() => setPreviewDevice('desktop')}
+                         className={`px-2 py-1 rounded-md transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)]' : 'hover:bg-white/5'}`}
+                       >
+                         Desktop
+                       </button>
+                       <button 
+                         onClick={() => setPreviewDevice('mobile')}
+                         className={`px-2 py-1 rounded-md transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)]' : 'hover:bg-white/5'}`}
+                       >
+                         Mobile
+                       </button>
+                    </div>
                   </div>
-                  <div className="sticky top-0 bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden min-h-[500px] flex flex-col">
-                    <div className="p-3 bg-zinc-100 border-b border-zinc-200 flex items-center gap-2">
-                      <div className="flex gap-1.5">
+                  <div className={`sticky top-0 bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden transition-all duration-500 flex flex-col mx-auto ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'w-full'} min-h-[500px]`}>
+                    <div className="p-3 bg-zinc-100 border-b border-zinc-200 flex items-center justify-between gap-2">
+                      <div className="flex gap-1.5 shrink-0">
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
                         <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
                       </div>
-                      <div className="flex-1 bg-white rounded px-2 py-0.5 text-[8px] text-zinc-400 truncate border border-zinc-200">
+                      <div className="flex-1 bg-white rounded px-2 py-0.5 text-[8px] text-zinc-400 truncate border border-zinc-200 text-center">
                         {editingTemplate?.subject || 'No Subject'}
                       </div>
+                      <div className="w-10" /> {/* Spacer */}
                     </div>
                     <div 
                       className="flex-1 p-8 overflow-y-auto preview-frame bg-white"
                       dangerouslySetInnerHTML={{ __html: editingTemplate?.html_content || '<div class="text-zinc-300 italic">No content...</div>' }}
                     />
                   </div>
+                  <p className="text-[10px] text-center text-[var(--t-text-muted)] font-bold uppercase tracking-widest opacity-50">
+                    * Personalized variables will be resolved when sending.
+                  </p>
                 </div>
               </div>
             </div>

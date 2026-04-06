@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, AlertCircle, CheckCircle2, X, Sparkles, MessageSquare, Clock, Settings, Bell, Mail, ToggleLeft, ToggleRight } from 'lucide-react';
+import { 
+  Calendar, AlertCircle, CheckCircle2, Sparkles, MessageSquare, 
+  Clock, Settings, Bell, Mail, Users, ArrowRightLeft, Bot, Smartphone 
+} from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
@@ -16,53 +19,77 @@ export interface OSMessage {
   priority?: 'low' | 'medium' | 'high';
 }
 
-interface MessagePreferences {
-  daily_summary_enabled: boolean;
-  weekly_summary_enabled: boolean;
-  transaction_alerts_enabled: boolean;
-  task_reminders_enabled: boolean;
-}
 
-export function OSMessages({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+
+export function OSMessages({ isOpen: _isOpen, onClose: _onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const [messages, setMessages] = useState<OSMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'messages' | 'settings'>('messages');
-  const [prefs, setPrefs] = useState<MessagePreferences | null>(null);
+  const [prefs, setPrefs] = useState<any>(null);
   const { currentUser } = useStore();
 
   useEffect(() => {
-    if (isOpen && currentUser) {
+    if (currentUser) {
       if (view === 'messages') {
         fetchMessages();
       } else {
         fetchPreferences();
       }
     }
-  }, [isOpen, currentUser, view]);
+  }, [currentUser, view]);
 
   const fetchPreferences = async () => {
     if (!supabase || !currentUser) return;
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('user_os_messages_preferences')
         .select('*')
         .eq('user_id', currentUser.id)
-        .single();
+        .maybeSingle();
       
-      if (data) setPrefs(data);
+      if (error) throw error;
+      if (data) {
+        setPrefs(data);
+      } else {
+        // Initialize default prefs if none exist
+        const defaultPrefs = {
+          user_id: currentUser.id,
+          daily_summary_enabled: true,
+          weekly_summary_enabled: true,
+          transaction_alerts_enabled: true,
+          task_reminders_enabled: true,
+          lead_captured_alerts_enabled: true,
+          status_change_alerts_enabled: true,
+          ai_insight_alerts_enabled: true,
+          task_escalation_alerts_enabled: false,
+          contract_signed_alerts_enabled: true,
+          document_uploaded_alerts_enabled: false,
+          payment_received_alerts_enabled: true,
+          low_balance_alerts_enabled: true,
+          sms_delivered_alerts_enabled: false,
+          email_opened_alerts_enabled: true,
+          link_clicked_alerts_enabled: true,
+          bounce_alerts_enabled: true,
+          api_error_alerts_enabled: false,
+          system_maintenance_alerts_enabled: true,
+          new_feature_alerts_enabled: true
+        };
+        setPrefs(defaultPrefs);
+        await supabase.from('user_os_messages_preferences').insert(defaultPrefs);
+      }
     } catch (err) {
       console.error('Fetch preferences error:', err);
     }
   };
 
-  const updatePreference = async (key: keyof MessagePreferences) => {
+  const updatePreference = async (key: string) => {
     if (!supabase || !currentUser || !prefs) return;
     try {
       const newPrefs = { ...prefs, [key]: !prefs[key] };
       setPrefs(newPrefs);
       await supabase
         .from('user_os_messages_preferences')
-        .upsert({ user_id: currentUser.id, ...newPrefs });
+        .upsert(newPrefs);
     } catch (err) {
       console.error('Update preferences error:', err);
     }
@@ -78,7 +105,7 @@ export function OSMessages({ isOpen, onClose }: { isOpen: boolean; onClose: () =
         .select('*')
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
         
       if (data) {
         setMessages(data);
@@ -96,163 +123,241 @@ export function OSMessages({ isOpen, onClose }: { isOpen: boolean; onClose: () =
     await supabase.from('notifications').update({ read: true }).eq('id', id);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[var(--z-modal)] flex items-end sm:items-center justify-end p-4 pointer-events-none">
-      <motion.div 
-        initial={{ opacity: 0, x: 100, scale: 0.9 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        exit={{ opacity: 0, x: 100, scale: 0.9 }}
-        className="pointer-events-auto w-full max-w-md bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] backdrop-blur-xl"
-      >
-        {/* Header */}
-        <div className="p-6 border-b border-[var(--t-border)] bg-gradient-to-r from-[var(--t-primary-dim)]/20 to-transparent flex items-center justify-between">
-          <button 
-            onClick={() => setView('messages')}
-            className={`flex items-center gap-3 transition-opacity ${view === 'settings' ? 'opacity-40 hover:opacity-100' : ''}`}
-          >
-            <div className="p-2 bg-[var(--t-primary-dim)]/30 text-[var(--t-primary)] rounded-xl">
-              <MessageSquare size={20} />
-            </div>
-            <div className="text-left">
-              <h3 className="text-lg font-bold text-[var(--t-text)]">OS Messages</h3>
-              <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest">Intelligent Comms</p>
-            </div>
-          </button>
-          
-          <div className="flex items-center gap-1">
-            <button 
-              onClick={() => setView(view === 'messages' ? 'settings' : 'messages')}
-              className={`p-2 rounded-xl transition-all ${view === 'settings' ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)]' : 'hover:bg-[var(--t-border)] text-[var(--t-text-muted)]'}`}
-            >
-              <Settings size={20} />
-            </button>
-            <button onClick={onClose} className="p-2 hover:bg-[var(--t-border)] rounded-xl transition-colors text-[var(--t-text-muted)]">
-              <X size={20} />
-            </button>
+    <div className="p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-[var(--t-primary-dim)] text-[var(--t-primary)] rounded-2xl shadow-xl shadow-[var(--t-primary-dim)]/20">
+            <MessageSquare size={32} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-[var(--t-text)] tracking-tight">OS Messages</h1>
+            <p className="text-sm text-[var(--t-text-muted)] font-bold uppercase tracking-[0.2em]">Intelligent Communication Hub</p>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+        <div className="flex items-center gap-2 p-1 bg-[var(--t-surface-subtle)] rounded-2xl border border-[var(--t-border)]">
+          <button 
+            onClick={() => setView('messages')}
+            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'messages' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+          >
+            Insights
+          </button>
+          <button 
+            onClick={() => setView('settings')}
+            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+          >
+            Preferences
+          </button>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-6">
           {view === 'messages' ? (
-            loading ? (
-              <div className="py-12 flex flex-col items-center gap-4">
-                <Clock className="w-8 h-8 text-[var(--t-primary)] animate-spin" />
-                <p className="text-xs font-bold text-[var(--t-text-muted)] uppercase">Syncing your status...</p>
-              </div>
-            ) : messages.length > 0 ? (
-              messages.map((msg) => (
-                <motion.div 
-                  layout
-                  key={msg.id}
-                  onClick={() => markAsRead(msg.id)}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer group relative ${
-                    msg.read ? 'bg-transparent border-[var(--t-border)] opacity-60' : 'bg-[var(--t-primary-dim)]/5 border-[var(--t-primary-dim)]/30 shadow-lg'
-                  }`}
-                >
-                  {!msg.read && (
-                    <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-[var(--t-primary)] animate-pulse" />
-                  )}
-                  
-                  <div className="flex gap-4">
-                    <div className={`p-2 rounded-xl shrink-0 ${
-                      msg.type === 'summary' ? 'bg-blue-500/10 text-blue-500' :
-                      msg.type === 'alert' ? 'bg-red-500/10 text-red-500' :
-                      msg.type === 'reminder' ? 'bg-yellow-500/10 text-yellow-500' :
-                      'bg-green-500/10 text-green-500'
-                    }`}>
-                      {msg.type === 'summary' ? <Calendar size={18} /> :
-                       msg.type === 'alert' ? <AlertCircle size={18} /> :
-                       msg.type === 'reminder' ? <Clock size={18} /> :
-                       <Sparkles size={18} />}
+            <div className="space-y-4">
+              {loading ? (
+                <div className="py-24 astral-glass border border-[var(--t-border)] rounded-[2.5rem] flex flex-col items-center justify-center gap-4">
+                  <div className="w-12 h-12 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm font-black text-[var(--t-text-muted)] uppercase tracking-widest">Aggregating Global Activity...</p>
+                </div>
+              ) : messages.length > 0 ? (
+                messages.map((msg) => (
+                  <motion.div 
+                    layout
+                    key={msg.id}
+                    onClick={() => markAsRead(msg.id)}
+                    className={`p-6 rounded-[2rem] astral-glass border transition-all cursor-pointer group relative ${
+                      msg.read ? 'border-[var(--t-border)] opacity-60' : 'border-[var(--t-primary-dim)]/40 bg-[var(--t-primary-dim)]/5 shadow-2xl'
+                    }`}
+                  >
+                    {!msg.read && (
+                      <div className="absolute top-6 right-6 w-3 h-3 rounded-full bg-[var(--t-primary)] shadow-[0_0_15px_var(--t-primary)]" />
+                    )}
+                    
+                    <div className="flex gap-6">
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${
+                        msg.type === 'summary' ? 'bg-blue-500/20 text-blue-400' :
+                        msg.type === 'alert' ? 'bg-red-500/20 text-red-400' :
+                        msg.type === 'reminder' ? 'bg-yellow-500/20 text-yellow-400' :
+                        'bg-[var(--t-primary-dim)] text-[var(--t-primary)]'
+                      }`}>
+                        {msg.type === 'summary' ? <Calendar size={24} /> :
+                         msg.type === 'alert' ? <AlertCircle size={24} /> :
+                         msg.type === 'reminder' ? <Clock size={24} /> :
+                         <Sparkles size={24} />}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-lg font-black text-[var(--t-text)]">{msg.title}</p>
+                          <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest bg-[var(--t-surface-subtle)] px-2 py-1 rounded-md">{format(new Date(msg.created_at), 'MMM d, h:mm a')}</p>
+                        </div>
+                        <p className="text-sm text-[var(--t-text-secondary)] leading-relaxed">{msg.message}</p>
+                        
+                        {msg.link && (
+                          <div className="pt-2">
+                            <span className="text-[10px] font-black text-[var(--t-primary)] uppercase tracking-widest hover:underline cursor-pointer flex items-center gap-1 group">
+                              View Details <Sparkles size={10} className="group-hover:rotate-12 transition-transform" />
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-bold text-[var(--t-text)]">{msg.title}</p>
-                      <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">{msg.message}</p>
-                      <p className="text-[10px] text-[var(--t-text-muted)] pt-1">{format(new Date(msg.created_at), 'h:mm a · MMM d')}</p>
-                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="py-24 text-center astral-glass border border-[var(--t-border)] rounded-[2.5rem] space-y-6">
+                  <div className="w-20 h-20 bg-[var(--t-surface-subtle)] rounded-full flex items-center justify-center mx-auto text-[var(--t-text-muted)] shadow-inner">
+                    <CheckCircle2 size={40} />
                   </div>
-                </motion.div>
-              ))
-            ) : (
-              <div className="py-12 text-center space-y-4">
-                <div className="w-12 h-12 bg-[var(--t-border)] rounded-full flex items-center justify-center mx-auto text-[var(--t-text-muted)]">
-                  <CheckCircle2 size={24} />
+                  <div>
+                    <h3 className="text-xl font-black text-[var(--t-text)]">Optimal Silence</h3>
+                    <p className="text-sm text-[var(--t-text-muted)] font-medium">Your WholeScale network is operating at peak efficiency.</p>
+                  </div>
                 </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Mail className="text-[var(--t-primary)]" size={20} />
+                  <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--t-text-muted)]">Core Summaries</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <SettingToggle 
+                    icon={<Calendar size={18} />}
+                    title="Daily OS Summary"
+                    description="24-hour network activity digest"
+                    enabled={prefs?.daily_summary_enabled ?? false}
+                    onToggle={() => updatePreference('daily_summary_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Bell size={18} />}
+                    title="Weekly Performance"
+                    description="Comparative growth analytics"
+                    enabled={prefs?.weekly_summary_enabled ?? false}
+                    onToggle={() => updatePreference('weekly_summary_enabled')}
+                  />
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Sparkles className="text-[var(--t-primary)]" size={20} />
+                  <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--t-text-muted)]">Granular Alerts</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <SettingToggle 
+                    icon={<Users size={18} />}
+                    title="Lead Captured"
+                    description="Immediate alert for new leads"
+                    enabled={prefs?.lead_captured_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('lead_captured_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<ArrowRightLeft size={18} />}
+                    title="Status Changes"
+                    description="Alert when CRM status updates"
+                    enabled={prefs?.status_change_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('status_change_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Bot size={18} />}
+                    title="AI Insights"
+                    description="Machine-learning recommendations"
+                    enabled={prefs?.ai_insight_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('ai_insight_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<AlertCircle size={18} />}
+                    title="Task Escalation"
+                    description="Alert for overdue high-priority tasks"
+                    enabled={prefs?.task_escalation_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('task_escalation_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<CheckCircle2 size={18} />}
+                    title="Contract Signed"
+                    description="Closing momentum notifications"
+                    enabled={prefs?.contract_signed_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('contract_signed_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Smartphone size={18} />}
+                    title="SMS Deliverability"
+                    description="Reports on sent/failed messages"
+                    enabled={prefs?.sms_delivered_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('sms_delivered_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Mail size={18} />}
+                    title="Email Tracking"
+                    description="Opens and link click notifications"
+                    enabled={prefs?.email_opened_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('email_opened_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Settings size={18} />}
+                    title="System Updates"
+                    description="New features and maintenance"
+                    enabled={prefs?.new_feature_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('new_feature_alerts_enabled')}
+                  />
+                </div>
+              </section>
+            </div>
+          )}
+        </div>
+
+        <div className="lg:col-span-4 space-y-6">
+          <div className="p-8 astral-glass border border-[var(--t-primary-dim)]/30 rounded-[2.5rem] bg-gradient-to-br from-[var(--t-primary-dim)]/10 to-transparent">
+            <div className="w-16 h-16 bg-[var(--t-primary)] text-white rounded-[1.5rem] flex items-center justify-center mb-6 shadow-2xl shadow-[var(--t-primary)]/40">
+              <Sparkles size={32} />
+            </div>
+            <h3 className="text-xl font-black text-[var(--t-text)] mb-2">Automated Digests</h3>
+            <p className="text-sm text-[var(--t-text-secondary)] leading-relaxed mb-6">
+              Our AI service analyzes your pipeline activity while you sleep, preparing comprehensive reports delivered straight to your OS hub and email inbox.
+            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[var(--t-success)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Real-time DB Sync</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[var(--t-success)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Cross-Provider SMTP</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-[var(--t-success)]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">End-to-End Encryption</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8 astral-glass border border-[var(--t-border)] rounded-[2.5rem]">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)] mb-4">Activity Log</h3>
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <Clock size={14} className="text-[var(--t-primary)] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-[var(--t-text)]">You're all caught up!</p>
-                  <p className="text-xs text-[var(--t-text-muted)]">No new messages from OS Bot.</p>
+                  <p className="text-[11px] font-bold text-[var(--t-text)]">Preferences Synced</p>
+                  <p className="text-[9px] text-[var(--t-text-muted)]">Just now</p>
                 </div>
               </div>
-            )
-          ) : (
-            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-              <div className="p-4 bg-[var(--t-primary-dim)]/10 rounded-2xl border border-[var(--t-primary-dim)]/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <Mail className="text-[var(--t-primary)]" size={18} />
-                  <p className="text-sm font-bold text-[var(--t-text)]">Email Summary Hub</p>
+              <div className="flex gap-3">
+                <Mail size={14} className="text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[11px] font-bold text-[var(--t-text)]">Email Gateway Active</p>
+                  <p className="text-[9px] text-[var(--t-text-muted)]">14 minutes ago</p>
                 </div>
-                <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
-                  WholeScale OS sends high-level summaries of your real estate activity directly to your inbox.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <SettingToggle 
-                  icon={<Calendar size={16} />}
-                  title="Daily OS Summary"
-                  description="24-hour activity report"
-                  enabled={prefs?.daily_summary_enabled ?? false}
-                  onToggle={() => updatePreference('daily_summary_enabled')}
-                />
-                <SettingToggle 
-                  icon={<Bell size={16} />}
-                  title="Weekly Performance"
-                  description="Week-over-week growth"
-                  enabled={prefs?.weekly_summary_enabled ?? false}
-                  onToggle={() => updatePreference('weekly_summary_enabled')}
-                />
-                <SettingToggle 
-                  icon={<AlertCircle size={16} />}
-                  title="Transaction Alerts"
-                  description="Real-time deal updates"
-                  enabled={prefs?.transaction_alerts_enabled ?? false}
-                  onToggle={() => updatePreference('transaction_alerts_enabled')}
-                />
-                <SettingToggle 
-                  icon={<Clock size={16} />}
-                  title="Task Reminders"
-                  description="Automated due-date emails"
-                  enabled={prefs?.task_reminders_enabled ?? false}
-                  onToggle={() => updatePreference('task_reminders_enabled')}
-                />
               </div>
             </div>
-          )}
+          </div>
         </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-[var(--t-border)] bg-[var(--t-surface-dim)] flex items-center justify-center">
-          {view === 'messages' ? (
-            <button 
-              className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-colors"
-              onClick={async () => {
-                if (!supabase || !currentUser) return;
-                setMessages(prev => prev.map(m => ({ ...m, read: true })));
-                await supabase.from('notifications').update({ read: true }).eq('user_id', currentUser.id);
-              }}
-            >
-              Mark all as read
-            </button>
-          ) : (
-            <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--t-text-muted)]">
-              Managed by WholeScale AI
-            </div>
-          )}
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -265,19 +370,24 @@ function SettingToggle({ icon, title, description, enabled, onToggle }: {
   onToggle: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between p-4 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl hover:border-[var(--t-primary-dim)] transition-all">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded-lg">
+    <div 
+      onClick={onToggle}
+      className={`flex items-center justify-between p-5 rounded-[1.5rem] border transition-all cursor-pointer select-none ${
+        enabled ? 'border-[var(--t-primary-dim)] bg-[var(--t-primary-dim)]/5' : 'border-[var(--t-border)] hover:border-[var(--t-text-muted)]/30'
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <div className={`p-3 rounded-xl ${enabled ? 'bg-[var(--t-primary)] text-white' : 'bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)]'}`}>
           {icon}
         </div>
         <div>
-          <p className="text-xs font-bold text-[var(--t-text)]">{title}</p>
-          <p className="text-[10px] text-[var(--t-text-muted)]">{description}</p>
+          <p className={`text-sm font-black ${enabled ? 'text-[var(--t-text)]' : 'text-[var(--t-text-muted)]'}`}>{title}</p>
+          <p className="text-[10px] text-[var(--t-text-muted)] font-medium">{description}</p>
         </div>
       </div>
-      <button onClick={onToggle} className="text-[var(--t-primary)] transition-transform active:scale-95">
-        {enabled ? <ToggleRight size={28} /> : <ToggleLeft size={28} className="text-[var(--t-text-muted)]" />}
-      </button>
+      <div className={`w-12 h-6 rounded-full transition-all relative ${enabled ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-border)]'}`}>
+        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${enabled ? 'left-7 shadow-lg shadow-black/20' : 'left-1'}`} />
+      </div>
     </div>
   );
 }

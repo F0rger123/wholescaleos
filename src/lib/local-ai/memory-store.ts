@@ -16,6 +16,7 @@ export interface ConversationContext {
   userName?: string;
   lastLeadId?: string;
   lastLeadName?: string;
+  activeEntity?: { id: string; name: string; type: 'lead' | 'contact' };
   recentLeads: Array<{ id: string; name: string }>;
   history: Message[];
 }
@@ -26,7 +27,8 @@ export function getMemory(): ConversationContext {
   const data = localStorage.getItem(MEMORY_KEY);
   return data ? JSON.parse(data) : { 
     recentLeads: [],
-    history: [] 
+    history: [],
+    activeEntity: undefined
   };
 }
 
@@ -61,8 +63,37 @@ export function trackLead(id: string, name: string) {
     ...memory,
     lastLeadId: id,
     lastLeadName: name,
-    recentLeads
+    recentLeads,
+    activeEntity: { id, name, type: 'lead' }
   }));
+}
+
+/**
+ * Sets the currently active entity for the conversation
+ */
+export function setActiveEntity(id: string, name: string, type: 'lead' | 'contact') {
+  const memory = getMemory();
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    activeEntity: { id, name, type }
+  }));
+}
+
+/**
+ * Resolves pronouns like "him", "her", "them" or "it" to the active entity
+ */
+export function resolveEntityFromContext(input: string): { id: string; name: string; type: 'lead' | 'contact' } | null {
+  const memory = getMemory();
+  const lower = input.toLowerCase();
+  const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their'];
+  
+  const hasPronoun = pronouns.some(p => lower.includes(` ${p} `) || lower.endsWith(` ${p}`) || lower === p);
+  
+  if (hasPronoun && memory.activeEntity) {
+    return memory.activeEntity;
+  }
+  
+  return null;
 }
 
 /**
@@ -91,6 +122,7 @@ export function getAIContext() {
   return {
     user: store.currentUser?.name || memory.userName || 'Agent',
     lastLead: memory.lastLeadName || 'none',
+    activeEntity: memory.activeEntity,
     recentLeads: memory.recentLeads,
     history: memory.history
   };

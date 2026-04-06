@@ -20,10 +20,13 @@ function getLevenshteinDistance(a: string, b: string): number {
 const COMMON_CORRECTIONS: Record<string, string> = {
   'textt': 'text',
   'txt': 'text',
+  'sennd': 'send',
   'messge': 'message',
+  'massage': 'message',
   'msg': 'message',
   'leed': 'lead',
   'led': 'lead',
+  'tassk': 'task',
   'statas': 'status',
   'staus': 'status',
   'creeat': 'create',
@@ -32,7 +35,9 @@ const COMMON_CORRECTIONS: Record<string, string> = {
   'deleet': 'delete',
   'updte': 'update',
   'updt': 'update',
-  'remindr': 'reminder'
+  'remindr': 'reminder',
+  'remmind': 'remind',
+  'calender': 'calendar'
 };
 
 export function spellCheck(input: string): string {
