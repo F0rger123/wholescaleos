@@ -5,7 +5,7 @@ import { sendSMS } from './sms-service';
 import { recognizeIntent } from './local-ai/intent-engine';
 import { executeTask } from './local-ai/task-executor';
 import { generateResponse } from './local-ai/response-generator';
-import { saveConversation } from './local-ai/memory-store';
+import { saveMessage } from './local-ai/memory-store';
 
 export interface GeminiResponse {
   intent: string;
@@ -370,7 +370,7 @@ export async function processWithLocalAI(prompt: string): Promise<GeminiResponse
     const executionResult = await executeTask(localResult.intent, localResult.entities);
     const responseText = generateResponse(localResult.intent, executionResult);
     
-    saveConversation(responseText, 'assistant');
+    saveMessage('assistant', responseText);
     
     return {
       intent: localResult.intent,
@@ -392,7 +392,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   const userId = store.currentUser?.id;
   
   // Save user message to local memory
-  saveConversation(prompt, 'user');
+  saveMessage('user', prompt);
 
   // ── OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
@@ -488,7 +488,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
     const responseText = generateResponse(localResult.intent, executionResult);
     
-    saveConversation(responseText, 'assistant');
+    saveMessage('assistant', responseText);
     
     return {
       intent: localResult.intent,

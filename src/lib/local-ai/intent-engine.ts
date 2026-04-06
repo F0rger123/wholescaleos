@@ -1,6 +1,6 @@
 /**
- * OS Bot Intent Engine (v3.0)
- * Handles complex intent recognition, entity extraction, and CRM contact mapping.
+ * OS Bot Intent Engine (v5.0 - Professional CRM Edition)
+ * Optimized for real estate wholesaling and high-speed property management.
  */
 
 export interface IntentResult {
@@ -10,205 +10,200 @@ export interface IntentResult {
 }
 
 /**
- * Try to resolve a contact name to a phone number from the CRM leads list.
- * This is called when the user says "text Luke" or "send sms to John".
+ * Enhanced Entity Extraction logic with context-aware anchors
  */
-function resolveContactFromLeads(name: string, leads: any[]): { phone?: string; fullName?: string } {
-  if (!leads || leads.length === 0) return {};
+const ENTITY_REGEX = {
+  email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+  phone: /(?:\+?1[-. ]?)?\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})\b/g,
+  date: /\b(tomorrow|today|tonight|next (?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2}(?:st|nd|rd|th)?)\b/gi,
+  time: /\b(\d{1,2}(?::\d{2})?\s*(?:am|pm|o'clock)?|at \d{1,2}(?::\d{2})?)\b/gi,
+  price: /\$?\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b/g,
+};
+
+function extractEntities(text: string): Record<string, any> {
+  const entities: any = {};
   
-  try {
-    let lowerName = name.toLowerCase().trim();
-    
-    // Remove filler words common in speech-to-text
-    lowerName = lowerName.replace(/\b(for me|real quick|please|about|regarding|someone named|can you|the lead|my contact)\b/gi, '').trim();
-    
-    if (!lowerName) return {};
-    
-    // Try exact match first, then partial match
-    const exactMatch = leads.find((l: any) => 
-      l.name?.toLowerCase() === lowerName ||
-      l.name?.toLowerCase().split(' ')[0] === lowerName // first name match
-    );
-    
-    if (exactMatch) {
-      return { 
-        phone: exactMatch.phone || exactMatch.phoneNumber || undefined, 
-        fullName: exactMatch.name 
-      };
+  const emails = text.match(ENTITY_REGEX.email);
+  if (emails) entities.email = emails[0];
+  
+  const phones = text.match(ENTITY_REGEX.phone);
+  if (phones) entities.phone = phones[0].replace(/[^\d+]/g, '');
+  
+  const dates = text.match(ENTITY_REGEX.date);
+  if (dates) entities.date = dates[0].toLowerCase();
+  
+  const times = text.match(ENTITY_REGEX.time);
+  if (times) entities.time = times[0].toLowerCase();
+
+  const prices = text.match(ENTITY_REGEX.price);
+  if (prices) entities.price = parseFloat(prices[0].replace(/[$,]/g, ''));
+  
+  return entities;
+}
+
+/**
+ * Intelligent Lead Name Extractor
+ * Attempts to pull the name relative to keywords like "add lead" or "create lead"
+ */
+function extractLeadName(text: string): string | null {
+  const normalized = text.toLowerCase();
+  const anchors = ["add lead", "create lead", "new lead", "add person"];
+  
+  for (const anchor of anchors) {
+    if (normalized.includes(anchor)) {
+      const remaining = text.substring(normalized.indexOf(anchor) + anchor.length).trim();
+      // Stop at "from", "at", "saying", "@", or digits
+      const namePart = remaining.split(/\b(from|at|saying|for|with|in)\b|(?=@|\d)/i)[0].trim();
+      if (namePart && namePart.length > 2) return namePart;
     }
-    
-    // Fuzzy: partial name contains
-    const partialMatch = leads.find((l: any) =>
-      l.name?.toLowerCase().includes(lowerName) ||
-      lowerName.includes(l.name?.toLowerCase().split(' ')[0])
-    );
-    
-    if (partialMatch) {
-      return { 
-        phone: partialMatch.phone || partialMatch.phoneNumber || undefined, 
-        fullName: partialMatch.name 
-      };
-    }
-  } catch (err) {
-    console.error('[IntentEngine] Failed to resolve contact:', err);
   }
+  return null;
+}
+
+/**
+ * Intelligent Location Extractor
+ * Pulls location after "from" or "at"
+ */
+function extractLocation(text: string): string | null {
+  const fromMatch = text.match(/\b(?:from|at|in|near)\s+([^,.]+?)(?=\b(?:at|on|for|with|by|to)\b|$)/i);
+  return fromMatch ? fromMatch[1].trim() : null;
+}
+
+function resolveContactFromLeads(name: string, leads: any[]): { phone?: string; fullName?: string; email?: string; id?: string } {
+  if (!leads || leads.length === 0 || !name) return {};
+  
+  const lowerName = name.toLowerCase().trim();
+  const exactMatch = leads.find((l: any) => 
+    l.name?.toLowerCase() === lowerName ||
+    l.name?.toLowerCase().split(' ')[0] === lowerName
+  );
+  
+  if (exactMatch) {
+    return { 
+      id: exactMatch.id,
+      phone: exactMatch.phone || exactMatch.phoneNumber, 
+      fullName: exactMatch.name,
+      email: exactMatch.email
+    };
+  }
+  
+  const partialMatch = leads.find((l: any) => l.name?.toLowerCase().includes(lowerName));
+  if (partialMatch) {
+    return { 
+      id: partialMatch.id,
+      phone: partialMatch.phone || partialMatch.phoneNumber, 
+      fullName: partialMatch.name,
+      email: partialMatch.email
+    };
+  }
+  
   return {};
 }
 
 export function recognizeIntent(text: string, leads: any[] = []): IntentResult {
   const normalized = text.toLowerCase().trim();
-
-  // 1. Help
-  if (normalized.match(/^(help|what can you do|how do i use|available commands|help me)/)) {
-    return { intent: 'help', entities: {}, confidence: 0.95 };
+  const entities = extractEntities(text);
+  
+  // 1. Navigation / Show (Prioritized)
+  if (normalized.match(/\b(show|open|view|go to|take me to|navigate to)\b.*\b(tasks|todo|reminders|items)\b/)) {
+    if (normalized.includes('completed')) return { intent: 'show_completed_tasks', entities, confidence: 0.95 };
+    return { intent: 'show_tasks', entities, confidence: 0.95 };
+  }
+  if (normalized.match(/\b(show|open|view|go to|take me to|navigate to)\b.*\b(calendar|schedule|agenda|events|today)\b/)) {
+    return { intent: 'show_calendar', entities, confidence: 0.95 };
+  }
+  if (normalized.match(/\b(show|open|view|go to|take me to|navigate to)\b.*\b(leads|contacts|database|crm|pipeline)\b/)) {
+    return { intent: 'show_leads', entities, confidence: 0.95 };
+  }
+  if (normalized.match(/\b(show|open|view|go to|take me to|navigate to)\b.*\b(dashboard|home|main)\b/)) {
+    return { intent: 'show_dashboard', entities, confidence: 0.95 };
+  }
+  if (normalized.match(/\b(show|open|view|go to|take me to|navigate to)\b.*\b(settings|profile|account)\b/)) {
+    return { intent: 'show_settings', entities, confidence: 0.95 };
   }
 
-  // 2. Navigation / Show
-  if (normalized.match(/^(show|go to|take me to|open|view)\s+(dashboard|home|main)/)) {
-    return { intent: 'show_dashboard', entities: {}, confidence: 0.95 };
-  }
-  if (normalized.match(/^(show|go to|take me to|open|view)\s+(leads|contacts|prospects|database)/)) {
-    return { intent: 'show_leads', entities: {}, confidence: 0.95 };
-  }
-  if (normalized.match(/^(show|go to|take me to|open|view)\s+(tasks|todo|calendar|schedule|agenda|plans)/)) {
-    return { intent: 'show_tasks', entities: {}, confidence: 0.95 };
-  }
-
-  // 3. Create Lead (Enhanced)
-  const leadPatterns = [
-    // Full: add lead [Name] from [Location]
-    /(?:create|add|new)\s+(?:lead|contact)\s+([^@\d\n]+?)\s+from\s+([^@\d\n]+)/i,
-    // Name only: add lead [Name]
-    /(?:create|add|new)\s+(?:lead|contact)\s+([^@\d\n]+)$/i,
-    // Email: add lead [Email]
-    /(?:create|add|new)\s+(?:lead|contact)\s+([\w.@+-]+)$/i,
-    // Phone: add lead [Phone]
-    /(?:create|add|new)\s+(?:lead|contact)\s+([\d+-]+)$/i
-  ];
-
-  for (const pattern of leadPatterns) {
-    const match = normalized.match(pattern);
-    if (match) {
-      const entities: any = {};
-      const val = match[1]?.trim();
-      
-      if (val.includes('@')) {
-        entities.email = val;
-        entities.name = val.split('@')[0];
-      } else if (val.match(/^[\d+-]+$/)) {
-        entities.phone = val;
-        entities.name = 'New Contact';
-      } else {
-        entities.name = val;
-      }
-
-      if (match[2]) {
-        entities.location = match[2].trim();
-        entities.propertyAddress = entities.location;
-      }
-
-      return { intent: 'create_lead', entities, confidence: 0.9 };
-    }
-  }
-
-  // 4. Create Task (Enhanced)
-  const taskPatterns = [
-    /(?:create|add|new|set)\s+task\s+(.+?)(?:\s+(tomorrow|today|next week|on Monday|on Tuesday|on Wednesday|on Thursday|on Friday|on Saturday|on Sunday))?$/i,
-    /(?:remind|reminder|set reminder)\s+(?:me\s+)?(?:to\s+)?(.+?)(?:\s+(tomorrow|today|next week|on Monday|on Tuesday|on Wednesday|on Thursday|on Friday|on Saturday|on Sunday))?$/i
-  ];
-
-  for (const pattern of taskPatterns) {
-    const match = normalized.match(pattern);
-    if (match) {
-      return {
-        intent: 'create_task',
-        entities: {
-          title: match[1]?.trim(),
-          dueDateRaw: match[2]?.trim() || 'today',
-          priority: 'medium'
-        },
-        confidence: 0.9
-      };
-    }
-  }
-
-  // 5. Send SMS (Enhanced with CRM contact mapping)
-  const smsPatterns = [
-    // "text [Name/Phone] saying [Message]"
-    /(?:send\s+(?:sms|text|message)\s+to|text|message|sms)\s+(\+?[\d\s-]{7,})\s+(?:saying|content|message|with)\s+(.*)/i,
-    // "text [Name] saying [Message]"
-    /(?:send\s+(?:sms|text|message)\s+to|text|sms|message)\s+([\w\s]+?)\s+(?:saying|content|message|with)\s+(.*)/i,
-    // "text [Name] for me" (no explicit message)
-    /(?:text|message|sms)\s+([\w\s]+?)\s+(?:for\s+me|real quick|about\s+.+)/i,
-    // "text [Phone] [Message]" (no keyword like 'saying')
-    /(?:send\s+(?:sms|text|message)\s+to|text|sms)\s+(\+?[\d\s-]{7,})\s+(.*)/i,
-    // "text [Name] [Message]" (shortest match, must have at least some text after name)
-    /(?:send\s+(?:sms|text|message)\s+to|text|sms|message)\s+([\w]+)\s+([\w].*)/i
-  ];
-
-  for (const pattern of smsPatterns) {
-    const match = normalized.match(pattern);
-    if (match) {
-      const targetRaw = match[1]?.trim();
-      const messageRaw = match[2]?.trim() || '';
-      
-      const entities: any = {
-        target: targetRaw,
-        message: messageRaw
-      };
-      
-      // Determine if target is a phone or a name
-      const isPhone = /^[\d\s+()-]{7,}$/.test(targetRaw);
-      
-      if (isPhone) {
-        entities.phone = targetRaw.replace(/[\s()-]/g, '');
-      } else {
-        // Try to resolve the name to a phone number from CRM
-        const contact = resolveContactFromLeads(targetRaw, leads);
-        if (contact.phone) {
-          entities.phone = contact.phone;
-          entities.resolvedName = contact.fullName || targetRaw;
-          entities.crmResolved = true;
-        } else {
-          entities.contactName = targetRaw;
-          entities.crmResolved = false;
-        }
-      }
-      
-      return {
-        intent: 'send_sms',
-        entities,
-        confidence: 0.95
-      };
-    }
-  }
-
-  // 6. Search Leads
-  const searchMatch = normalized.match(/(?:search|find|find lead|look up|search for)\s+([\w\s]+)/i);
-  if (searchMatch) {
+  // 2. Send SMS (Enhanced with Contact Lookup)
+  const smsMatch = normalized.match(/(?:text|message|sms)\s+([\w\s]+?)\s+(?:saying|content|message|with|that)\s+(.*)/i) ||
+                  normalized.match(/(?:send\s+sms\s+to|send\s+text\s+to)\s+([\w\s]+?)\s+(?:saying|content|message|with|that)\s+(.*)/i);
+  if (smsMatch) {
+    const target = smsMatch[1].trim();
+    const contact = resolveContactFromLeads(target, leads);
     return {
-      intent: 'search_leads',
-      entities: { query: searchMatch[1]?.trim() },
-      confidence: 0.85
-    };
-  }
-
-  // 7. Update Lead Status
-  const statusMatch = normalized.match(/(?:update|change)\s+(?:lead\s+)?status\s+(?:to\s+)?(new|hot|warm|cold|closed|contacted|qualified|negotiating|lost|closed-won|closed-lost)\s+(?:for|of)\s+([\w\s]+)/i);
-  if (statusMatch) {
-    return {
-      intent: 'update_lead_status',
+      intent: 'send_sms',
       entities: {
-        status: statusMatch[1],
-        leadName: statusMatch[2]?.trim()
+        ...entities,
+        phone: contact.phone || entities.phone || target,
+        contactName: contact.fullName || target,
+        leadId: contact.id,
+        message: smsMatch[2].trim()
       },
-      confidence: 0.85
+      confidence: 0.95
     };
   }
 
-  // 10. Schedule check
-  if (normalized.match(/^(what is|show|tell me|view)\s+(my|today's|this week's)\s+(schedule|calendar|agenda|plans)/i)) {
-    return { intent: 'what_is_my_schedule', entities: {}, confidence: 0.95 };
+  // 3. Create Lead (Major Overhaul)
+  if (normalized.match(/\b(create|add|new)\s+lead\b/i)) {
+    const name = extractLeadName(text);
+    const location = extractLocation(text);
+    return {
+      intent: 'create_lead',
+      entities: {
+        ...entities,
+        name: name || entities.email || 'New Opportunity',
+        location: location || entities.address || '',
+        notes: `Extracted via OS Bot from: "${text}"`
+      },
+      confidence: 0.95
+    };
+  }
+
+  // 4. Create Task / Reminder (Enhanced Date/Time Integration)
+  const taskMatch = normalized.match(/(?:create|add|new|set|remind\s+me\s+to)\s+(?:task|reminder)?\s?(.+?)(?:\s+(tomorrow|today|at|on\s+[\w\s]+))?$/i);
+  if (taskMatch || normalized.includes('remind me to')) {
+    const taskPhrase = taskMatch ? taskMatch[1].trim() : normalized.replace('remind me to', '').trim();
+    // Clean phrase of date/time info if we grabbed it in entities
+    let cleanedTitle = taskPhrase.split(/\b(tomorrow|today|at|on)\b/i)[0].trim();
+    
+    return {
+      intent: 'create_task',
+      entities: {
+        ...entities,
+        title: cleanedTitle,
+        dueDate: entities.date || 'today',
+        dueTime: entities.time || null
+      },
+      confidence: 0.9
+    };
+  }
+
+  // 5. Email Compose (Context Focused)
+  const emailMatch = normalized.match(/(?:email|mail)\s+([\w\s@.]+?)\s+(?:about|regarding|that|with)\s+(.*)/i);
+  if (emailMatch) {
+    const target = emailMatch[1].trim();
+    const contact = resolveContactFromLeads(target, leads);
+    return {
+      intent: 'email_compose',
+      entities: {
+        ...entities,
+        email: contact.email || entities.email || target,
+        contactName: contact.fullName || target,
+        subject: emailMatch[2].trim()
+      },
+      confidence: 0.9
+    };
+  }
+
+  // 6. Complete / Manage Tasks
+  if (normalized.match(/\b(mark|complete|done|finish)\b.*\btask\b/)) {
+    return { intent: 'complete_task', entities, confidence: 0.9 };
+  }
+  if (normalized.match(/\b(show|view|see)\b.*\bcompleted\b.*\b(tasks|items)\b/)) {
+    return { intent: 'show_completed_tasks', entities, confidence: 0.95 };
+  }
+
+  // 7. General Knowledge / Help
+  if (normalized.match(/^(help|what can you do|how do i use|tell me about|what is)/) || normalized === 'help') {
+    return { intent: 'help', entities: {}, confidence: 0.95 };
   }
 
   return { intent: 'unknown', entities: {}, confidence: 0 };
@@ -218,11 +213,13 @@ export const LOCAL_INTENTS = [
   'create_lead',
   'create_task',
   'send_sms',
-  'show_dashboard',
+  'email_compose',
   'show_leads',
   'show_tasks',
-  'search_leads',
-  'update_lead_status',
-  'what_is_my_schedule',
+  'show_completed_tasks',
+  'show_calendar',
+  'show_dashboard',
+  'show_settings',
+  'complete_task',
   'help'
 ];

@@ -61,6 +61,8 @@ function AutomationsHubContent() {
   const [createName, setCreateName] = useState('');
   const [createDesc, setCreateDesc] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const { isAutomationRunning } = useStore();
   const { fitView } = useReactFlow();
@@ -184,6 +186,32 @@ function AutomationsHubContent() {
     [],
   );
 
+  const onNodeClick = useCallback((_: any, node: Node) => {
+    setSelectedNode(node);
+    setIsSettingsOpen(true);
+  }, []);
+
+  const updateNodeData = (nodeId: string, newData: any) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === nodeId) {
+          return { ...node, data: { ...node.data, ...newData } };
+        }
+        return node;
+      })
+    );
+    if (selectedNode?.id === nodeId) {
+      setSelectedNode((prev) => prev ? { ...prev, data: { ...prev.data, ...newData } } : null);
+    }
+  };
+
+  const deleteNode = (nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setIsSettingsOpen(false);
+    setSelectedNode(null);
+  };
+
   const loadTemplate = (template: AutomationTemplate) => {
     // Deep clone nodes and edges to avoid reference issues
     const newNodes = JSON.parse(JSON.stringify(template.nodes));
@@ -260,6 +288,7 @@ function AutomationsHubContent() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onNodeClick={onNodeClick}
           nodeTypes={nodeTypes}
           fitView
           colorMode="dark"
@@ -345,7 +374,7 @@ function AutomationsHubContent() {
           </Panel>
         </ReactFlow>
 
-        {/* Loading Overlay with Theme Blur */}
+        {/* Loading Overlay */}
         <AnimatePresence>
           {isLoading && (
             <motion.div 
@@ -431,10 +460,10 @@ function AutomationsHubContent() {
                       type: 'automation',
                       position: { x: 250, y: 50 },
                       data: { 
-                          label: 'Start Trigger', 
-                          type: 'trigger', 
-                          triggerType: 'new_lead',
-                          description: createDesc.trim() || 'Configure your workflow starting point.' 
+                        label: 'Start Trigger', 
+                        type: 'trigger', 
+                        triggerType: 'new_lead',
+                        description: createDesc.trim() || 'Configure your workflow starting point.' 
                       }
                     }]);
                     setEdges([]);
@@ -455,6 +484,165 @@ function AutomationsHubContent() {
         )}
       </AnimatePresence>
 
+      {/* Node Settings Panel */}
+      <AnimatePresence>
+        {isSettingsOpen && selectedNode && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsOpen(false)}
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99]"
+            />
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--t-bg)] border-l border-[var(--t-border)] z-[100] shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface)]/50 backdrop-blur-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)]">
+                    <Settings size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
+                      Node <span className="text-[var(--t-primary)]">Settings</span>
+                    </h2>
+                    <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">Configure {selectedNode.data.type} Step</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 text-[var(--t-text)]">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Step Label</label>
+                    <input 
+                      type="text" 
+                      value={selectedNode.data.label || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
+                      className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Description</label>
+                    <textarea 
+                      value={selectedNode.data.description || ''}
+                      onChange={(e) => updateNodeData(selectedNode.id, { description: e.target.value })}
+                      rows={2}
+                      className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="h-px bg-[var(--t-border)]" />
+
+                {selectedNode.data.type === 'trigger' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Trigger Event</label>
+                      <select 
+                        value={selectedNode.data.triggerType || ''}
+                        onChange={(e) => updateNodeData(selectedNode.id, { triggerType: e.target.value })}
+                        className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 appearance-none cursor-pointer"
+                      >
+                        <option value="new_lead">New Lead Created</option>
+                        <option value="status_change">Lead Status Changed</option>
+                        <option value="high_score">High Deal Score</option>
+                        <option value="task_overdue">Task Becomes Overdue</option>
+                      </select>
+                    </div>
+
+                    {selectedNode.data.triggerType === 'status_change' && (
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Target Status</label>
+                        <select 
+                          value={selectedNode.data.status || ''}
+                          onChange={(e) => updateNodeData(selectedNode.id, { status: e.target.value })}
+                          className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
+                        >
+                          <option value="new">New</option>
+                          <option value="engaged">Engaged</option>
+                          <option value="cold">Cold</option>
+                          <option value="negotiating">Negotiating</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {selectedNode.data.triggerType === 'high_score' && (
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Score Threshold</label>
+                        <input 
+                          type="number" 
+                          value={selectedNode.data.threshold || 80}
+                          onChange={(e) => updateNodeData(selectedNode.id, { threshold: parseInt(e.target.value) })}
+                          className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(['action', 'sms', 'email', 'ai'].includes(selectedNode.data.type)) && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Action Type</label>
+                      <select 
+                        value={selectedNode.data.actionType || ''}
+                        onChange={(e) => updateNodeData(selectedNode.id, { actionType: e.target.value })}
+                        className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 appearance-none cursor-pointer"
+                      >
+                        <option value="send_sms">Send SMS Message</option>
+                        <option value="send_email">Send Email Template</option>
+                        <option value="notify">System Notification</option>
+                        <option value="add_task">Create Follow-up Task</option>
+                      </select>
+                    </div>
+
+                    {(['send_sms', 'notify', 'send_chat'].includes(selectedNode.data.actionType)) && (
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Message Template</label>
+                        <textarea 
+                          value={selectedNode.data.message || ''}
+                          onChange={(e) => updateNodeData(selectedNode.id, { message: e.target.value })}
+                          placeholder="Use {{name}} for personalization."
+                          rows={4}
+                          className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 font-mono text-[11px]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 border-t border-[var(--t-border)] bg-[var(--t-surface)]/50 flex gap-3">
+                <button 
+                  onClick={() => deleteNode(selectedNode.id)}
+                  className="px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl font-bold transition-all"
+                >
+                  Delete
+                </button>
+                <button 
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="flex-1 px-6 py-3 bg-[var(--t-primary)] text-white rounded-2xl font-bold transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Library Sidebar */}
       <AnimatePresence>
         {isLibraryOpen && (
@@ -470,71 +658,29 @@ function AutomationsHubContent() {
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--t-bg)] border-l border-[var(--t-border)] z-[100] shadow-2xl flex flex-col"
             >
-              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface)]/50 backdrop-blur-xl">
-                <div>
-                  <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
-                    Automation <span className="text-[var(--t-primary)]">Library</span>
-                  </h2>
-                  <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">20 Professional Templates</p>
-                </div>
-                <button 
-                  onClick={() => setIsLibraryOpen(false)}
-                  className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"
-                >
-                  <X size={24} />
-                </button>
+              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between">
+                <h2 className="text-xl font-black italic uppercase text-[var(--t-text)]">
+                  Automation <span className="text-[var(--t-primary)]">Library</span>
+                </h2>
+                <button onClick={() => setIsLibraryOpen(false)}><X size={24} /></button>
               </div>
-
-              <div className="p-4 flex gap-2 overflow-x-auto border-b border-[var(--t-border)] bg-[var(--t-bg)]">
-                {['All', 'Lead Gen', 'Email', 'AI', 'Comms', 'CRM'].map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                      selectedCategory === cat 
-                        ? 'bg-[var(--t-primary)] text-white' 
-                        : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {automationTemplates
-                  .filter(t => selectedCategory === 'All' || t.category === selectedCategory)
-                  .map(template => (
-                    <motion.div
-                      key={template.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => loadTemplate(template)}
-                      className="group cursor-pointer p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all shadow-lg hover:shadow-[var(--t-primary)]/10"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <span className="px-2.5 py-1 rounded-lg bg-[var(--t-primary)]/10 text-[var(--t-primary)] text-[9px] font-black uppercase tracking-widest border border-[var(--t-primary)]/20">
-                          {template.category}
-                        </span>
-                        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-[var(--t-primary)]/20 transition-colors">
-                          <Plus size={16} className="text-[var(--t-primary)]" />
-                        </div>
-                      </div>
-                      <h3 className="text-lg font-black italic uppercase tracking-tighter text-[var(--t-text)] mb-2 group-hover:text-[var(--t-primary)] transition-colors">
-                        {template.name}
-                      </h3>
-                      <p className="text-sm text-[var(--t-text-muted)] leading-relaxed line-clamp-2">
-                        {template.description}
-                      </p>
-                      <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                {automationTemplates.map(template => (
+                  <motion.div
+                    key={template.id}
+                    onClick={() => loadTemplate(template)}
+                    className="cursor-pointer p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all"
+                  >
+                    <h3 className="text-lg font-black uppercase text-[var(--t-text)]">{template.name}</h3>
+                    <p className="text-sm text-[var(--t-text-muted)]">{template.description}</p>
+                    <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                         <Bot size={12} className="text-[var(--t-primary)]" />
                         Contains AI Automation Steps
                       </div>
-                    </motion.div>
-                  ))}
+                  </motion.div>
+                ))}
               </div>
             </motion.div>
           </>

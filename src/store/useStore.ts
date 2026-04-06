@@ -5,7 +5,7 @@ import { leadsService, tasksService, teamService, chatService, notificationsServ
 import { themes } from '../styles/themes';
 import { automationEngine } from '../lib/automation-engine';
 
-// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ——————————————————————————————————————————————————————————————————————————————————————————————————
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost' | 'contract-in' | 'under-contract' | 'follow-up';
 
@@ -31,6 +31,7 @@ export type LeadSource =
   | 'fsbo'
   | 'cold-call'
   | 'email-campaign'
+  | 'ai_bot'
   | 'other';
 export type PropertyType = 'single-family' | 'multi-family' | 'commercial' | 'land' | 'condo';
 export type TimelineType = 'call' | 'email' | 'note' | 'status-change' | 'meeting' | 'task';
@@ -721,6 +722,7 @@ export function calculatePriorityScore(lead: Lead): { score: number; level: AIPr
     'fsbo': 85,
     'cold-call': 70,
     'email-campaign': 50,
+    'ai_bot': 75,
     'other': 40,
   };
   const sourceScore = sourceQuality[lead.source];

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2 } from 'lucide-react';
+import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail } from '../lib/email';
@@ -59,6 +59,7 @@ export default function EmailComposeModal({
   const [templateCategory, setTemplateCategory] = useState<string>('All');
   const [templateImages, setTemplateImages] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
   const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
@@ -141,6 +142,33 @@ export default function EmailComposeModal({
     setShowTemplates(false);
   };
 
+  const handleAIRecommend = async () => {
+    setIsGeneratingAI(true);
+    
+    // Simulate AI "Thinking"
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    try {
+      // Find a suitable template based on search or lead status
+      let recommendedId = 'follow-up-1'; // Default
+      
+      if (selectedLead) {
+        if (selectedLead.status === 'new') recommendedId = 'intro-seller';
+        else if (selectedLead.status === 'contract-in' || selectedLead.status === 'under-contract') recommendedId = 'offer-followup';
+        else if (selectedLead.status === 'closed-lost') recommendedId = 'zombie-lead-revival';
+        else if (selectedLead.status === 'closed-won') recommendedId = 'post-closing-followup';
+        else recommendedId = 'follow-up-1';
+      }
+
+      const template = allTemplates.find(t => t.id === recommendedId) || allTemplates[0];
+      handleApplyTemplate(template);
+    } catch (err) {
+      console.error('AI Recommendation Error:', err);
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const handleUpdateTemplateImage = async (key: string, fileOrUrl: File | string) => {
     let finalUrl = '';
     
@@ -179,10 +207,6 @@ export default function EmailComposeModal({
       const oldUrl = templateImages[key];
       if (oldUrl) {
          setBody(prev => prev.split(oldUrl).join(finalUrl));
-      } else {
-         // If for some reason it wasn't there, we just update the state and hope for the best
-         // In reality, our templates use {{header_image}} which we replaced on load.
-         // So we need to find the <img> with src that matches the old URL.
       }
     }
   };
@@ -210,7 +234,6 @@ export default function EmailComposeModal({
       });
 
       if (result.success) {
-        // Log to timeline if lead exists
         if (selectedLead) {
           const timelineEntry = {
             id: crypto.randomUUID(),
@@ -230,7 +253,6 @@ export default function EmailComposeModal({
           });
         }
         
-        // Show success and close
         if (onSuccess) onSuccess();
         onClose();
       } else {
@@ -417,7 +439,7 @@ export default function EmailComposeModal({
               </div>
 
               {/* Template Quick Selection */}
-              <div className="flex items-center justify-between pb-2">
+              <div className="flex items-center gap-3 pb-2">
                 <button 
                   onClick={() => setShowTemplates(!showTemplates)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-primary-dim)]/10 hover:bg-[var(--t-primary-dim)]/20 text-[var(--t-primary)] rounded-lg text-xs font-bold transition-all border border-[var(--t-primary-dim)]/20"
@@ -425,7 +447,19 @@ export default function EmailComposeModal({
                   <BookOpenText size={14} />
                   {showTemplates ? 'Hide Templates' : 'Use Agent Template'}
                 </button>
-                <p className="text-[10px] text-[var(--t-text-muted)] font-medium">✨ High-converting scripts included</p>
+                
+                <button 
+                  onClick={handleAIRecommend}
+                  disabled={isGeneratingAI}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 hover:from-purple-600/30 hover:to-indigo-600/30 text-purple-400 rounded-lg text-xs font-bold transition-all border border-purple-500/20 group"
+                >
+                  {isGeneratingAI ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={14} className="group-hover:rotate-12 transition-transform" />
+                  )}
+                  {isGeneratingAI ? 'OS Bot Thinking...' : 'AI Recommended Response'}
+                </button>
               </div>
 
               {showTemplates && (
@@ -453,7 +487,7 @@ export default function EmailComposeModal({
                       >
                          <div className="aspect-video w-full bg-[var(--t-surface-hover)] overflow-hidden relative">
                             {t.imageUrl ? (
-                              <img src={t.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              <img src={t.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={t.name} />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-[var(--t-text-muted)]">
                                 <ImageIcon size={24} />
@@ -478,7 +512,7 @@ export default function EmailComposeModal({
                 </div>
               )}
 
-              {/* Graphic Editor (Visible when a template with an image is active) */}
+              {/* Graphic Editor */}
               {Object.keys(templateImages).length > 0 && (
                 <div className="p-4 bg-[var(--t-primary-dim)]/5 border border-[var(--t-primary-dim)]/20 rounded-2xl space-y-3">
                   <div className="flex items-center justify-between">
@@ -491,7 +525,7 @@ export default function EmailComposeModal({
                     {Object.entries(templateImages).map(([key, url]) => (
                       <div key={key} className="flex items-center gap-4 p-2 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl group">
                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--t-surface-hover)] border border-[var(--t-border)]">
-                           <img src={url} className="w-full h-full object-cover" />
+                           <img src={url} className="w-full h-full object-cover" alt={key} />
                          </div>
                          <div className="flex-1 min-w-0">
                            <p className="text-[10px] font-bold text-[var(--t-text)] truncate capitalize">{key.replace('_', ' ')}</p>
@@ -699,4 +733,3 @@ export default function EmailComposeModal({
     </div>
   );
 }
-

@@ -1,94 +1,93 @@
 /**
- * OS Bot Response Generator
- * Generates natural language responses based on intent and task result.
+ * OS Bot Response Generator (v4.0)
+ * Generates high-impact, professional responses for property management & CRM.
  */
 
 import { useStore } from '../../store/useStore';
 
+export interface ResponseResult {
+  text: string;
+  intent: string;
+  systemLog?: string;
+}
+
 export function generateResponse(intent: string, result: any): string {
   const store = useStore.getState();
-  const userName = store.currentUser?.name?.split(' ')[0] || 'there';
+  const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
 
-  if (!result || (!result.success && !['help', 'unknown', 'general_response'].includes(intent))) {
-    const errorMsgs = [
-      `I'm sorry ${userName}, I hit a snag with that. ${result?.message || 'Try rephrasing?'}`,
-      `Ouch, something went wrong. ${result?.message || 'Could you try that again?'}`,
-      `I couldn't quite complete that, ${userName}. ${result?.message || ''}`
-    ];
-    return errorMsgs[Math.floor(Math.random() * errorMsgs.length)];
+  // Specific "Help" response
+  if (intent === 'help') {
+    return `### 🤖 OS Bot Capabilities
+I'm your built-in intelligence engine, designed for speed and precision.
+
+**Try these commands:**
+- 📧 **Email**: "Email Sarah about the contract"
+- 💬 **SMS**: "Text John saying the offer is ready"
+- 👤 **CRM**: "Add lead Mike Ross from Houston"
+- ✅ **Tasks**: "Remind me to follow up tomorrow at 2pm"
+- 📅 **Navigation**: "Show my calendar" or "Show my tasks"
+
+How can I assist your business right now, **${userName}**?`;
   }
 
-  const successMsgs: Record<string, string[]> = {
-    show_dashboard: [
-      `Right away, ${userName}. Loading your dashboard now.`,
-      `Opening the dashboard for you.`,
-      `Here's a bird's eye view of your business.`
+  // Handle errors
+  if (!result || !result.success) {
+    if (intent === 'unknown') {
+      return `I'm not quite sure how to handle that request yet, **${userName}**. I'm currently optimized for **Leads, Tasks, Emails, and SMS**. Try rephrasing?`;
+    }
+    return `I encountered an issue while trying to process that **${intent.replace('_', ' ')}** request. ${result?.message || 'Please check your connection and try again.'}`;
+  }
+
+  const data = result.data || {};
+
+  // Professional Templates
+  const templates: Record<string, string[]> = {
+    show_tasks: [
+      `Right away, **${userName}**. I've opened your **Agendas & Tasks** view.`,
+      `Loading your task list. Your schedule is now synchronized.`,
+      `Opening your task manager, **${userName}**.`
+    ],
+    show_calendar: [
+      `Opening your **Google Calendar** integration now.`,
+      `Redirecting to your schedule view.`,
+      `Here is your current agenda and calendar events.`
     ],
     show_leads: [
-      `Sure thing! Opening your leads database.`,
-      `Heading over to the CRM.`,
-      `Let's look at those prospects.`
-    ],
-    show_tasks: [
-      `Coming right up. Here is your task list and calendar.`,
-      `Opening your agenda for you.`,
-      `Let's see what's on your plate.`
-    ],
-    create_lead: [
-      `Done! I've added ${result.data?.name || 'the new lead'} to your database.`,
-      `Lead created successfully. Time to follow up!`,
-      `Got it. ${result.data?.name || 'The lead'} is now in your pipeline.`
-    ],
-    create_task: [
-      `Got it. "${result.data?.title}" has been added to your tasks.`,
-      `Task created! I'll remind you about "${result.data?.title}".`,
-      `Added to your to-do list.`
+      `Accessing the **CRM Lead Database** for you.`,
+      `Opening your lead pipeline.`,
+      `Let's take a look at your active prospects.`
     ],
     send_sms: [
-      `Message sent! I've logged this in your communications history.`,
-      `SMS delivered to ${result.data?.phone || 'the contact'}.`,
-      `Sent! Check the communications tab for the log.`
+      `✅ **SMS Sent**: Message delivered to **${data.contactName || data.phone}**.`,
+      `Message broadcasted successfully to **${data.contactName || 'the recipient'}**.`,
+      `Sent! This interaction has been logged to the lead's timeline.`
     ],
-    search_leads: [
-      `Searching for "${result.data?.query}"... Found some matches for you.`,
-      `Looking up "${result.data?.query}" in your database.`,
-      `Here is what I found for "${result.data?.query}".`
+    email_compose: [
+      `📧 **Compose Ready**: Opening an email draft for **${data.contactName || data.email}**.`,
+      `Email editor opened. Subject: "*${data.subject || 'Follow up'}*"`,
+      `Directing you to the email composer for **${data.contactName || 'the contact'}**.`
     ],
-    update_lead_status: [
-      `Success! I've updated the lead status for you.`,
-      `Status changed. Your pipeline has been refreshed.`,
-      `Updated! Momentum is key.`
+    create_lead: [
+      `👤 **Lead Captured**: **${data.name}** has been added to your CRM.`,
+      `New lead **${data.name}** is now in your pipeline. Success!`,
+      `Got it. I've initialized a new lead profile for **${data.name}**.`
     ],
-    what_is_my_schedule: [
-      `Here is your agenda for today, ${userName}. You've got this!`,
-      `Checking your schedule... looks like a productive day!`,
-      `Here's what your day looks like.`
+    create_task: [
+      `📅 **Task Scheduled**: "*${data.title}*" for **${data.dueDate || 'today'}**.`,
+      `Task added to your queue: "*${data.title}*"`,
+      `Reminder set! I'll keep you on track for "*${data.title}*".`
+    ],
+    complete_task: [
+      `✅ **Task Completed**: Great progress, **${userName}**!`,
+      `Marked as done. Keep that momentum going!`,
+      `Task updated to complete. Your list is shrinking!`
     ]
   };
 
-  if (intent === 'help') {
-    return `I'm **OS Bot**, your built-in AI assistant. I'm faster, free, and deeply integrated.
-
-Try saying:
-- "Add lead John Smith from Austin"
-- "Create task Call John tomorrow"
-- "Send SMS to 555-1234 saying Hello"
-- "Show my dashboard"
-- "Update John's status to Qualified"
-
-How can I help you right now?`;
-  }
-
-  if (intent === 'unknown') {
-    return `I'm not exactly sure how to do that yet, ${userName}. Could you try rephrasing? I'm good with leads, tasks, and SMS!`;
-  }
-
-  const variations = successMsgs[intent];
+  const variations = templates[intent];
   if (variations) {
     return variations[Math.floor(Math.random() * variations.length)];
   }
 
-  return `Task completed successfully, ${userName}. What else can I do for you?`;
+  return `Action completed successfully, **${userName}**. What's next on our agenda?`;
 }
-
-

@@ -3,8 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { toast } from 'react-hot-toast';
 import { useStore } from '../store/useStore';
-import { Key, Loader2, Check, AlertCircle, Save, Sparkles, Layout, ExternalLink } from 'lucide-react';
-import { getEnabledPrebuiltRules } from '../lib/prebuilt-rules';
+import { Key, Loader2, Check, Save, Sparkles } from 'lucide-react';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [provider, setProvider] = useState<'gemini' | 'local'>('local');
@@ -30,7 +29,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     tasks: true,
     drive: false
   });
-  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
 
   const { 
     aiName: storeAiName, 
@@ -46,14 +44,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     setShowFloatingAIWidget(val);
   };
 
-  const handleToggleIntegration = (key: keyof typeof googleIntegrations) => {
-    setGoogleIntegrations(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
   useEffect(() => {
-    // Just to trigger the import if needed, but we don't strictly need it if not using it
-    getEnabledPrebuiltRules();
-    
     async function loadKey() {
       if (!currentUser?.id) {
         setLoading(false);
@@ -67,14 +58,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             .select('provider, refresh_token, access_token')
             .eq('user_id', currentUser.id);
 
-            if (connections) {
-              connections.forEach((conn: any) => {
-                if (conn.provider === 'google') {
-                  setIsGoogleConnected(true);
-                } else if (conn.provider === 'gemini') {
+          if (connections) {
+            connections.forEach((conn: any) => {
+              if (conn.provider === 'gemini') {
                 setGeminiKey(conn.refresh_token || '');
                 if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
-                  setModel(conn.access_token || 'gemini-2.0-flash');
+                  setModel(conn.access_token || 'gemini-3.1-flash-lite');
                 }
               } else if (conn.provider === 'local') {
                 setLocalEndpoint(conn.refresh_token || 'http://localhost:11434/v1');
@@ -88,7 +77,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           const activeProv = localStorage.getItem('user_ai_provider') as any;
           if (activeProv) setProvider(activeProv);
 
-          // Load profile settings for personality
           const { data: profile } = await supabase
             .from('profiles')
             .select('settings')
@@ -106,10 +94,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             setGoogleIntegrations(profile.settings.google_integrations);
           }
         } catch (err) {
-          console.error('Failed to load API keys:', err);
+          console.error('Failed to load settings:', err);
         }
       } else {
-        // Fallback to local storage for demo mode
         setGeminiKey(localStorage.getItem('user_gemini_api_key') || '');
         setLocalEndpoint(localStorage.getItem('user_local_ai_endpoint') || 'http://localhost:11434/v1');
         
@@ -129,6 +116,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
         const localAiTone = localStorage.getItem('user_ai_tone');
         if (localAiTone) setAiTone(localAiTone);
+
         const localShowWidget = localStorage.getItem('user_show_floating_widget');
         if (localShowWidget) {
           const val = localShowWidget === 'true';
@@ -163,7 +151,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           setTestResult({ success: true, message: 'OS Bot is always ready! No connection test needed.' });
         } else {
           const res = await fetch(`${localEndpoint}/models`);
-          if (res.ok) setTestResult({ success: true, message: 'OS Bot connection successful!' });
+          if (res.ok) setTestResult({ success: true, message: 'Local AI connection successful!' });
           else throw new Error('Local endpoint not reachable.');
         }
       }
@@ -182,7 +170,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
     if (isSupabaseConfigured && supabase) {
       try {
-        // Save current provider connection
         const { data: existing } = await supabase
           .from('user_connections')
           .select('id')
@@ -200,7 +187,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           });
         }
 
-        // Save profile settings
         const { data: profile } = await supabase.from('profiles').select('settings').eq('id', currentUser.id).maybeSingle();
         await supabase.from('profiles').update({
           settings: {
@@ -220,8 +206,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         setStoreAiPersonality(aiPersonality);
         if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
         window.dispatchEvent(new CustomEvent('ai-settings-updated'));
+        
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 2000);
       } catch (err: any) {
         console.error('Failed to save settings:', err);
+        toast.error('Failed to save settings.');
       }
     } else {
       localStorage.setItem('user_gemini_api_key', geminiKey);
@@ -235,15 +225,15 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
       if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
       window.dispatchEvent(new CustomEvent('ai-settings-updated'));
+      
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
     }
     setSaving(false);
   };
 
   const handleReconnectGoogle = () => {
-    // Use the native Google OAuth service instead of Supabase Auth to avoid dashboard configuration errors.
-    // This allows the ecosystem to connect even if "Google" is not enabled as a primary login method.
     try {
-      // Pass the current path in the state so the callback knows where to redirect
       const state = `calendar-sync:${window.location.pathname}`;
       const url = GoogleCalendarService.getInstance().getAuthUrl(state);
       if (!url) throw new Error('Could not generate Google Auth URL');
@@ -271,7 +261,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         </div>
       )}
 
-      {/* Provider Selection — OS Bot first, Gemini second. No other providers. */}
+      {/* Provider Selection */}
       <div className="grid grid-cols-2 gap-3">
         {[
           { id: 'local', label: 'OS Bot (Built-in AI)', icon: '🤖', desc: 'Free, unlimited, zero-latency' },
@@ -281,8 +271,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             key={p.id}
             onClick={() => {
               setProvider(p.id as any);
-              if (p.id === 'gemini') setModel('gemini-3.1-flash-lite');
-              else if (p.id === 'local') setModel('os-bot');
+              setModel(p.id === 'gemini' ? 'gemini-3.1-flash-lite' : 'os-bot');
               setTestResult(null);
             }}
             className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
@@ -292,13 +281,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             }`}
           >
             <span className="text-2xl">{p.icon}</span>
-            <span className={`text-[10px] font-black uppercase tracking-tight ${provider === p.id ? 'text-[var(--t-on-primary)]' : 'text-[var(--t-text-muted)]'}`}>{p.label}</span>
+            <span className={`text-[10px] font-black uppercase tracking-tight ${provider === p.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{p.label}</span>
             <span className="text-[9px] text-[var(--t-text-muted)]">{p.desc}</span>
           </button>
         ))}
       </div>
 
-      {/* Guide Card */}
       <div className="bg-[var(--t-surface)]/50 rounded-2xl border border-[var(--t-border)] p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Key className="w-5 h-5 text-[var(--t-primary)]" />
@@ -306,7 +294,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         </h2>
         
         <div className="space-y-3 text-[var(--t-text-muted)] text-sm">
-          {provider === 'gemini' && (
+          {provider === 'gemini' ? (
             <>
               <p>Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Google AI Studio</a>.</p>
               <ol className="list-decimal list-inside space-y-2 ml-2">
@@ -315,17 +303,15 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 <li>Paste it into the configuration field below and click Save.</li>
               </ol>
             </>
-          )}
-          {provider === 'local' && (
+          ) : (
             <div className="bg-[var(--t-success)]/5 border border-[var(--t-success)]/20 rounded-xl p-4">
               <p className="text-[var(--t-success)] font-bold text-sm mb-1">✅ No setup needed!</p>
-              <p>OS Bot is powered by our custom-built AI. Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.</p>
+              <p>OS Bot is powered by our custom-built AI. Zero cost, unlimited messages, runs entirely in your browser.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Model Selection Card */}
       <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-primary)]/20 shadow-lg shadow-[var(--t-primary)]/5 p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-[var(--t-primary)]" />
@@ -334,7 +320,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         <div>
           <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred Model</label>
           <div className="grid grid-cols-1 gap-3">
-            {/* OS Bot — always first */}
             {provider === 'local' && (
               <button
                 onClick={() => setModel('os-bot')}
@@ -344,31 +329,25 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                   <div className={`w-2 h-2 rounded-full ${model === 'os-bot' ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
                   <span className={`font-medium ${model === 'os-bot' ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>🤖 OS Bot (Built-in AI)</span>
                 </div>
-                <span className="text-xs text-[var(--t-text-muted)]">Zero cost, unlimited messages, runs entirely in your browser. No rate limits, no API keys needed.</span>
+                <span className="text-xs text-[var(--t-text-muted)]">Zero cost, unlimited messages, runs entirely in your browser.</span>
               </button>
             )}
 
-            {/* Gemini models */}
-            {provider === 'gemini' && [
-              { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite', desc: 'High-performance alternative (mapped to 2.0 Flash)' },
-              { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Ultra-low latency, cost-effective model for rapid task execution.' }
-            ].map((m) => (
+            {provider === 'gemini' && (
               <button
-                key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === m.id ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
+                onClick={() => setModel('gemini-3.1-flash-lite')}
+                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === 'gemini-3.1-flash-lite' ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === m.id ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
-                  <span className={`font-medium ${model === m.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{m.label}</span>
+                  <div className={`w-2 h-2 rounded-full ${model === 'gemini-3.1-flash-lite' ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
+                  <span className={`font-medium ${model === 'gemini-3.1-flash-lite' ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>Gemini 3.1 Flash-Lite</span>
                 </div>
-                <span className="text-xs text-[var(--t-text-muted)]">{m.desc}</span>
+                <span className="text-xs text-[var(--t-text-muted)]">High-performance cloud intelligence (mapped to 2.0 Flash).</span>
               </button>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* Personality Section */}
         <div className="pt-6 border-t border-[var(--t-border)] space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -377,7 +356,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 type="text"
                 value={aiName}
                 onChange={(e) => setAiName(e.target.value)}
-                placeholder="e.g., WholeScale Buddy"
                 className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all font-medium"
               />
             </div>
@@ -388,9 +366,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 onChange={(e) => setAiTone(e.target.value)}
                 className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all appearance-none"
               >
-                <option value="friendly">Friendly (Warm & Helpful)</option>
-                <option value="professional">Professional (Formal & Precise)</option>
-                <option value="direct">Direct (Concise & Efficient)</option>
+                <option value="friendly">Friendly</option>
+                <option value="professional">Professional</option>
+                <option value="direct">Direct</option>
               </select>
             </div>
           </div>
@@ -399,7 +377,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             <textarea
               value={aiPersonality}
               onChange={(e) => setAiPersonalityState(e.target.value)}
-              placeholder="e.g., 'Be friendly, use emojis, and focus on real estate ROI.'"
               rows={3}
               className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
             />
@@ -419,10 +396,34 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         </div>
       </div>
 
-      {/* Configuration Card — hide API endpoint for OS Bot (Issue 5) */}
-      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-        {/* Only show API key/endpoint when NOT using OS Bot */}
-        {!(provider === 'local' && model === 'os-bot') && (
+      <div className="flex justify-end pt-4">
+        <button
+          onClick={handleSaveKey}
+          disabled={saving}
+          className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 ${
+            saveSuccess 
+              ? 'bg-[var(--t-success)] text-white shadow-[var(--t-success-dim)]' 
+              : 'bg-[var(--t-primary)] text-[var(--t-on-primary)] shadow-[var(--t-primary-dim)]'
+          }`}
+        >
+          {saving ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : saveSuccess ? (
+            <>
+              <Check className="w-5 h-5" />
+              Saved ✓
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5" />
+              Save AI Settings
+            </>
+          )}
+        </button>
+      </div>
+
+      {!(provider === 'local' && model === 'os-bot') && (
+        <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">
               {provider === 'local' ? 'API Endpoint URL' : 'Gemini API Key'}
@@ -435,129 +436,40 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                   if (provider === 'gemini') setGeminiKey(e.target.value);
                   else setLocalEndpoint(e.target.value);
                 }}
-                placeholder={provider === 'local' ? 'http://localhost:11434/v1' : 'Paste your Gemini key here...'}
                 className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
               />
               <button
                 onClick={handleTestKey}
                 disabled={testing || (provider === 'gemini' && !geminiKey)}
-                className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-white rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2 disabled:opacity-50 font-semibold"
+                className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-white rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2"
               >
                 {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
               </button>
             </div>
           </div>
-        )}
 
-        {testResult && (
-          <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-[var(--t-success)]/10 border border-[var(--t-success)]/20 text-[var(--t-success)]' : 'bg-[var(--t-error)]/10 border border-[var(--t-error)]/20 text-[var(--t-error)]'}`}>
-            {testResult.success ? <Check className="w-5 h-5 shrink-0" /> : <AlertCircle className="w-5 h-5 shrink-0" />}
-            <span className="text-sm font-medium">{testResult.message}</span>
-          </div>
-        )}
-
-        {/* Save button with Issue 4: toast + green checkmark */}
-        <div className="pt-4 border-t border-[var(--t-border)]">
-          <button
-            onClick={async () => {
-              await handleSaveKey();
-              setSaveSuccess(true);
-              toast.success('AI Settings saved successfully!', { icon: '✅' });
-              setTimeout(() => setSaveSuccess(false), 2000);
-            }}
-            disabled={saving || (provider === 'gemini' && !geminiKey)}
-            className={`w-full font-black uppercase tracking-widest py-3 rounded-xl transition-all flex items-center justify-center gap-2 hover:shadow-lg disabled:opacity-50 ${
-              saveSuccess 
-                ? 'bg-[var(--t-success)] text-white' 
-                : 'bg-[var(--t-primary)] hover:bg-[var(--t-primary)] text-[var(--t-on-primary)] hover:shadow-[var(--t-primary-dim)]'
-            }`}
-          >
-            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : saveSuccess ? <Check className="w-5 h-5 animate-bounce" /> : <Save className="w-5 h-5" />}
-            {saveSuccess ? 'Saved ✓' : 'Save AI Settings'}
-          </button>
-        </div>
-      </div>
-
-      {/* Google Ecosystem Suite */}
-      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Layout className="w-5 h-5 text-[var(--t-primary)]" />
-            Google Ecosystem Management
-          </h2>
-          <div className="flex items-center gap-2">
-            {isGoogleConnected && (
-              <span className="flex items-center gap-1 px-2 py-1 bg-[var(--t-success)]/10 text-[var(--t-success)] text-[9px] font-black rounded border border-[var(--t-success)]/20 uppercase tracking-tighter">
-                <Check size={8} strokeWidth={4} />
-                Connected
-              </span>
-            )}
-            <button 
-              onClick={handleReconnectGoogle}
-              className="px-3 py-1 bg-[var(--t-primary)]/10 text-[var(--t-primary)] text-[10px] font-black rounded-lg border border-[var(--t-primary)]/20 uppercase tracking-widest hover:bg-[var(--t-primary)] hover:text-[var(--t-on-primary)] transition-all"
-            >
-              {isGoogleConnected ? 'Update Connection' : 'Connect Ecosystem'}
-            </button>
-          </div>
-        </div>
-
-        <p className="text-xs text-[var(--t-text-muted)] leading-relaxed">
-          Manage specialized Google services integrated into your OS. Authorized via secure OAuth.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { id: 'calendar', label: 'Team Calendar', desc: 'Sync events & task deadlines' },
-            { id: 'gmail', label: 'Gmail Inbox', desc: 'Send & receive transaction emails' },
-            { id: 'contacts', label: 'Google Contacts', desc: 'Auto-sync leads to phone' },
-            { id: 'tasks', label: 'Google Tasks', desc: 'Push high-priority items' },
-            { id: 'drive', label: 'Google Drive', desc: 'Store contracts & deal photos' }
-          ].map((item) => (
-            <div key={item.id} className="p-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface-dim)]/30 flex items-center justify-between group hover:border-[var(--t-primary)]/30 transition-all">
-              <div className="space-y-1">
-                <span className="text-sm font-bold text-white block">{item.label}</span>
-                <span className="text-[10px] text-[var(--t-text-muted)]">{item.desc}</span>
-              </div>
-              <button
-                onClick={() => handleToggleIntegration(item.id as any)}
-                className={`w-10 h-5 rounded-full transition-colors relative ${googleIntegrations[item.id as keyof typeof googleIntegrations] ? 'bg-[var(--t-success)]' : 'bg-[var(--t-surface-subtle)]'}`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${googleIntegrations[item.id as keyof typeof googleIntegrations] ? 'left-[22px]' : 'left-0.5'}`} />
-              </button>
+          {testResult && (
+            <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-[var(--t-success)]/10 text-[var(--t-success)]' : 'bg-[var(--t-error)]/10 text-[var(--t-error)]'}`}>
+              <Check className="w-5 h-5 mt-0.5" />
+              <p className="text-sm">{testResult.message}</p>
             </div>
-          ))}
+          )}
         </div>
+      )}
 
-        {/* Developer Console Links */}
-        <div className="pt-6 border-t border-[var(--t-border)]">
-          <h3 className="text-xs font-bold text-[var(--t-text-muted)] uppercase mb-4 tracking-widest">Industry Resource Suite</h3>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: 'Supabase', url: 'https://supabase.com/dashboard' },
-              { label: 'Resend', url: 'https://resend.com' },
-              { label: 'Stripe', url: 'https://dashboard.stripe.com' },
-              { label: 'Cloudflare', url: 'https://dash.cloudflare.com' },
-              { label: 'GitHub Actions', url: 'https://github.com/features/actions' },
-              { label: 'Google AI Studio', url: 'https://aistudio.google.com' }
-            ].map((link) => (
-              <a
-                key={link.label}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-2 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)] text-[10px] font-black uppercase tracking-widest text-[var(--t-text)] flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-all"
-              >
-                {link.label}
-                <ExternalLink size={10} className="text-[var(--t-primary)]" />
-              </a>
-            ))}
+      {/* Google Ecosystem Connection */}
+      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-4">
+        <button
+          onClick={handleReconnectGoogle}
+          className="w-full flex items-center justify-between p-4 bg-[var(--t-primary)]/10 border border-[var(--t-primary)]/20 rounded-xl hover:bg-[var(--t-primary)]/20 transition-all"
+        >
+          <div className="text-left">
+            <p className="text-sm font-bold text-white">Google Workforce Connection</p>
+            <p className="text-xs text-[var(--t-text-muted)]">Force refresh Google Tasks & Calendar permissions</p>
           </div>
-        </div>
+          <div className="px-4 py-1.5 bg-[var(--t-primary)] text-white text-xs font-black uppercase rounded-lg">Reconnect</div>
+        </button>
       </div>
-
-      <p className="text-center text-[10px] text-[var(--t-text-muted)] italic pb-8">
-        All connections use bank-level OAuth security. Your keys are never stored on our servers in plain text.
-      </p>
     </div>
   );
 }

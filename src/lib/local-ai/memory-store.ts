@@ -1,6 +1,6 @@
 /**
- * OS Bot Memory Store
- * Manages conversation history, context, and user preferences locally.
+ * OS Bot Memory Store (v4.0)
+ * Manages conversation history, professional context, and CRM entities locally.
  */
 
 import { useStore } from '../../store/useStore';
@@ -12,21 +12,28 @@ export interface Message {
 }
 
 export interface ConversationContext {
+  userId?: string;
+  userName?: string;
   lastLeadId?: string;
   lastLeadName?: string;
-  lastIntent?: string;
-  recentEntities: Record<string, any>;
+  recentLeads: Array<{ id: string; name: string }>;
+  history: Message[];
 }
 
-const MEMORY_KEY = 'wholescale_os_bot_memory';
-const CONTEXT_KEY = 'wholescale_os_bot_context';
+const MEMORY_KEY = 'os_bot_permanent_memory';
 
-export function getMemory(): Message[] {
+export function getMemory(): ConversationContext {
   const data = localStorage.getItem(MEMORY_KEY);
-  return data ? JSON.parse(data) : [];
+  return data ? JSON.parse(data) : { 
+    recentLeads: [],
+    history: [] 
+  };
 }
 
-export function saveConversation(content: string, role: 'user' | 'assistant') {
+/**
+ * Saves a message to history and caps it at last 10 turns (5 full conversations)
+ */
+export function saveMessage(role: 'user' | 'assistant', content: string) {
   const memory = getMemory();
   const newMessage: Message = {
     role,
@@ -34,45 +41,62 @@ export function saveConversation(content: string, role: 'user' | 'assistant') {
     timestamp: new Date().toISOString()
   };
   
-  // Keep last 20 for better context
-  const updatedMemory = [...memory, newMessage].slice(-20);
-  localStorage.setItem(MEMORY_KEY, JSON.stringify(updatedMemory));
+  // Keep last 10 messages (5 user + 5 assistant)
+  const updatedHistory = [...memory.history, newMessage].slice(-10);
+  
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    history: updatedHistory
+  }));
 }
 
-export function getContext(): ConversationContext {
-  const data = localStorage.getItem(CONTEXT_KEY);
-  return data ? JSON.parse(data) : { recentEntities: {} };
+/**
+ * Updates the context with the most recent lead created/viewed
+ */
+export function trackLead(id: string, name: string) {
+  const memory = getMemory();
+  const recentLeads = [{ id, name }, ...memory.recentLeads.filter(l => l.id !== id)].slice(0, 5);
+  
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    lastLeadId: id,
+    lastLeadName: name,
+    recentLeads
+  }));
 }
 
-export function updateContext(updates: Partial<ConversationContext>) {
-  const current = getContext();
-  const updated = {
-    ...current,
-    ...updates,
-    recentEntities: { ...current.recentEntities, ...(updates.recentEntities || {}) }
+/**
+ * Injects user profile info into memory
+ */
+export function syncUserProfile() {
+  const store = useStore.getState();
+  const profile = store.currentUser;
+  if (!profile) return;
+
+  const memory = getMemory();
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    userId: profile.id,
+    userName: profile.name || 'Agent'
+  }));
+}
+
+/**
+ * Get current context for the AI engine
+ */
+export function getAIContext() {
+  const memory = getMemory();
+  const store = useStore.getState();
+  
+  return {
+    user: store.currentUser?.name || memory.userName || 'Agent',
+    lastLead: memory.lastLeadName || 'none',
+    recentLeads: memory.recentLeads,
+    history: memory.history
   };
-  localStorage.setItem(CONTEXT_KEY, JSON.stringify(updated));
 }
 
 export function clearMemory() {
   localStorage.removeItem(MEMORY_KEY);
-  localStorage.removeItem(CONTEXT_KEY);
-}
-
-/**
- * Syncs memory and context to Supabase profile settings if needed.
- */
-export async function syncMemoryToCloud() {
-  const store = useStore.getState();
-  const userId = store.currentUser?.id;
-  if (!userId) return;
-
-  const memory = getMemory();
-  const context = getContext();
-
-  console.log('[OS Bot] Syncing memory to cloud...', { messages: memory.length });
-  
-  // In a real implementation, we would update the 'profiles' table 'settings' column
-  // with this memory to allow cross-device continuity.
 }
 

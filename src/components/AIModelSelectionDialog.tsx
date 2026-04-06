@@ -1,24 +1,21 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Modal } from './Modal';
-import { Sparkles, Cpu, Globe, ArrowRight } from 'lucide-react';
+import { Sparkles, Cpu, ArrowRight } from 'lucide-react';
 
 export const AIModelSelectionDialog: React.FC = () => {
   const { isAiFirstUse, setIsAiFirstUse, setAiModel } = useStore();
-  const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic' | 'local'>('gemini');
-  const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/v1');
+  const [provider, setProvider] = useState<'gemini' | 'local'>('local');
 
   if (!isAiFirstUse) return null;
 
   const handleSave = () => {
-    let model = 'gemini-2.0-flash';
-    if (provider === 'openai') model = 'gpt-4o';
-    else if (provider === 'anthropic') model = 'claude-3-5-sonnet-latest';
-    else if (provider === 'local') model = 'llama3';
+    let model = 'os-bot';
+    if (provider === 'gemini') model = 'gemini-3.1-flash-lite';
+    else if (provider === 'local') model = 'os-bot';
 
     setAiModel(model);
     if (provider === 'local') {
-      localStorage.setItem('user_local_ai_endpoint', localEndpoint);
       localStorage.setItem('user_ai_provider', 'local');
     } else {
       localStorage.setItem('user_ai_provider', provider);
@@ -90,22 +87,12 @@ export const AIModelSelectionDialog: React.FC = () => {
           ))}
         </div>
 
+        {/* Hidden endpoint for OS Bot — Issue 5 */}
         {provider === 'local' && (
-          <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/20 space-y-4 animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center gap-2 text-purple-400">
-              <Globe className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-widest">Local Node Configuration</span>
-            </div>
-            <input
-              type="text"
-              value={localEndpoint}
-              onChange={(e) => setLocalEndpoint(e.target.value)}
-              placeholder="e.g. http://localhost:11434/v1"
-              className="w-full bg-black/40 border border-purple-500/30 rounded-xl px-4 py-3 text-white outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-mono text-xs"
-            />
-            <p className="text-[10px] text-purple-400/70 italic">
-              Ensure Ollama or LM Studio is running on your machine with the server enabled.
-            </p>
+          <div className="p-5 rounded-2xl bg-[var(--t-primary)]/5 border border-[var(--t-primary)]/20 animate-in fade-in slide-in-from-top-2 text-center">
+             <p className="text-xs text-[var(--t-text-muted)] italic">
+               OS Bot is a zero-latency, local neural engine. No configuration required.
+             </p>
           </div>
         )}
 
