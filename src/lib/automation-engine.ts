@@ -3,6 +3,7 @@ import { leadsService, tasksService, notificationsService, chatService } from '.
 import { Node, Edge } from '@xyflow/react';
 import { toast } from 'react-hot-toast';
 import { useStore } from '../store/useStore';
+import * as emailSummaryService from './email-summary-service';
 
 export type AutomationEventType = 
   | 'LEAD_CREATED' 
@@ -40,7 +41,10 @@ class AutomationEngine {
     try {
       if (!supabase) return;
 
-      // 1. Fetch active workflows
+      // 1. Handle OS Preference-based direct alerts (Hardcoded system alerts)
+      await this.handlePreferenceAlerts(eventType, data);
+
+      // 2. Fetch active workflows
       const { data: workflows, error } = await supabase
         .from('user_automations')
         .select('*')
@@ -49,7 +53,7 @@ class AutomationEngine {
       if (error) throw error;
       if (!workflows || workflows.length === 0) return;
 
-      // 2. Process each matching workflow
+      // 3. Process each matching workflow
       for (const workflow of workflows) {
         const nodes = workflow.nodes as Node[];
         const edges = workflow.edges as Edge[];
@@ -83,6 +87,46 @@ class AutomationEngine {
     } catch (err) {
       console.error('[AutomationEngine] Error processing triggers:', err);
       useStore.getState().setIsAutomationRunning(false);
+    }
+  }
+
+  /**
+   * Dispatches OS Message alerts based on user preferences table
+   */
+  private async handlePreferenceAlerts(eventType: AutomationEventType, data: any) {
+    const store = useStore.getState();
+    const currentUser = store.currentUser;
+    const userId = (data.user_id as string) || (data.assigned_to as string) || currentUser?.id;
+    const leadId = data.id || data.leadId || data.lead_id;
+
+    if (!userId) return;
+
+    try {
+      switch (eventType) {
+        case 'LEAD_CREATED':
+          await emailSummaryService.sendLeadAlert(userId, leadId, 'new');
+          break;
+        case 'LEAD_SCORE_HIGH':
+          await emailSummaryService.sendLeadAlert(userId, leadId, 'high-score');
+          break;
+        case 'DEAL_WON':
+          await emailSummaryService.sendDealAlert(userId, leadId, 'closed');
+          break;
+        case 'TASK_STATUS_CHANGED':
+          if (data.status === 'overdue') {
+            const taskId = data.id || data.taskId;
+            if (taskId) await emailSummaryService.sendTaskAlert(userId, taskId, 'overdue');
+          }
+          break;
+        case 'CALENDAR_EVENT_CREATED':
+          // Optional: send logic for new events if requested
+          break;
+        case 'LEAD_INACTIVITY':
+          // Optional: logic for inactivity warning
+          break;
+      }
+    } catch (err) {
+      console.error('[AutomationEngine] Preference alert failed:', err);
     }
   }
 

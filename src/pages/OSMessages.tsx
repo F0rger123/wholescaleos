@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Calendar, AlertCircle, CheckCircle2, Sparkles, MessageSquare, 
-  Clock, Settings, Bell, Mail, Users, ArrowRightLeft, Bot, Smartphone 
+  Clock, Mail, Users, ArrowRightLeft, Bot, 
+  Smartphone, Plus, X, Send, Target, Zap
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
+import { toast } from 'react-hot-toast';
 
 export interface OSMessage {
   id: string;
@@ -19,13 +21,20 @@ export interface OSMessage {
   priority?: 'low' | 'medium' | 'high';
 }
 
-
-
 export function OSMessages() {
   const [messages, setMessages] = useState<OSMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'messages' | 'settings'>('messages');
   const [prefs, setPrefs] = useState<any>(null);
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customMsg, setCustomMsg] = useState({
+    name: '',
+    description: '',
+    trigger_type: 'manual',
+    template_content: '',
+    recipient_type: 'self'
+  });
+  
   const { currentUser } = useStore();
 
   useEffect(() => {
@@ -51,28 +60,25 @@ export function OSMessages() {
       if (data) {
         setPrefs(data);
       } else {
-        // Initialize default prefs if none exist
         const defaultPrefs = {
           user_id: currentUser.id,
           daily_summary_enabled: true,
           weekly_summary_enabled: true,
-          transaction_alerts_enabled: true,
+          monthly_performance_report_enabled: true,
+          deal_closed_alerts_enabled: true,
+          offer_made_alert_enabled: true,
+          offer_accepted_alert_enabled: true,
+          contract_signed_alert_enabled: true,
+          calendar_digest_enabled: true,
           task_reminders_enabled: true,
-          lead_captured_alerts_enabled: true,
-          status_change_alerts_enabled: true,
-          ai_insight_alerts_enabled: true,
-          task_escalation_alerts_enabled: false,
-          contract_signed_alerts_enabled: true,
-          document_uploaded_alerts_enabled: false,
-          payment_received_alerts_enabled: true,
-          low_balance_alerts_enabled: true,
-          sms_delivered_alerts_enabled: false,
-          email_opened_alerts_enabled: true,
-          link_clicked_alerts_enabled: true,
-          bounce_alerts_enabled: true,
-          api_error_alerts_enabled: false,
-          system_maintenance_alerts_enabled: true,
-          new_feature_alerts_enabled: true
+          task_overdue_alert_enabled: true,
+          new_lead_alerts_enabled: true,
+          lead_inactivity_alert_enabled: true,
+          lead_score_high_alert_enabled: true,
+          email_open_notification_enabled: true,
+          sms_received_alert_enabled: true,
+          goal_milestone_alert_enabled: true,
+          team_activity_summary_enabled: true
         };
         setPrefs(defaultPrefs);
         await supabase.from('user_os_messages_preferences').insert(defaultPrefs);
@@ -85,13 +91,21 @@ export function OSMessages() {
   const updatePreference = async (key: string) => {
     if (!supabase || !currentUser || !prefs) return;
     try {
-      const newPrefs = { ...prefs, [key]: !prefs[key] };
+      const newValue = !prefs[key];
+      const newPrefs = { ...prefs, [key]: newValue };
       setPrefs(newPrefs);
-      await supabase
+      
+      const { error } = await supabase
         .from('user_os_messages_preferences')
         .upsert(newPrefs);
+        
+      if (error) throw error;
+      toast.success(`${key.replace(/_/g, ' ')} updated`, {
+        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+      });
     } catch (err) {
       console.error('Update preferences error:', err);
+      toast.error('Failed to update preference');
     }
   };
 
@@ -107,9 +121,7 @@ export function OSMessages() {
         .order('created_at', { ascending: false })
         .limit(50);
         
-      if (data) {
-        setMessages(data);
-      }
+      if (data) setMessages(data);
     } catch (err) {
       console.error('Fetch messages error:', err);
     } finally {
@@ -123,6 +135,31 @@ export function OSMessages() {
     await supabase.from('notifications').update({ read: true }).eq('id', id);
   };
 
+  const handleCreateCustom = async () => {
+    if (!supabase || !currentUser) return;
+    if (!customMsg.name || !customMsg.template_content) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_os_messages_custom')
+        .insert({
+          ...customMsg,
+          user_id: currentUser.id
+        });
+
+      if (error) throw error;
+      toast.success('Custom message template saved!');
+      setShowCustomModal(false);
+      setCustomMsg({ name: '', description: '', trigger_type: 'manual', template_content: '', recipient_type: 'self' });
+    } catch (err) {
+      console.error('Create custom error:', err);
+      toast.error('Failed to save template');
+    }
+  };
+
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
       {/* Header */}
@@ -133,23 +170,33 @@ export function OSMessages() {
           </div>
           <div>
             <h1 className="text-3xl font-black text-[var(--t-text)] tracking-tight">OS Messages</h1>
-            <p className="text-sm text-[var(--t-text-muted)] font-bold uppercase tracking-[0.2em]">Intelligent Communication Hub</p>
+            <p className="text-sm text-[var(--t-text-muted)] font-bold uppercase tracking-[0.2em]">Intelligent Automation Hub</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 p-1 bg-[var(--t-surface-subtle)] rounded-2xl border border-[var(--t-border)]">
+        <div className="flex items-center gap-4">
           <button 
-            onClick={() => setView('messages')}
-            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'messages' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+            onClick={() => setShowCustomModal(true)}
+            className="flex items-center gap-2 px-6 py-2.5 bg-[var(--t-primary)] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[var(--t-primary)]/20"
           >
-            Insights
+            <Plus size={16} />
+            Create Custom
           </button>
-          <button 
-            onClick={() => setView('settings')}
-            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
-          >
-            Preferences
-          </button>
+
+          <div className="flex items-center gap-2 p-1 bg-[var(--t-surface-subtle)] rounded-2xl border border-[var(--t-border)]">
+            <button 
+              onClick={() => setView('messages')}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'messages' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+            >
+              Activity
+            </button>
+            <button 
+              onClick={() => setView('settings')}
+              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${view === 'settings' ? 'bg-[var(--t-primary)] text-white shadow-lg' : 'text-[var(--t-text-muted)] hover:text-[var(--t-text)]'}`}
+            >
+              Preferences
+            </button>
+          </div>
         </div>
       </div>
 
@@ -199,7 +246,7 @@ export function OSMessages() {
                         {msg.link && (
                           <div className="pt-2">
                             <span className="text-[10px] font-black text-[var(--t-primary)] uppercase tracking-widest hover:underline cursor-pointer flex items-center gap-1 group">
-                              View Details <Sparkles size={10} className="group-hover:rotate-12 transition-transform" />
+                              View Details <ArrowRightLeft size={10} className="group-hover:rotate-12 transition-transform" />
                             </span>
                           </div>
                         )}
@@ -220,91 +267,157 @@ export function OSMessages() {
               )}
             </div>
           ) : (
-            <div className="space-y-8 animate-in slide-in-from-right-8 duration-500">
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Mail className="text-[var(--t-primary)]" size={20} />
-                  <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--t-text-muted)]">Core Summaries</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-12 animate-in slide-in-from-right-8 duration-500 pb-20">
+              {/* Daily/Weekly Reports */}
+              <section className="space-y-6">
+                <CategoryHeader icon={<Mail size={20} />} title="Automated Reporting" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <SettingToggle 
-                    icon={<Calendar size={18} />}
-                    title="Daily OS Summary"
-                    description="24-hour network activity digest"
+                    icon={<Clock size={18} />}
+                    title="Daily Summary"
+                    description="Leads, tasks, and revenue digest (8:00 AM)"
                     enabled={prefs?.daily_summary_enabled ?? false}
                     onToggle={() => updatePreference('daily_summary_enabled')}
                   />
                   <SettingToggle 
-                    icon={<Bell size={18} />}
-                    title="Weekly Performance"
-                    description="Comparative growth analytics"
+                    icon={<Calendar size={18} />}
+                    title="Weekly Summary"
+                    description="Trends and conversion rates (Monday 9:00 AM)"
                     enabled={prefs?.weekly_summary_enabled ?? false}
                     onToggle={() => updatePreference('weekly_summary_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Target size={18} />}
+                    title="Monthly Report"
+                    description="Full performance report (1st of month)"
+                    enabled={prefs?.monthly_performance_report_enabled ?? false}
+                    onToggle={() => updatePreference('monthly_performance_report_enabled')}
                   />
                 </div>
               </section>
 
-              <section className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Sparkles className="text-[var(--t-primary)]" size={20} />
-                  <h2 className="text-sm font-black uppercase tracking-[0.3em] text-[var(--t-text-muted)]">Granular Alerts</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Deal Alerts */}
+              <section className="space-y-6">
+                <CategoryHeader icon={<Zap size={20} />} title="Deal Momentum" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <SettingToggle 
-                    icon={<Users size={18} />}
-                    title="Lead Captured"
-                    description="Immediate alert for new leads"
-                    enabled={prefs?.lead_captured_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('lead_captured_alerts_enabled')}
+                    icon={<CheckCircle2 size={18} />}
+                    title="Deal Closed"
+                    description="Alert when a deal is won"
+                    enabled={prefs?.deal_closed_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('deal_closed_alerts_enabled')}
                   />
                   <SettingToggle 
-                    icon={<ArrowRightLeft size={18} />}
-                    title="Status Changes"
-                    description="Alert when CRM status updates"
-                    enabled={prefs?.status_change_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('status_change_alerts_enabled')}
+                    icon={<Send size={18} />}
+                    title="Offer Made"
+                    description="Notification for new offers"
+                    enabled={prefs?.offer_made_alert_enabled ?? false}
+                    onToggle={() => updatePreference('offer_made_alert_enabled')}
                   />
                   <SettingToggle 
-                    icon={<Bot size={18} />}
-                    title="AI Insights"
-                    description="Machine-learning recommendations"
-                    enabled={prefs?.ai_insight_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('ai_insight_alerts_enabled')}
-                  />
-                  <SettingToggle 
-                    icon={<AlertCircle size={18} />}
-                    title="Task Escalation"
-                    description="Alert for overdue high-priority tasks"
-                    enabled={prefs?.task_escalation_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('task_escalation_alerts_enabled')}
+                    icon={<Zap size={18} />}
+                    title="Offer Accepted"
+                    description="Alert on accepted offers"
+                    enabled={prefs?.offer_accepted_alert_enabled ?? false}
+                    onToggle={() => updatePreference('offer_accepted_alert_enabled')}
                   />
                   <SettingToggle 
                     icon={<CheckCircle2 size={18} />}
                     title="Contract Signed"
-                    description="Closing momentum notifications"
-                    enabled={prefs?.contract_signed_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('contract_signed_alerts_enabled')}
+                    description="Final commitment alert"
+                    enabled={prefs?.contract_signed_alert_enabled ?? false}
+                    onToggle={() => updatePreference('contract_signed_alert_enabled')}
+                  />
+                </div>
+              </section>
+
+              {/* Calendar & Tasks */}
+              <section className="space-y-6">
+                <CategoryHeader icon={<Calendar size={20} />} title="Schedule & Focus" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <SettingToggle 
+                    icon={<Calendar size={18} />}
+                    title="Calendar Digest"
+                    description="Morning schedule brief (7:00 AM)"
+                    enabled={prefs?.calendar_digest_enabled ?? false}
+                    onToggle={() => updatePreference('calendar_digest_enabled')}
                   />
                   <SettingToggle 
+                    icon={<Clock size={18} />}
+                    title="Task Reminder"
+                    description="30 minutes before task due time"
+                    enabled={prefs?.task_reminders_enabled ?? false}
+                    onToggle={() => updatePreference('task_reminders_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<AlertCircle size={18} />}
+                    title="Task Overdue"
+                    description="Immediate alert for missed deadlines"
+                    enabled={prefs?.task_overdue_alert_enabled ?? false}
+                    onToggle={() => updatePreference('task_overdue_alert_enabled')}
+                  />
+                </div>
+              </section>
+
+              {/* Lead Management */}
+              <section className="space-y-6">
+                <CategoryHeader icon={<Users size={20} />} title="Lead Intelligence" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <SettingToggle 
+                    icon={<Plus size={18} />}
+                    title="New Lead Notif"
+                    description="Real-time alert for new captures"
+                    enabled={prefs?.new_lead_alerts_enabled ?? false}
+                    onToggle={() => updatePreference('new_lead_alerts_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Clock size={18} />}
+                    title="Inactivity Alert"
+                    description="7 days with no outbound contact"
+                    enabled={prefs?.lead_inactivity_alert_enabled ?? false}
+                    onToggle={() => updatePreference('lead_inactivity_alert_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Zap size={18} />}
+                    title="Lead Score High"
+                    description="Alert when lead score > 80"
+                    enabled={prefs?.lead_score_high_alert_enabled ?? false}
+                    onToggle={() => updatePreference('lead_score_high_alert_enabled')}
+                  />
+                </div>
+              </section>
+
+              {/* Team & Engagement */}
+              <section className="space-y-6">
+                <CategoryHeader icon={<Bot size={20} />} title="Team & Engagement" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <SettingToggle 
                     icon={<Smartphone size={18} />}
-                    title="SMS Deliverability"
-                    description="Reports on sent/failed messages"
-                    enabled={prefs?.sms_delivered_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('sms_delivered_alerts_enabled')}
+                    title="Goal Milestones"
+                    description="Team progress achievements"
+                    enabled={prefs?.goal_milestone_alert_enabled ?? false}
+                    onToggle={() => updatePreference('goal_milestone_alert_enabled')}
+                  />
+                  <SettingToggle 
+                    icon={<Users size={18} />}
+                    title="Activity Digest"
+                    description="Collaborative work summary"
+                    enabled={prefs?.team_activity_summary_enabled ?? false}
+                    onToggle={() => updatePreference('team_activity_summary_enabled')}
                   />
                   <SettingToggle 
                     icon={<Mail size={18} />}
-                    title="Email Tracking"
-                    description="Opens and link click notifications"
-                    enabled={prefs?.email_opened_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('email_opened_alerts_enabled')}
+                    title="Email Opens"
+                    description="Alert when lead opens email"
+                    enabled={prefs?.email_open_notification_enabled ?? false}
+                    onToggle={() => updatePreference('email_open_notification_enabled')}
                   />
                   <SettingToggle 
-                    icon={<Settings size={18} />}
-                    title="System Updates"
-                    description="New features and maintenance"
-                    enabled={prefs?.new_feature_alerts_enabled ?? false}
-                    onToggle={() => updatePreference('new_feature_alerts_enabled')}
+                    icon={<Smartphone size={18} />}
+                    title="SMS Received"
+                    description="Real-time alert for incoming SMS"
+                    enabled={prefs?.sms_received_alert_enabled ?? false}
+                    onToggle={() => updatePreference('sms_received_alert_enabled')}
                   />
                 </div>
               </section>
@@ -312,6 +425,103 @@ export function OSMessages() {
           )}
         </div>
       </div>
+
+      {/* Custom Message Modal */}
+      <AnimatePresence>
+        {showCustomModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCustomModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-2xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="p-8 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-[var(--t-primary-dim)] text-[var(--t-primary)] rounded-xl">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-[var(--t-text)]">Create Custom Alert</h3>
+                      <p className="text-xs text-[var(--t-text-muted)] font-bold uppercase tracking-widest">User-Defined Notification Engine</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowCustomModal(false)} className="p-2 hover:bg-[var(--t-surface-subtle)] rounded-full transition-colors">
+                    <X size={20} className="text-[var(--t-text-muted)]" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-1">Template Name</label>
+                    <input 
+                      value={customMsg.name}
+                      onChange={e => setCustomMsg({ ...customMsg, name: e.target.value })}
+                      placeholder="e.g. High Priority Follow-up"
+                      className="w-full bg-[var(--t-surface-subtle)] border border-[var(--t-border)] rounded-2xl px-5 py-3 text-sm focus:outline-none focus:border-[var(--t-primary)] transition-all"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-1">Trigger Event</label>
+                    <select 
+                      value={customMsg.trigger_type}
+                      onChange={e => setCustomMsg({ ...customMsg, trigger_type: e.target.value })}
+                      className="w-full bg-[var(--t-surface-subtle)] border border-[var(--t-border)] rounded-2xl px-5 py-3 text-sm focus:outline-none focus:border-[var(--t-primary)] transition-all appearance-none"
+                    >
+                      <option value="manual">Manual Trigger</option>
+                      <option value="lead_score">Lead Score Threshold</option>
+                      <option value="status_change">Status Change</option>
+                      <option value="task_overdue">Task Overdue</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] ml-1">Message Content (HTML Allowed)</label>
+                  <textarea 
+                    value={customMsg.template_content}
+                    onChange={e => setCustomMsg({ ...customMsg, template_content: e.target.value })}
+                    placeholder="Hello {{lead_name}}, this is a custom follow-up regarding {{address}}..."
+                    className="w-full h-40 bg-[var(--t-surface-subtle)] border border-[var(--t-border)] rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-[var(--t-primary)] transition-all resize-none font-mono"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button 
+                    onClick={() => setShowCustomModal(false)}
+                    className="px-6 py-3 text-xs font-black uppercase tracking-widest text-[var(--t-text-muted)] hover:text-[var(--t-text)] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleCreateCustom}
+                    className="px-8 py-3 bg-[var(--t-primary)] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[var(--t-primary)]/20"
+                  >
+                    Save Template
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function CategoryHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-[var(--t-border)] pb-2 mb-4">
+      <div className="text-[var(--t-primary)]">{icon}</div>
+      <h2 className="text-xs font-black uppercase tracking-[0.4em] text-[var(--t-text-muted)]">{title}</h2>
     </div>
   );
 }
@@ -326,20 +536,20 @@ function SettingToggle({ icon, title, description, enabled, onToggle }: {
   return (
     <div 
       onClick={onToggle}
-      className={`flex items-center justify-between p-5 rounded-[1.5rem] border transition-all cursor-pointer select-none ${
-        enabled ? 'border-[var(--t-primary-dim)] bg-[var(--t-primary-dim)]/5' : 'border-[var(--t-border)] hover:border-[var(--t-text-muted)]/30'
+      className={`flex items-center justify-between p-5 rounded-[1.8rem] border transition-all cursor-pointer select-none group ${
+        enabled ? 'border-[var(--t-primary-dim)] bg-[var(--t-primary-dim)]/5' : 'border-[var(--t-border)] hover:border-[var(--t-primary-dim)]/40 hover:bg-[var(--t-surface-subtle)]'
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className={`p-3 rounded-xl ${enabled ? 'bg-[var(--t-primary)] text-white' : 'bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)]'}`}>
+        <div className={`p-3 rounded-xl transition-all ${enabled ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary)]/20' : 'bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)]'}`}>
           {icon}
         </div>
         <div>
-          <p className={`text-sm font-black ${enabled ? 'text-[var(--t-text)]' : 'text-[var(--t-text-muted)]'}`}>{title}</p>
-          <p className="text-[10px] text-[var(--t-text-muted)] font-medium">{description}</p>
+          <p className={`text-sm font-black transition-colors ${enabled ? 'text-[var(--t-text)]' : 'text-[var(--t-text-muted)] group-hover:text-[var(--t-text-secondary)]'}`}>{title}</p>
+          <p className="text-[10px] text-[var(--t-text-muted)] font-medium leading-tight">{description}</p>
         </div>
       </div>
-      <div className={`w-12 h-6 rounded-full transition-all relative ${enabled ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-border)]'}`}>
+      <div className={`w-12 h-6 rounded-full transition-all relative shrink-0 ${enabled ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-border)]'}`}>
         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${enabled ? 'left-7 shadow-lg shadow-black/20' : 'left-1'}`} />
       </div>
     </div>
