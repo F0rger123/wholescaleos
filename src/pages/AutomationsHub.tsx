@@ -228,7 +228,7 @@ function AutomationsHubContent() {
     setSelectedNode(null);
   };
 
-  const loadTemplate = (template: AutomationTemplate) => {
+  const loadTemplate = async (template: AutomationTemplate) => {
     // Deep clone nodes and edges to avoid reference issues
     const newNodes = JSON.parse(JSON.stringify(template.nodes));
     const newEdges = JSON.parse(JSON.stringify(template.edges));
@@ -241,13 +241,18 @@ function AutomationsHubContent() {
     setIsLibraryOpen(false);
     
     // Auto-save the template to the database
-    saveWorkflow(true, newNodes, newEdges, template.name);
-    
-    // Zoom to fit the loaded template
-    setTimeout(() => {
-      fitView({ duration: 800, padding: 0.2 });
-      toast.success(`Loaded & Saved Template: ${template.name}`);
-    }, 100);
+    try {
+      await saveWorkflow(true, newNodes, newEdges, template.name);
+      
+      // Zoom to fit the loaded template
+      setTimeout(() => {
+        fitView({ duration: 800, padding: 0.2 });
+        toast.success(`Loaded & Saved Template: ${template.name}`);
+      }, 100);
+    } catch (err) {
+      console.error('Failed to auto-save template:', err);
+      toast.error('Failed to save template to database.');
+    }
   };
 
   const addNode = (type: string) => {

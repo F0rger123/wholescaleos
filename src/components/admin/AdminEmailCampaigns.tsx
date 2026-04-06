@@ -46,7 +46,6 @@ const AdminEmailCampaigns = () => {
   const [editingTemplate, setEditingTemplate] = useState<Partial<dbEmailTemplate> | null>(null);
   const [editingCampaign, setEditingCampaign] = useState<Partial<dbEmailCampaign> | null>(null);
   const [activeTab, setActiveTab] = useState<'templates' | 'campaigns'>('templates');
-  const [previewMode, setPreviewMode] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
@@ -442,7 +441,7 @@ const AdminEmailCampaigns = () => {
 
       {showTemplateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="w-full max-w-[800px] bg-[var(--t-surface)]/80 border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md animate-in zoom-in-95 duration-500 flex flex-col">
+        <div className="w-full max-w-[1200px] bg-[var(--t-surface)]/80 border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md animate-in zoom-in-95 duration-500 flex flex-col">
             <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-black/20">
               <h2 className="text-xl font-black uppercase tracking-wider text-[var(--t-text)]">
                 {editingTemplate?.id ? 'Edit Template' : 'New Template'}
@@ -456,82 +455,98 @@ const AdminEmailCampaigns = () => {
             </div>
             
             <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar flex-1">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
-                    Template Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editingTemplate?.name || ''}
-                    onChange={e => setEditingTemplate({...editingTemplate, name: e.target.value})}
-                    className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none"
-                    placeholder="e.g., Welcome Email"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
-                    Category
-                  </label>
-                  <input
-                    type="text"
-                    value={editingTemplate?.category || ''}
-                    onChange={e => setEditingTemplate({...editingTemplate, category: e.target.value})}
-                    className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none"
-                    placeholder="e.g., Onboarding"
-                  />
-                </div>
-              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Editor Column */}
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
+                        Template Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editingTemplate?.name || ''}
+                        onChange={e => setEditingTemplate({...editingTemplate, name: e.target.value})}
+                        className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none text-sm"
+                        placeholder="e.g., Welcome Email"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
+                        Category
+                      </label>
+                      <input
+                        type="text"
+                        value={editingTemplate?.category || ''}
+                        onChange={e => setEditingTemplate({...editingTemplate, category: e.target.value})}
+                        className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none text-sm"
+                        placeholder="e.g., Onboarding"
+                      />
+                    </div>
+                  </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
-                  Subject Line
-                </label>
-                <input
-                  type="text"
-                  value={editingTemplate?.subject || ''}
-                  onChange={e => setEditingTemplate({...editingTemplate, subject: e.target.value})}
-                  className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none"
-                  placeholder="Hello {{name}}! Check this out..."
-                />
-              </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
+                      Subject Line
+                    </label>
+                    <input
+                      type="text"
+                      value={editingTemplate?.subject || ''}
+                      onChange={e => setEditingTemplate({...editingTemplate, subject: e.target.value})}
+                      className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none text-sm"
+                      placeholder="Hello {{name}}! Check this out..."
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
-                  Description (Internal)
-                </label>
-                <textarea
-                  value={editingTemplate?.description || ''}
-                  onChange={e => setEditingTemplate({...editingTemplate, description: e.target.value})}
-                  className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none h-20 resize-none"
-                  placeholder="What is this template for?"
-                />
-              </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={editingTemplate?.description || ''}
+                      onChange={e => setEditingTemplate({...editingTemplate, description: e.target.value})}
+                      className="w-full px-4 py-3 bg-black/20 border border-[var(--t-border)] rounded-xl focus:border-[var(--t-primary)] transition-colors outline-none h-20 resize-none text-sm"
+                      placeholder="What is this template for?"
+                    />
+                  </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
-                    Email Body (HTML/Text)
-                  </label>
-                  <button
-                    onClick={() => setPreviewMode(!previewMode)}
-                    className="text-[10px] font-black uppercase text-[var(--t-primary)] hover:underline"
-                  >
-                    {previewMode ? 'Edit Mode' : 'Preview Mode'}
-                  </button>
+                  <div className="space-y-4">
+                    <label className="block text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
+                      Email Body (HTML/Text)
+                    </label>
+                    <div className="border border-[var(--t-border)] rounded-2xl overflow-hidden bg-black/20">
+                      <RichTextEditor
+                        value={editingTemplate?.html_content || ''}
+                        onChange={(val: string) => setEditingTemplate({...editingTemplate, html_content: val})}
+                        minHeight="300px"
+                      />
+                    </div>
+                  </div>
                 </div>
-                
-                {previewMode ? (
-                  <div 
-                    className="w-full min-h-[300px] p-6 bg-white rounded-2xl overflow-auto border border-[var(--t-border)]"
-                    dangerouslySetInnerHTML={{ __html: editingTemplate?.html_content || '' }}
-                  />
-                ) : (
-                  <RichTextEditor
-                    value={editingTemplate?.html_content || ''}
-                    onChange={(val: string) => setEditingTemplate({...editingTemplate, html_content: val})}
-                  />
-                )}
+
+                {/* Preview Column */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
+                    <Layout size={12} />
+                    Live Preview
+                  </div>
+                  <div className="sticky top-0 bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden min-h-[500px] flex flex-col">
+                    <div className="p-3 bg-zinc-100 border-b border-zinc-200 flex items-center gap-2">
+                      <div className="flex gap-1.5">
+                        <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                        <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                      </div>
+                      <div className="flex-1 bg-white rounded px-2 py-0.5 text-[8px] text-zinc-400 truncate border border-zinc-200">
+                        {editingTemplate?.subject || 'No Subject'}
+                      </div>
+                    </div>
+                    <div 
+                      className="flex-1 p-8 overflow-y-auto preview-frame bg-white"
+                      dangerouslySetInnerHTML={{ __html: editingTemplate?.html_content || '<div class="text-zinc-300 italic">No content...</div>' }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

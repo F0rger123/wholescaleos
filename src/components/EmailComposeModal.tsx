@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles, BookOpenText, ImageIcon, Upload, Link as LinkIcon } from 'lucide-react';
+import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles, BookOpenText, ImageIcon, Upload, Link as LinkIcon, Layout } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail, getThread } from '../lib/email';
@@ -345,7 +345,7 @@ export default function EmailComposeModal({
 
   return (
     <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-[var(--t-surface)] w-full max-w-2xl rounded-2xl border border-[var(--t-border)] shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div className={`bg-[var(--t-surface)] w-full ${showHtmlPreview ? 'max-w-6xl' : 'max-w-2xl'} rounded-2xl border border-[var(--t-border)] shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 transition-all`}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-[var(--t-border)] bg-[var(--t-primary-dim)]/20 rounded-t-2xl">
           <div className="flex items-center gap-3">
@@ -639,18 +639,45 @@ export default function EmailComposeModal({
                 </div>
               </div>
 
-              {showHtmlPreview ? (
-                <div className="border border-[var(--t-border)] rounded-xl overflow-hidden bg-white min-h-[300px] p-8">
-                  <div className="prose prose-sm max-w-none text-black" dangerouslySetInnerHTML={{ __html: body }} />
+              <div className={showHtmlPreview ? "grid grid-cols-1 lg:grid-cols-2 gap-8" : "space-y-4"}>
+                <div className="space-y-4">
+                  <div className="border border-[var(--t-border)] rounded-2xl overflow-hidden bg-black/5">
+                    <RichTextEditor 
+                      value={body}
+                      onChange={setBody}
+                      placeholder="Write your message here..."
+                      minHeight={showHtmlPreview ? "500px" : "250px"}
+                    />
+                  </div>
                 </div>
-              ) : (
-                <RichTextEditor 
-                  value={body}
-                  onChange={setBody}
-                  placeholder="Write your message here..."
-                  minHeight="250px"
-                />
-              )}
+
+                {showHtmlPreview && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest">
+                      <Layout size={12} />
+                      Live HTML Preview
+                    </div>
+                    <div className="bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden flex-1 min-h-[500px] flex flex-col">
+                      <div className="p-3 bg-zinc-100 border-b border-zinc-200 flex items-center gap-2">
+                        <div className="flex gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                        </div>
+                        <div className="flex-1 bg-white rounded px-2 py-0.5 text-[8px] text-zinc-400 truncate border border-zinc-200">
+                          {subject || 'No Subject'}
+                        </div>
+                      </div>
+                      <div className="flex-1 p-8 overflow-y-auto bg-white">
+                        <div 
+                          className="prose prose-sm max-w-none text-black emails-preview-content" 
+                          dangerouslySetInnerHTML={{ __html: body || '<div class="text-zinc-300 italic">No content...</div>' }} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {isAttachmentLoading && (
                 <div className="flex items-center gap-3 p-3 bg-[var(--t-surface-hover)] border border-[var(--t-border)] rounded-xl animate-pulse">

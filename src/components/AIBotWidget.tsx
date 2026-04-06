@@ -423,14 +423,20 @@ export function AIBotWidget() {
 
         const handler = (actionHandlers as any)[matched.intent.action];
         if (matched.intent.name === 'send_sms_partial') {
+          const target = matched.params.number || null;
           setSmsSession({
             active: true,
-            waitingFor: 'target'
+            waitingFor: target ? 'message' : 'target',
+            target: target,
+            message: ''
           });
+          const nextAsk = target 
+            ? `Got it! What message should I send to ${target}?`
+            : "Sure! Who would you like to text?";
           setMessages(prev => [...prev, {
             id: (Date.now() + 1).toString(),
             role: 'ai',
-            content: "Sure! Who would you like to text?",
+            content: nextAsk,
             timestamp: new Date().toISOString(),
             systemLog: "🤖 OS Bot"
           }]);
@@ -724,7 +730,7 @@ export function AIBotWidget() {
                   <span className={`text-[9px] font-black italic uppercase tracking-tight ml-2 px-1.5 py-0.5 rounded border border-white/5 bg-white/5 ${
                     usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-text-muted)]')
                   }`}>
-                    {usage.remaining} / {usage.limit} LEFT
+                    🔋 {usage.remaining} messages remaining today
                   </span>
                 )}
               </div>

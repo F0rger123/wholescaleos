@@ -42,7 +42,7 @@ class AutomationEngine {
 
       // 1. Fetch active workflows
       const { data: workflows, error } = await supabase
-        .from('workflows')
+        .from('user_automations')
         .select('*')
         .eq('is_active', true);
 

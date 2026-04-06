@@ -1,161 +1,118 @@
-import { useStore } from '../store/useStore';
+import { supabase } from './supabase';
+import { sendEmail } from './email';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
-export const emailSummaryService = {
-  /**
-   * Generates a daily summary report for the current user.
-   */
-  async generateDailySummary(userId: string) {
-    const { leads, tasks, calendarEvents, mergedGoogleEvents, currentUser } = useStore.getState();
-    if (!currentUser || currentUser.id !== userId) return null;
+export interface SummaryStats {
+  newLeads: number;
+  completedTasks: number;
+  pendingTasks: number;
+  activeWorkflows: number;
+}
 
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+export async function generateDailySummary(userId: string) {
+  try {
+    if (!supabase) return;
 
-    // 1. Revenue & Deals (last 24h)
-    const dailyDeals = leads.filter(l => 
-      l.status === 'closed-won' && 
-      new Date(l.updatedAt || "").getTime() >= startOfToday.getTime()
-    );
-    const dailyRevenue = dailyDeals.reduce((sum, l) => sum + (Number(l.estimatedValue || 0) * 0.03), 0);
+    // 1. Fetch User Preferences
+    const { data: prefs } = await supabase
+      .from('user_os_messages_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
-    // 2. New Leads (last 24h)
-    const newLeadsCount = leads.filter(l => 
-      new Date(l.createdAt || "").getTime() >= startOfToday.getTime()
-    ).length;
+    if (!prefs?.daily_summary_enabled) return;
 
-    // 3. Tasks Completed (last 24h)
-    const tasksCompletedCount = tasks.filter(t => 
-      t.status === 'done' && 
-      t.completedAt && new Date(t.completedAt).getTime() >= startOfToday.getTime()
-    ).length;
+    // 2. Fetch User Profile for context
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
+      .single();
 
-    // 4. Upcoming Events (Today)
-    const todayEvents = [
-      ...calendarEvents,
-      ...mergedGoogleEvents
-    ].filter(e => {
-      const start = new Date(e.start);
-      return start >= startOfToday && start <= endOfToday;
-    });
+    if (!profile?.email) return;
 
-    return {
-      revenue: dailyRevenue,
-      deals: dailyDeals.length,
-      newLeads: newLeadsCount,
-      tasksCompleted: tasksCompletedCount,
-      events: todayEvents.length,
-      eventList: todayEvents.map(e => e.title).join(', ')
+    // 3. Gather Stats for the last 24h
+    const yesterday = subDays(new Date(), 1);
+    const start = startOfDay(yesterday).toISOString();
+    const end = endOfDay(yesterday).toISOString();
+
+    // New Leads
+    const { count: newLeads } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', start)
+      .lte('created_at', end);
+
+    // Completed Tasks
+    const { count: completedTasks } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'done')
+      .gte('completed_at', start)
+      .lte('completed_at', end);
+
+    // Pending Tasks
+    const { count: pendingTasks } = await supabase
+      .from('tasks')
+      .select('*', { count: 'exact', head: true })
+      .neq('status', 'done')
+      .lte('due_date', end);
+
+    const stats: SummaryStats = {
+      newLeads: newLeads || 0,
+      completedTasks: completedTasks || 0,
+      pendingTasks: pendingTasks || 0,
+      activeWorkflows: 0 // Fetch from user_automations if needed
     };
-  },
 
-  /**
-   * Generates a weekly summary report.
-   */
-  async generateWeeklySummary(userId: string) {
-    const { leads, currentUser } = useStore.getState();
-    if (!currentUser || currentUser.id !== userId) return null;
+    // 4. Construct Email HTML
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <h1 style="color: #6366f1;">Your Daily OS Summary</h1>
+        <p>Hi ${profile.full_name || 'there'}, here is what happened in your WholeScale OS yesterday:</p>
+        
+        <div style="display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin: 30px 0;">
+          <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 24px; font-weight: bold; color: #6366f1;">${stats.newLeads}</div>
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">New Leads</div>
+          </div>
+          <div style="background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <div style="font-size: 24px; font-weight: bold; color: #10b981;">${stats.completedTasks}</div>
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #64748b;">Tasks Completed</div>
+          </div>
+        </div>
 
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
+        <div style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 30px;">
+          <h3 style="margin-top: 0;">Action Items</h3>
+          <p>You have <strong>${stats.pendingTasks}</strong> pending tasks that need your attention.</p>
+          <a href="${window.location.origin}/tasks" style="display: inline-block; background: #6366f1; color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold;">View Tasks</a>
+        </div>
 
-    const weeklyDeals = leads.filter(l => 
-      l.status === 'closed-won' && 
-      new Date(l.updatedAt || "").getTime() >= weekAgo.getTime()
-    );
-    const weeklyRevenue = weeklyDeals.reduce((sum, l) => sum + (Number(l.estimatedValue || 0) * 0.03), 0);
-    
-    const wonCount = weeklyDeals.length;
-    const lostCount = leads.filter(l => 
-      l.status === 'closed-lost' && 
-      new Date(l.updatedAt || "").getTime() >= weekAgo.getTime()
-    ).length;
-
-    const newLeads = leads.filter(l => 
-      new Date(l.createdAt || "").getTime() >= weekAgo.getTime()
-    );
-    
-    const conversionRate = newLeads.length > 0 ? (wonCount / newLeads.length) * 100 : 0;
-
-    return {
-      revenue: weeklyRevenue,
-      won: wonCount,
-      lost: lostCount,
-      conversion: conversionRate.toFixed(1),
-      newLeads: newLeads.length
-    };
-  },
-
-  /**
-   * Sends the requested report via the automation engine.
-   */
-  async sendReport(userId: string, type: 'daily' | 'weekly' | 'calendar') {
-    const { currentUser, sendAutomationEmail } = useStore.getState();
-    if (!currentUser || currentUser.id !== userId) return;
-
-    let subject = '';
-    let reportData: any = null;
-
-    if (type === 'daily') {
-      reportData = await this.generateDailySummary(userId);
-      subject = `Daily Performance Summary - ${new Date().toLocaleDateString()}`;
-    } else if (type === 'weekly') {
-      reportData = await this.generateWeeklySummary(userId);
-      subject = `Weekly Performance Summary - Week of ${new Date().toLocaleDateString()}`;
-    } else if (type === 'calendar') {
-      reportData = await this.generateDailySummary(userId); // Reuse daily for now
-      subject = `Today's Schedule: ${new Date().toLocaleDateString()}`;
-    }
-
-    if (!reportData) return;
-
-    // In a real app, we'd inject this data into the HTML template.
-    // For this demo, we'll format a nice message.
-    const content = `
-      <h1>${subject}</h1>
-      ${type === 'daily' ? `
-        <p><strong>Revenue:</strong> $${reportData.revenue.toLocaleString()}</p>
-        <p><strong>Deals Closed:</strong> ${reportData.deals}</p>
-        <p><strong>New Leads:</strong> ${reportData.newLeads}</p>
-        <p><strong>Tasks Completed:</strong> ${reportData.tasksCompleted}</p>
-        <p><strong>Events Today:</strong> ${reportData.events} (${reportData.eventList || 'None'})</p>
-      ` : type === 'weekly' ? `
-        <p><strong>Weekly Revenue:</strong> $${reportData.revenue.toLocaleString()}</p>
-        <p><strong>Deals Won:</strong> ${reportData.won}</p>
-        <p><strong>Deals Lost:</strong> ${reportData.lost}</p>
-        <p><strong>New Leads:</strong> ${reportData.newLeads}</p>
-        <p><strong>Conversion Rate:</strong> ${reportData.conversion}%</p>
-      ` : `
-        <p><strong>Upcoming Events:</strong> ${reportData.events}</p>
-        <p>${reportData.eventList || 'No events scheduled for today.'}</p>
-      `}
+        <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+          You are receiving this because Daily Summaries are enabled in your OS Settings.
+        </p>
+      </div>
     `;
 
-    // We'll use a specific "Internal Report" lead or just send it to the user.
-    // For now, we'll attach it to the user's "Primary Lead" or a dummy ID.
-    await sendAutomationEmail(userId, subject, content);
-    
-    // Update last sent date in settings
-    this.updateLastSent(userId, type);
-  },
-
-  async updateLastSent(_userId: string, type: 'daily' | 'weekly' | 'calendar') {
-    const { updateProfile, currentUser } = useStore.getState();
-    if (!currentUser) return;
-    
-    const settings = currentUser.settings || {};
-    const automatedReports = settings.automated_reports || {};
-    
-    const key = type === 'daily' ? 'lastDailySent' : type === 'weekly' ? 'lastWeeklySent' : 'lastCalendarSent';
-    
-    updateProfile({
-      settings: {
-        ...settings,
-        automated_reports: {
-          ...automatedReports,
-          [key]: new Date().toISOString()
-        }
-      }
+    // 5. Send Email
+    await sendEmail({
+      to: profile.email,
+      subject: `Daily OS Summary - ${format(yesterday, 'MMM d, yyyy')}`,
+      html: html
     });
+
+    // 6. Log as OS Message
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'summary',
+      title: 'Daily Summary Sent',
+      message: `We've sent your daily summary to ${profile.email}. You had ${stats.newLeads} new leads yesterday.`,
+      data: stats
+    });
+
+    return stats;
+  } catch (error) {
+    console.error('Error generating daily summary:', error);
+    throw error;
   }
-};
+}
