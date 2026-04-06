@@ -362,7 +362,8 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * Tries to handle the prompt locally before falling back to external APIs.
  */
 export async function processWithLocalAI(prompt: string): Promise<GeminiResponse | null> {
-  const localResult = recognizeIntent(prompt);
+  const leads = useStore.getState().leads || [];
+  const localResult = recognizeIntent(prompt, leads);
   
   if (localResult.confidence >= 0.7) {
     console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent} (${Math.round(localResult.confidence * 100)}%)`);
@@ -477,7 +478,8 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
   // 1.5 - Intercept Local Provider
   if (provider === 'local' || provider === (null as any)) {
-    const localResult = recognizeIntent(prompt);
+    const leads = useStore.getState().leads || [];
+    const localResult = recognizeIntent(prompt, leads);
     let executionResult;
     
     if (localResult.confidence > 0.4) {
@@ -491,7 +493,8 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     return {
       intent: localResult.intent,
       response: responseText,
-      data: localResult.entities || executionResult?.data || null
+      data: localResult.entities || executionResult?.data || null,
+      systemLog: '🤖 OS Bot'
     };
   }
 

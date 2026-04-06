@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Modal } from './Modal';
-import { Sparkles, Cpu, Zap, Brain, Globe, ArrowRight } from 'lucide-react';
+import { Sparkles, Cpu, Globe, ArrowRight } from 'lucide-react';
 
 export const AIModelSelectionDialog: React.FC = () => {
   const { isAiFirstUse, setIsAiFirstUse, setAiModel } = useStore();
@@ -29,32 +29,18 @@ export const AIModelSelectionDialog: React.FC = () => {
 
   const providers = [
     { 
+      id: 'local', 
+      label: 'OS Bot (Built-in AI)', 
+      icon: <Cpu className="w-6 h-6 text-purple-400" />, 
+      desc: 'Zero cost, unlimited messages, runs 100% in your browser.',
+      color: 'bg-purple-500/10 border-purple-500/30'
+    },
+    { 
       id: 'gemini', 
       label: 'Google Gemini', 
       icon: <Sparkles className="w-6 h-6 text-blue-400" />, 
-      desc: 'Fast, free-tier available, best for general OS tasks.',
+      desc: 'High-performance cloud intelligence (Requires API Key).',
       color: 'bg-blue-500/10 border-blue-500/30'
-    },
-    { 
-      id: 'openai', 
-      label: 'OpenAI GPT-4o', 
-      icon: <Brain className="w-6 h-6 text-emerald-400" />, 
-      desc: 'Industry standard for complex reasoning & logic.',
-      color: 'bg-emerald-500/10 border-emerald-500/30'
-    },
-    { 
-      id: 'anthropic', 
-      label: 'Claude 3.5', 
-      icon: <Zap className="w-6 h-6 text-orange-400" />, 
-      desc: 'Superior coding and nuanced instruction following.',
-      color: 'bg-orange-500/10 border-orange-500/30'
-    },
-    { 
-      id: 'local', 
-      label: 'Local AI (Ollama)', 
-      icon: <Cpu className="w-6 h-6 text-purple-400" />, 
-      desc: 'Run 100% locally for maximum privacy & zero cost.',
-      color: 'bg-purple-500/10 border-purple-500/30'
     }
   ];
 

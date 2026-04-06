@@ -268,7 +268,7 @@ export default function AITest() {
               content: formatted, 
               intent: matched.intent.name,
               data: res.data,
-              systemLog: "🤖 Local AI"
+              systemLog: "🤖 OS Bot"
             });
             setLoading(false);
             return;
@@ -303,7 +303,7 @@ export default function AITest() {
           role: 'ai', 
           content: clean, 
           intent: response.intent, 
-          systemLog: "✨ Gemini AI" 
+          systemLog: "✨ Google Gemini" 
         });
 
         if (response.intent === 'confirm_action' && response.data) {

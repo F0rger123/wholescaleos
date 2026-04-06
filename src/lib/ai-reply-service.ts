@@ -39,7 +39,7 @@ export async function analyzeConversation(
 ): Promise<AIAnalysis | null> {
   if (messages.length === 0) return null;
 
-  // Local AI Logic (No API Credits)
+  // OS Bot Logic (No API Credits)
   const lastMessage = messages[messages.length - 1].content.toLowerCase();
   
   let category = 'default';

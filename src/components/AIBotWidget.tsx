@@ -379,7 +379,7 @@ export function AIBotWidget() {
             timestamp: new Date().toISOString(),
             intent: 'disambiguation',
             data: { originalIntent: matched },
-            systemLog: "🤖 Local AI (Low Confidence)"
+            systemLog: "🤖 OS Bot (Low Confidence)"
           }]);
           setLoading(false);
           return;
@@ -406,7 +406,7 @@ export function AIBotWidget() {
               timestamp: new Date().toISOString(),
               intent: matched.intent.name,
               data: res.data,
-              systemLog: "🤖 Local AI"
+              systemLog: "🤖 OS Bot"
             }]);
             setLoading(false);
             return;
@@ -425,16 +425,15 @@ export function AIBotWidget() {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
           role: 'ai',
-          content: response.response,
+          content: response.response || "AI initialization complete.",
           timestamp: new Date().toISOString(),
-          intent: 'rate_limit',
-          systemLog: "✨ Gemini AI"
+          systemLog: "🤖 OS Bot"
         }]);
         setLoading(false);
         return;
       }
 
-      if (response.intent !== 'error' && response.intent !== 'rate_limit' && !response.systemLog?.includes('Local AI')) {
+      if (response.intent !== 'error' && response.intent !== 'rate_limit' && !response.systemLog?.includes('OS Bot')) {
         incrementAiUsage(aiModel);
       }
 
@@ -443,50 +442,37 @@ export function AIBotWidget() {
           id: (Date.now() + 1).toString(),
           role: 'ai',
           content: "I need your Gemini API key to work. Redirecting you to settings...",
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          systemLog: "🤖 OS Bot"
         }]);
         setTimeout(() => navigate('/settings/ai'), 1500);
 
-      } else if (response.intent === 'send_sms' || response.intent === 'confirm_action') {
+      } else if (response.intent === 'confirm_action') {
         const d = response.data || {};
-        const hasTarget = !!(d.target || d.leadId || d.phone);
-        const hasMessage = !!d.message;
-
-        if (hasTarget && hasMessage) {
-          // All info present — show confirm modal immediately
+        if (d.intent === 'send_sms' && d.target && d.message) {
+          // Open the confirm modal for SMS
           setConfirmModal({
             isOpen: true,
-            title: 'Confirm SMS',
+            title: 'Confirm OS Bot Action',
             message: response.response,
             onConfirm: () => handleExecuteAction(d.intent || response.intent, d)
           });
-          setMessages(prev => [...prev, {
-            id: (Date.now() + 1).toString(),
-            role: 'ai',
+          setMessages(prev => [...prev.slice(0, -1), {
+            id: Date.now().toString(),
+            role: "ai",
             content: response.response,
             timestamp: new Date().toISOString(),
-            intent: response.intent,
-            data: d,
-            systemLog: response.systemLog || "✨ Gemini AI"
+            systemLog: response.systemLog || "🤖 OS Bot"
           }]);
         } else {
           // Missing info — start SMS session to collect it conversationally
-          const newSession = {
-            active: true,
-            target: hasTarget ? (d.target || d.leadId || d.phone) : undefined,
-            message: hasMessage ? d.message : undefined,
-            waitingFor: hasTarget ? 'message' as const : 'target' as const
-          };
-          setSmsSession(newSession);
-
-          // Show the AI's message (which should be asking for the missing piece)
           setMessages(prev => [...prev, {
             id: (Date.now() + 1).toString(),
             role: 'ai',
             content: response.response,
             timestamp: new Date().toISOString(),
             intent: 'ask_question',
-            systemLog: response.systemLog || "✨ Gemini AI"
+            systemLog: response.systemLog || "🤖 OS Bot"
           }]);
         }
 
@@ -502,7 +488,7 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString(),
           intent: 'ask_save_contact',
           data: response.data,
-          systemLog: "✨ Gemini AI"
+          systemLog: "🤖 OS Bot"
         }]);
       } else {
         setMessages(prev => [...prev, {
@@ -512,7 +498,7 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString(),
           intent: response.intent,
           data: response.data,
-          systemLog: "✨ Gemini AI"
+          systemLog: response.systemLog || "🤖 OS Bot"
         }]);
         speak(response.response);
 

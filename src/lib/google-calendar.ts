@@ -216,6 +216,14 @@ export class GoogleCalendarService {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return false;
+
+      // CRITICAL FIX: Clear old connection before upserting to ensure fresh scope state
+      await supabase
+        .from('user_connections')
+        .delete()
+        .eq('user_id', userId)
+        .eq('provider', 'google');
+
       const { error } = await supabase
         .from('user_connections')
         .upsert(

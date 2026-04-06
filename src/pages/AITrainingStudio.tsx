@@ -101,10 +101,8 @@ const AITrainingStudio = () => {
                   <h2 className="text-3xl font-black italic tracking-tighter">Choose Your Foundation</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                      {[
-                       { name: 'Gemini 2.0 Flash', desc: 'Superior speed & low latency for live chat.', recommended: true },
-                       { name: 'Claude 3.5 Sonnet', desc: 'Best for complex logic & documentation.' },
-                       { name: 'GPT-4o', desc: 'Well-rounded performance & reliability.' },
-                       { name: 'Ollama Llama3 (Local)', desc: 'Privacy-focused local execution.' }
+                       { name: 'Gemini 1.5 Flash', desc: 'Fast, reliable, and multi-modal.', recommended: false },
+                       { name: 'Gemini 2.0 Flash', desc: 'Cutting-edge speed and performance.', recommended: true }
                      ].map((m) => (
                         <div key={m.name} className="p-6 rounded-2xl border border-[var(--t-border)] bg-[var(--t-background)]/50 cursor-pointer hover:border-[var(--t-primary)] transition-all group">
                            <div className="flex justify-between items-start mb-2 text-white font-bold">

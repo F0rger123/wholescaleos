@@ -163,7 +163,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           setTestResult({ success: true, message: 'OS Bot is always ready! No connection test needed.' });
         } else {
           const res = await fetch(`${localEndpoint}/models`);
-          if (res.ok) setTestResult({ success: true, message: 'Local AI connection successful!' });
+          if (res.ok) setTestResult({ success: true, message: 'OS Bot connection successful!' });
           else throw new Error('Local endpoint not reachable.');
         }
       }

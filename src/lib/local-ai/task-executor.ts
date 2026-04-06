@@ -45,7 +45,7 @@ export async function executeTask(intent: string, entities: any): Promise<TaskRe
           offerAmount: 0,
           lat: 30.2672,
           lng: -97.7431,
-          notes: `Created via Local AI. Company: ${entities.company || 'N/A'}`,
+          notes: `Created via OS Bot. Company: ${entities.company || 'N/A'}`,
           assignedTo: store.currentUser?.id || 'system',
           probability: 50,
           engagementLevel: 1,

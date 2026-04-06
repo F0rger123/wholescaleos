@@ -10,21 +10,19 @@ export interface IntentResult {
 }
 
 /**
- * Try to resolve a contact name to a phone number from the CRM leads store.
+ * Try to resolve a contact name to a phone number from the CRM leads list.
  * This is called when the user says "text Luke" or "send sms to John".
  */
-function resolveContactFromLeads(name: string): { phone?: string; fullName?: string } {
+function resolveContactFromLeads(name: string, leads: any[]): { phone?: string; fullName?: string } {
+  if (!leads || leads.length === 0) return {};
+  
   try {
-    // Access the Zustand store's persisted data from localStorage
-    const stored = localStorage.getItem('wholescale-crm-storage');
-    if (!stored) return {};
+    let lowerName = name.toLowerCase().trim();
     
-    const parsed = JSON.parse(stored);
-    const leads: any[] = parsed?.state?.leads || [];
+    // Remove filler words common in speech-to-text
+    lowerName = lowerName.replace(/\b(for me|real quick|please|about|regarding|someone named|can you|the lead|my contact)\b/gi, '').trim();
     
-    if (leads.length === 0) return {};
-    
-    const lowerName = name.toLowerCase().trim();
+    if (!lowerName) return {};
     
     // Try exact match first, then partial match
     const exactMatch = leads.find((l: any) => 
@@ -57,7 +55,7 @@ function resolveContactFromLeads(name: string): { phone?: string; fullName?: str
   return {};
 }
 
-export function recognizeIntent(text: string): IntentResult {
+export function recognizeIntent(text: string, leads: any[] = []): IntentResult {
   const normalized = text.toLowerCase().trim();
 
   // 1. Help
@@ -135,23 +133,17 @@ export function recognizeIntent(text: string): IntentResult {
   }
 
   // 5. Send SMS (Enhanced with CRM contact mapping)
-  // Patterns:
-  // "send SMS to 555-1234 saying hello"
-  // "text Luke for me"
-  // "text Luke saying hey man"
-  // "message John hello world"
-  // "send sms to John Smith saying meet at 3pm"
   const smsPatterns = [
     // "text [Name/Phone] saying [Message]"
     /(?:send\s+(?:sms|text|message)\s+to|text|message|sms)\s+(\+?[\d\s-]{7,})\s+(?:saying|content|message|with)\s+(.*)/i,
     // "text [Name] saying [Message]"
-    /(?:send\s+(?:sms|text|message)\s+to|text|message|sms)\s+([\w\s]+?)\s+(?:saying|content|message|with)\s+(.*)/i,
+    /(?:send\s+(?:sms|text|message)\s+to|text|sms|message)\s+([\w\s]+?)\s+(?:saying|content|message|with)\s+(.*)/i,
     // "text [Name] for me" (no explicit message)
     /(?:text|message|sms)\s+([\w\s]+?)\s+(?:for\s+me|real quick|about\s+.+)/i,
     // "text [Phone] [Message]" (no keyword like 'saying')
     /(?:send\s+(?:sms|text|message)\s+to|text|sms)\s+(\+?[\d\s-]{7,})\s+(.*)/i,
     // "text [Name] [Message]" (shortest match, must have at least some text after name)
-    /(?:send\s+(?:sms|text|message)\s+to|text|sms)\s+([\w]+)\s+([\w].*)/i
+    /(?:send\s+(?:sms|text|message)\s+to|text|sms|message)\s+([\w]+)\s+([\w].*)/i
   ];
 
   for (const pattern of smsPatterns) {
@@ -172,7 +164,7 @@ export function recognizeIntent(text: string): IntentResult {
         entities.phone = targetRaw.replace(/[\s()-]/g, '');
       } else {
         // Try to resolve the name to a phone number from CRM
-        const contact = resolveContactFromLeads(targetRaw);
+        const contact = resolveContactFromLeads(targetRaw, leads);
         if (contact.phone) {
           entities.phone = contact.phone;
           entities.resolvedName = contact.fullName || targetRaw;
