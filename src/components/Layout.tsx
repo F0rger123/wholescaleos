@@ -21,7 +21,6 @@ import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
 import { LeadFormModal } from './LeadFormModal';
 import { Logo } from './Logo';
-import { OSMessages } from '../pages/OSMessages';
 
 interface UserTeam {
   teamId: string;
@@ -113,7 +112,6 @@ export function Layout() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isOSMessagesOpen, setIsOSMessagesOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   // Quick Notes drag state
@@ -680,7 +678,6 @@ export function Layout() {
       {showCreateModal && <CreateTeamModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />}
 
       <QuickNotes />
-      <OSMessages isOpen={isOSMessagesOpen} onClose={() => setIsOSMessagesOpen(false)} />
     </div>
   );
 }

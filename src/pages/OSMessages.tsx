@@ -21,7 +21,7 @@ export interface OSMessage {
 
 
 
-export function OSMessages({ isOpen: _isOpen, onClose: _onClose }: { isOpen?: boolean; onClose?: () => void }) {
+export function OSMessages() {
   const [messages, setMessages] = useState<OSMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'messages' | 'settings'>('messages');
@@ -155,7 +155,7 @@ export function OSMessages({ isOpen: _isOpen, onClose: _onClose }: { isOpen?: bo
 
       {/* Content */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-12 space-y-6">
           {view === 'messages' ? (
             <div className="space-y-4">
               {loading ? (
@@ -310,52 +310,6 @@ export function OSMessages({ isOpen: _isOpen, onClose: _onClose }: { isOpen?: bo
               </section>
             </div>
           )}
-        </div>
-
-        <div className="lg:col-span-4 space-y-6">
-          <div className="p-8 astral-glass border border-[var(--t-primary-dim)]/30 rounded-[2.5rem] bg-gradient-to-br from-[var(--t-primary-dim)]/10 to-transparent">
-            <div className="w-16 h-16 bg-[var(--t-primary)] text-white rounded-[1.5rem] flex items-center justify-center mb-6 shadow-2xl shadow-[var(--t-primary)]/40">
-              <Sparkles size={32} />
-            </div>
-            <h3 className="text-xl font-black text-[var(--t-text)] mb-2">Automated Digests</h3>
-            <p className="text-sm text-[var(--t-text-secondary)] leading-relaxed mb-6">
-              Our AI service analyzes your pipeline activity while you sleep, preparing comprehensive reports delivered straight to your OS hub and email inbox.
-            </p>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-[var(--t-success)]" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Real-time DB Sync</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-[var(--t-success)]" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Cross-Provider SMTP</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-[var(--t-success)]" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">End-to-End Encryption</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-8 astral-glass border border-[var(--t-border)] rounded-[2.5rem]">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)] mb-4">Activity Log</h3>
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <Clock size={14} className="text-[var(--t-primary)] shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[11px] font-bold text-[var(--t-text)]">Preferences Synced</p>
-                  <p className="text-[9px] text-[var(--t-text-muted)]">Just now</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Mail size={14} className="text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-[11px] font-bold text-[var(--t-text)]">Email Gateway Active</p>
-                  <p className="text-[9px] text-[var(--t-text-muted)]">14 minutes ago</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
