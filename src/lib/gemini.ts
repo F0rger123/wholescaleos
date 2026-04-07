@@ -402,7 +402,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     if (isLocalSelected) {
       return localResponse || {
         intent: 'unknown',
-        response: "I'm not quite sure how to handle that request offline. Should we try an online model?",
+        response: "I'm not exactly sure how to help with that offline yet. 🤖 Try asking me to create a lead, send a SMS, or summarize your tasks!",
         systemLog: '🤖 OS Bot'
       };
     }

@@ -135,7 +135,9 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       patterns: [
         /^(?:thanks|thank you|thx|thanks lot|great job|well done|nice|cool|awesome|sweet)$/i,
         /^(?:how are you|how it going|hows it going|how you doing|sup|whats up|how are things)$/i,
-        /^(?:bye|goodbye|see you|later|im done|exit|close)$/i
+        /^(?:bye|goodbye|see you|later|im done|exit|close)$/i,
+        /^(?:test|testing|test message|ping)$/i,
+        /^(?:tell me a joke|joke)$/i
       ],
       params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
     },

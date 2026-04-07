@@ -185,6 +185,9 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'small_talk':
       const phrase = entities.text?.toLowerCase() || '';
+      if (phrase.includes('test') || phrase.includes('ping')) {
+        return { success: true, message: "Beep boop! 🤖 Test received. I'm online, fully functional, and ready to help you dominate the market. What's our next move?" };
+      }
       if (phrase.includes('thank') || phrase.includes('thx') || phrase.includes('great') || phrase.includes('nice')) {
         trackSentiment(phrase);
         return { success: true, message: `You're very welcome, ${userName}! Always happy to help. What else is on your mind?` };

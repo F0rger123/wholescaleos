@@ -854,7 +854,7 @@ export function AIBotWidget() {
                     <div className="flex flex-col gap-1.5 min-w-[120px]">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-[var(--t-primary)] text-[var(--t-on-primary)]">
-                          {msg.role === 'ai' ? (aiModel === 'os-bot' ? '🤖 OS Bot' : '✨ Gemini') : 'You'}
+                          {msg.role === 'ai' ? (msg.systemLog || (aiModel === 'os-bot' ? '🤖 OS Bot' : '✨ Gemini')) : 'You'}
                         </span>
                         {msg.systemLog && (
                           <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest">
