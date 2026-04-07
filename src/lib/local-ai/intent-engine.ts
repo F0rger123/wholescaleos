@@ -6,6 +6,7 @@ export interface ParsedIntent {
   intent: Intent;
   params: Record<string, any>;
   confidence: number;
+  originalText?: string;
 }
 
 /**
@@ -25,6 +26,17 @@ export function normalizeInput(input: string): string {
   });
   
   return normalized.trim();
+}
+
+/**
+ * Splits complex user input into multiple command segments.
+ * Example: "Add John as a lead AND text him hello" -> ["Add John as a lead", "text him hello"]
+ */
+export function splitMultiIntent(input: string): string[] {
+  // Simple delimiter-based splitting
+  const segments = input.split(/\s+(?:and then|then|and|also)\s+/i);
+  if (segments.length <= 1) return [input];
+  return segments.map(s => s.trim()).filter(s => s.length > 2);
 }
 
 export const LOCAL_INTENTS = intents.map(i => i.name);
@@ -117,7 +129,23 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       ],
       params: (matches: string[]) => {
         setTopic('tasks');
-        return { title: matches[1].trim(), dueDate: matches[2]?.trim() };
+        const title = matches[1].trim();
+        let dueDate = matches[2]?.trim();
+        
+        // Basic relative date conversion
+        if (dueDate) {
+          const d = new Date();
+          const low = dueDate.toLowerCase();
+          if (low === 'tomorrow') d.setDate(d.getDate() + 1);
+          else if (low.includes('next week')) d.setDate(d.getDate() + 7);
+          else if (low === 'today') { /* already now */ }
+          
+          if (low === 'tomorrow' || low.includes('next week') || low === 'today') {
+            dueDate = d.toISOString().split('T')[0];
+          }
+        }
+
+        return { title, dueDate };
       }
     },
 

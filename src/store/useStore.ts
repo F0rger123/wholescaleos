@@ -1689,6 +1689,8 @@ interface AppState {
   decrementPremiumMessages: () => void;
   aiPersonality: string;
   setAiPersonality: (personality: string) => void;
+  aiTone: string;
+  setAiTone: (tone: string) => void;
   isAiFirstUse: boolean;
   setIsAiFirstUse: (v: boolean) => void;
 
@@ -1846,6 +1848,7 @@ export const useStore = create<AppState>((set, get) => ({
   aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'os-bot',
   premiumMessagesLeft: 99999,
   aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
+  aiTone: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-tone') : null) || 'Professional',
   aiUsage: (() => {
     try {
       if (typeof window !== 'undefined') {
@@ -4580,6 +4583,28 @@ export const useStore = create<AppState>((set, get) => ({
           const currentSettings = profile?.settings || {};
           supabaseClient.from('profiles')
             .update({ settings: { ...currentSettings, ai_personality: personality } })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
+  },
+  setAiTone: (tone: string) => {
+    const { currentUser } = get();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-ai-tone', tone);
+    }
+    set({ aiTone: tone });
+    
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const supabaseClient = supabase;
+      supabaseClient.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then(({ data: profile }: { data: any }) => {
+          const currentSettings = profile?.settings || {};
+          supabaseClient.from('profiles')
+            .update({ settings: { ...currentSettings, ai_tone: tone } })
             .eq('id', currentUser.id)
             .then();
         });

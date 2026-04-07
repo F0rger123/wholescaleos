@@ -16,7 +16,7 @@ export interface ResponseResult {
 export function generateResponse(intent: string, result: any): string {
   const store = useStore.getState();
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
-  const { sentiment, learnedFacts } = getAIContext();
+  const { sentiment } = getAIContext();
 
   // PASS-THROUGH INTENTS: These intents return their own rich messages from task-executor
   const passThroughIntents = [
@@ -42,7 +42,7 @@ export function generateResponse(intent: string, result: any): string {
       msg = `⚡ ${msg}`;
     }
 
-    return msg;
+    return applyToneAndPersonality(msg, store.aiTone, store.aiPersonality);
   }
 
   // Handle errors
@@ -87,16 +87,54 @@ export function generateResponse(intent: string, result: any): string {
   };
 
   const variations = templates[intent];
-  if (variations) {
-    const response = variations[Math.floor(Math.random() * variations.length)];
-    
-    // Add personalization if we have learned facts
-    if (learnedFacts['style'] === 'concise' || learnedFacts['mode'] === 'pro') {
-      return response.split('.')[0] + '.';
-    }
+  let response = variations 
+    ? variations[Math.floor(Math.random() * variations.length)]
+    : (result.message || `Action completed successfully, **${userName}**. What's next?`);
 
-    return response;
+  // PERSONALIZATION & TONE (v7.0)
+  return applyToneAndPersonality(response, store.aiTone, store.aiPersonality);
+}
+
+/**
+ * Applies tone and personality transformations to the raw response.
+ */
+function applyToneAndPersonality(text: string, tone: string, personality: string): string {
+  let result = text;
+  const t = (tone || 'Professional').toLowerCase();
+  const p = (personality || '').toLowerCase();
+
+  // Tone Adjustments
+  if (t === 'friendly') {
+    // Add emojis and enthusiasm
+    if (!result.match(/[!✨🌟]/)) {
+      result = result.replace(/\.$/, '!');
+      const emojis = ['✨', '🌟', '🚀', '✅', '🤘'];
+      result = `${result} ${emojis[Math.floor(Math.random() * emojis.length)]}`;
+    }
+  } else if (t === 'direct') {
+    // Strip conversational filler for speed/efficiency
+    result = result.replace(/^(Right away|Got it|Taking you there|Success|Done|Ok),? /i, '')
+                  .replace(/ (Success|Done|Ok|Right away)!?$/i, '')
+                  .replace(/\.? Everything is synchronized\.?/, '')
+                  .replace(/\.? I've opened that up for you\.?/, '');
+    
+    // Ensure it's not empty after stripping
+    if (!result.trim()) result = text;
+  } else if (t === 'professional') {
+    // Standard professional phrasing (No active changes usually needed as templates are pro)
+    result = result.replace(/Done\./g, 'Completed.')
+                  .replace(/Got it!/g, 'Request acknowledged.');
   }
 
-  return result.message || `Action completed successfully, **${userName}**. What's next?`;
+  // Multi-trait personality injection (Keyword-based)
+  if (p.includes('pirate')) {
+    result = `Arrr! ${result.replace(/Yes/g, 'Aye').replace(/\./g, ', matey!')}`;
+  } else if (p.includes('concise') || p.includes('short')) {
+    result = result.split('.')[0] + '.';
+  } else if (p.includes('humor') || p.includes('funny')) {
+    const quips = [' (I make this look easy, right?)', ' (Efficiency is my middle name.)', ' (Mission accomplished!)'];
+    result = `${result}${quips[Math.floor(Math.random() * quips.length)]}`;
+  }
+
+  return result;
 }

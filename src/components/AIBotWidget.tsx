@@ -14,7 +14,7 @@ import { RateLimitModal } from './RateLimitModal';
 import { voiceService } from '../lib/voice-service';
 import { usageTracker, UsageData } from '../lib/usage-tracking';
 import { UsageLimitModal } from './UsageLimitModal';
-import { recognizeIntent, executeTask, wrapResponse } from '../lib/local-ai';
+import { recognizeIntent, executeTask, wrapResponse, splitMultiIntent } from '../lib/local-ai';
 
 interface ChatMessage {
   id: string;
@@ -431,8 +431,38 @@ export function AIBotWidget() {
       }
 
       // ── LOCAL RULE-BASED MATCHING (OS BOT 2.0) ───────────────────────────
-      const matched = recognizeIntent(userText);
       const isLocalModel = aiModel === 'os-bot';
+      const segments = isLocalModel ? splitMultiIntent(userText) : [userText];
+
+      if (isLocalModel && segments.length > 1) {
+        // Multi-Intent Processing
+        const taskResults: string[] = [];
+        for (const segment of segments) {
+          const matched = recognizeIntent(segment);
+          if (matched && matched.confidence >= 80) {
+            const res = await executeTask(matched.intent.action, matched.params);
+            if (res.success && res.message) {
+              taskResults.push(res.message);
+            }
+          }
+        }
+
+        if (taskResults.length > 0) {
+          const aiMsg: ChatMessage = {
+            id: Date.now().toString(),
+            role: 'ai',
+            content: taskResults.join('\n\n'),
+            timestamp: new Date().toISOString(),
+            systemLog: "🤖 OS Bot"
+          };
+          setMessages(prev => [...prev, aiMsg]);
+          setTypingMessageId(aiMsg.id);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const matched = recognizeIntent(userText);
 
       if (matched || isLocalModel) {
         // Increment usage for OS Bot

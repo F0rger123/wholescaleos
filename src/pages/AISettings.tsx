@@ -35,6 +35,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     setAiName: setStoreAiName,
     aiPersonality: storeAiPersonality, 
     setAiPersonality: setStoreAiPersonality,
+    aiTone: storeAiTone,
+    setAiTone: setStoreAiTone,
     currentUser, 
     setShowFloatingAIWidget
   } = useStore();
@@ -114,8 +116,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         if (localAiPersonality) setAiPersonalityState(localAiPersonality);
         else setAiPersonalityState(storeAiPersonality);
 
-        const localAiTone = localStorage.getItem('user_ai_tone');
+        const localAiTone = localStorage.getItem('wholescale-ai-tone') || localStorage.getItem('user_ai_tone');
         if (localAiTone) setAiTone(localAiTone);
+        else setAiTone(storeAiTone);
 
         const localShowWidget = localStorage.getItem('user_show_floating_widget');
         if (localShowWidget) {
@@ -204,6 +207,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         setStoreAiName(aiName);
         localStorage.setItem('user_ai_personality', aiPersonality);
         setStoreAiPersonality(aiPersonality);
+        localStorage.setItem('wholescale-ai-tone', aiTone);
+        setStoreAiTone(aiTone);
         if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
         window.dispatchEvent(new CustomEvent('ai-settings-updated'));
         
@@ -221,6 +226,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       setStoreAiName(aiName);
       localStorage.setItem('user_ai_personality', aiPersonality);
       setStoreAiPersonality(aiPersonality);
+      localStorage.setItem('wholescale-ai-tone', aiTone);
+      setStoreAiTone(aiTone);
       localStorage.setItem('user_ai_tone', aiTone);
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
       if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
