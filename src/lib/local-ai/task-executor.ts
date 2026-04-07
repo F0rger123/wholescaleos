@@ -220,7 +220,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'capabilities':
       return { 
         success: true, 
-        message: "I'm a native WholeScale OS feature! I can:\n- 🎯 **Manage Leads**: Create, update, or delete leads.\n- 📝 **CRM Work**: Add/update status or add notes to profiles.\n- 💬 **Send SMS**: Text your leads directly using your connected number.\n- 📅 **Task & Calendar**: Create reminders or check your daily schedule.\n- 📊 **Query Data**: Ask me how many hot leads or overdue tasks you have.\n- 🧠 **Learning**: Tell me preferences like 'Remember that I prefer morning calls'." 
+        message: `I'm your intelligent OS Bot, ${userName}! 🤖 I'm specialized in helping you manage your CRM data efficiently. Here's exactly what I can do for you:\n\n` +
+                 `🎯 **Lead Management**: I can add new leads, update their information, change deal status, or record notes to their profiles.\n` +
+                 `💬 **Engagement**: Send SMS to your contacts instantly. Just say "Text John: Checking in!"\n` +
+                 `📅 **Organization**: I can check your schedule, create tasks for today or in the future (e.g., "remind me in 3 days"), and aggregate your daily pipeline.\n` +
+                 `📊 **Insights**: Ask me about your lead count, overdue tasks, or hot deals.\n` +
+                 `🧠 **Learning**: I remember your preferences and facts you tell me so I can better assist you over time.\n\n` +
+                 `What would you like to tackle first?`
       };
 
     case 'help':

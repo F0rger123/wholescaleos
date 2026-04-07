@@ -173,6 +173,7 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       intent: 'greeting',
       patterns: [
         /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up)$/i,
+        /^(?:how's it going|how are you|good morning|good afternoon|good evening)$/i,
         /\b(?:hi|hello|yo|hey)\b/i
       ],
       params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
@@ -212,7 +213,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'capabilities',
       patterns: [
-        /^(?:what can you do\??|what are you\??|who are you\??|what features do you have\??|capabilities\??|what type of things can you do\??)$/i
+        /^(?:what can you do\??|what are you\??|who are you\??|what features do you have\??|capabilities\??|what type of things can you do\??)$/i,
+        /^(?:what can you all do for me\??|how can you help\??|what are your functions\??|give me a tour\??|show me what you got\??)$/i
       ],
       params: () => ({})
     },
@@ -251,13 +253,13 @@ export function recognizeIntent(input: string): ParsedIntent | null {
   let bestMatch: { intent: Intent, confidence: number } | null = null;
   
   const seedPhrases: Record<string, string[]> = {
-    small_talk: ['thanks', 'how are you', 'thank you', 'hows it going', 'bye'],
+    small_talk: ['thanks', 'how are you', 'thank you', 'hows it going', 'bye', 'good job', 'well done', 'nice', 'cool'],
     set_preference: ['remember', 'save preference', 'record fact', 'i prefer', 'i like'],
-    send_sms: ['text', 'sms', 'message John', 'tell John'],
+    send_sms: ['text', 'sms', 'message John', 'tell John', 'ping'],
     update_lead_status: ['set status', 'change status', 'mark as hot'],
     add_note: ['add note', 'record note', 'write note'],
-    create_lead: ['new lead', 'add lead', 'create lead'],
-    add_task: ['new task', 'remind me', 'set reminder']
+    create_lead: ['new lead', 'add lead', 'create lead', 'onboard'],
+    add_task: ['new task', 'remind me', 'set reminder', 'todo']
   };
 
   for (const intent of intents) {
