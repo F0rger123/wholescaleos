@@ -58,6 +58,10 @@ export default function AITest() {
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Typing Animation State
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
+  const [displayedText, setDisplayedText] = useState('');
+
   // Thread Sidebar Search & Editing
   const [threadSearch, setThreadSearch] = useState('');
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
@@ -176,6 +180,35 @@ export default function AITest() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Typing Animation Simulation
+  useEffect(() => {
+    if (!typingMessageId) return;
+
+    const message = messages.find(m => m.id === typingMessageId);
+    if (!message) {
+      setTypingMessageId(null);
+      return;
+    }
+
+    setDisplayedText(''); 
+    const fullText = message.content;
+    let currentText = '';
+    let index = 0;
+
+    const timer = setInterval(() => {
+      if (index < fullText.length) {
+        currentText += fullText.charAt(index);
+        setDisplayedText(currentText);
+        index++;
+      } else {
+        clearInterval(timer);
+        setTypingMessageId(null);
+      }
+    }, 15); // Faster typing speed (15ms)
+
+    return () => clearInterval(timer);
+  }, [typingMessageId, messages]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -184,7 +217,7 @@ export default function AITest() {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [messages]);
+  }, [messages, displayedText]);
 
   const handleScroll = () => {
     const container = containerRef.current;
@@ -194,12 +227,14 @@ export default function AITest() {
   };
 
   const pushMessage = (msg: Omit<AIBotMessage, 'id' | 'timestamp'>) => {
-    if (!currentAiThreadId) return;
+    if (!currentAiThreadId) return null;
+    const id = (Date.now() + Math.random()).toString();
     addAiMessage(currentAiThreadId, {
       ...msg,
-      id: Date.now().toString(),
+      id,
       timestamp: new Date().toISOString()
     });
+    return id;
   };
 
   useEffect(() => {
@@ -263,13 +298,14 @@ export default function AITest() {
           const res = await handler(matched.params);
           if (res.success) {
             const formatted = formatTemplate(matched.intent.template, res.data);
-            pushMessage({ 
+            const aiId = pushMessage({ 
               role: 'ai', 
               content: formatted, 
               intent: matched.intent.name,
               data: res.data,
               systemLog: "🤖 OS Bot"
             });
+            if (aiId) setTypingMessageId(aiId);
             setLoading(false);
             return;
           }
@@ -299,12 +335,13 @@ export default function AITest() {
           } catch (e) {}
         }
 
-        pushMessage({ 
+        const aiId = pushMessage({ 
           role: 'ai', 
           content: clean, 
           intent: response.intent, 
           systemLog: "🤖 OS Bot" 
         });
+        if (aiId) setTypingMessageId(aiId);
 
         if (response.intent === 'confirm_action' && response.data) {
           setConfirmModal({
@@ -373,7 +410,8 @@ export default function AITest() {
       // ONLY push a new message if there is a system log to show, 
       // otherwise we already pushed the AI response in handleSendMessage.
       if (log) {
-        pushMessage({ role: 'ai', content: log, intent, data: finalData, systemLog: log });
+        const sysId = pushMessage({ role: 'ai', content: log, intent, data: finalData, systemLog: log });
+        if (sysId) setTypingMessageId(sysId);
       }
     } catch (err) {
       console.error('Action failed:', err);
@@ -677,7 +715,20 @@ export default function AITest() {
                   borderColor: msg.role === 'user' ? 'transparent' : 'var(--t-border)',
                   color: msg.role === 'user' ? 'var(--t-on-primary)' : 'var(--t-text)'
                 }}>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</div>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                    {msg.id === typingMessageId ? (
+                      <div className="flex flex-col gap-3">
+                        <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">{displayedText}</div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--t-primary)]/10 rounded-full w-fit border border-[var(--t-primary)]/20 shadow-sm">
+                          <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-duration:0.8s]" />
+                          <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.2s] [animation-duration:0.8s]" />
+                          <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.4s] [animation-duration:0.8s]" />
+                        </div>
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
                 </div>
                 
                 {msg.role === 'ai' && msg.intent && msg.intent !== 'error' && msg.intent !== 'unknown' && msg.intent !== 'ask_question' && (

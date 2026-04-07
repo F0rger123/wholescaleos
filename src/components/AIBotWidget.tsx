@@ -322,7 +322,9 @@ export function AIBotWidget() {
       return;
     }
 
+    // Set initial state immediately to avoid flashing previous text
     setDisplayedText(''); 
+    
     const fullText = message.content;
     let currentText = '';
     let index = 0;
@@ -338,7 +340,9 @@ export function AIBotWidget() {
       }
     }, 15); // Faster typing speed (15ms)
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+    };
   }, [typingMessageId, messages]);
 
   // Proactive Insights based on page
@@ -713,8 +717,9 @@ export function AIBotWidget() {
       await usageTracker.incrementUsage();
       await fetchUsage();
 
+      const finalId = Date.now().toString();
       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
+        id: finalId,
         role: 'ai',
         content: result
           ? (result.success ? result.message : `❌ ${result.message}`)
@@ -722,6 +727,7 @@ export function AIBotWidget() {
         timestamp: new Date().toISOString(),
         intent: intent
       }]);
+      setTypingMessageId(finalId);
       
       const speechText = result 
         ? (result.success ? result.message : `Error. ${result.message}`)
@@ -730,13 +736,15 @@ export function AIBotWidget() {
     } catch (err: any) {
       console.error('Widget action failed:', err);
       setLoading(false);
+      const errId = (Date.now() + 1).toString();
       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
+        id: errId,
         role: 'ai',
         content: `❌ ${err?.message || "Couldn't complete that action. Please check your Google/SMS settings."}`,
         timestamp: new Date().toISOString(),
         systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
       }]);
+      setTypingMessageId(errId);
     }
   };
 
