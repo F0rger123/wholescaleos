@@ -423,6 +423,36 @@ function AutomationsHubContent() {
     });
   };
 
+  const handleTestWorkflow = async () => {
+    if (nodes.length < 2) {
+      toast.error('Add more nodes to test the workflow.');
+      return;
+    }
+
+    setIsSaving(true);
+    toast.loading('Initializing test trigger...', { id: 'test-flow' });
+
+    try {
+      // Simulate node execution sequence
+      for (const node of nodes) {
+        // Visual feedback on the node (lighting up)
+        setNodes(nds => nds.map(n => n.id === node.id ? { ...n, data: { ...n.data, status: 'running' } } : n));
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setNodes(nds => nds.map(n => n.id === node.id ? { ...n, data: { ...n.data, status: 'success' } } : n));
+      }
+
+      toast.success('Workflow simulation complete!', { id: 'test-flow' });
+    } catch (err) {
+      toast.error('Workflow test failed.', { id: 'test-flow' });
+    } finally {
+      setIsSaving(false);
+      // Reset status after a delay
+      setTimeout(() => {
+        setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, status: undefined } })));
+      }, 3000);
+    }
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 min-h-[calc(100vh-100px)] flex flex-col">
       {/* Header */}
@@ -561,6 +591,14 @@ function AutomationsHubContent() {
                 title="Add AI Step"
               >
                 <Bot size={14} className="text-purple-400 group-hover:scale-110 transition-transform" />
+              </button>
+              <button 
+                onClick={handleTestWorkflow}
+                disabled={isSaving || nodes.length < 2}
+                className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-500/20 flex items-center gap-2 font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
+              >
+                <Zap size={14} />
+                Test Trigger
               </button>
               <button 
                 onClick={() => saveWorkflow()}

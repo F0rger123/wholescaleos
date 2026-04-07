@@ -7,7 +7,7 @@ import { executeTask } from './local-ai/task-executor';
 import { generateResponse } from './local-ai/response-generator';
 import { saveMessage } from './local-ai/memory-store';
 
-export interface GeminiResponse {
+export interface BotResponse {
   intent: string;
   response: string;
   data?: any;
@@ -361,7 +361,7 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * OS Bot Processing Fallback
  * Tries to handle the prompt locally before falling back to external APIs.
  */
-export async function processWithLocalAI(prompt: string): Promise<GeminiResponse | null> {
+export async function processWithLocalAI(prompt: string): Promise<BotResponse | null> {
   const localResult = recognizeIntent(prompt);
   
   if (localResult && (localResult.confidence >= 0.4 || (localStorage.getItem('user_ai_provider') === 'local'))) {
@@ -386,7 +386,7 @@ export async function processWithLocalAI(prompt: string): Promise<GeminiResponse
  * Sends a prompt and context to the Gemini API and returns a parsed intent and response.
  * Strictly requires a user-configured API key from settings.
  */
-export async function processPrompt(prompt: string, context: Record<string, any> = {}, modelOverride?: string, signal?: AbortSignal): Promise<GeminiResponse> {
+export async function processPrompt(prompt: string, context: Record<string, any> = {}, modelOverride?: string, signal?: AbortSignal): Promise<BotResponse> {
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   

@@ -489,8 +489,8 @@ const AdminEmailCampaigns = () => {
       )}
 
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-        <div className="w-full max-w-[1200px] bg-[var(--t-surface)]/80 border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl backdrop-blur-md animate-in zoom-in-95 duration-500 flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xl animate-in fade-in duration-300">
+          <div className="w-full max-w-[800px] max-h-[80vh] bg-[var(--t-surface)]/90 border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col">
             <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-black/20">
               <h2 className="text-xl font-black uppercase tracking-wider text-[var(--t-text)]">
                 {editingTemplate?.id ? 'Edit Template' : 'New Template'}
@@ -503,7 +503,7 @@ const AdminEmailCampaigns = () => {
               </button>
             </div>
             
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar flex-1">
+            <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Editor Column */}
                 <div className="space-y-6">

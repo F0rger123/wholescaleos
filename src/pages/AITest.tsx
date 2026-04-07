@@ -303,7 +303,7 @@ export default function AITest() {
           role: 'ai', 
           content: clean, 
           intent: response.intent, 
-          systemLog: "✨ Google Gemini" 
+          systemLog: "🤖 OS Bot" 
         });
 
         if (response.intent === 'confirm_action' && response.data) {
@@ -419,7 +419,7 @@ export default function AITest() {
         </div>
         <h2 className="text-2xl font-bold text-white mb-3">AI Assistant Locked</h2>
         <p className="text-[var(--t-text-muted)] mb-8 leading-relaxed">
-          Configure your Gemini API key in settings to unlock these features.
+          Configure your OS Cloud API key in settings to unlock these features.
         </p>
         <button
           onClick={() => navigate('/settings/ai')}
@@ -427,7 +427,7 @@ export default function AITest() {
           style={{ background: 'var(--t-primary)' }}
         >
           <Sparkles className="w-5 h-5" />
-          Setup AI Key Now
+          Setup OS Cloud Key
         </button>
       </div>
     );
@@ -748,7 +748,7 @@ export default function AITest() {
             <div className="flex-1 text-left">
               <h3 className="text-sm font-semibold" style={{ color: 'var(--t-text)' }}>Rate Limit Reached</h3>
               <p className="text-xs mt-1" style={{ color: 'var(--t-text-secondary)' }}>
-                You've reached your rate limit for the Gemini API. 
+                You've reached your rate limit for the OS Cloud API. 
                 Retrying in <span className="font-bold" style={{ color: 'var(--t-primary)' }}>{rateLimit.seconds}s</span>...
                 <br />
                 <span className="text-[10px] mt-1 block">

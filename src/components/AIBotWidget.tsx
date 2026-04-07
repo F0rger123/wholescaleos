@@ -26,7 +26,7 @@ interface ChatMessage {
   systemLog?: string;
 }
 
-export interface GeminiResponse {
+export interface BotResponse {
   intent: string;
   response: string;
   data?: unknown;
@@ -545,13 +545,15 @@ export function AIBotWidget() {
 
       if (response.intent === 'rate_limit') {
         setShowRateLimitModal(true);
+        const finalId = (Date.now() + 1).toString();
         setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
+          id: finalId,
           role: 'ai',
           content: response.response || "AI initialization complete.",
           timestamp: new Date().toISOString(),
-          systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
+          systemLog: "🤖 OS Bot"
         }]);
+        setTypingMessageId(finalId);
         setLoading(false);
         return;
       }
@@ -565,13 +567,15 @@ export function AIBotWidget() {
       }
 
       if (response.intent === 'redirect_setup') {
+        const finalId = (Date.now() + 1).toString();
         setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
+          id: finalId,
           role: 'ai',
-          content: "I need your Gemini API key to work. Redirecting you to settings...",
+          content: "I need your OS Cloud Key to work. Redirecting you to settings...",
           timestamp: new Date().toISOString(),
-          systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
+          systemLog: "🤖 OS Bot"
         }]);
+        setTypingMessageId(finalId);
         setTimeout(() => navigate('/settings/ai'), 1500);
 
       } else if (response.intent === 'confirm_action') {
@@ -584,23 +588,27 @@ export function AIBotWidget() {
             message: response.response,
             onConfirm: () => handleExecuteAction(d.intent || response.intent, d)
           });
+          const finalId = Date.now().toString();
           setMessages(prev => [...prev.slice(0, -1), {
-            id: Date.now().toString(),
+            id: finalId,
             role: "ai",
             content: response.response,
             timestamp: new Date().toISOString(),
-            systemLog: response.systemLog || (aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini")
+            systemLog: response.systemLog || "🤖 OS Bot"
           }]);
+          setTypingMessageId(finalId);
         } else {
           // Missing info — start SMS session to collect it conversationally
+          const finalId = (Date.now() + 1).toString();
           setMessages(prev => [...prev, {
-            id: (Date.now() + 1).toString(),
+            id: finalId,
             role: 'ai',
             content: response.response,
             timestamp: new Date().toISOString(),
             intent: 'ask_question',
-            systemLog: response.systemLog || (aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini")
+            systemLog: response.systemLog || "🤖 OS Bot"
           }]);
+          setTypingMessageId(finalId);
         }
 
       } else if (response.intent === 'ask_save_contact') {
@@ -608,15 +616,17 @@ export function AIBotWidget() {
           isOpen: true,
           phone: response.data?.phone || ''
         });
+        const finalId = (Date.now() + 1).toString();
         setMessages(prev => [...prev, {
-          id: (Date.now() + 1).toString(),
+          id: finalId,
           role: 'ai',
           content: response.response,
           timestamp: new Date().toISOString(),
           intent: 'ask_save_contact',
           data: response.data,
-          systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
+          systemLog: "🤖 OS Bot"
         }]);
+        setTypingMessageId(finalId);
       } else {
         const aiMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
@@ -625,7 +635,7 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString(),
           intent: response.intent,
           data: response.data,
-          systemLog: response.systemLog || (aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini")
+          systemLog: response.systemLog || "🤖 OS Bot"
         };
         setMessages(prev => [...prev, aiMsg]);
         setTypingMessageId(aiMsg.id);
@@ -634,7 +644,7 @@ export function AIBotWidget() {
         if (response.intent === 'navigate' && response.data?.path) {
           navigate(response.data.path);
         } else if (response.intent === 'multi_action' && response.data?.actions) {
-          response.data.actions.forEach((act: { intent: string; data?: any }) => {
+          (response.data.actions as any[]).forEach((act: { intent: string; data?: any }) => {
             if (act.intent === 'navigate' && act.data?.path) {
               navigate(act.data.path);
             } else if (act.intent === 'create_task') {

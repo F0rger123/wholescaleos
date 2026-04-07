@@ -34,9 +34,9 @@ export const AIModelSelectionDialog: React.FC = () => {
     },
     { 
       id: 'gemini', 
-      label: 'Google Gemini', 
+      label: 'OS Bot (Cloud Brain)', 
       icon: <Sparkles className="w-6 h-6 text-blue-400" />, 
-      desc: 'High-performance cloud intelligence (Requires API Key).',
+      desc: 'High-performance cloud intelligence (Requires OS Key).',
       color: 'bg-blue-500/10 border-blue-500/30'
     }
   ];

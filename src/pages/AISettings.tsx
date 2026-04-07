@@ -271,8 +271,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       {/* Provider Selection */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { id: 'local', label: 'OS Bot (Built-in AI)', icon: '🤖', desc: 'Free, unlimited, zero-latency' },
-          { id: 'gemini', label: 'Google Gemini', icon: '✨', desc: 'Requires API key' }
+          { id: 'local', label: 'OS Bot (Native)', icon: '🤖', desc: 'Free, unlimited, zero-latency' },
+          { id: 'gemini', label: 'OS Bot (Cloud Brain)', icon: '☁️', desc: 'High-performance cloud intelligence' }
         ].map((p) => (
           <button
             key={p.id}
@@ -297,7 +297,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       <div className="bg-[var(--t-surface)]/50 rounded-2xl border border-[var(--t-border)] p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Key className="w-5 h-5 text-[var(--t-primary)]" />
-          {provider === 'local' ? 'OS Bot — Ready to Go' : 'Setup Instructions: GEMINI'}
+          {provider === 'local' ? 'OS Bot — Ready to Go' : 'Setup Instructions: OS CLOUD'}
         </h2>
         
         <div className="space-y-3 text-[var(--t-text-muted)] text-sm">
@@ -433,7 +433,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">
-              {provider === 'local' ? 'API Endpoint URL' : 'Gemini API Key'}
+              {provider === 'local' ? 'API Endpoint URL' : 'OS Cloud API Key'}
             </label>
             <div className="flex gap-2">
               <input

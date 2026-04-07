@@ -4,7 +4,7 @@ import {
   Star, Trash2, Sparkles, Loader2, 
   Inbox, FileText, Layout, Plus, 
   Settings, Clock, Calendar, Search, Mail, Edit2, Trash, UserPlus,
-  BookOpenText, X, Eye, CheckCircle2
+  X, Eye, CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -803,6 +803,7 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
   const [selectedRecipientIds, setSelectedRecipientIds] = useState<string[]>([]);
   const [scheduleType, setScheduleType] = useState<'once' | 'daily' | 'weekly' | 'monthly'>('once');
   const [isSaving, setIsSaving] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   
   const { leads, contacts } = useStore();
 
@@ -853,7 +854,7 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-[900px] bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between p-4 border-b border-[var(--t-border)]">
           <div>
             <h3 className="text-lg font-bold">Campaign Wizard</h3>
@@ -862,74 +863,115 @@ function CampaignWizard({ templates, onClose, onSave, onSetView }: { templates: 
           <button onClick={onClose} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"><X size={20} /></button>
         </div>
 
-        <div className="p-6 h-[450px] overflow-y-auto custom-scrollbar">
+        <div className="p-6 h-[500px] overflow-hidden flex flex-col">
           {step === 1 && (
-            <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-              <div>
-                <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block mb-2">Campaign Name</label>
-                <input 
-                  value={name} onChange={e => setName(e.target.value)}
-                  className="w-full px-4 py-3 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all"
-                  placeholder="e.g. November Follow-up Blast"
-                />
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block">Select Template</label>
-                  <div className="flex bg-[var(--t-surface-dim)] p-0.5 rounded-lg border border-[var(--t-border)]">
-                    <button 
-                      onClick={() => { setSelectedTemplateSource('pro'); setSelectedTemplateId(null); }}
-                      className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${selectedTemplateSource === 'pro' ? 'bg-[var(--t-primary)] text-white' : 'text-[var(--t-text-muted)]'}`}
-                    >
-                      PRO LIBRARY
-                    </button>
-                    <button 
-                      onClick={() => { setSelectedTemplateSource('custom'); setSelectedTemplateId(null); }}
-                      className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${selectedTemplateSource === 'custom' ? 'bg-[var(--t-primary)] text-white' : 'text-[var(--t-text-muted)]'}`}
-                    >
-                      MY TEMPLATES
-                    </button>
-                  </div>
+            <div className="flex flex-col lg:flex-row gap-8 animate-in slide-in-from-right-4 duration-300 h-full">
+              {/* List Section */}
+              <div className="w-full lg:w-72 flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest block">Automation Name</label>
+                  <input 
+                    value={name} onChange={e => setName(e.target.value)}
+                    className="w-full px-4 py-3 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none transition-all"
+                    placeholder="e.g. November Follow-up Blast"
+                  />
                 </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {allTemplates.map((tmp: dbEmailTemplate | AgentTemplate) => (
-                    <button 
-                      key={tmp.id}
-                      onClick={() => setSelectedTemplateId(tmp.id)}
-                      className={`p-4 text-left border rounded-2xl transition-all ${selectedTemplateId === tmp.id ? 'border-[var(--t-primary)] bg-[var(--t-primary-dim)]/10 ring-2 ring-[var(--t-primary)]/20' : 'border-[var(--t-border)] hover:border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)]/50'}`}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <p className="text-xs font-bold truncate">{tmp.name}</p>
-                        {selectedTemplateSource === 'pro' && <Sparkles size={10} className="text-[var(--t-primary)]" />}
-                      </div>
-                      <p className="text-[9px] text-[var(--t-text-muted)] truncate">{tmp.subject}</p>
-                    </button>
-                  ))}
-                  {selectedTemplateSource === 'custom' && (
-                    <button 
-                      onClick={() => { onSetView('templates'); onClose(); }}
-                      className="p-4 border-2 border-dashed border-[var(--t-border)] rounded-2xl flex flex-col items-center justify-center text-[var(--t-text-muted)] hover:text-[var(--t-primary)] hover:border-[var(--t-primary-dim)]"
-                    >
-                      <Plus size={20} className="mb-2" />
-                      <span className="text-xs font-bold">New Template</span>
-                    </button>
-                  )}
-                </div>
-
-                {selectedTemplateId && currentTemplate && (
-                  <div className="p-4 bg-[var(--t-surface-dim)] border border-[var(--t-border)] rounded-2xl animate-in fade-in zoom-in-95 duration-300">
-                    <p className="text-[10px] font-bold text-[var(--t-primary)] mb-2 uppercase tracking-widest flex items-center gap-1">
-                      <BookOpenText size={12} /> Template Preview
-                    </p>
-                    <div className="max-h-32 overflow-hidden relative">
-                       <div className="text-[11px] text-[var(--t-text-muted)] space-y-2 prose prose-invert max-w-none">
-                          {currentTemplate.body ? currentTemplate.body.split('\n').slice(0, 3).join('\n') + '...' : 'Rich HTML Content'}
-                       </div>
-                       <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-[var(--t-surface-dim)] to-transparent" />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block">Templates</label>
+                    <div className="flex bg-[var(--t-surface-dim)] p-0.5 rounded-lg border border-[var(--t-border)]">
+                      <button 
+                        onClick={() => { setSelectedTemplateSource('pro'); setSelectedTemplateId(null); }}
+                        className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${selectedTemplateSource === 'pro' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)]'}`}
+                      >
+                        PRO
+                      </button>
+                      <button 
+                        onClick={() => { setSelectedTemplateSource('custom'); setSelectedTemplateId(null); }}
+                        className={`px-3 py-1 text-[9px] font-bold rounded-md transition-all ${selectedTemplateSource === 'custom' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)]'}`}
+                      >
+                        MY
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  <div className="space-y-2">
+                    {allTemplates.map((tmp: dbEmailTemplate | AgentTemplate) => (
+                      <button 
+                        key={tmp.id}
+                        onClick={() => setSelectedTemplateId(tmp.id)}
+                        className={`w-full p-3 text-left border rounded-xl transition-all ${selectedTemplateId === tmp.id ? 'border-[var(--t-primary)] bg-[var(--t-primary-dim)]/10 ring-2 ring-[var(--t-primary)]/20' : 'border-[var(--t-border)] hover:border-[var(--t-primary-dim)] bg-[var(--t-surface-dim)]/30'}`}
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className={`text-[11px] font-bold truncate ${selectedTemplateId === tmp.id ? 'text-[var(--t-primary)]' : 'text-[var(--t-text)]'}`}>{tmp.name}</p>
+                          {selectedTemplateSource === 'pro' && <Sparkles size={10} className="text-[var(--t-primary)]" />}
+                        </div>
+                        <p className="text-[9px] text-[var(--t-text-muted)] truncate opacity-70 italic">{tmp.subject}</p>
+                      </button>
+                    ))}
+                    {selectedTemplateSource === 'custom' && (
+                      <button 
+                        onClick={() => { onSetView('templates'); onClose(); }}
+                        className="w-full p-4 border-2 border-dashed border-[var(--t-border)] rounded-xl flex flex-col items-center justify-center text-[var(--t-text-muted)] hover:text-[var(--t-primary)] hover:border-[var(--t-primary-dim)] bg-black/5"
+                      >
+                        <Plus size={16} className="mb-1 opacity-50" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">New Template</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview Section */}
+              <div className="flex-1 flex flex-col gap-4 bg-[var(--t-surface-dim)]/30 border border-[var(--t-border)] rounded-2xl p-4 overflow-hidden">
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest px-2">
+                   <div className="flex items-center gap-2">
+                      <Eye size={12} /> Live Preview
+                   </div>
+                   <div className="flex bg-black/10 rounded-lg p-0.5 border border-white/5">
+                      <button 
+                        onClick={() => setPreviewDevice('desktop')}
+                        className={`px-3 py-0.5 rounded-md transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'hover:bg-white/5'}`}
+                      >
+                        Desktop
+                      </button>
+                      <button 
+                        onClick={() => setPreviewDevice('mobile')}
+                        className={`px-3 py-0.5 rounded-md transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'hover:bg-white/5'}`}
+                      >
+                        Mobile
+                      </button>
+                   </div>
+                </div>
+
+                <div className="flex-1 overflow-hidden flex flex-col items-center justify-center">
+                   {selectedTemplateId && currentTemplate ? (
+                     <div className={`w-full bg-white rounded-xl border border-[var(--t-border)] shadow-2xl overflow-hidden flex flex-col transition-all duration-500 min-h-0 ${previewDevice === 'mobile' ? 'max-w-[280px]' : 'w-full'} flex-1`}>
+                        <div className="p-2 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between gap-2">
+                          <div className="flex gap-1">
+                            <div className="w-1 h-1 rounded-full bg-zinc-300" />
+                            <div className="w-1 h-1 rounded-full bg-zinc-300" />
+                            <div className="w-1 h-1 rounded-full bg-zinc-300" />
+                          </div>
+                          <div className="flex-1 bg-white border border-zinc-200 rounded px-2 py-0.5 text-[7px] text-zinc-400 truncate text-center italic">
+                            {currentTemplate.subject}
+                          </div>
+                          <div className="w-6" />
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar preview-frame text-black">
+                           <div 
+                             className="prose prose-sm max-w-none"
+                             dangerouslySetInnerHTML={{ __html: (currentTemplate as any).html || currentTemplate.body || '' }} 
+                           />
+                        </div>
+                     </div>
+                   ) : (
+                     <div className="text-center opacity-40">
+                        <Mail className="mx-auto text-[var(--t-text-muted)] mb-3" size={32} />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Select a Template</p>
+                     </div>
+                   )}
+                </div>
               </div>
             </div>
           )}

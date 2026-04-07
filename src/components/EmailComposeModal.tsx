@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles, BookOpenText, ImageIcon, Upload, Link as LinkIcon, Layout, Trash2 } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Bot, Sparkles, ImageIcon, Upload, Link as LinkIcon, Layout, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail, getThread } from '../lib/email';
@@ -604,7 +604,7 @@ export default function EmailComposeModal({
                   onClick={() => setShowTemplates(!showTemplates)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-primary-dim)]/10 hover:bg-[var(--t-primary-dim)]/20 text-[var(--t-primary)] rounded-lg text-xs font-bold transition-all border border-[var(--t-primary-dim)]/20"
                 >
-                  <BookOpenText size={14} />
+                  <Bot size={14} />
                   {showTemplates ? 'Hide Templates' : 'Use Agent Template'}
                 </button>
                 <button 
@@ -653,13 +653,13 @@ export default function EmailComposeModal({
               </div>
 
               {showTemplates && (
-                <div className="flex flex-col lg:flex-row gap-6 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300 min-h-[600px] overflow-hidden">
+                <div className="flex flex-col lg:flex-row gap-6 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300 max-h-[600px] overflow-hidden">
                   {/* Sidebar: Categories & List */}
-                  <div className="w-full lg:w-72 border-r border-[var(--t-border)] flex flex-col bg-black/5">
-                    <div className="p-4 border-b border-[var(--t-border)] space-y-3">
+                  <div className="w-full lg:w-72 border-r border-[var(--t-border)] flex flex-col bg-black/5 overflow-hidden">
+                    <div className="p-4 border-b border-[var(--t-border)] space-y-3 shrink-0">
                          <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest px-1">
                             <BookOpen size={12} />
-                            Template Library
+                            Library
                          </div>
                          <div className="flex flex-wrap gap-1.5">
                            {categories.map(cat => (
@@ -685,10 +685,10 @@ export default function EmailComposeModal({
                             }
                           }}
                           onDoubleClick={() => handleApplyTemplate(t)}
-                          className={`w-full text-left p-3 rounded-xl border transition-all group ${editingTemplate?.id === t.id ? 'bg-[var(--t-primary-dim)]/20 border-[var(--t-primary)] shadow-sm' : 'bg-[var(--t-surface)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]/50'}`}
+                          className={`w-full text-left p-3 rounded-xl border transition-all group ${editingTemplate?.id === t.id ? 'bg-[var(--t-primary-dim)]/20 border-[var(--t-primary)] shadow-sm scale-[1.02]' : 'bg-[var(--t-surface)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]/50'}`}
                         >
                            <div className="flex items-center justify-between gap-2 mb-1">
-                             <p className="text-[11px] font-bold text-[var(--t-text)] truncate">{t.name}</p>
+                             <p className={`text-[11px] font-bold truncate ${editingTemplate?.id === t.id ? 'text-[var(--t-primary)]' : 'text-[var(--t-text)]'}`}>{t.name}</p>
                              {t.category === 'Custom' && (
                                <button 
                                  onClick={async (e) => {
@@ -710,94 +710,68 @@ export default function EmailComposeModal({
                            <p className="text-[9px] text-[var(--t-text-muted)] line-clamp-1 opacity-70 italic">{t.subject}</p>
                         </button>
                       ))}
-                      {filteredTemplates.length === 0 && (
-                        <div className="text-center py-8">
-                           <BookOpenText size={24} className="mx-auto text-[var(--t-text-muted)] opacity-20 mb-2" />
-                           <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider">No templates found</p>
-                        </div>
-                      )}
                     </div>
                   </div>
 
                   {/* Main: Real-time Preview */}
-                  <div className="flex-1 p-6 flex flex-col bg-[var(--t-surface-dim)]/30">
+                  <div className="flex-1 p-6 flex flex-col bg-[var(--t-surface-dim)]/30 overflow-hidden">
                     {editingTemplate ? (
-                      <div className="flex flex-col h-full space-y-4">
-                        <div className="flex items-center justify-between">
+                      <div className="flex flex-col h-full space-y-4 overflow-hidden">
+                        <div className="flex items-center justify-between shrink-0">
                            <div>
                              <h4 className="text-sm font-bold text-[var(--t-text)]">{editingTemplate.name}</h4>
-                             <p className="text-xs text-[var(--t-text-muted)]">Live Preview w/ Variables</p>
+                             <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest flex items-center gap-1">
+                               <Sparkles size={10} className="text-[var(--t-primary)]" /> Personalized Preview
+                             </p>
                            </div>
                            <div className="flex gap-2">
                               <div className="flex bg-black/10 rounded-lg p-0.5 border border-[var(--t-border)]">
                                 <button 
                                   onClick={() => setPreviewDevice('desktop')}
-                                  className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
+                                  className={`px-3 py-1 rounded-md text-[9px] font-bold transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
                                 >
-                                  Desktop
+                                  DESKTOP
                                 </button>
                                 <button 
                                   onClick={() => setPreviewDevice('mobile')}
-                                  className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
+                                  className={`px-3 py-1 rounded-md text-[9px] font-bold transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
                                 >
-                                  Mobile
+                                  MOBILE
                                 </button>
                               </div>
                               <button 
                                 onClick={() => handleApplyTemplate(editingTemplate as any)}
-                                className="px-4 py-1.5 bg-[var(--t-primary)] text-white rounded-lg text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[var(--t-primary-dim)]/20"
+                                className="px-5 py-2 bg-[var(--t-primary)] text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[var(--t-primary-dim)]/30"
                               >
                                 Use Template
                               </button>
                            </div>
                         </div>
 
-                        <div 
-                          className={`flex-1 border border-[var(--t-border)] rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'w-full'}`}
-                          onClick={async (e) => {
-                            const target = e.target as HTMLElement;
-                            if (target.tagName === 'IMG') {
-                              const imgTarget = target as HTMLImageElement;
-                              const fileInput = document.createElement('input');
-                              fileInput.type = 'file';
-                              fileInput.accept = 'image/*';
-                              fileInput.onchange = async (event: any) => {
-                                const file = event.target.files?.[0];
-                                if (file) {
-                                  // Find which key this image corresponds to by checking templateImages
-                                  let foundKey = 'header_image';
-                                  for (const [k, v] of Object.entries(templateImages)) {
-                                    if (imgTarget.src.includes(v)) {
-                                      foundKey = k;
-                                      break;
-                                    }
-                                  }
-                                  await handleUpdateTemplateImage(foundKey, file);
-                                }
-                              };
-                              fileInput.click();
-                            }
-                          }}
-                        >
-                           <div className="p-2 bg-zinc-50 border-b border-zinc-200 flex items-center gap-2">
-                             <div className="flex gap-1">
-                               <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
-                               <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
-                               <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                        <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-2">
+                          <div 
+                            className={`w-full border border-[var(--t-border)] rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[320px]' : 'w-full'} flex-1`}
+                          >
+                             <div className="p-2.5 bg-zinc-50 border-b border-zinc-200 flex items-center gap-2 shrink-0">
+                               <div className="flex gap-1">
+                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                               </div>
+                               <div className="flex-1 bg-white border border-zinc-200 rounded px-2 py-0.5 text-[9px] text-zinc-400 select-none truncate">
+                                 {getInterpolatedHtml(editingTemplate.subject || '')}
+                               </div>
                              </div>
-                             <div className="flex-1 bg-white border border-zinc-200 rounded px-2 py-0.5 text-[9px] text-zinc-400 select-none truncate">
-                               {getInterpolatedHtml(editingTemplate.subject || '')}
+                             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar preview-frame bg-white">
+                               <div 
+                                 className="prose prose-sm max-w-none text-black selection:bg-indigo-100"
+                                 dangerouslySetInnerHTML={{ __html: getInterpolatedHtml((editingTemplate as any).html || (editingTemplate as any).body || '') }}
+                               />
                              </div>
-                           </div>
-                           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar preview-frame">
-                             <div 
-                               className="prose prose-sm max-w-none text-black"
-                               dangerouslySetInnerHTML={{ __html: getInterpolatedHtml((editingTemplate as any).html || (editingTemplate as any).body || '') }}
-                             />
-                           </div>
+                          </div>
                         </div>
-                        <p className="text-[9px] text-center text-[var(--t-text-muted)] font-bold uppercase tracking-widest opacity-40">
-                          Click "Use Template" to start editing this layout.
+                        <p className="text-[9px] text-center text-[var(--t-text-muted)] font-bold uppercase tracking-widest opacity-40 shrink-0">
+                          * Personalized variables will be resolved upon application.
                         </p>
                       </div>
                     ) : (
@@ -806,8 +780,8 @@ export default function EmailComposeModal({
                           <Eye size={32} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-[var(--t-text)]">Select a Template</p>
-                          <p className="text-xs text-[var(--t-text-muted)]">Choose a layout from the list to see a live preview here.</p>
+                          <p className="text-sm font-bold text-[var(--t-text)] uppercase tracking-wider">Select a Template</p>
+                          <p className="text-xs text-[var(--t-text-muted)] mt-1">Choose a layout from the list to see an instant preview</p>
                         </div>
                       </div>
                     )}

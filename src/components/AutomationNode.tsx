@@ -57,8 +57,8 @@ export const AutomationNode = memo(({ id, data }: any) => {
       />
       
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${colorClass}`}>
-          <Icon size={20} />
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${colorClass} ${data.status === 'running' ? 'animate-pulse scale-110 shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.5)]' : ''}`}>
+          {data.status === 'success' ? <Check className="text-green-500" size={20} /> : <Icon size={20} />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">{data.type}</p>
