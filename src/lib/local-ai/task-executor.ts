@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
-import { trackLead, setActiveEntity, setActiveState, getMemory } from './memory-store';
+import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, trackSentiment } from './memory-store';
 
 export interface TaskResponse {
   success: boolean;
@@ -10,6 +10,7 @@ export interface TaskResponse {
 
 export async function executeTask(action: string, entities: any): Promise<TaskResponse> {
   const store = useStore.getState();
+  const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
 
   switch (action) {
     case 'navigate':
@@ -36,7 +37,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
       return { success: false, message: `I don't know how to navigate to "${path}".` };
 
-    case 'createLead':
+    case 'create_lead':
       try {
         const result = await store.addLead({
           name: entities.name || 'New Opportunity',
@@ -74,7 +75,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: false, message: 'Lead creation error.' };
       }
 
-    case 'createTask':
+    case 'add_task':
       try {
         store.addTask({
           title: entities.title || 'New Task',
@@ -91,12 +92,11 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: false, message: 'Task creation error.' };
       }
 
-    case 'sendSMS':
+    case 'send_sms':
       try {
         let target = entities.target;
         const memory = getMemory();
         
-        // Handle multi-turn target resolution
         if (!target && memory.activeState?.type === 'AWAITING_SMS_MESSAGE') {
           target = memory.activeState.data?.target;
         }
@@ -112,8 +112,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
         const res = await sendSMS(phone, entities.message);
         if (res.success && lead) {
-            setActiveEntity(lead.id, lead.name, 'lead');
-            setActiveState(null); // Clear state
+            pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
+            setActiveState(null);
         }
 
         return { 
@@ -124,16 +124,35 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: false, message: e.message || 'SMS service error.' };
       }
 
-    case 'sendSMSPartial':
-      setActiveState('AWAITING_SMS_MESSAGE', { target: entities.target });
-      return { 
-        success: true, 
-        message: entities.target 
-          ? `Sure! What would you like to say to ${entities.target}?` 
-          : "I can help with that. Who would you like to text?" 
-      };
+    case 'update_lead_status':
+      const leadToUpdate = store.leads.find(l => l.name.toLowerCase().includes(entities.target?.toLowerCase()));
+      if (leadToUpdate) {
+        store.updateLead(leadToUpdate.id, { status: entities.status });
+        pushToEntityStack({ id: leadToUpdate.id, name: leadToUpdate.name, type: 'lead' });
+        return { success: true, message: `✅ Marked ${leadToUpdate.name} as ${entities.status}.` };
+      }
+      return { success: false, message: `I couldn't find a lead named "${entities.target}".` };
 
-    case 'queryLeads': {
+    case 'add_note':
+      const leadForNote = store.leads.find(l => l.name.toLowerCase().includes(entities.target?.toLowerCase()));
+      if (leadForNote) {
+        const newNote = `[OS Bot ${new Date().toLocaleDateString()}]: ${entities.note}\n\n${leadForNote.notes || ''}`;
+        store.updateLead(leadForNote.id, { notes: newNote });
+        pushToEntityStack({ id: leadForNote.id, name: leadForNote.name, type: 'lead' });
+        return { success: true, message: `✅ Added note to ${leadForNote.name}'s profile.` };
+      }
+      return { success: false, message: `I couldn't find a lead named "${entities.target}".` };
+
+    case 'get_lead_info':
+      const foundLead = store.leads.find(l => l.name.toLowerCase().includes(entities.name?.toLowerCase()));
+      if (foundLead) {
+        pushToEntityStack({ id: foundLead.id, name: foundLead.name, type: 'lead' });
+        const summary = `Here's what I have on **${foundLead.name}**:\n- 📍 Address: ${foundLead.propertyAddress || 'N/A'}\n- 📊 Status: ${foundLead.status}\n- 🎯 Deal Score: ${foundLead.dealScore || 0}\n- 📞 Phone: ${foundLead.phone || 'None'}`;
+        return { success: true, message: summary };
+      }
+      return { success: false, message: `I don't have any records for "${entities.name}".` };
+
+    case 'lead_query': {
       const leads = store.leads;
       const count = leads.length;
       const hotLeads = leads.filter(l => (l.dealScore || 0) >= 80).length;
@@ -149,7 +168,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { success: true, message: msg };
     }
 
-    case 'queryTasks': {
+    case 'task_query': {
       const tasks = store.tasks.filter(t => t.status !== 'done');
       const overdue = tasks.filter(t => new Date(t.dueDate) < new Date()).length;
       
@@ -160,52 +179,51 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { success: true, message: msg };
     }
 
-    case 'getCalendar': {
-      const today = new Date().toISOString().split('T')[0];
-      const todayEvents = store.calendarEvents?.filter(e => e.start?.includes(today)) || [];
-      
-      if (todayEvents.length === 0) {
-        return { success: true, message: "Your calendar is clear for today!" };
-      }
+    case 'set_preference':
+      setLearnedFact(entities.key || 'generic', entities.value || 'true');
+      return { success: true, message: `✅ Got it. I'll remember that ${entities.key} is ${entities.value}.` };
 
-      return { 
-        success: true, 
-        message: `You have ${todayEvents.length} events today. Your next one is "${todayEvents[0].title}" starting soon.` 
-      };
-    }
+    case 'small_talk':
+      const phrase = entities.text?.toLowerCase() || '';
+      if (phrase.includes('thank') || phrase.includes('thx') || phrase.includes('great') || phrase.includes('nice')) {
+        trackSentiment(phrase);
+        return { success: true, message: `You're very welcome, ${userName}! Always happy to help. What else is on your mind?` };
+      }
+      if (phrase.includes('how are you') || phrase.includes('how its going')) {
+        return { success: true, message: `I'm functioning at 100% capacity and ready to assist! It's a great day to close some deals. How about you?` };
+      }
+      if (phrase.includes('bye') || phrase.includes('see you') || phrase.includes('later')) {
+        return { success: true, message: `Talk to you later, ${userName}! Have a productive day.` };
+      }
+      return { success: true, message: `I hear you! Conversation is the key to business growth. How can I help you move forward today?` };
 
     case 'greeting':
-      const userName = store.currentUser?.name?.split(' ')[0] || 'there';
-      const text = entities.text?.toLowerCase() || '';
-      
-      if (text === 'yo') {
+      const hour = new Date().getHours();
+      let timeGreeting = 'Hello';
+      if (hour < 12) timeGreeting = 'Good morning';
+      else if (hour < 18) timeGreeting = 'Good afternoon';
+      else timeGreeting = 'Good evening';
+
+      const greetingText = entities.text?.toLowerCase() || '';
+      if (greetingText === 'yo') {
         return { success: true, message: `Yo ${userName}! 🤘 Ready to crush some goals today? What's the move?` };
-      }
-      if (text === 'hello') {
-        return { success: true, message: `Hello ${userName}! 👋 I'm powered up and ready to help. Should we check your leads or send some texts?` };
-      }
-      if (text === 'hi' || text === 'hi there') {
-        return { success: true, message: `Hi ${userName}! 😊 Great to see you. How can I make your day easier?` };
-      }
-      if (text.includes('sup') || text.includes('up')) {
-        return { success: true, message: `Hey! Just hanging out in the cloud, ready to work. What's on your mind, ${userName}?` };
       }
       
       return { 
         success: true, 
-        message: `Hello ${userName}! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and can help you manage leads, send text messages, create tasks, and more. How can I help you today?` 
+        message: `${timeGreeting}, ${userName}! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and ready to work. What's our first objective?` 
       };
 
     case 'capabilities':
       return { 
         success: true, 
-        message: "I'm a native WholeScale OS feature! I can:\n- 🎯 **Manage Leads**: Create, update, or delete leads.\n- 💬 **Send SMS**: Text your leads directly using your connected number.\n- 📅 **Task & Calendar**: Create reminders or check your daily schedule.\n- 📊 **Query Data**: Ask me how many hot leads or overdue tasks you have.\n- 🧭 **Navigation**: Ask me to open any page like 'Go to Calendar'." 
+        message: "I'm a native WholeScale OS feature! I can:\n- 🎯 **Manage Leads**: Create, update, or delete leads.\n- 📝 **CRM Work**: Add/update status or add notes to profiles.\n- 💬 **Send SMS**: Text your leads directly using your connected number.\n- 📅 **Task & Calendar**: Create reminders or check your daily schedule.\n- 📊 **Query Data**: Ask me how many hot leads or overdue tasks you have.\n- 🧠 **Learning**: Tell me preferences like 'Remember that I prefer morning calls'." 
       };
 
     case 'help':
       return { 
         success: true, 
-        message: "Here are some things you can try saying:\n- 'Show me my hot leads'\n- 'Text John saying I have an update on the property'\n- 'Create a task to call Sarah on Friday'\n- 'Go to the team dashboard'\n- 'What's on my calendar today?'" 
+        message: "Try these commands:\n- 'Add a note to John: Likes morning calls'\n- 'Mark John as Hot Lead'\n- 'Tell me about Sarah'\n- 'Remember that I prefer dark mode'\n- 'Thanks, bot!'" 
       };
 
     default:
