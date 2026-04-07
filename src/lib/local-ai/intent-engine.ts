@@ -7,6 +7,8 @@ export interface ParsedIntent {
   params: Record<string, any>;
   confidence: number;
   originalText?: string;
+  isAmbiguous?: boolean;
+  isConfirming?: boolean;
 }
 
 /**
@@ -41,6 +43,51 @@ export function splitMultiIntent(input: string): string[] {
 
 export const LOCAL_INTENTS = intents.map(i => i.name);
 
+/**
+ * Calculates a confidence score for an intent based on keyword matching
+ */
+export function calculateIntentScore(input: string, intent: Intent): number {
+  const lower = input.toLowerCase();
+  let score = 0;
+  
+  // 1. Pattern checks
+  intent.patterns.forEach(p => {
+    if (lower.includes(p.toLowerCase())) {
+      score += 25;
+      // Bonus for exact or near-exact match
+      if (lower === p.toLowerCase()) score += 50;
+      if (lower.startsWith(p.toLowerCase())) score += 15;
+    }
+  });
+
+  // 2. Keyword density
+  const words = lower.split(/\s+/);
+  const patternWords = intent.patterns.flatMap(p => p.toLowerCase().split(/\s+/));
+  const uniquePatternWords = [...new Set(patternWords)].filter(w => w.length > 3);
+  
+  uniquePatternWords.forEach(pw => {
+    if (words.includes(pw)) {
+      let weight = 10;
+      // Bonus for Action Verbs
+      const verbs = ['send', 'create', 'add', 'text', 'navigate', 'delete', 'update', 'mark', 'show'];
+      if (verbs.includes(pw)) weight += 15;
+      
+      const nouns = ['lead', 'task', 'pipeline', 'workflow', 'automation', 'contact'];
+      if (nouns.includes(pw)) weight += 5;
+
+      score += weight;
+    }
+  });
+
+  // 3. Negative signals (Anti-patterns)
+  const negatives = ['not', 'don\'t', 'never', 'stop', 'no', 'none'];
+  if (negatives.some(n => words.includes(n))) {
+    score -= 50;
+  }
+
+  return Math.min(Math.max(score, 0), 100);
+}
+
 export function recognizeIntent(input: string): ParsedIntent | null {
   const memory = getMemory();
   const checked = spellCheck(input);
@@ -49,6 +96,25 @@ export function recognizeIntent(input: string): ParsedIntent | null {
   const activeEntity = resolveEntityFromContext(normalized);
 
   console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
+
+  // Check Confirmation logic (Yes/No)
+  if (memory.activeState?.type === 'AWAITING_INTENT_CONFIRMATION') {
+    if (normalized.match(/^(?:yes|yep|yup|yeah|sure|do it|ok|okay|confirm)$/i)) {
+      return { 
+        intent: memory.activeState.data.intent, 
+        params: memory.activeState.data.params || {}, 
+        confidence: 100,
+        isConfirming: true 
+      };
+    }
+    if (normalized.match(/^(?:no|nope|nah|nevermind|stop|cancel|wrong)$/i)) {
+      return { 
+        intent: { name: 'cancel_confirmation', patterns: [], action: 'cancel', template: 'No problem.' }, 
+        params: {}, 
+        confidence: 100 
+      };
+    }
+  }
 
   // 1. CHECK MULTI-TURN STATE
   if (memory.activeState?.type === 'AWAITING_SMS_MESSAGE') {
@@ -135,6 +201,29 @@ export function recognizeIntent(input: string): ParsedIntent | null {
         setTopic('leads');
         return { name: matches[1].trim() };
       }
+    },
+    {
+      intent: 'automation_query',
+      patterns: [
+        /^(?:automation hub|automations|workflow hub|summary setup|alert setup)$/i,
+        /^(?:what|how many|which)\s+(?:automations|workflows|background tasks|summary alerts)\s+(?:can you|are available|do I have|set up|exist)$/i
+      ],
+      params: (matches: string[]) => ({ query: matches[0] })
+    },
+    {
+      intent: 'automation_setup',
+      patterns: [
+        /^(?:setup|configure|create|open|go to)\s+(?:automation|automations|workflow|workflows|summary|pipeline alerts)$/i
+      ],
+      params: () => ({ path: 'automations' })
+    },
+    {
+      intent: 'clarify_previous',
+      patterns: [
+        /^(?:tell me more|explain that|why|elaborate|give me more details|what does that mean)$/i,
+        /^(?:why|how)$/i
+      ],
+      params: () => ({ topic: getMemory().lastTopic })
     },
     {
       intent: 'create_lead',
@@ -261,47 +350,36 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     }
   }
 
-  // 3. FALLBACK: Keyword / Semantic Matching (v6.0)
-  let bestMatch: { intent: Intent, confidence: number } | null = null;
+  // 3. FUZZY MATCHING FALLBACK (Scoring Engine v6.1 - with Ambiguity Zone)
+  const scores = intents.map(intent => ({
+    intent,
+    score: calculateIntentScore(normalized, intent)
+  })).sort((a, b) => b.score - a.score);
+
+  const bestMatchResult = scores[0];
   
-  const seedPhrases: Record<string, string[]> = {
-    small_talk: ['thanks', 'how are you', 'thank you', 'hows it going', 'bye', 'good job', 'well done', 'nice', 'cool'],
-    set_preference: ['remember', 'save preference', 'record fact', 'i prefer', 'i like'],
-    send_sms: ['text', 'sms', 'message John', 'tell John'],
-    update_lead_status: ['set status', 'change status', 'mark as hot'],
-    add_note: ['add note', 'record note', 'write note'],
-    create_lead: ['new lead', 'add lead', 'create lead', 'onboard'],
-    add_task: ['new task', 'remind me', 'set reminder', 'todo']
-  };
-
-  for (const intent of intents) {
-    const seeds = seedPhrases[intent.name] || [];
-    for (const seed of seeds) {
-      if (normalized.includes(seed)) {
-        const score = 80;
-        if (!bestMatch || score > bestMatch.confidence) {
-          bestMatch = { intent, confidence: score };
-        }
-      }
+  if (bestMatchResult) {
+    if (bestMatchResult.score >= 75) {
+      console.log(`[🤖 OS Bot] Strong Match: ${bestMatchResult.intent.name} (${bestMatchResult.score}%)`);
+      return {
+        intent: bestMatchResult.intent,
+        params: {},
+        confidence: bestMatchResult.score,
+        originalText: input
+      };
     }
 
-    for (const pattern of intent.patterns) {
-      const p = pattern.toLowerCase();
-      if (normalized === p) {
-        bestMatch = { intent, confidence: 100 };
-        break;
-      }
-      if (normalized.includes(p)) {
-        const score = Math.round((p.length / normalized.length) * 85);
-        if (!bestMatch || score > bestMatch.confidence) {
-          bestMatch = { intent, confidence: score };
-        }
-      }
+    if (bestMatchResult.score >= 45) {
+      console.log(`[🤖 OS Bot] Ambiguous Match: ${bestMatchResult.intent.name} (${bestMatchResult.score}%)`);
+      return {
+        intent: bestMatchResult.intent,
+        params: {},
+        confidence: bestMatchResult.score,
+        originalText: input,
+        isAmbiguous: true
+      };
     }
-    if (bestMatch?.confidence === 100) break;
   }
 
-  if (!bestMatch || bestMatch.confidence < 40) return null;
-
-  return { intent: bestMatch.intent, params: {}, confidence: bestMatch.confidence };
+  return null;
 }

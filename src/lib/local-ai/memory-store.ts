@@ -75,9 +75,10 @@ export function saveMessage(role: 'user' | 'assistant', content: string) {
     history: updatedHistory
   }));
 
-  // Auto-detect sentiment if user message
+  // Auto-detect sentiment and topic if user message
   if (role === 'user') {
     trackSentiment(content);
+    detectAndSetTopic(content);
   }
 }
 
@@ -90,13 +91,13 @@ export function trackSentiment(input: string) {
   
   let newSentiment: Sentiment = 'neutral';
   
-  if (lower.includes('thanks') || lower.includes('great') || lower.includes('awesome') || lower.includes('love it')) {
+  if (lower.includes('thanks') || lower.includes('great') || lower.includes('awesome') || lower.includes('love it') || lower.includes('rockstar')) {
     newSentiment = 'happy';
-  } else if (lower.includes('error') || lower.includes('broken') || lower.includes('help') || lower.includes('not working') || lower.includes('bad')) {
+  } else if (lower.includes('error') || lower.includes('broken') || lower.includes('help') || lower.includes('not working') || lower.includes('bad') || lower.includes('confused')) {
     newSentiment = 'frustrated';
   } else if (lower.includes('urgent') || lower.includes('asap') || lower.includes('now') || lower.includes('immediately')) {
     newSentiment = 'urgent';
-  } else if (lower.includes('how') || lower.includes('why') || lower.includes('what') || lower.includes('?') || lower.includes('show me')) {
+  } else if (lower.includes('how') || lower.includes('why') || lower.includes('what') || lower.includes('?') || lower.includes('show me') || lower.includes('details')) {
     newSentiment = 'curious';
   }
 
@@ -115,6 +116,25 @@ export function setTopic(topic: string) {
     ...memory,
     lastTopic: topic
   }));
+}
+
+/**
+ * Automatically detects the topic from user input
+ */
+export function detectAndSetTopic(input: string) {
+  const lower = input.toLowerCase();
+  
+  if (lower.includes('lead') || lower.includes('deal') || lower.includes('pipeline') || lower.includes('prospect')) {
+    setTopic('leads');
+  } else if (lower.includes('task') || lower.includes('todo') || lower.includes('reminder') || lower.includes('to do')) {
+    setTopic('tasks');
+  } else if (lower.includes('calendar') || lower.includes('schedule') || lower.includes('appointment') || lower.includes('meeting')) {
+    setTopic('calendar');
+  } else if (lower.includes('sms') || lower.includes('text') || lower.includes('message')) {
+    setTopic('sms');
+  } else if (lower.includes('automation') || lower.includes('workflow') || lower.includes('hub')) {
+    setTopic('automations');
+  }
 }
 
 /**

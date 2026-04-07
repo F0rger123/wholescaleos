@@ -5,7 +5,7 @@ import { sendSMS } from './sms-service';
 import { recognizeIntent } from './local-ai/intent-engine';
 import { executeTask } from './local-ai/task-executor';
 import { generateResponse } from './local-ai/response-generator';
-import { saveMessage } from './local-ai/memory-store';
+import { saveMessage, setActiveState } from './local-ai/memory-store';
 
 export interface BotResponse {
   intent: string;
@@ -364,19 +364,58 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
 export async function processWithLocalAI(prompt: string): Promise<BotResponse | null> {
   const localResult = recognizeIntent(prompt);
   
-  if (localResult && (localResult.confidence >= 0.4 || (localStorage.getItem('user_ai_provider') === 'local'))) {
-    console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent.name} (${Math.round(localResult.confidence * 100)}%)`);
-    const executionResult = await executeTask(localResult.intent.name, localResult.params);
-    const responseText = generateResponse(localResult.intent.name, executionResult);
+  if (localResult) {
+    const isAmbiguous = localResult.isAmbiguous;
+    const isConfirming = localResult.isConfirming;
     
-    saveMessage('assistant', responseText);
-    
-    return {
-      intent: localResult.intent.name,
-      response: responseText,
-      data: { ...localResult.params, ...executionResult.data },
-      systemLog: '🤖 OS Bot'
-    };
+    // 1. HANDLE CONFIRMATION (YES)
+    if (isConfirming) {
+      console.log(`[🤖 OS Bot] Confirmation Received. Executing stored intent: ${localResult.intent.name}`);
+      const executionResult = await executeTask(localResult.intent.name, localResult.params);
+      const responseText = generateResponse(localResult.intent.name, executionResult);
+      setActiveState(null); // Clear confirmation state
+      saveMessage('assistant', responseText);
+      return {
+        intent: localResult.intent.name,
+        response: responseText,
+        data: { ...localResult.params, ...executionResult.data },
+        systemLog: '🤖 OS Bot'
+      };
+    }
+
+    // 2. HANDLE AMBIGUITY ("Did you mean?")
+    if (isAmbiguous) {
+      console.log(`[🤖 OS Bot] Ambiguous prompt detected. Setting AWAITING_CONFIRMATION state.`);
+      setActiveState('AWAITING_INTENT_CONFIRMATION', { 
+        intent: localResult.intent, 
+        params: localResult.params 
+      });
+      
+      const response = generateResponse('ambiguous', localResult);
+      saveMessage('assistant', response);
+      return {
+        intent: 'ambiguous',
+        response: response,
+        data: { originalText: prompt, suggestedIntent: localResult.intent.name },
+        systemLog: '🤖 OS Bot'
+      };
+    }
+
+    // 3. REGULAR EXECUTION (High Confidence)
+    if (localResult.confidence >= 0.75 || (localStorage.getItem('user_ai_provider') === 'local')) {
+      console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent.name} (${Math.round(localResult.confidence * 100)}%)`);
+      const executionResult = await executeTask(localResult.intent.name, localResult.params);
+      const responseText = generateResponse(localResult.intent.name, executionResult);
+      
+      saveMessage('assistant', responseText);
+      
+      return {
+        intent: localResult.intent.name,
+        response: responseText,
+        data: { ...localResult.params, ...executionResult.data },
+        systemLog: '🤖 OS Bot'
+      };
+    }
   }
   
   return null;
@@ -402,7 +441,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     if (isLocalSelected) {
       return localResponse || {
         intent: 'unknown',
-        response: "I'm not exactly sure how to help with that offline yet. 🤖 Try asking me to create a lead, send a SMS, or summarize your tasks!",
+        response: "I'm not exactly sure how to help with that offline yet. 🤖 Try asking me to create a lead, send a SMS, or show me my **automations**!",
         systemLog: '🤖 OS Bot'
       };
     }

@@ -196,6 +196,19 @@ export const intents: Intent[] = [
     template: "✅ Learned: '{phrase}' means '{meaning}'"
   },
   {
+    name: "automation_query",
+    patterns: ["what automations can you set up", "automation hub", "workflow setup", "what can I automate", "my automations", "automatic emails", "summary alerts"],
+    action: "automation_query",
+    template: "You have several automation options available: {details}"
+  },
+  {
+    name: "automation_setup",
+    patterns: ["setup automation", "create a workflow", "configure alerts", "set up summaries", "open automations"],
+    action: "navigate",
+    params: { path: "automations" },
+    template: "Opening the Automations Hub for you now..."
+  },
+  {
     name: "greeting",
     patterns: ["hi", "hello", "yo", "hey", "hola", "greetings", "good morning", "good afternoon"],
     action: "greeting",
@@ -206,6 +219,36 @@ export const intents: Intent[] = [
     patterns: ["what can you do", "capabilities", "features", "what are you", "who are you"],
     action: "capabilities",
     template: "I can manage your leads, send SMS, create tasks, query your pipeline, and help you navigate the platform. Try asking 'show my hot leads' or 'text John saying hello'."
+  },
+  {
+    name: "bot_origin",
+    patterns: ["who built you", "who made you", "what is your purpose", "where do you come from", "are you gemini", "who is your creator"],
+    action: "bot_origin",
+    template: "I am **🤖 OS Bot**, a custom-built AI assistant for WholeScale OS. I was designed to help you dominate your real estate market with advanced automation and CRM intelligence."
+  },
+  {
+    name: "philosophical",
+    patterns: ["meaning of life", "are you sentient", "do you have feelings", "is the world a simulation", "what is reality"],
+    action: "philosophical",
+    template: "{response}"
+  },
+  {
+    name: "feedback",
+    patterns: ["you are great", "good job", "bad bot", "you're slow", "awesome work", "love you", "thanks"],
+    action: "feedback",
+    template: "{response}"
+  },
+  {
+    name: "system_status",
+    patterns: ["how are you today", "how is the system", "performance", "is everything okay", "how are things looking"],
+    action: "system_status",
+    template: "{response}"
+  },
+  {
+    name: "clarify_previous",
+    patterns: ["explain that more", "why", "tell me more", "elaborate", "give me more details"],
+    action: "clarify_previous",
+    template: "{response}"
   },
   {
     name: "help",

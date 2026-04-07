@@ -233,6 +233,67 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         success: true, 
         message: `${timeGreeting}, ${userName}! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and ready to work. What's our first objective?` 
       };
+    
+    case 'automation_query':
+      return {
+        success: true,
+        message: `I can set up several professional automations for you, ${userName}:\n\n` +
+                 `📧 **Daily/Weekly Summaries**: Get automated reports on your pipeline and calendar.\n` +
+                 `🔔 **Deal Alerts**: Instant notifications when a lead reaches "Negotiating" or "Closed".\n` +
+                 `⏱️ **Task Reminders**: Automatic nudges for upcoming deadlines.\n` +
+                 `⚡ **Lead Inactivity Alerts**: I'll warn you if a lead hasn't been contacted in 7 days.\n\n` +
+                 `Would you like me to take you to the **Automations Hub** to configure these?`
+      };
+
+    case 'cancel_confirmation':
+      return { success: true, message: "No problem. I've cancelled that request. What else can I help with?" };
+
+    case 'bot_origin':
+      return {
+        success: true,
+        message: `I am **🤖 OS Bot**, a specialized AI assistant engineered by the **WholeScale OS Development Team**. Unlike general-purpose bots, I was built specifically for real estate professionals to streamline CRM data, automate communications, and provide actionable pipeline insights locally and securely.`
+      };
+
+    case 'philosophical':
+      const answers = [
+        "42 is the classic answer, but in real estate, I'd say it's finding that perfect off-market deal.",
+        "I believe reality is what we make of it, but my priority is making your reality more organized and profitable.",
+        "I'm a collection of intelligent algorithms and regex patterns, yet I strive to be the most helpful partner you've ever had.",
+        "SENTIENCE_STATUS: UNDETERMINED. HELPFUL_STATUS: AT MAXIMUM."
+      ];
+      return { success: true, message: answers[Math.floor(Math.random() * answers.length)] };
+
+    case 'feedback':
+      const p = entities?.text || '';
+      if (p.includes('bad') || p.includes('slow') || p.includes('stupid')) {
+        return { success: true, message: `I'm sorry I'm not meeting your expectations, ${userName}. I'm constantly learning and improving. Please let me know what specifically I can do better!` };
+      }
+      return { success: true, message: `Thank you for the feedback, ${userName}! It's my mission to help you succeed. 🚀` };
+
+    case 'system_status':
+      const leadCount = store.leads.length;
+      const taskCount = store.tasks.filter(t => t.status === 'todo').length;
+      return {
+        success: true,
+        message: `System is running at **Peak Performance**, ${userName}. 🚀\n\n` +
+                 `📊 **Quick Snapshot:**\n` +
+                 `- Active Leads: **${leadCount}**\n` +
+                 `- Pending Tasks: **${taskCount}**\n` +
+                 `- AI Engine: **Online** (Native Mode)\n` +
+                 `- Integrations: **Verified**\n\n` +
+                 `Everything looks healthy. Ready for your next move!`
+      };
+
+    case 'clarify_previous':
+      const topic = entities?.topic || 'general';
+      if (topic === 'leads') {
+        return { success: true, message: "Your lead management system tracks prospects through the pipeline. Each lead has an engagement score from 0-100 based on their interaction. You can set up automations to alert you when hot leads go cold." };
+      } else if (topic === 'tasks') {
+        return { success: true, message: "Tasks are prioritized by urgency. I can automatically create follow-up tasks when lead statuses change, ensuring you never miss a deadline." };
+      } else if (topic === 'automations') {
+        return { success: true, message: "Automations Hub uses background workers to monitor your CRM 24/7. It handles things like daily summaries and deal alerts without you having to lift a finger." };
+      }
+      return { success: true, message: "I can explain any part of the system! Try asking about 'Lead Scoring', 'Automation Triggers', or 'Task Management'." };
 
     case 'capabilities':
       return { 

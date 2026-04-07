@@ -385,8 +385,14 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
               value={aiPersonality}
               onChange={(e) => setAiPersonalityState(e.target.value)}
               rows={3}
+              placeholder="e.g. Call me Commander. Sassy and witty. Emoji overload."
               className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
             />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Try "Call me Commander"</span>
+              <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Use Keywords: "Sassy", "Robot", "Gentleman"</span>
+              <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Prefix: [Sir]</span>
+            </div>
           </div>
           <div className="flex items-center justify-between p-4 bg-[var(--t-surface)]/50 rounded-xl border border-[var(--t-border)]">
             <div>
