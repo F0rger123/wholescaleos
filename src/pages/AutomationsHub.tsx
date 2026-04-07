@@ -304,6 +304,7 @@ function AutomationsHubContent() {
     const newNodes = JSON.parse(JSON.stringify(template.nodes));
     const newEdges = JSON.parse(JSON.stringify(template.edges));
     
+    // Immediate UI update
     setNodes(newNodes);
     setEdges(newEdges);
     setWorkflowName(template.name);
@@ -311,18 +312,24 @@ function AutomationsHubContent() {
     setIsActive(true);
     setIsLibraryOpen(false);
     
-    // Auto-save the template to the database
+    // Smooth zoom to fit the loaded template
+    setTimeout(() => {
+      fitView({ duration: 800, padding: 0.2 });
+    }, 100);
+
+    // Background auto-save the template to the database
+    setIsSaving(true);
     try {
       await saveWorkflow(true, newNodes, newEdges, template.name);
-      
-      // Zoom to fit the loaded template
-      setTimeout(() => {
-        fitView({ duration: 800, padding: 0.2 });
-        toast.success(`Loaded & Saved Template: ${template.name}`);
-      }, 100);
+      toast.success(`Loaded & Saved Template: ${template.name}`, {
+        icon: '🤖',
+        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-success)' }
+      });
     } catch (err) {
       console.error('Failed to auto-save template:', err);
       toast.error('Failed to save template to database.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -341,6 +348,10 @@ function AutomationsHubContent() {
       },
     };
     setNodes((nds) => [...nds, newNode]);
+    toast.success(`Added ${type.toUpperCase()} node`, {
+      icon: '➕',
+      style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+    });
   };
 
   return (
@@ -353,7 +364,17 @@ function AutomationsHubContent() {
           </h1>
           <p className="text-[var(--t-text-muted)] text-sm">Design and deploy autonomous real estate workflows.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
+          {isSaving && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-primary)]/10 text-[var(--t-primary)] rounded-full border border-[var(--t-primary)]/20 shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.1)]"
+            >
+              <Loader2 size={12} className="animate-spin" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Synchronizing...</span>
+            </motion.div>
+          )}
           <button 
             onClick={() => setIsGlobalSettingsOpen(!isGlobalSettingsOpen)}
             className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all border ${
@@ -377,12 +398,6 @@ function AutomationsHubContent() {
             Library
           </button>
           <div className="flex items-center gap-3">
-              {isSaving && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-[var(--t-primary)]/10 text-[var(--t-primary)] rounded-full animate-pulse border border-[var(--t-primary)]/20">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Saving...</span>
-                </div>
-              )}
               <div className="flex items-center gap-2 p-1.5 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl group">
                 <div className={`px-3 py-1.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${isActive ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)]'}`}
                   onClick={() => setIsActive(!isActive)}
@@ -397,7 +412,7 @@ function AutomationsHubContent() {
                 className={`px-4 py-2.5 bg-[var(--t-primary)] text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                <span>Save Workflow</span>
+                <span>{isSaving ? 'Saving...' : 'Save Workflow'}</span>
               </button>
             </div>
         </div>

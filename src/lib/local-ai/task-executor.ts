@@ -175,9 +175,25 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     case 'greeting':
+      const userName = store.currentUser?.name?.split(' ')[0] || 'there';
+      const text = entities.text?.toLowerCase() || '';
+      
+      if (text === 'yo') {
+        return { success: true, message: `Yo ${userName}! 🤘 Ready to crush some goals today? What's the move?` };
+      }
+      if (text === 'hello') {
+        return { success: true, message: `Hello ${userName}! 👋 I'm powered up and ready to help. Should we check your leads or send some texts?` };
+      }
+      if (text === 'hi' || text === 'hi there') {
+        return { success: true, message: `Hi ${userName}! 😊 Great to see you. How can I make your day easier?` };
+      }
+      if (text.includes('sup') || text.includes('up')) {
+        return { success: true, message: `Hey! Just hanging out in the cloud, ready to work. What's on your mind, ${userName}?` };
+      }
+      
       return { 
         success: true, 
-        message: "Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and can help you manage leads, send text messages, create tasks, and more. How can I help you today?" 
+        message: `Hello ${userName}! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and can help you manage leads, send text messages, create tasks, and more. How can I help you today?` 
       };
 
     case 'capabilities':

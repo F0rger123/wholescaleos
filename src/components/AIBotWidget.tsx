@@ -205,9 +205,9 @@ export function AIBotWidget() {
             setMessages([{
               id: 'welcome',
               role: 'ai',
-              content: `Hi there! I'm 🤖 OS Bot. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
+              content: `Hi there! I'm ${aiModel === 'os-bot' ? '🤖 OS Bot' : '✨ Google Gemini'}. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
               timestamp: new Date().toISOString(),
-              systemLog: "🤖 OS Bot"
+              systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
             }]);
         }
       }
@@ -336,7 +336,7 @@ export function AIBotWidget() {
         setTypingMessageId(null);
         setDisplayedText('');
       }
-    }, 15); // Fast typing speed
+    }, 15); // Faster typing speed
 
     return () => clearInterval(timer);
   }, [typingMessageId, messages]);
@@ -432,30 +432,34 @@ export function AIBotWidget() {
 
       // ── LOCAL RULE-BASED MATCHING (OS BOT 2.0) ───────────────────────────
       const matched = recognizeIntent(userText);
-      if (matched) {
+      const isLocalModel = aiModel === 'os-bot';
+
+      if (matched || isLocalModel) {
         // Increment usage for OS Bot
         await usageTracker.incrementUsage();
         await fetchUsage();
 
         // Handle Confidence Disambiguation
-        if (matched.confidence > 40 && matched.confidence < 80) {
-          setMessages(prev => [...prev, {
+        if (matched && matched.confidence > 40 && matched.confidence < 80) {
+          const aiMsg: ChatMessage = {
             id: (Date.now() + 1).toString(),
             role: 'ai',
             content: `I think you might want to ${matched.intent.name.replace(/_/g, ' ')}. Is that right?`,
             timestamp: new Date().toISOString(),
             intent: 'disambiguation',
             data: { originalIntent: matched },
-            systemLog: "🤖 OS Bot (Low Confidence)"
-          }]);
+            systemLog: "🤖 OS Bot"
+          };
+          setMessages(prev => [...prev, aiMsg]);
+          setTypingMessageId(aiMsg.id);
           setLoading(false);
           return;
         }
 
-        if (matched.confidence >= 80) {
+        if (matched && matched.confidence >= 80) {
           const res = await executeTask(matched.intent.action, matched.params);
           if (res.success) {
-            setMessages(prev => [...prev, {
+            const aiMsg: ChatMessage = {
               id: (Date.now() + 1).toString(),
               role: 'ai',
               content: wrapResponse(res.message, 'success'),
@@ -463,10 +467,27 @@ export function AIBotWidget() {
               intent: matched.intent.name,
               data: res.data,
               systemLog: "🤖 OS Bot"
-            }]);
+            };
+            setMessages(prev => [...prev, aiMsg]);
+            setTypingMessageId(aiMsg.id);
             setLoading(false);
             return;
           }
+        }
+
+        // If explicitly set to OS Bot but no intent matched, or intent failed
+        if (isLocalModel) {
+          const aiMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: "I'm not sure how to handle that specific request yet. Try asking for 'help' to see what I can do!",
+            timestamp: new Date().toISOString(),
+            systemLog: "🤖 OS Bot"
+          };
+          setMessages(prev => [...prev, aiMsg]);
+          setTypingMessageId(aiMsg.id);
+          setLoading(false);
+          return;
         }
       }
 
@@ -483,7 +504,7 @@ export function AIBotWidget() {
           role: 'ai',
           content: response.response || "AI initialization complete.",
           timestamp: new Date().toISOString(),
-          systemLog: "🤖 OS Bot"
+          systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
         }]);
         setLoading(false);
         return;
@@ -503,7 +524,7 @@ export function AIBotWidget() {
           role: 'ai',
           content: "I need your Gemini API key to work. Redirecting you to settings...",
           timestamp: new Date().toISOString(),
-          systemLog: "🤖 OS Bot"
+          systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
         }]);
         setTimeout(() => navigate('/settings/ai'), 1500);
 
@@ -522,7 +543,7 @@ export function AIBotWidget() {
             role: "ai",
             content: response.response,
             timestamp: new Date().toISOString(),
-            systemLog: response.systemLog || "🤖 OS Bot"
+            systemLog: response.systemLog || (aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini")
           }]);
         } else {
           // Missing info — start SMS session to collect it conversationally
@@ -532,7 +553,7 @@ export function AIBotWidget() {
             content: response.response,
             timestamp: new Date().toISOString(),
             intent: 'ask_question',
-            systemLog: response.systemLog || "🤖 OS Bot"
+            systemLog: response.systemLog || (aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini")
           }]);
         }
 
@@ -548,7 +569,7 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString(),
           intent: 'ask_save_contact',
           data: response.data,
-          systemLog: "🤖 OS Bot"
+          systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
         }]);
       } else {
         const aiMsg: ChatMessage = {
@@ -558,7 +579,7 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString(),
           intent: response.intent,
           data: response.data,
-          systemLog: response.systemLog || "🤖 OS Bot"
+          systemLog: response.systemLog || (aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini")
         };
         setMessages(prev => [...prev, aiMsg]);
         setTypingMessageId(aiMsg.id);
@@ -582,7 +603,7 @@ export function AIBotWidget() {
         role: 'ai',
         content: "I'm not sure how to handle that request yet. Try asking for 'help' to see what I can do!",
         timestamp: new Date().toISOString(),
-        systemLog: "🤖 OS Bot"
+        systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
       }]);
     } finally {
       setLoading(false);
@@ -658,7 +679,7 @@ export function AIBotWidget() {
         role: 'ai',
         content: `❌ ${err?.message || "Couldn't complete that action. Please check your Google/SMS settings."}`,
         timestamp: new Date().toISOString(),
-        systemLog: "🤖 OS Bot"
+        systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
       }]);
     }
   };
@@ -731,7 +752,7 @@ export function AIBotWidget() {
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </button>
               <div className="flex flex-col">
-                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">🤖 OS Bot</h2>
+                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">{aiModel === 'os-bot' ? '🤖 OS Bot' : '✨ Gemini'}</h2>
                 {usage && (
                   <span className={`text-[9px] font-bold mt-0.5 ${
                     usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
@@ -830,31 +851,26 @@ export function AIBotWidget() {
                     borderColor: msg.role === 'user' ? 'transparent' : 'var(--t-border)',
                     color: msg.role === 'user' ? 'var(--t-on-primary)' : 'var(--t-text)'
                   }}>
-                    {msg.role === 'ai' && (
-                      <div className="flex flex-col gap-1.5 min-w-[120px]">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-[var(--t-primary)] text-[var(--t-on-primary)]">
-                            🤖 OS Bot
+                    <div className="flex flex-col gap-1.5 min-w-[120px]">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-[var(--t-primary)] text-[var(--t-on-primary)]">
+                          {msg.role === 'ai' ? (aiModel === 'os-bot' ? '🤖 OS Bot' : '✨ Gemini') : 'You'}
+                        </span>
+                        {msg.systemLog && (
+                          <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest">
+                            {msg.systemLog.replace('🤖 OS Bot', '').replace('✨ Gemini', '').trim()}
                           </span>
-                          {msg.systemLog && (
-                            <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest">
-                              {msg.systemLog.replace('🤖 OS Bot', '').trim()}
-                            </span>
-                          )}
-                        </div>
-                        <div className="whitespace-pre-wrap">
-                          {typingMessageId === msg.id ? (
-                            <>
-                              {displayedText}
-                              <span className="inline-block w-1 h-3 bg-[var(--t-primary)] ml-1 animate-pulse" />
-                            </>
-                          ) : msg.content}
-                        </div>
+                        )}
                       </div>
-                    )}
-                    {msg.role === 'user' && (
-                      <div className="whitespace-pre-wrap">{msg.content}</div>
-                    )}
+                      <div className="whitespace-pre-wrap">
+                        {typingMessageId === msg.id ? (
+                          <>
+                            {displayedText}
+                            <span className="inline-block w-1.5 h-4 bg-[var(--t-primary)] ml-1 animate-pulse align-middle" />
+                          </>
+                        ) : msg.content}
+                      </div>
+                    </div>
                     
                     {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (
                       <div className="mt-2 flex gap-2">

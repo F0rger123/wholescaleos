@@ -396,9 +396,9 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   // ── OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
     const localResponse = await processWithLocalAI(prompt);
-    // If user explicitly chose os_bot, we return the local response even if confidence is low, 
+    // If user explicitly chose os-bot, we return the local response even if confidence is low, 
     // unless it's a completely unknown intent AND they have an API key for fallback.
-    if (localResponse && (localResponse.intent !== 'unknown' || modelOverride === 'os_bot' || localStorage.getItem('user_ai_provider') === 'local')) {
+    if (localResponse && (localResponse.intent !== 'unknown' || modelOverride === 'os-bot' || localStorage.getItem('user_ai_provider') === 'local')) {
       return {
         ...localResponse,
         systemLog: '🤖 OS Bot'
@@ -732,9 +732,9 @@ Time: ${context.currentTime || new Date().toISOString()}`;
     } catch (parseError) {
       console.error(`Failed to parse ${provider} response as JSON:`, textData);
       return {
-        intent: 'unknown',
         response: textData,
-        systemLog: '🤖 OS Bot'
+        intent: 'greeting',
+        systemLog: "🤖 OS Bot"
       };
     }
 

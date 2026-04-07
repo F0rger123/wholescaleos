@@ -570,12 +570,9 @@ export function Layout() {
                 <span className="text-[10px] font-black text-[var(--t-primary)] uppercase tracking-wider">Syncing</span>
               </div>
             )}
-            <div className="flex items-center gap-2 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
-              {/* Unified Header Cluster */}
-              
-              {/* OS Bot Toggle */}
-              {/* OS Stats & Controls */}
-              <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mr-1">
+            <div className="flex items-center gap-1.5 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
+              {/* Actions Cluster (Save/Undo/Redo) */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mr-1.5">
                 <button
                   onClick={undo}
                   disabled={history.length === 0}
@@ -597,6 +594,14 @@ export function Layout() {
                   <span className="text-[9px] font-black uppercase tracking-widest">{saveStatus === 'saving' ? 'Saving' : saveStatus === 'success' ? 'Saved' : 'Save'}</span>
                 </button>
               </div>
+
+              <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1 opacity-20" />
+
+              {/* Unified Header Cluster */}
+              
+              {/* OS Bot Toggle */}
+              {/* OS Stats & Controls */}
+
 
               {showFloatingAIWidget && (
                 <>
@@ -662,7 +667,7 @@ export function Layout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto relative custom-scrollbar">
+        <main className={`flex-1 relative custom-scrollbar ${location.pathname.startsWith('/team-chat') ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <Outlet />
         </main>
       </div>

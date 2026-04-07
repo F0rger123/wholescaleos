@@ -98,10 +98,10 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'greeting',
       patterns: [
-        /^(?:hi|hello|yo|hey|hola|hey ther|howdy|good morning|morning|good afternoon|good evening|sup|what's up|hi there|hello there)$/i,
+        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up)$/i,
         /\b(?:hi|hello|yo|hey)\b/i
       ],
-      params: () => ({})
+      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
     },
     {
       intent: 'capabilities',
