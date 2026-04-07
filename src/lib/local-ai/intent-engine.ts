@@ -38,7 +38,7 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       patterns: [
         /^(?:text|textt|txt|send text to|send sms to|message|send a message to|shoot a text to|tell)\s+([a-zA-Z\s]+)\s+(?:saying|that says|message|with the message|telling them|that)\s+(.*)$/i,
         /^(?:text|textt|txt|message|tell)\s+([a-zA-Z0-9\s]+)\s*[:|,]\s*(.*)$/i,
-        /^(?:text|textt|txt)\s+([a-zA-Z0-9\s]+)\s+(.*)$/i
+        /^(?:text|textt|txt)\s+([a-z0-9\s]+)\s+(.*)$/i
       ],
       params: (matches: string[]) => ({ target: matches[1].trim(), message: matches[2].trim() })
     },
@@ -98,21 +98,22 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'greeting',
       patterns: [
-        /^(?:hi|hello|yo|hey|hola|good morning|good afternoon|good evening)$/i
+        /^(?:hi|hello|yo|hey|hola|hey ther|howdy|good morning|morning|good afternoon|good evening|sup|what's up|hi there|hello there)$/i,
+        /\b(?:hi|hello|yo|hey)\b/i
       ],
       params: () => ({})
     },
     {
       intent: 'capabilities',
       patterns: [
-        /^(?:what can you do\??|what are you\??|who are you\??|what features do you have\??|capabilities\??)$/i
+        /^(?:what can you do\??|what are you\??|who are you\??|what features do you have\??|capabilities\??|what type of things can you do\??)$/i
       ],
       params: () => ({})
     },
     {
       intent: 'help',
       patterns: [
-        /^(?:help\??|commands|show examples|give me examples)$/i
+        /^(?:help\??|commands|show examples|give me examples|help me)$/i
       ],
       params: () => ({})
     }

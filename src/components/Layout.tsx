@@ -14,8 +14,9 @@ import {
   Indent, AlignLeft,
   Bot, Smartphone, StickyNote,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
-  Undo2, Redo2, Download, UserCog, Map, Calendar,
-  Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare
+  Undo2, Redo2, UserCog, Map, Calendar,
+  Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
+  Loader2, CheckCircle2, Save
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
@@ -573,6 +574,30 @@ export function Layout() {
               {/* Unified Header Cluster */}
               
               {/* OS Bot Toggle */}
+              {/* OS Stats & Controls */}
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mr-1">
+                <button
+                  onClick={undo}
+                  disabled={history.length === 0}
+                  className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-20 transition-all text-[var(--t-text-muted)] hover:text-white"
+                  title="Undo (Ctrl+Z)"
+                ><Undo2 size={16} /></button>
+                <button
+                  onClick={redo}
+                  disabled={future.length === 0}
+                  className="p-1.5 rounded-lg hover:bg-white/10 disabled:opacity-20 transition-all text-[var(--t-text-muted)] hover:text-white"
+                  title="Redo (Ctrl+Y)"
+                ><Redo2 size={16} /></button>
+                <div className="w-[1px] h-3 bg-white/10 mx-0.5" />
+                <button
+                  onClick={() => manualSave()}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${saveStatus === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'border-white/10 hover:bg-white/10 text-[var(--t-text)] hover:text-white backdrop-blur-md'}`}
+                >
+                  {saveStatus === 'saving' ? <Loader2 size={14} className="animate-spin" /> : saveStatus === 'success' ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                  <span className="text-[9px] font-black uppercase tracking-widest">{saveStatus === 'saving' ? 'Saving' : saveStatus === 'success' ? 'Saved' : 'Save'}</span>
+                </button>
+              </div>
+
               {showFloatingAIWidget && (
                 <>
                   <button
@@ -642,32 +667,7 @@ export function Layout() {
         </main>
       </div>
 
-      {!(location.pathname.startsWith('/settings') || location.pathname.startsWith('/admin')) && (
-        <div className="fixed bottom-6 right-6 flex items-center gap-2 z-[var(--z-popover)] animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-1 p-1 rounded-2xl astral-glass border border-white/10 shadow-2xl">
-            <button
-              onClick={undo}
-              disabled={history.length === 0}
-              className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 transition-all text-[var(--t-text-muted)] hover:text-white"
-              title="Undo (Ctrl+Z)"
-            ><Undo2 size={18} /></button>
-            <button
-              onClick={redo}
-              disabled={future.length === 0}
-              className="p-2 rounded-xl hover:bg-white/10 disabled:opacity-30 transition-all text-[var(--t-text-muted)] hover:text-white"
-              title="Redo (Ctrl+Y)"
-            ><Redo2 size={18} /></button>
-            <div className="w-[1px] h-4 bg-white/10 mx-1" />
-            <button
-              onClick={() => manualSave()}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${saveStatus === 'success' ? 'bg-green-500/20 border-green-500/50 text-green-400' : 'border-white/10 hover:bg-white/10 text-[var(--t-text)] hover:text-white backdrop-blur-md'}`}
-            >
-              {saveStatus === 'saving' ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : saveStatus === 'success' ? <CloudCheck size={16} /> : <Download size={16} className="rotate-180" />}
-              <span className="text-[10px] font-black uppercase tracking-widest leading-none">{saveStatus === 'saving' ? 'Saving' : saveStatus === 'success' ? 'Saved' : 'Save'}</span>
-            </button>
-          </div>
-        </div>
-      )}
+
 
       <AIBotWidget />
       

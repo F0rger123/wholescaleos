@@ -48,6 +48,8 @@ export function AIBotWidget() {
   const [prompt, setPrompt] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [hasKey, setHasKey] = useState<boolean | null>(null);
+  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
+  const [displayedText, setDisplayedText] = useState('');
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
@@ -302,10 +304,42 @@ export function AIBotWidget() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
+  }, [messages, isAiOpen, displayedText]);
+
+  useEffect(() => {
     if (currentUser?.id && messages.length > 0) {
       localStorage.setItem(`ai_widget_history_${currentUser.id}`, JSON.stringify(messages));
     }
-  }, [messages, isAiOpen]);
+  }, [messages, currentUser?.id]);
+
+  // Typing Animation Simulation
+  useEffect(() => {
+    if (!typingMessageId) return;
+
+    const message = messages.find(m => m.id === typingMessageId);
+    if (!message) {
+      setTypingMessageId(null);
+      return;
+    }
+
+    let currentText = '';
+    const fullText = message.content;
+    let index = 0;
+
+    const timer = setInterval(() => {
+      if (index < fullText.length) {
+        currentText += fullText.charAt(index);
+        setDisplayedText(currentText);
+        index++;
+      } else {
+        clearInterval(timer);
+        setTypingMessageId(null);
+        setDisplayedText('');
+      }
+    }, 15); // Fast typing speed
+
+    return () => clearInterval(timer);
+  }, [typingMessageId, messages]);
 
   // Proactive Insights based on page
   useEffect(() => {
@@ -517,7 +551,7 @@ export function AIBotWidget() {
           systemLog: "🤖 OS Bot"
         }]);
       } else {
-        setMessages(prev => [...prev, {
+        const aiMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'ai',
           content: response.response,
@@ -525,7 +559,9 @@ export function AIBotWidget() {
           intent: response.intent,
           data: response.data,
           systemLog: response.systemLog || "🤖 OS Bot"
-        }]);
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        setTypingMessageId(aiMsg.id);
         speak(response.response);
 
         if (response.intent === 'navigate' && response.data?.path) {
@@ -795,12 +831,29 @@ export function AIBotWidget() {
                     color: msg.role === 'user' ? 'var(--t-on-primary)' : 'var(--t-text)'
                   }}>
                     {msg.role === 'ai' && (
-                      <div className="mt-1 flex items-center">
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm" 
-                          style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}>
-                          🤖 OS Bot
-                        </span>
+                      <div className="flex flex-col gap-1.5 min-w-[120px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-[var(--t-primary)] text-[var(--t-on-primary)]">
+                            🤖 OS Bot
+                          </span>
+                          {msg.systemLog && (
+                            <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest">
+                              {msg.systemLog.replace('🤖 OS Bot', '').trim()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="whitespace-pre-wrap">
+                          {typingMessageId === msg.id ? (
+                            <>
+                              {displayedText}
+                              <span className="inline-block w-1 h-3 bg-[var(--t-primary)] ml-1 animate-pulse" />
+                            </>
+                          ) : msg.content}
+                        </div>
                       </div>
+                    )}
+                    {msg.role === 'user' && (
+                      <div className="whitespace-pre-wrap">{msg.content}</div>
                     )}
                     
                     {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (

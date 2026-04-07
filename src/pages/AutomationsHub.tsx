@@ -19,10 +19,10 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { 
-  Plus, Save, 
+  Save, 
   Settings,
   Webhook, X, Bot,
-  Zap, Mail, Clock, Calendar, Target, CheckCircle2, AlertCircle
+  Zap, Mail, Clock, Calendar, Target, CheckCircle2, AlertCircle, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AutomationNode } from '../components/AutomationNode';
@@ -72,6 +72,7 @@ function AutomationsHubContent() {
   const [workflowName, setWorkflowName] = useState('My New Automation');
   const [createName, setCreateName] = useState('');
   const [createDesc, setCreateDesc] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -201,8 +202,8 @@ function AutomationsHubContent() {
       return;
     }
 
+    setIsSaving(true);
     try {
-      setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -251,7 +252,7 @@ function AutomationsHubContent() {
       console.error('Save Error:', err);
       toast.error('Failed to save workflow.');
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -375,13 +376,30 @@ function AutomationsHubContent() {
             <Settings size={20} />
             Library
           </button>
-          <button 
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-2xl font-bold shadow-lg shadow-[var(--t-primary-dim)] transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Plus size={20} />
-            Create Workflow
-          </button>
+          <div className="flex items-center gap-3">
+              {isSaving && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-[var(--t-primary)]/10 text-[var(--t-primary)] rounded-full animate-pulse border border-[var(--t-primary)]/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Saving...</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 p-1.5 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl group">
+                <div className={`px-3 py-1.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${isActive ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)]'}`}
+                  onClick={() => setIsActive(!isActive)}
+                >
+                  <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-white animate-pulse' : 'bg-[var(--t-text-muted)]'}`} />
+                  <span className="text-[10px] font-black uppercase tracking-widest">{isActive ? 'Active' : 'Inactive'}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => saveWorkflow()}
+                disabled={isSaving}
+                className={`px-4 py-2.5 bg-[var(--t-primary)] text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                <span>Save Workflow</span>
+              </button>
+            </div>
         </div>
       </div>
 
