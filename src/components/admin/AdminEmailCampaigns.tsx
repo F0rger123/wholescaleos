@@ -12,6 +12,7 @@ import {
 } from '../../lib/email';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../../lib/supabase';
+import { useStore } from '../../store/useStore';
 import RichTextEditor from './RichTextEditor';
 import { DEFAULT_TEMPLATES } from '../../lib/default-templates';
 
@@ -38,6 +39,7 @@ const EmailTemplatePreview = ({ html, body, scale = 0.25, className = "" }: { ht
 };
 
 const AdminEmailCampaigns = () => {
+  const { currentUser } = useStore();
   const [templates, setTemplates] = useState<dbEmailTemplate[]>([]);
   const [campaigns, setCampaigns] = useState<dbEmailCampaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,24 @@ const AdminEmailCampaigns = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getInterpolatedHtml = (html: string) => {
+    const vars: Record<string, string> = {
+      '{{name}}': 'John Doe',
+      '{{address}}': '123 Luxury Lane',
+      '{{area}}': 'Beverly Hills',
+      '{{city}}': 'Los Angeles',
+      '{{agent_name}}': currentUser?.name || 'Agent Name',
+      '{{price}}': '$1,250,000'
+    };
+
+    let processed = html;
+    Object.entries(vars).forEach(([key, val]) => {
+      const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      processed = processed.replace(regex, val);
+    });
+    return processed;
   };
 
   const handleSaveTemplate = async () => {
@@ -214,6 +234,34 @@ const AdminEmailCampaigns = () => {
       html_content: tpl.html || tpl.body || tpl.content || '',
     });
     setShowTemplateModal(true);
+  };
+
+  const handleUpdateTemplateImage = async (_: string, file: File) => {
+    if (!supabase) return;
+    
+    const toastId = toast.loading('Uploading image...');
+    try {
+      const fileName = `${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('email-assets')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('email-assets')
+        .getPublicUrl(fileName);
+
+      // Re-replace in content
+      // If we clicked an image, we should replace that specific img src.
+      // This is handled in the onClick handler below.
+      
+      toast.success('Image updated', { id: toastId });
+      return publicUrl;
+    } catch (err) {
+      console.error('Image upload failed:', err);
+      toast.error('Failed to upload image', { id: toastId });
+    }
   };
 
   return (
@@ -560,8 +608,32 @@ const AdminEmailCampaigns = () => {
                       <div className="w-10" /> {/* Spacer */}
                     </div>
                     <div 
-                      className="flex-1 p-8 overflow-y-auto preview-frame bg-white"
-                      dangerouslySetInnerHTML={{ __html: editingTemplate?.html_content || '<div class="text-zinc-300 italic">No content...</div>' }}
+                      className="flex-1 p-8 overflow-y-auto preview-frame bg-white cursor-pointer"
+                      onClick={async (e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.tagName === 'IMG') {
+                          const imgTarget = target as HTMLImageElement;
+                          const fileInput = document.createElement('input');
+                          fileInput.type = 'file';
+                          fileInput.accept = 'image/*';
+                          fileInput.onchange = async (ev) => {
+                            const file = (ev.target as HTMLInputElement).files?.[0];
+                            if (file) {
+                              const newUrl = await handleUpdateTemplateImage('image', file);
+                              if (newUrl) {
+                                // Direct DOM manipulation for instant feedback, plus state update
+                                const oldSrc = imgTarget.src;
+                                setEditingTemplate(prev => ({
+                                  ...prev!,
+                                  html_content: prev!.html_content?.replace(oldSrc, newUrl) || ''
+                                }));
+                              }
+                            }
+                          };
+                          fileInput.click();
+                        }
+                      }}
+                      dangerouslySetInnerHTML={{ __html: getInterpolatedHtml(editingTemplate?.html_content || '<div class="text-zinc-300 italic">No content...</div>') }}
                     />
                   </div>
                   <p className="text-[10px] text-center text-[var(--t-text-muted)] font-bold uppercase tracking-widest opacity-50">

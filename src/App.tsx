@@ -21,6 +21,7 @@ import EmailConfirmed from './pages/EmailConfirmed';
 import TeamSelection from './pages/TeamSelection';
 import AutomationsHub from './pages/AutomationsHub';
 import ResetPassword from './pages/ResetPassword';
+import { useAutomationScheduler } from './hooks/useAutomationScheduler';
 import { useStore } from './store/useStore';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import { Building2, Loader2 } from 'lucide-react';
@@ -109,6 +110,7 @@ function DataSyncWrapper() {
 // SupabaseSync will handle the branded loading experience.
 
 export function App() {
+  useAutomationScheduler(); // Activate client-side summaries/reminders
   const [isChecking, setIsChecking] = useState(true);
   const [authReady, setAuthReady] = useState(false);
   const [isMfaRequired, setIsMfaRequired] = useState(false);
@@ -160,11 +162,7 @@ export function App() {
     if (!isSupabaseConfigured || !supabase) return;
     try {
       const { data: aal, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (error) {
-        console.error('[App] MFA getAAL error:', error);
-        return;
-      }
-      
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows found"
       const mfaNeeded = aal?.currentLevel === 'aal1' && aal?.nextLevel === 'aal2';
       console.log('[App] MFA check:', { current: aal?.currentLevel, next: aal?.nextLevel, needed: mfaNeeded });
       setIsMfaRequired(mfaNeeded);

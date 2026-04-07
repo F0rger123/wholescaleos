@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles, BookOpenText, ImageIcon, Upload, Link as LinkIcon, Layout } from 'lucide-react';
+import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Sparkles, BookOpenText, ImageIcon, Upload, Link as LinkIcon, Layout, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail, getThread } from '../lib/email';
@@ -62,17 +62,51 @@ export default function EmailComposeModal({
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [showHtmlPreview, setShowHtmlPreview] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<AgentTemplate | null>(null);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
-  const allTemplates = useMemo(() => [...AGENT_EMAIL_TEMPLATES, ...DEFAULT_TEMPLATES], []);
-  const categories = useMemo(() => ['All', ...Array.from(new Set(allTemplates.map(t => t.category)))], [allTemplates]);
+  const [userTemplates, setUserTemplates] = useState<AgentTemplate[]>([]);
+
+  useEffect(() => {
+    const loadUserTemplates = async () => {
+      if (!currentUser?.id) return;
+      const { data, error } = await supabase
+        .from('user_email_templates')
+        .select('*')
+        .eq('user_id', currentUser.id);
+      
+      if (data && !error) {
+        setUserTemplates(data.map(t => ({
+          id: t.id,
+          name: t.name,
+          subject: t.subject,
+          body: t.body || t.html_content || '',
+          html: t.html_content || t.body || '',
+          category: 'Custom',
+          tags: ['custom']
+        })));
+      }
+    };
+    loadUserTemplates();
+  }, [currentUser?.id]);
+
+  const allTemplates = useMemo(() => [
+    ...userTemplates,
+    ...AGENT_EMAIL_TEMPLATES, 
+    ...DEFAULT_TEMPLATES
+  ], [userTemplates]);
+
+  const categories = useMemo(() => ['All', 'Custom', ...Array.from(new Set(AGENT_EMAIL_TEMPLATES.map(t => t.category)))], []);
 
   const filteredTemplates = useMemo(() => {
-    if (templateCategory === 'All') return allTemplates;
-    return allTemplates.filter(t => t.category === templateCategory);
+    let base = allTemplates;
+    if (templateCategory !== 'All') {
+      base = base.filter(t => t.category === templateCategory);
+    }
+    return base;
   }, [allTemplates, templateCategory]);
 
   // Filter leads for selection
@@ -111,18 +145,7 @@ export default function EmailComposeModal({
     setSearchQuery('');
   };
 
-  const handleApplyTemplate = (template: AgentTemplate) => {
-    let newBody = template.body || template.html || '';
-    let newSubject = template.subject;
-
-    // Handle images
-    const initialImages: Record<string, string> = {};
-    if (template.imageUrl) {
-      initialImages['header_image'] = template.imageUrl;
-    }
-    setTemplateImages(initialImages);
-
-    // Replace variables
+  const getInterpolatedHtml = (html: string) => {
     const vars: Record<string, string> = {
       '{{name}}': selectedLead?.name || 'there',
       '{{address}}': selectedLead?.propertyAddress || 'your property',
@@ -132,41 +155,73 @@ export default function EmailComposeModal({
       '{{offer_amount}}': '$' + ((selectedLead as any)?.metadata?.estimatedValue?.toLocaleString() || '---'),
       '{{closing_date}}': '30 days from now',
       '{{inspection_period}}': '7',
-      '{{header_image}}': template.imageUrl || '',
+      '{{header_image}}': templateImages['header_image'] || '',
       '{{price}}': '$' + ((selectedLead as any)?.metadata?.estimatedValue?.toLocaleString() || '450,000')
     };
 
-    let processedHtml = newBody;
+    let processed = html;
     Object.entries(vars).forEach(([key, val]) => {
       const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-      processedHtml = processedHtml.replace(regex, val);
-      newSubject = newSubject.replace(regex, val);
+      processed = processed.replace(regex, val);
     });
+    return processed;
+  };
 
-    setSubject(newSubject);
+  const handleApplyTemplate = (template: AgentTemplate) => {
+    let newBody = template.body || template.html || '';
+    let newSubject = template.subject;
+
+    // Set initial images if available
+    if (template.imageUrl) {
+      setTemplateImages({ 'header_image': template.imageUrl });
+    }
+
+    const processedHtml = getInterpolatedHtml(newBody);
+    const processedSubject = getInterpolatedHtml(newSubject);
+
+    setSubject(processedSubject);
     setBody(processedHtml);
     setShowTemplates(false);
+    setShowHtmlPreview(true);
+    toast.success(`Applied: ${template.name}`);
   };
 
   const handleSaveAsTemplate = async () => {
-    if (!body || !subject) return;
-    setIsSavingTemplate(true);
+    if (!currentUser?.id) return;
+    
+    const name = window.prompt('Enter a name for this template:');
+    if (!name) return;
+
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('user_email_templates')
-        .insert([{
-          name: `Custom: ${subject.slice(0, 20)}...`,
+        .insert({
+          user_id: currentUser.id,
+          name,
           subject,
-          body,
-          category: 'Custom',
-          user_id: currentUser?.id
-        }]);
+          html_content: body,
+          category: 'Custom'
+        })
+        .select()
+        .single();
       
       if (error) throw error;
-      alert('Template saved successfully!');
+      
+      if (data) {
+        setUserTemplates(prev => [...prev, {
+          id: data.id,
+          name: data.name,
+          subject: data.subject,
+          body: data.html_content || '',
+          html: data.html_content || '',
+          category: 'Custom',
+          tags: ['custom']
+        }]);
+        toast.success('Template saved successfully!');
+      }
     } catch (err) {
       console.error('Save template error:', err);
-      alert('Failed to save template.');
+      toast.error('Failed to save template.');
     } finally {
       setIsSavingTemplate(false);
     }
@@ -598,51 +653,164 @@ export default function EmailComposeModal({
               </div>
 
               {showTemplates && (
-                <div className="space-y-4 p-4 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                      {categories.map(cat => (
+                <div className="flex flex-col lg:flex-row gap-6 bg-[var(--t-surface-dim)]/50 border border-[var(--t-border)] rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300 min-h-[600px] overflow-hidden">
+                  {/* Sidebar: Categories & List */}
+                  <div className="w-full lg:w-72 border-r border-[var(--t-border)] flex flex-col bg-black/5">
+                    <div className="p-4 border-b border-[var(--t-border)] space-y-3">
+                         <div className="flex items-center gap-2 text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest px-1">
+                            <BookOpen size={12} />
+                            Template Library
+                         </div>
+                         <div className="flex flex-wrap gap-1.5">
+                           {categories.map(cat => (
+                             <button
+                               key={cat}
+                               onClick={() => setTemplateCategory(cat)}
+                               className={`px-3 py-1 rounded-full text-[9px] font-bold border transition-all ${templateCategory === cat ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)] shadow-md' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
+                             >
+                               {cat}
+                             </button>
+                           ))}
+                         </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                      {filteredTemplates.map(t => (
                         <button
-                          key={cat}
-                          onClick={() => setTemplateCategory(cat)}
-                          className={`px-4 py-1.5 rounded-full text-[10px] font-bold border transition-all whitespace-nowrap ${templateCategory === cat ? 'bg-[var(--t-primary)] text-white border-[var(--t-primary)] shadow-lg shadow-[var(--t-primary-dim)]' : 'bg-[var(--t-surface)] text-[var(--t-text-muted)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]'}`}
+                          key={t.id}
+                          onClick={() => {
+                            if (editingTemplate?.id === t.id) {
+                              handleApplyTemplate(t);
+                            } else {
+                              setEditingTemplate(t as any);
+                            }
+                          }}
+                          onDoubleClick={() => handleApplyTemplate(t)}
+                          className={`w-full text-left p-3 rounded-xl border transition-all group ${editingTemplate?.id === t.id ? 'bg-[var(--t-primary-dim)]/20 border-[var(--t-primary)] shadow-sm' : 'bg-[var(--t-surface)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)]/50'}`}
                         >
-                          {cat}
+                           <div className="flex items-center justify-between gap-2 mb-1">
+                             <p className="text-[11px] font-bold text-[var(--t-text)] truncate">{t.name}</p>
+                             {t.category === 'Custom' && (
+                               <button 
+                                 onClick={async (e) => {
+                                   e.stopPropagation();
+                                   if (window.confirm('Delete this template?')) {
+                                      const { error } = await supabase.from('user_email_templates').delete().eq('id', t.id);
+                                      if (!error) {
+                                        setUserTemplates(prev => prev.filter(ut => ut.id !== t.id));
+                                        toast.success('Template deleted');
+                                      }
+                                   }
+                                 }}
+                                 className="opacity-0 group-hover:opacity-100 p-1 hover:text-[var(--t-error)] transition-opacity"
+                               >
+                                 <Trash2 size={10} />
+                               </button>
+                             )}
+                           </div>
+                           <p className="text-[9px] text-[var(--t-text-muted)] line-clamp-1 opacity-70 italic">{t.subject}</p>
                         </button>
                       ))}
+                      {filteredTemplates.length === 0 && (
+                        <div className="text-center py-8">
+                           <BookOpenText size={24} className="mx-auto text-[var(--t-text-muted)] opacity-20 mb-2" />
+                           <p className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider">No templates found</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                    {filteredTemplates.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => handleApplyTemplate(t)}
-                        className="group relative flex flex-col bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl hover:border-[var(--t-primary-dim)] hover:shadow-xl transition-all overflow-hidden text-left"
-                      >
-                         <div className="aspect-video w-full bg-[var(--t-surface-hover)] overflow-hidden relative">
-                            {t.imageUrl ? (
-                              <img src={t.imageUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={t.name} />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[var(--t-text-muted)]">
-                                <ImageIcon size={24} />
+                  {/* Main: Real-time Preview */}
+                  <div className="flex-1 p-6 flex flex-col bg-[var(--t-surface-dim)]/30">
+                    {editingTemplate ? (
+                      <div className="flex flex-col h-full space-y-4">
+                        <div className="flex items-center justify-between">
+                           <div>
+                             <h4 className="text-sm font-bold text-[var(--t-text)]">{editingTemplate.name}</h4>
+                             <p className="text-xs text-[var(--t-text-muted)]">Live Preview w/ Variables</p>
+                           </div>
+                           <div className="flex gap-2">
+                              <div className="flex bg-black/10 rounded-lg p-0.5 border border-[var(--t-border)]">
+                                <button 
+                                  onClick={() => setPreviewDevice('desktop')}
+                                  className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
+                                >
+                                  Desktop
+                                </button>
+                                <button 
+                                  onClick={() => setPreviewDevice('mobile')}
+                                  className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
+                                >
+                                  Mobile
+                                </button>
                               </div>
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                               <p className="text-[10px] font-bold text-white uppercase tracking-widest flex items-center gap-1">
-                                 <Plus size={10} /> Use Template
-                               </p>
-                            </div>
-                         </div>
-                         <div className="p-3">
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                              <p className="text-xs font-bold text-[var(--t-text)] truncate">{t.name}</p>
-                              <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 bg-[var(--t-border)] text-[var(--t-text-muted)] rounded-md uppercase">{t.category}</span>
-                            </div>
-                            <p className="text-[10px] text-[var(--t-text-muted)] line-clamp-1">{t.subject}</p>
-                         </div>
-                      </button>
-                    ))}
+                              <button 
+                                onClick={() => handleApplyTemplate(editingTemplate as any)}
+                                className="px-4 py-1.5 bg-[var(--t-primary)] text-white rounded-lg text-xs font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[var(--t-primary-dim)]/20"
+                              >
+                                Use Template
+                              </button>
+                           </div>
+                        </div>
+
+                        <div 
+                          className={`flex-1 border border-[var(--t-border)] rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'w-full'}`}
+                          onClick={async (e) => {
+                            const target = e.target as HTMLElement;
+                            if (target.tagName === 'IMG') {
+                              const imgTarget = target as HTMLImageElement;
+                              const fileInput = document.createElement('input');
+                              fileInput.type = 'file';
+                              fileInput.accept = 'image/*';
+                              fileInput.onchange = async (event: any) => {
+                                const file = event.target.files?.[0];
+                                if (file) {
+                                  // Find which key this image corresponds to by checking templateImages
+                                  let foundKey = 'header_image';
+                                  for (const [k, v] of Object.entries(templateImages)) {
+                                    if (imgTarget.src.includes(v)) {
+                                      foundKey = k;
+                                      break;
+                                    }
+                                  }
+                                  await handleUpdateTemplateImage(foundKey, file);
+                                }
+                              };
+                              fileInput.click();
+                            }
+                          }}
+                        >
+                           <div className="p-2 bg-zinc-50 border-b border-zinc-200 flex items-center gap-2">
+                             <div className="flex gap-1">
+                               <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                               <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                               <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                             </div>
+                             <div className="flex-1 bg-white border border-zinc-200 rounded px-2 py-0.5 text-[9px] text-zinc-400 select-none truncate">
+                               {getInterpolatedHtml(editingTemplate.subject || '')}
+                             </div>
+                           </div>
+                           <div className="flex-1 overflow-y-auto p-8 custom-scrollbar preview-frame">
+                             <div 
+                               className="prose prose-sm max-w-none text-black"
+                               dangerouslySetInnerHTML={{ __html: getInterpolatedHtml((editingTemplate as any).html || (editingTemplate as any).body || '') }}
+                             />
+                           </div>
+                        </div>
+                        <p className="text-[9px] text-center text-[var(--t-text-muted)] font-bold uppercase tracking-widest opacity-40">
+                          Click "Use Template" to start editing this layout.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-16 h-16 rounded-3xl bg-[var(--t-primary-dim)]/10 flex items-center justify-center text-[var(--t-primary)] opacity-40">
+                          <Eye size={32} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[var(--t-text)]">Select a Template</p>
+                          <p className="text-xs text-[var(--t-text-muted)]">Choose a layout from the list to see a live preview here.</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -749,7 +917,50 @@ export default function EmailComposeModal({
                         </button>
                       </div>
                     </div>
-                    <div className={`bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'w-full'} min-h-[500px] flex-1`}>
+                    <div 
+                      className={`bg-white rounded-2xl border border-[var(--t-border)] shadow-xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'w-full'} min-h-[500px] flex-1`}
+                      onClick={async (e) => {
+                        const target = e.target as HTMLElement;
+                        if (target.tagName === 'IMG') {
+                          const imgTarget = target as HTMLImageElement;
+                          const fileInput = document.createElement('input');
+                          fileInput.type = 'file';
+                          fileInput.accept = 'image/*';
+                          fileInput.onchange = async (event: any) => {
+                            const file = event.target.files?.[0];
+                            if (file) {
+                              setIsUploading(true);
+                              try {
+                                const fileExt = file.name.split('.').pop();
+                                const fileName = `${Math.random()}.${fileExt}`;
+                                const filePath = `templates/${fileName}`;
+
+                                const { error: uploadError } = await supabase.storage
+                                  .from('email-assets')
+                                  .upload(filePath, file);
+
+                                if (uploadError) throw uploadError;
+
+                                const { data } = supabase.storage
+                                  .from('email-assets')
+                                  .getPublicUrl(filePath);
+                                
+                                const finalUrl = data.publicUrl;
+                                const oldUrl = imgTarget.src;
+                                setBody(prev => prev.split(oldUrl).join(finalUrl));
+                                toast.success('Image updated');
+                              } catch (err) {
+                                console.error('Upload error:', err);
+                                toast.error('Failed to upload image');
+                              } finally {
+                                setIsUploading(false);
+                              }
+                            }
+                          };
+                          fileInput.click();
+                        }
+                      }}
+                    >
                       <div className="p-3 bg-zinc-100 border-b border-zinc-200 flex items-center justify-between gap-2">
                         <div className="flex gap-1.5 shrink-0">
                           <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
@@ -763,7 +974,23 @@ export default function EmailComposeModal({
                       </div>
                       <div className="flex-1 p-8 overflow-y-auto bg-white">
                         <div 
-                          className="prose prose-sm max-w-none text-black emails-preview-content" 
+                          className="prose prose-sm max-w-none text-black emails-preview-content cursor-pointer" 
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement;
+                            if (target.tagName === 'IMG') {
+                              const currentSrc = (target as HTMLImageElement).src;
+                              // Find which key this belongs to, or create one
+                              let key = Object.keys(templateImages).find(k => templateImages[k] === currentSrc) || `image_${Date.now()}`;
+                              const fileInput = document.createElement('input');
+                              fileInput.type = 'file';
+                              fileInput.accept = 'image/*';
+                              fileInput.onchange = (ev) => {
+                                const file = (ev.target as HTMLInputElement).files?.[0];
+                                if (file) handleUpdateTemplateImage(key, file);
+                              };
+                              fileInput.click();
+                            }
+                          }}
                           dangerouslySetInnerHTML={{ __html: body || '<div class="text-zinc-300 italic">No content...</div>' }} 
                         />
                       </div>

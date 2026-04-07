@@ -205,9 +205,9 @@ export function AIBotWidget() {
             setMessages([{
               id: 'welcome',
               role: 'ai',
-              content: `Hi there! I'm ${aiModel === 'os-bot' ? '🤖 OS Bot' : '✨ Google Gemini'}. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
+              content: `Hi there! I'm 🤖 OS Bot. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
               timestamp: new Date().toISOString(),
-              systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
+              systemLog: "🤖 OS Bot"
             }]);
         }
       }
@@ -492,7 +492,7 @@ export function AIBotWidget() {
             const aiMsg: ChatMessage = {
               id: (Date.now() + 1).toString(),
               role: 'ai',
-              content: wrapResponse(res.message, 'success'),
+              content: wrapResponse(res.message, 'success', matched.intent.name),
               timestamp: new Date().toISOString(),
               intent: matched.intent.name,
               data: res.data,
@@ -521,7 +521,23 @@ export function AIBotWidget() {
         }
       }
 
-      // ── Normal AI processing ──────────────────────────────────────────────
+      // ── Normal AI processing (Only if NOT Local Model) ──────────────────
+      if (isLocalModel) {
+        // We already handled local above, but if we got here, it's a fallback.
+        // For OS Bot, we don't fall back to Gemini unless explicitly requested.
+        const aiMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: "I'm not sure how to handle that specific request offline. Try asking for 'help' to see what I can do!",
+          timestamp: new Date().toISOString(),
+          systemLog: "🤖 OS Bot"
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        setTypingMessageId(aiMsg.id);
+        setLoading(false);
+        return;
+      }
+
       const response = await processPrompt(userText, { 
         page: location.pathname,
         currentTime: new Date().toISOString()
@@ -884,7 +900,7 @@ export function AIBotWidget() {
                     <div className="flex flex-col gap-1.5 min-w-[120px]">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-[var(--t-primary)] text-[var(--t-on-primary)]">
-                          {msg.role === 'ai' ? (aiModel === 'os-bot' ? '🤖 OS Bot' : (msg.systemLog || '✨ Gemini')) : 'You'}
+                          {msg.role === 'ai' ? (msg.systemLog?.includes('OS Bot') ? '🤖 OS Bot' : '🤖 OS Bot') : 'You'}
                         </span>
                         {msg.systemLog && (
                           <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest">

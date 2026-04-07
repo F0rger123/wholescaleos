@@ -24,10 +24,10 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         'dashboard': '#/dashboard',
         'settings': '#/settings',
         'inbox': '#/inbox',
-        'message': '#/os-messages',
-        'messages': '#/os-messages',
-        'summary': '#/os-messages',
-        'summaries': '#/os-messages',
+        'message': '#/automations',
+        'messages': '#/automations',
+        'summary': '#/automations',
+        'summaries': '#/automations',
         'ai': '#/ai-bot',
         'training': '#/ai-training'
       };

@@ -114,55 +114,46 @@ class AutomationEngine {
 
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows found"
 
-      // Default to true if no prefs found (standard system behavior)
-      const preferences = prefs || {
-        lead_alerts: true,
-        deal_alerts: true,
-        task_reminders: true,
-        calendar_sync: true,
-        marketing_automation: true,
-        ai_recommendations: true
-      };
 
       switch (eventType) {
         case 'LEAD_CREATED':
-          if (preferences.lead_alerts) {
+          if (prefs?.new_lead_alerts_enabled) {
             await emailSummaryService.sendLeadAlert(userId, leadId, 'new');
           }
           break;
         case 'LEAD_SCORE_HIGH':
-          if (preferences.lead_alerts) {
+          if (prefs?.lead_score_high_alert_enabled) {
             await emailSummaryService.sendLeadAlert(userId, leadId, 'high-score');
           }
           break;
         case 'LEAD_STATUS_CHANGED':
-          if (data.status === 'closed-won' && preferences.deal_alerts) {
+          if (data.status === 'closed-won' && prefs?.deal_closed_alerts_enabled) {
             await emailSummaryService.sendDealAlert(userId, leadId, 'closed');
           }
           break;
         case 'OFFER_SUBMITTED':
-          if (preferences.deal_alerts) {
+          if (prefs?.offer_made_alert_enabled) {
             await emailSummaryService.sendOfferAlert(userId, leadId, 'made');
           }
           break;
         case 'OFFER_ACCEPTED':
-          if (preferences.deal_alerts) {
+          if (prefs?.offer_accepted_alert_enabled) {
             await emailSummaryService.sendOfferAlert(userId, leadId, 'accepted');
           }
           break;
         case 'CONTRACT_SIGNED':
-          if (preferences.deal_alerts) {
+          if (prefs?.contract_signed_alert_enabled) {
             await emailSummaryService.sendContractAlert(userId, leadId);
           }
           break;
         case 'TASK_STATUS_CHANGED':
-          if (data.status === 'overdue' && preferences.task_reminders) {
+          if (data.status === 'overdue' && prefs?.task_overdue_alert_enabled) {
             const taskId = data.id || data.taskId;
             if (taskId) await emailSummaryService.sendTaskAlert(userId, taskId, 'overdue');
           }
           break;
         case 'LEAD_INACTIVITY':
-          if (preferences.lead_alerts) {
+          if (prefs?.lead_inactivity_alert_enabled) {
             await emailSummaryService.checkLeadInactivity(userId);
           }
           break;

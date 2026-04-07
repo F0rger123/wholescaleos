@@ -17,9 +17,14 @@ export function getBotIdentity(): IdentityProfile {
   };
 }
 
-export function wrapResponse(content: string, responseType: 'success' | 'confirm' | 'error' | 'ask'): string {
+export function wrapResponse(content: string, responseType: 'success' | 'confirm' | 'error' | 'ask', intentName?: string): string {
   const { tone, agentName } = getBotIdentity();
   
+  // Skip prefix for conversational intents like greetings
+  if (intentName === 'greeting' || intentName === 'small_talk') {
+    return content;
+  }
+
   const prefixes = {
     professional: {
       success: 'Command executed successfully.',

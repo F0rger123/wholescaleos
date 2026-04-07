@@ -4,9 +4,11 @@ import {
   Star, Trash2, Sparkles, Loader2, 
   Inbox, FileText, Layout, Plus, 
   Settings, Clock, Calendar, Search, Mail, Edit2, Trash, UserPlus,
-  BookOpenText, X
+  BookOpenText, X, Eye, CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
+import { supabase } from '../lib/supabase';
 import { useStore } from '../store/useStore';
 import { 
   listThreads, getThread, EmailThread, 
@@ -590,6 +592,10 @@ function TemplateModal({ template, onClose, onSave }: { template: dbEmailTemplat
   const [subject, setSubject] = useState(template?.subject || '');
   const [body, setBody] = useState(template?.body || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const [isUploading, setIsUploading] = useState(false);
+
+  const { currentUser } = useStore();
 
   const handleSave = async () => {
     if (!name || !subject || !body || isSaving) return;
@@ -607,55 +613,181 @@ function TemplateModal({ template, onClose, onSave }: { template: dbEmailTemplat
     }
   };
 
+  const getInterpolatedHtml = (html: string) => {
+    const vars: Record<string, string> = {
+      '{{name}}': 'John Doe',
+      '{{address}}': '123 Luxury Lane',
+      '{{area}}': 'Beverly Hills',
+      '{{city}}': 'Los Angeles',
+      '{{agent_name}}': currentUser?.name || 'Agent Name',
+      '{{price}}': '$1,250,000'
+    };
+
+    let processed = html;
+    Object.entries(vars).forEach(([key, val]) => {
+      const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      processed = processed.replace(regex, val);
+    });
+    return processed;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between p-4 border-b border-[var(--t-border)]">
-          <h3 className="text-lg font-bold">{template ? 'Edit Template' : 'New Template'}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"><X size={20} /></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+      <div className="w-full max-w-6xl bg-[var(--t-surface)] border border-[var(--t-border)] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--t-border)] bg-black/5">
+          <div>
+            <h3 className="text-xl font-bold">{template ? 'Edit Template' : 'New Template'}</h3>
+            <p className="text-xs text-[var(--t-text-muted)] mt-1">Design your premium email experience</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"><X size={24} /></button>
         </div>
         
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block mb-1">Template Name</label>
-            <input 
-              value={name} onChange={e => setName(e.target.value)}
-              className="w-full px-4 py-2.5 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none"
-              placeholder="e.g. Welcome Email"
-            />
+        <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+          {/* Edit Column */}
+          <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar border-r border-[var(--t-border)] bg-black/5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest block mb-2">Template Name</label>
+                <input 
+                  value={name} onChange={e => setName(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none font-bold"
+                  placeholder="e.g. Welcome Email"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest block mb-2">Subject Line</label>
+                <input 
+                  value={subject} onChange={e => setSubject(e.target.value)}
+                  className="w-full px-4 py-3 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none font-bold"
+                  placeholder="The subject line recipients will see"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black uppercase text-[var(--t-text-muted)] tracking-widest block mb-2">HTML Body Content</label>
+              <div className="border border-[var(--t-border)] rounded-2xl overflow-hidden bg-[var(--t-input-bg)] shadow-inner">
+                <RichTextEditor 
+                  value={body} onChange={setBody}
+                  placeholder="<p>Hello {{name}}!</p>"
+                  minHeight="400px"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[var(--t-primary-dim)]/10 p-4 rounded-2xl border border-[var(--t-primary-dim)]/20">
+               <div className="flex items-center gap-2 mb-2">
+                 <Sparkles size={14} className="text-[var(--t-primary)]" />
+                 <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-primary)]">Pro Tip</p>
+               </div>
+               <p className="text-xs text-[var(--t-text)] leading-relaxed">
+                 Use variables like <code>{`{{name}}`}</code>, <code>{`{{address}}`}</code>, <code>{`{{city}}`}</code> to personalize your emails. Click any image in the preview to replace it.
+               </p>
+            </div>
           </div>
-          <div>
-            <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block mb-1">Email Subject</label>
-            <input 
-              value={subject} onChange={e => setSubject(e.target.value)}
-              className="w-full px-4 py-2.5 bg-[var(--t-input-bg)] border border-[var(--t-border)] rounded-xl text-sm focus:ring-2 focus:ring-[var(--t-primary)] outline-none"
-              placeholder="The subject line recipients will see"
-            />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-[var(--t-text-muted)] uppercase tracking-wider block mb-1">HTML Body Content</label>
-            <RichTextEditor 
-              value={body} onChange={setBody}
-              placeholder="<p>Hello {{name}}!</p>"
-              minHeight="250px"
-            />
-          </div>
-          <div className="bg-[var(--t-primary-dim)]/10 p-3 rounded-xl">
-             <p className="text-[10px] text-[var(--t-primary)] leading-tight">
-               <strong>Tip:</strong> Use variable placeholders like <code>{`{{name}}`}</code>, <code>{`{{address}}`}</code>, <code>{`{{city}}`}</code> to personalize your emails. These will be automatically replaced with lead data during delivery.
-             </p>
+
+          {/* Preview Column */}
+          <div className="flex-1 p-8 flex flex-col space-y-4 bg-[var(--t-surface-dim)]/30 overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                 <div className="w-8 h-8 rounded-lg bg-[var(--t-primary-dim)]/10 flex items-center justify-center text-[var(--t-primary)]">
+                   <Eye size={16} />
+                 </div>
+                 <div>
+                   <p className="text-xs font-black uppercase tracking-widest">Live Preview</p>
+                   {isUploading && <p className="text-[9px] font-bold text-[var(--t-primary)] animate-pulse">Uploading Image...</p>}
+                 </div>
+              </div>
+              <div className="flex bg-black/10 rounded-lg p-1 border border-[var(--t-border)]">
+                <button 
+                  onClick={() => setPreviewDevice('desktop')}
+                  className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
+                >
+                  Desktop
+                </button>
+                <button 
+                  onClick={() => setPreviewDevice('mobile')}
+                  className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-md' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
+                >
+                  Mobile
+                </button>
+              </div>
+            </div>
+
+            <div 
+              className={`flex-1 bg-white rounded-2xl border border-[var(--t-border)] shadow-2xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[375px]' : 'w-full'} min-h-[400px]`}
+              onClick={async (e) => {
+                const target = e.target as HTMLElement;
+                if (target.tagName === 'IMG') {
+                  const imgTarget = target as HTMLImageElement;
+                  const fileInput = document.createElement('input');
+                  fileInput.type = 'file';
+                  fileInput.accept = 'image/*';
+                  fileInput.onchange = async (event: any) => {
+                    const file = event.target.files?.[0];
+                    if (file) {
+                      setIsUploading(true);
+                      try {
+                        const fileExt = file.name.split('.').pop();
+                        const fileName = `${Math.random()}.${fileExt}`;
+                        const filePath = `templates/${fileName}`;
+
+                        const { error: uploadError } = await supabase.storage
+                          .from('email-assets')
+                          .upload(filePath, file);
+
+                        if (uploadError) throw uploadError;
+
+                        const { data } = supabase.storage
+                          .from('email-assets')
+                          .getPublicUrl(filePath);
+                        
+                        const finalUrl = data.publicUrl;
+                        const oldUrl = imgTarget.src;
+                        setBody(prev => prev.split(oldUrl).join(finalUrl));
+                        toast.success('Image updated');
+                      } catch (err) {
+                        console.error('Upload error:', err);
+                        toast.error('Failed to upload image');
+                      } finally {
+                        setIsUploading(false);
+                      }
+                    }
+                  };
+                  fileInput.click();
+                }
+              }}
+            >
+              <div className="p-3 bg-zinc-50 border-b border-zinc-200 flex items-center justify-between gap-2">
+                <div className="flex gap-1.5 shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-zinc-300" />
+                </div>
+                <div className="flex-1 bg-white border border-zinc-200 rounded px-2 py-0.5 text-[8px] text-zinc-400 select-none truncate text-center">
+                  {subject || 'No Subject'}
+                </div>
+                <div className="w-10" />
+              </div>
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar preview-frame">
+                <div 
+                  className="prose prose-sm max-w-none text-black"
+                  dangerouslySetInnerHTML={{ __html: getInterpolatedHtml(body) }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="p-4 border-t border-[var(--t-border)] flex justify-end gap-3">
-          <button onClick={onClose} className="px-6 py-2.5 text-sm font-bold text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] rounded-xl transition-all">Cancel</button>
+        <div className="p-6 border-t border-[var(--t-border)] flex justify-end gap-3 bg-black/5">
+          <button onClick={onClose} className="px-6 py-3 text-sm font-bold text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)] rounded-2xl transition-all">Cancel</button>
           <button 
             onClick={handleSave} 
             disabled={isSaving || !name}
-            className="flex items-center gap-2 px-8 py-2.5 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary-dim)] transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-10 py-3 bg-[var(--t-primary)] hover:bg-[var(--t-primary-hover)] text-[var(--t-on-primary)] rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-[var(--t-primary-dim)] transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
           >
-            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
-            Save Template
+            {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+            {template ? 'Update Template' : 'Create Template'}
           </button>
         </div>
       </div>

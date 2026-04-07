@@ -8,7 +8,7 @@ export interface AgentTemplate {
   body?: string; // Markdown/Plain text for quick replies
   html?: string; // Rich HTML for campaigns
   imageUrl?: string; // Preview/Header image
-  category: 'email' | 'sms' | 'chat' | 'Marketing' | 'Sales' | 'Product' | 'Onboarding' | 'Operations' | 'Reports' | 'Alerts';
+  category: 'email' | 'sms' | 'chat' | 'Marketing' | 'Sales' | 'Product' | 'Onboarding' | 'Operations' | 'Reports' | 'Alerts' | 'Custom';
   category_label?: string;
   description?: string;
   tags: string[];

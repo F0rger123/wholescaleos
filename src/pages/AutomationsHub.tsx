@@ -22,7 +22,8 @@ import {
   Save, 
   Settings,
   Webhook, X, Bot,
-  Zap, Mail, Clock, Calendar, Target, CheckCircle2, AlertCircle, Loader2
+  Zap, Mail, Clock, Calendar, Target, CheckCircle2, AlertCircle, Loader2,
+  Layout, Snowflake, Flame
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AutomationNode } from '../components/AutomationNode';
@@ -78,6 +79,8 @@ function AutomationsHubContent() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
   const [prefs, setPrefs] = useState<any>(null);
+  const [myAutomations, setMyAutomations] = useState<any[]>([]);
+  const [libraryTab, setLibraryTab] = useState<'templates' | 'my'>('templates');
 
   const { isAutomationRunning } = useStore();
   const { fitView } = useReactFlow();
@@ -128,7 +131,27 @@ function AutomationsHubContent() {
 
     loadWorkflow();
     fetchPreferences();
+    fetchMyAutomations();
   }, [fitView]);
+
+  const fetchMyAutomations = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_automations')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+      setMyAutomations(data || []);
+    } catch (err) {
+      console.error('Fetch my automations error:', err);
+    }
+  };
 
   const fetchPreferences = async () => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -243,16 +266,58 @@ function AutomationsHubContent() {
 
       if (error) throw error;
       
+      await fetchMyAutomations(); // Refresh list
+
       if (forcedIsActive !== undefined) {
-          toast.success(`Workflow ${activeStatus ? 'Activated' : 'Deactivated'}`);
+          toast.success(`Workflow ${activeStatus ? 'Activated' : 'Deactivated'}`, {
+            icon: activeStatus ? '🟢' : '⚪',
+            style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+          });
       } else {
-          toast.success('Workflow saved successfully!');
+          toast.success('Workflow saved successfully!', {
+            icon: '💾',
+            style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+          });
       }
     } catch (err) {
       console.error('Save Error:', err);
       toast.error('Failed to save workflow.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const deleteWorkflow = async (id: string, name: string) => {
+    if (!isSupabaseConfigured || !supabase) return;
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('user_automations')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      toast.success(`Deleted workflow: ${name}`, {
+        icon: '🗑️',
+        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+      });
+
+      if (workflowId === id) {
+        setWorkflowId(null);
+        setWorkflowName('My New Automation');
+        setNodes(initialNodes);
+        setEdges(initialEdges);
+      }
+      
+      await fetchMyAutomations();
+    } catch (err) {
+      console.error('Delete workflow error:', err);
+      toast.error('Failed to delete workflow.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -299,43 +364,41 @@ function AutomationsHubContent() {
     setSelectedNode(null);
   };
 
-  const loadTemplate = async (template: AutomationTemplate) => {
-    // Deep clone nodes and edges to avoid reference issues
+  const loadTemplate = async (template: AutomationTemplate | any, isSavedWorkflow = false) => {
+    // Immediate UI update for the canvas
     const newNodes = JSON.parse(JSON.stringify(template.nodes));
     const newEdges = JSON.parse(JSON.stringify(template.edges));
     
-    // Immediate UI update
     setNodes(newNodes);
     setEdges(newEdges);
     setWorkflowName(template.name);
-    setWorkflowId(null); // Reset ID so it saves as new
-    setIsActive(true);
+    setIsActive(template.is_active ?? true);
     setIsLibraryOpen(false);
     
-    // Smooth zoom to fit the loaded template
-    setTimeout(() => {
-      fitView({ duration: 800, padding: 0.2 });
-    }, 100);
+    // Smooth zoom
+    setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
 
-    // Background auto-save the template to the database
-    setIsSaving(true);
-    setIsLoading(true); // Trigger the loading overlay for a cleaner "drawing" feel
-    try {
-      await saveWorkflow(true, newNodes, newEdges, template.name);
-      toast.success(`Drawing Template: ${template.name}...`, {
-        icon: '🎨',
-        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-primary)' }
-      });
-      toast.success(`Loaded & Saved Template: ${template.name}`, {
-        icon: '🤖',
-        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-success)' }
-      });
-    } catch (err) {
-      console.error('Failed to auto-save template:', err);
-      toast.error('Failed to save template to database.');
-    } finally {
-      setIsSaving(false);
-      setIsLoading(false);
+    if (isSavedWorkflow) {
+        setWorkflowId(template.id);
+        toast.success(`Loaded workflow: ${template.name}`, {
+            icon: '📂',
+            style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
+        });
+    } else {
+        // Background auto-save for new templates
+        setWorkflowId(null);
+        setIsSaving(true);
+        try {
+          await saveWorkflow(true, newNodes, newEdges, template.name);
+          toast.success(`Auto-saving blueprint: ${template.name}`, {
+            icon: '🎨',
+            style: { background: 'var(--t-surface)', color: 'var(--t-primary)', border: '1px solid var(--t-primary)' }
+          });
+        } catch (err) {
+          console.error('Failed to auto-save template:', err);
+        } finally {
+          setIsSaving(false);
+        }
     }
   };
 
@@ -824,7 +887,7 @@ function AutomationsHubContent() {
                 <section className="space-y-4">
                   <div className="flex items-center gap-2 border-b border-[var(--t-border)] pb-2">
                     <Mail size={16} className="text-[var(--t-primary)]" />
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Reporting Core</h3>
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Summary Core</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-3">
                     <HubSettingToggle 
@@ -836,10 +899,17 @@ function AutomationsHubContent() {
                     />
                     <HubSettingToggle 
                       icon={<Calendar size={16} />}
-                      title="Weekly Summary"
-                      description="Trends and conversion rates"
+                      title="Weekly Performance"
+                      description="Trends and conversion rates (Monday 9:00 AM)"
                       enabled={prefs?.weekly_summary_enabled}
                       onToggle={() => updatePreference('weekly_summary_enabled')}
+                    />
+                    <HubSettingToggle 
+                      icon={<Layout size={16} />}
+                      title="Calendar Digest"
+                      description="Your daily schedule overview (7:00 AM)"
+                      enabled={prefs?.calendar_digest_enabled}
+                      onToggle={() => updatePreference('calendar_digest_enabled')}
                     />
                   </div>
                 </section>
@@ -853,24 +923,38 @@ function AutomationsHubContent() {
                   <div className="grid grid-cols-1 gap-3">
                     <HubSettingToggle 
                       icon={<Target size={16} />}
-                      title="New Lead Alerts"
+                      title="New Lead Notification"
                       description="Instant notification for new captures"
                       enabled={prefs?.new_lead_alerts_enabled}
                       onToggle={() => updatePreference('new_lead_alerts_enabled')}
                     />
                     <HubSettingToggle 
                       icon={<CheckCircle2 size={16} />}
-                      title="Deal Won"
-                      description="Alert when a deal status set to Closed Won"
+                      title="Deal Closed Alert"
+                      description="Immediate signal when a deal closes"
                       enabled={prefs?.deal_closed_alerts_enabled}
                       onToggle={() => updatePreference('deal_closed_alerts_enabled')}
                     />
                     <HubSettingToggle 
                       icon={<AlertCircle size={16} />}
-                      title="Task Overdue"
-                      description="Immediate alert for missed deadlines"
-                      enabled={prefs?.task_overdue_alert_enabled}
-                      onToggle={() => updatePreference('task_overdue_alert_enabled')}
+                      title="Task Reminder"
+                      description="Triggered 30 mins before task is due"
+                      enabled={prefs?.task_reminders_enabled}
+                      onToggle={() => updatePreference('task_reminders_enabled')}
+                    />
+                    <HubSettingToggle 
+                      icon={<Snowflake size={16} />}
+                      title="Lead Inactivity"
+                      description="Alert for leads with 7+ days no contact"
+                      enabled={prefs?.lead_inactivity_alert_enabled}
+                      onToggle={() => updatePreference('lead_inactivity_alert_enabled')}
+                    />
+                    <HubSettingToggle 
+                      icon={<Flame size={16} />}
+                      title="Lead Score High"
+                      description="Hot status alert (Score > 80)"
+                      enabled={prefs?.lead_score_high_alert_enabled}
+                      onToggle={() => updatePreference('lead_score_high_alert_enabled')}
                     />
                   </div>
                 </section>
@@ -912,21 +996,87 @@ function AutomationsHubContent() {
                 </h2>
                 <button onClick={() => setIsLibraryOpen(false)}><X size={24} /></button>
               </div>
+
+              {/* Sidebar Tabs */}
+              <div className="px-4 pt-2 flex gap-1 bg-[var(--t-surface)]/20">
+                <button 
+                  onClick={() => setLibraryTab('templates')}
+                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${
+                    libraryTab === 'templates' ? 'border-[var(--t-primary)] text-[var(--t-primary)]' : 'border-transparent text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
+                  }`}
+                >
+                  Global Templates
+                </button>
+                <button 
+                  onClick={() => setLibraryTab('my')}
+                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${
+                    libraryTab === 'my' ? 'border-[var(--t-primary)] text-[var(--t-primary)]' : 'border-transparent text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
+                  }`}
+                >
+                  My Automations ({myAutomations.length})
+                </button>
+              </div>
+
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {automationTemplates.map(template => (
-                  <motion.div
-                    key={template.id}
-                    onClick={() => loadTemplate(template)}
-                    className="cursor-pointer p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all"
-                  >
-                    <h3 className="text-lg font-black uppercase text-[var(--t-text)]">{template.name}</h3>
-                    <p className="text-sm text-[var(--t-text-muted)]">{template.description}</p>
-                    <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Bot size={12} className="text-[var(--t-primary)]" />
-                        Contains AI Automation Steps
-                      </div>
-                  </motion.div>
-                ))}
+                {libraryTab === 'templates' ? (
+                  automationTemplates.map(template => (
+                    <motion.div
+                      key={template.id}
+                      onClick={() => loadTemplate(template)}
+                      className="cursor-pointer p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all group"
+                    >
+                      <h3 className="text-lg font-black uppercase text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors">{template.name}</h3>
+                      <p className="text-sm text-[var(--t-text-muted)]">{template.description}</p>
+                      <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest">
+                          <Bot size={12} className="text-[var(--t-primary)]" />
+                          Blueprint Template
+                        </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  myAutomations.length > 0 ? (
+                    myAutomations.map(automation => (
+                      <motion.div
+                        key={automation.id}
+                        className="p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all group relative overflow-hidden"
+                      >
+                        <div onClick={() => loadTemplate(automation, true)} className="cursor-pointer">
+                          <h3 className="text-lg font-black uppercase text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors">{automation.name}</h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className={`w-1.5 h-1.5 rounded-full ${automation.is_active ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-60 text-[var(--t-text)]">
+                              {automation.is_active ? 'Active Flow' : 'Drafted Flow'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 flex items-center justify-between">
+                          <span className="text-[8px] font-bold text-[var(--t-text-muted)] uppercase">Last Updated: {new Date(automation.updated_at).toLocaleDateString()}</span>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteWorkflow(automation.id, automation.name);
+                            }}
+                            className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="text-center py-20">
+                      <Zap size={40} className="mx-auto text-[var(--t-border)] mb-4" />
+                      <p className="text-[var(--t-text-muted)] font-bold text-sm tracking-tight">No saved automations found.</p>
+                      <button 
+                        onClick={() => setLibraryTab('templates')}
+                        className="mt-4 text-[10px] font-black uppercase text-[var(--t-primary)] tracking-widest hover:underline"
+                      >
+                        Explore Templates
+                      </button>
+                    </div>
+                  )
+                )}
               </div>
             </motion.div>
           </>

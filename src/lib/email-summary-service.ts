@@ -590,3 +590,31 @@ export async function sendTaskAlert(userId: string, taskId: string, type: 'remin
     }
   } catch (err) { console.error('Task alert error:', err); }
 }
+
+export async function checkTaskReminders(userId: string) {
+  try {
+    if (!supabase) return;
+    const { data: prefs } = await supabase.from('user_os_messages_preferences').select('task_reminders_enabled').eq('user_id', userId).single();
+    if (!prefs?.task_reminders_enabled) return;
+
+    const now = new Date();
+    const thirtyMinsFromNow = new Date(now.getTime() + 35 * 60000).toISOString(); // 35 min buffer
+    const twentyFiveMinsFromNow = new Date(now.getTime() + 25 * 60000).toISOString();
+
+    const { data: upcomingTasks } = await supabase
+      .from('tasks')
+      .select('*, leads(name)')
+      .eq('assigned_to', userId)
+      .eq('status', 'todo')
+      .gte('due_date', twentyFiveMinsFromNow)
+      .lte('due_date', thirtyMinsFromNow);
+
+    if (!upcomingTasks || upcomingTasks.length === 0) return;
+
+    for (const task of upcomingTasks) {
+      await sendTaskAlert(userId, task.id, 'reminder');
+    }
+  } catch (err) {
+    console.error('Check task reminders error:', err);
+  }
+}
