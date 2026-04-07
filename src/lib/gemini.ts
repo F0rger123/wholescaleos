@@ -395,10 +395,19 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
   // ── OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
+    const isLocalSelected = modelOverride === 'os-bot' || localStorage.getItem('user_ai_provider') === 'local';
     const localResponse = await processWithLocalAI(prompt);
-    // If user explicitly chose os-bot, we return the local response even if confidence is low, 
-    // unless it's a completely unknown intent AND they have an API key for fallback.
-    if (localResponse && (localResponse.intent !== 'unknown' || modelOverride === 'os-bot' || localStorage.getItem('user_ai_provider') === 'local')) {
+    
+    // If local is explicitly selected, we MUST return something from local processing
+    if (isLocalSelected) {
+      return localResponse || {
+        intent: 'unknown',
+        response: "I'm not quite sure how to handle that request offline. Should we try an online model?",
+        systemLog: '🤖 OS Bot'
+      };
+    }
+
+    if (localResponse && localResponse.intent !== 'unknown') {
       return {
         ...localResponse,
         systemLog: '🤖 OS Bot'

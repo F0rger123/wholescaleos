@@ -319,8 +319,13 @@ function AutomationsHubContent() {
 
     // Background auto-save the template to the database
     setIsSaving(true);
+    setIsLoading(true); // Trigger the loading overlay for a cleaner "drawing" feel
     try {
       await saveWorkflow(true, newNodes, newEdges, template.name);
+      toast.success(`Drawing Template: ${template.name}...`, {
+        icon: '🎨',
+        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-primary)' }
+      });
       toast.success(`Loaded & Saved Template: ${template.name}`, {
         icon: '🤖',
         style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-success)' }
@@ -330,6 +335,7 @@ function AutomationsHubContent() {
       toast.error('Failed to save template to database.');
     } finally {
       setIsSaving(false);
+      setIsLoading(false);
     }
   };
 

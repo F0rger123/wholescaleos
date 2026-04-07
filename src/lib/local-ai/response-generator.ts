@@ -15,6 +15,11 @@ export function generateResponse(intent: string, result: any): string {
   const store = useStore.getState();
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
 
+  // Specific "Greeting" response
+  if (intent === 'greeting') {
+    return result.message;
+  }
+
   // Specific "Help" response
   if (intent === 'help') {
     return `### 🤖 OS Bot Capabilities

@@ -752,7 +752,7 @@ export function AIBotWidget() {
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </button>
               <div className="flex flex-col">
-                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">{aiModel === 'os-bot' ? '🤖 OS Bot' : '✨ Gemini'}</h2>
+                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">🤖 OS Bot</h2>
                 {usage && (
                   <span className={`text-[9px] font-bold mt-0.5 ${
                     usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
@@ -915,9 +915,9 @@ export function AIBotWidget() {
                   <Bot className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} />
                 </div>
                 <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl rounded-tl-none px-3 py-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-[var(--t-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-[var(--t-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 bg-[var(--t-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+                  <div className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
                 </div>
               </div>
             )}
