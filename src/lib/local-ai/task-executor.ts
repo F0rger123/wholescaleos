@@ -179,6 +179,23 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { success: true, message: msg };
     }
 
+    case 'calendar_query': {
+      const today = new Date().toISOString().split('T')[0];
+      const tasks = store.tasks.filter(t => t.dueDate === today && t.status !== 'done');
+      
+      if (tasks.length === 0) {
+        return { success: true, message: `Your calendar is clear for today, ${userName}! 📅 No appointments or urgent tasks found. Want me to help you find some new leads?` };
+      }
+      
+      let msg = `Here's what's on your agenda for today, ${userName}:\n\n`;
+      tasks.forEach((t, i) => {
+        msg += `${i + 1}. **${t.title}** ${t.priority === 'high' ? '⚠️' : ''}\n`;
+      });
+      msg += `\nYou have ${tasks.length} total items to handle today. What would you like to tackle first?`;
+      
+      return { success: true, message: msg };
+    }
+
     case 'set_preference':
       setLearnedFact(entities.key || 'generic', entities.value || 'true');
       return { success: true, message: `✅ Got it. I'll remember that ${entities.key} is ${entities.value}.` };

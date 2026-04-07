@@ -66,13 +66,35 @@ export function recognizeIntent(input: string): ParsedIntent | null {
 
   // 2. PRIORITY REGEX HANDLERS (v6.0 - Conversational + CRM Categories)
   const handlers = [
+    // --- CONVERSATIONAL & LEARNING (Priority) ---
+    {
+      intent: 'small_talk',
+      patterns: [
+        /^(?:thanks|thank you|thx|thanks lot|great job|well done|nice|cool|awesome|sweet)$/i,
+        /^(?:how are you|how it going|hows it going|how you doing|sup|whats up|how are things)$/i,
+        /^(?:bye|goodbye|see you|later|im done|exit|close)$/i,
+        /^(?:test|testing|test message|ping)$/i,
+        /^(?:tell me a joke|joke)$/i
+      ],
+      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
+    },
+    {
+      intent: 'greeting',
+      patterns: [
+        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up)$/i,
+        /^(?:how's it going|how are you|good morning|good afternoon|good evening)$/i,
+        /\b(?:hi|hello|yo|hey)\b/i
+      ],
+      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
+    },
+
     // --- CRM_ACTIONS ---
     {
       intent: 'send_sms',
       patterns: [
         /^(?:text|textt|txt|send text to|send sms to|message|send a message to|shoot a text to|tell)\s+([a-zA-Z\s]+)\s+(?:saying|that says|message|with the message|telling them|that)\s+(.*)$/i,
         /^(?:text|textt|txt|message|tell)\s+([a-zA-Z0-9\s]+)\s*[:|,]\s*(.*)$/i,
-        /^(?:text|textt|txt)\s+([a-z0-9\s]+)\s+(.*)$/i
+        /^(?:text|textt|txt)\s+([a-z0-9\s]{2,})\s+(.*)$/i
       ],
       params: (matches: string[]) => ({ target: matches[1].trim(), message: matches[2].trim() })
     },
@@ -158,26 +180,6 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       ],
       params: (matches: string[]) => ({ key: matches[1]?.trim(), value: matches[2]?.trim() || matches[1]?.trim() })
     },
-    {
-      intent: 'small_talk',
-      patterns: [
-        /^(?:thanks|thank you|thx|thanks lot|great job|well done|nice|cool|awesome|sweet)$/i,
-        /^(?:how are you|how it going|hows it going|how you doing|sup|whats up|how are things)$/i,
-        /^(?:bye|goodbye|see you|later|im done|exit|close)$/i,
-        /^(?:test|testing|test message|ping)$/i,
-        /^(?:tell me a joke|joke)$/i
-      ],
-      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
-    },
-    {
-      intent: 'greeting',
-      patterns: [
-        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up)$/i,
-        /^(?:how's it going|how are you|good morning|good afternoon|good evening)$/i,
-        /\b(?:hi|hello|yo|hey)\b/i
-      ],
-      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
-    },
 
     // --- SYSTEM_ACTIONS ---
     {
@@ -224,6 +226,16 @@ export function recognizeIntent(input: string): ParsedIntent | null {
         /^(?:help\??|commands|show examples|give me examples|help me)$/i
       ],
       params: () => ({})
+    },
+    {
+      intent: 'calendar_query',
+      patterns: [
+        /^(?:what's on my|show my|view|check|get|what is my|tell me my)\s*(?:today's\s+|current\s+)?(?:agenda|calendar|schedule)$/i,
+        /^(?:agenda|schedule|calendar)$/i,
+        /^(?:what am i doing today|what's happening today|anything on my schedule|whats on my agenda)$/i,
+        /^(?:show|view)\s+calendar$/i
+      ],
+      params: () => ({})
     }
   ];
 
@@ -255,7 +267,7 @@ export function recognizeIntent(input: string): ParsedIntent | null {
   const seedPhrases: Record<string, string[]> = {
     small_talk: ['thanks', 'how are you', 'thank you', 'hows it going', 'bye', 'good job', 'well done', 'nice', 'cool'],
     set_preference: ['remember', 'save preference', 'record fact', 'i prefer', 'i like'],
-    send_sms: ['text', 'sms', 'message John', 'tell John', 'ping'],
+    send_sms: ['text', 'sms', 'message John', 'tell John'],
     update_lead_status: ['set status', 'change status', 'mark as hot'],
     add_note: ['add note', 'record note', 'write note'],
     create_lead: ['new lead', 'add lead', 'create lead', 'onboard'],

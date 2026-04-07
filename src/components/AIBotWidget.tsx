@@ -322,8 +322,9 @@ export function AIBotWidget() {
       return;
     }
 
-    let currentText = '';
+    setDisplayedText(''); 
     const fullText = message.content;
+    let currentText = '';
     let index = 0;
 
     const timer = setInterval(() => {
@@ -334,9 +335,8 @@ export function AIBotWidget() {
       } else {
         clearInterval(timer);
         setTypingMessageId(null);
-        setDisplayedText('');
       }
-    }, 15); // Faster typing speed
+    }, 15); // Faster typing speed (15ms)
 
     return () => clearInterval(timer);
   }, [typingMessageId, messages]);
@@ -895,85 +895,88 @@ export function AIBotWidget() {
 
             {messages.map((msg) => (
               <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" 
-                  style={{ background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-secondary)' }}>
-                  {msg.role === 'user' ? <User className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} /> : <Bot className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} />}
+                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                  style={{ background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-surface-subtle)' }}>
+                  {msg.role === 'user' ? <User className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} /> : <Bot className="w-3 h-3" style={{ color: 'var(--t-primary)' }} />}
                 </div>
                 <div className={`max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                  <div className={`px-3 py-2 rounded-xl text-xs leading-relaxed ${
-                    msg.role === 'user' ? 'rounded-tr-none' : 'border rounded-tl-none'
-                  }`} style={{ 
-                    background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-surface)',
-                    borderColor: msg.role === 'user' ? 'transparent' : 'var(--t-border)',
-                    color: msg.role === 'user' ? 'var(--t-on-primary)' : 'var(--t-text)'
-                  }}>
-                    <div className="flex flex-col gap-1.5 min-w-[120px]">
+                  <div className={`px-4 py-3 rounded-[1.5rem] text-xs leading-relaxed shadow-lg ${
+                    msg.role === 'user' ? 'rounded-tr-none bg-[var(--t-primary)] text-[var(--t-on-primary)]' : 'border rounded-tl-none bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)]'
+                  }`}>
+                    <div className="flex flex-col gap-2 min-w-[140px]">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[9px] font-black px-2 py-0.5 rounded-full shadow-sm bg-[var(--t-primary)] text-[var(--t-on-primary)]">
-                          {msg.role === 'ai' ? (msg.systemLog?.includes('OS Bot') ? '🤖 OS Bot' : '🤖 OS Bot') : 'You'}
+                        <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-[var(--t-primary)] text-[var(--t-on-primary)] uppercase tracking-tighter">
+                          {msg.role === 'ai' ? '🤖 OS Bot' : 'You'}
                         </span>
                         {msg.systemLog && (
-                          <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest">
+                          <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest truncate max-w-[100px]">
                             {msg.systemLog.replace('🤖 OS Bot', '').replace('✨ Gemini', '').trim()}
                           </span>
                         )}
                       </div>
                       <div className="whitespace-pre-wrap">
-                        {typingMessageId === msg.id ? (
-                          <>
-                             {displayedText}
-                             <span className="inline-block w-2 h-5 bg-[var(--t-primary)] ml-1 animate-pulse align-middle" />
-                          </>
+                        {msg.id === typingMessageId ? (
+                          <div className="flex flex-col gap-3">
+                            <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">{displayedText}</div>
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--t-primary)]/10 rounded-full w-fit border border-[var(--t-primary)]/20 shadow-sm">
+                              <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-duration:0.8s]" />
+                              <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.2s] [animation-duration:0.8s]" />
+                              <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.4s] [animation-duration:0.8s]" />
+                            </div>
+                          </div>
                         ) : msg.content}
                       </div>
-                    </div>
-                    
-                    {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (
-                      <div className="mt-2 flex gap-2">
-                        <button
-                          onClick={() => {
-                            const matched = (msg.data as DisambiguationData).originalIntent;
-                            handleExecuteAction(matched.intent.action, matched.params);
-                            // Mark as resolved
-                            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, intent: 'resolved' } : m));
-                          }}
-                          className="px-2 py-1 rounded text-[10px] font-bold"
-                          style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
-                        >
-                          Yes, do it
-                        </button>
-                        <button
-                          onClick={() => {
-                            setMessages(prev => [...prev, {
-                              id: Date.now().toString(),
-                              role: 'ai',
-                              content: "No problem! How can I help then?",
-                              timestamp: new Date().toISOString()
-                            }]);
-                            setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, intent: 'resolved' } : m));
-                          }}
-                          className="px-2 py-1 bg-[var(--t-surface-hover)] text-[var(--t-text)] border border-[var(--t-border)] rounded text-[10px]"
-                        >
-                          No
-                        </button>
-                      </div>
-                    )}
-                  </div>
 
+                      {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (
+                        <div className="mt-4 flex gap-2">
+                          <button
+                            onClick={() => {
+                              const matched = (msg.data as DisambiguationData).originalIntent;
+                              handleExecuteAction(matched.intent.action, matched.params);
+                              setMessages(prev => prev.map(msgItem => msgItem.id === msg.id ? { ...msgItem, intent: 'resolved' } : msgItem));
+                            }}
+                            className="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--t-primary)] text-white hover:scale-105 transition-all shadow-md shadow-[var(--t-primary-dim)]"
+                          >
+                            Proceed
+                          </button>
+                          <button
+                            onClick={() => {
+                              setMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'ai',
+                                content: "No problem! How can I help then?",
+                                timestamp: new Date().toISOString()
+                              }]);
+                              setMessages(prev => prev.map(msgItem => msgItem.id === msg.id ? { ...msgItem, intent: 'resolved' } : msgItem));
+                            }}
+                            className="px-4 py-1.5 bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] border border-[var(--t-border)] rounded-xl text-[10px] font-bold"
+                          >
+                            No
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
+
             {loading && (
-              <div className="flex gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: 'var(--t-secondary)' }}
-                >
-                  <Bot className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} />
+              <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-400">
+                <div className="w-6 h-6 rounded-full bg-[var(--t-surface-subtle)] border border-[var(--t-border)] flex items-center justify-center shrink-0">
+                  <Bot className="w-3 h-3 text-[var(--t-primary)]" />
                 </div>
-                <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl rounded-tl-none px-3 py-2 flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
-                  <div className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-pulse" style={{ animationDelay: '400ms' }} />
+                <div className="px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[1.5rem] rounded-tl-none shadow-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-[var(--t-border)] text-[var(--t-text-muted)] uppercase tracking-tighter animate-pulse">
+                      Thinking...
+                    </span>
+                  </div>
+                  <div className="flex gap-1.5 p-1">
+                    <span className="w-2 h-2 bg-[var(--t-primary)] rounded-full animate-bounce [animation-duration:0.6s]" />
+                    <span className="w-2 h-2 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.2s] [animation-duration:0.6s]" />
+                    <span className="w-2 h-2 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.4s] [animation-duration:0.6s]" />
+                  </div>
                 </div>
               </div>
             )}

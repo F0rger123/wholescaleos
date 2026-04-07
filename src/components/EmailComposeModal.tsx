@@ -713,67 +713,39 @@ export default function EmailComposeModal({
                     </div>
                   </div>
 
-                  {/* Main: Real-time Preview */}
-                  <div className="flex-1 p-6 flex flex-col bg-[var(--t-surface-dim)]/30 overflow-hidden">
+                  {/* Preview Pane */}
+                  <div className="flex-1 bg-[var(--t-bg)] overflow-y-auto p-10 relative group custom-scrollbar">
                     {editingTemplate ? (
-                      <div className="flex flex-col h-full space-y-4 overflow-hidden">
-                        <div className="flex items-center justify-between shrink-0">
-                           <div>
-                             <h4 className="text-sm font-bold text-[var(--t-text)]">{editingTemplate.name}</h4>
-                             <p className="text-[10px] text-[var(--t-text-muted)] font-bold uppercase tracking-widest flex items-center gap-1">
-                               <Sparkles size={10} className="text-[var(--t-primary)]" /> Personalized Preview
-                             </p>
-                           </div>
-                           <div className="flex gap-2">
-                              <div className="flex bg-black/10 rounded-lg p-0.5 border border-[var(--t-border)]">
-                                <button 
-                                  onClick={() => setPreviewDevice('desktop')}
-                                  className={`px-3 py-1 rounded-md text-[9px] font-bold transition-all ${previewDevice === 'desktop' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
-                                >
-                                  DESKTOP
-                                </button>
-                                <button 
-                                  onClick={() => setPreviewDevice('mobile')}
-                                  className={`px-3 py-1 rounded-md text-[9px] font-bold transition-all ${previewDevice === 'mobile' ? 'bg-[var(--t-primary)] text-white shadow-sm' : 'text-[var(--t-text-muted)] hover:bg-black/5'}`}
-                                >
-                                  MOBILE
-                                </button>
-                              </div>
-                              <button 
-                                onClick={() => handleApplyTemplate(editingTemplate as any)}
-                                className="px-5 py-2 bg-[var(--t-primary)] text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:scale-105 active:scale-95 transition-all shadow-lg shadow-[var(--t-primary-dim)]/30"
-                              >
-                                Use Template
-                              </button>
-                           </div>
+                    <div className="max-w-2xl mx-auto space-y-6">
+                      <div className="flex items-center justify-between border-b border-[var(--t-border)] pb-4 mb-4">
+                        <div>
+                          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)] mb-1">Live Preview</h3>
+                          <p className="text-lg font-black text-[var(--t-text)]">{editingTemplate?.name || 'Untitled Template'}</p>
                         </div>
-
-                        <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-2">
-                          <div 
-                            className={`w-full border border-[var(--t-border)] rounded-2xl bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-500 mx-auto ${previewDevice === 'mobile' ? 'max-w-[320px]' : 'w-full'} flex-1`}
-                          >
-                             <div className="p-2.5 bg-zinc-50 border-b border-zinc-200 flex items-center gap-2 shrink-0">
-                               <div className="flex gap-1">
-                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
-                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
-                                 <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
-                               </div>
-                               <div className="flex-1 bg-white border border-zinc-200 rounded px-2 py-0.5 text-[9px] text-zinc-400 select-none truncate">
-                                 {getInterpolatedHtml(editingTemplate.subject || '')}
-                               </div>
-                             </div>
-                             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar preview-frame bg-white">
-                               <div 
-                                 className="prose prose-sm max-w-none text-black selection:bg-indigo-100"
-                                 dangerouslySetInnerHTML={{ __html: getInterpolatedHtml((editingTemplate as any).html || (editingTemplate as any).body || '') }}
-                               />
-                             </div>
-                          </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingTemplate(null)} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl text-[var(--t-text-muted)] transition-all">
+                            <X size={20} />
+                          </button>
                         </div>
-                        <p className="text-[9px] text-center text-[var(--t-text-muted)] font-bold uppercase tracking-widest opacity-40 shrink-0">
-                          * Personalized variables will be resolved upon application.
-                        </p>
                       </div>
+
+                      <div 
+                        className="bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[400px] border border-[var(--t-border)] transition-all duration-500 group-hover:scale-[1.01]"
+                      >
+                        <div className="p-8 email-content" dangerouslySetInnerHTML={{ __html: editingTemplate?.html || '<div class="flex items-center justify-center h-48 text-gray-400">Select a template to preview</div>' }} />
+                      </div>
+                      
+                      <div className="flex items-center justify-center pt-8">
+                        <button
+                          onClick={() => handleApplyTemplate(editingTemplate!)}
+                          disabled={!editingTemplate}
+                          className="px-10 py-4 bg-[var(--t-primary)] text-[var(--t-on-primary)] rounded-[2rem] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-[var(--t-primary-dim)] flex items-center gap-3 disabled:opacity-50"
+                        >
+                          <Zap size={20} />
+                          Use This Blueprint
+                        </button>
+                      </div>
+                    </div>
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
                         <div className="w-16 h-16 rounded-3xl bg-[var(--t-primary-dim)]/10 flex items-center justify-center text-[var(--t-primary)] opacity-40">

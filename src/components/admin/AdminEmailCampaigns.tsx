@@ -489,15 +489,23 @@ const AdminEmailCampaigns = () => {
       )}
 
       {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className="w-full max-w-[800px] max-h-[80vh] bg-[var(--t-surface)]/90 border border-[var(--t-border)] rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-500 flex flex-col">
-            <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-black/20">
-              <h2 className="text-xl font-black uppercase tracking-wider text-[var(--t-text)]">
-                {editingTemplate?.id ? 'Edit Template' : 'New Template'}
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-3xl animate-in fade-in duration-500">
+          <div className="w-full max-w-[800px] max-h-[85vh] bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.6)] animate-in zoom-in-95 duration-700 flex flex-col">
+            <div className="p-8 border-b border-[var(--t-border)] flex items-center justify-between bg-black/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)]">
+                   <Layout size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-widest text-[var(--t-text)]">
+                    {editingTemplate?.id ? 'Edit Template' : 'New Template'}
+                  </h2>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--t-text-muted)]">Design your broadcast masterpiece</p>
+                </div>
+              </div>
               <button 
                 onClick={() => setShowTemplateModal(false)}
-                className="p-2 hover:bg-black/20 rounded-full transition-colors text-[var(--t-text-muted)] hover:text-[var(--t-text)]"
+                className="p-3 hover:bg-black/20 rounded-2xl transition-all text-[var(--t-text-muted)] hover:text-[var(--t-text)] hover:rotate-90"
               >
                 <X size={24} />
               </button>
