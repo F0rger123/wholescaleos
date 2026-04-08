@@ -11,10 +11,10 @@ import MapView from './pages/MapView';
 import Team from './pages/Team';
 import Tasks from './pages/Tasks';
 import Chat from './pages/Chat';
-import Imports from './pages/Imports';
+import Import from './pages/Import';
 import Contracts from './pages/Contracts';
 import Analytics from './pages/Analytics';
-import Calculators from './pages/Calculators';
+import Calculator from './pages/Calculator';
 import SettingsPage from './pages/SettingsPage';
 import Login from './pages/Login';
 import EmailConfirmed from './pages/EmailConfirmed';
@@ -343,10 +343,10 @@ export function App() {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/team-chat" element={<Chat />} />
-            <Route path="/import" element={<Imports />} />
+            <Route path="/import" element={<Import />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
-            <Route path="/calculator" element={<Calculators />} />
+            <Route path="/calculator" element={<Calculator />} />
             <Route path="/automations" element={<AutomationsHub />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/ai" element={<AISettings />} />
