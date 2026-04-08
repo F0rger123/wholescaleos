@@ -64,6 +64,7 @@ export function Layout() {
   }, [currentUser]);
 
   const navSections = useMemo(() => {
+    // CRM Navigation Sections - Restoring missing items: Import, Calculator, Contracts
     const sections: Record<string, { to: string; label: string; icon: any }[]> = {
       MAIN: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
