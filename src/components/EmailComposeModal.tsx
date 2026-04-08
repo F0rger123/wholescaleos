@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Bot, Sparkles, ImageIcon, Upload, Link as LinkIcon, Layout, Trash2 } from 'lucide-react';
+import { X, Paperclip, Plus, Mail, User, CheckCircle2, Eye, ExternalLink, BookOpen, Loader2, Bot, Sparkles, ImageIcon, Upload, Link as LinkIcon, Layout, Trash2, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Lead, useStore } from '../store/useStore';
 import { sendEmail, getThread } from '../lib/email';
@@ -78,8 +78,16 @@ export default function EmailComposeModal({
         .select('*')
         .eq('user_id', currentUser.id);
       
+      interface UserTemplateRow {
+        id: string;
+        name: string;
+        subject: string;
+        body?: string;
+        html_content?: string;
+      }
+
       if (data && !error) {
-        setUserTemplates(data.map(t => ({
+        setUserTemplates((data as UserTemplateRow[]).map(t => ({
           id: t.id,
           name: t.name,
           subject: t.subject,
