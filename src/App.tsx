@@ -343,10 +343,10 @@ export function App() {
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/team-chat" element={<Chat />} />
-            <Route path="/imports" element={<Imports />} />
+            <Route path="/import" element={<Imports />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/leads/:id/share-edit" element={<LeadShareEditor />} />
-            <Route path="/calculators" element={<Calculators />} />
+            <Route path="/calculator" element={<Calculators />} />
             <Route path="/automations" element={<AutomationsHub />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/settings/ai" element={<AISettings />} />

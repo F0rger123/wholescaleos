@@ -16,7 +16,7 @@ import {
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
-  Loader2, CheckCircle2, Save
+  Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
@@ -68,8 +68,10 @@ export function Layout() {
       MAIN: [
         { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { to: '/leads', label: 'Leads', icon: Users },
-        { to: '/tasks', label: 'Tasks', icon: CheckCircle },
         { to: '/map', label: 'Map', icon: Map },
+        { to: '/tasks', label: 'Tasks', icon: CheckCircle },
+        { to: '/calculator', label: 'Calculator', icon: Calculator },
+        { to: '/import', label: 'Import', icon: Upload },
       ],
       AI: [
         { to: '/ai-test', label: aiName || 'OS Bot', icon: Bot },
@@ -79,10 +81,11 @@ export function Layout() {
         { to: '/email', label: 'Email', icon: Mail },
         { to: '/sms', label: 'Text (SMS)', icon: Smartphone },
         { to: '/calendar', label: 'Calendar', icon: Calendar },
+        { to: '/contracts', label: 'Contracts', icon: FileSignature },
+        { to: '/team-chat', label: 'Team Chat', icon: MessageSquare },
       ],
       TEAM: [
         { to: '/team', label: 'Team Dashboard', icon: UserCog },
-        { to: '/team-chat', label: 'Team Chat', icon: MessageSquare },
         { to: '/settings', label: 'Settings', icon: Settings },
       ],
     };
