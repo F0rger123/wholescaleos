@@ -21,7 +21,9 @@ export type AutomationEventType =
   | 'CONTRACT_SIGNED'
   | 'SCHEDULED_MONTHLY'
   | 'UNSUBSCRIBED'
-  | 'FACEBOOK_LEAD';
+  | 'FACEBOOK_LEAD'
+  | 'CLIENT_BIRTHDAY'
+  | 'REFERRAL_REQUESTED';
 
 class AutomationEngine {
   private static instance: AutomationEngine;
@@ -65,6 +67,9 @@ class AutomationEngine {
         const triggerNode = nodes.find(n => n.data?.type === 'trigger' && this.matchesTrigger(n, eventType, data));
         
         if (triggerNode) {
+          // Update stats (Async, don't block execution)
+          this.recordExecution(workflow.id, true).catch(console.error);
+
           // Set running state
           useStore.getState().setIsAutomationRunning(true);
           
@@ -90,6 +95,40 @@ class AutomationEngine {
     } catch (err) {
       console.error('[AutomationEngine] Error processing triggers:', err);
       useStore.getState().setIsAutomationRunning(false);
+    }
+  }
+
+  /**
+   * Records execution stats back to Supabase
+   */
+  private async recordExecution(workflowId: string, success: boolean) {
+    try {
+      if (!supabase) return;
+
+      const { data: current } = await supabase
+        .from('user_automations')
+        .select('run_count, success_count')
+        .eq('id', workflowId)
+        .single();
+
+      if (current) {
+        const run_count = (current.run_count || 0) + 1;
+        const success_count = (current.success_count || 0) + (success ? 1 : 0);
+        const success_rate = Math.round((success_count / run_count) * 100);
+
+        await supabase
+          .from('user_automations')
+          .update({
+            run_count,
+            success_count,
+            success_rate,
+            last_triggered_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', workflowId);
+      }
+    } catch (err) {
+      console.error('[AutomationEngine] Failed to record execution:', err);
     }
   }
 
@@ -192,12 +231,22 @@ class AutomationEngine {
         return config.triggerType === 'new_event';
       case 'DOCUMENT_SIGNED': 
         return config.triggerType === 'doc_signed';
+      case 'OFFER_SUBMITTED':
+        return config.triggerType === 'offer_submitted';
+      case 'OFFER_ACCEPTED':
+        return config.triggerType === 'offer_accepted';
+      case 'CONTRACT_SIGNED':
+        return config.triggerType === 'contract_signed';
       case 'SCHEDULED_MONTHLY': 
         return config.triggerType === 'monthly_run';
       case 'UNSUBSCRIBED': 
         return config.triggerType === 'unsubscribed';
       case 'FACEBOOK_LEAD': 
         return config.triggerType === 'facebook_lead';
+      case 'CLIENT_BIRTHDAY':
+        return config.triggerType === 'birthday';
+      case 'REFERRAL_REQUESTED':
+        return config.triggerType === 'referral_request';
       default: return false;
     }
   }
@@ -288,7 +337,14 @@ class AutomationEngine {
               due_date: new Date(Date.now() + 86400000).toISOString()
             });
           }
+        case 'delay': {
+          const seconds = Number(config.duration || config.delaySeconds || 0);
+          console.log(`[AutomationEngine] Delaying for ${seconds} seconds...`);
+          if (seconds > 0) {
+            await new Promise(resolve => setTimeout(resolve, seconds * 1000));
+          }
           break;
+        }
       }
     } catch (err) {
       console.error(`[AutomationEngine] Action failed for node ${node.id}:`, err);

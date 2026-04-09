@@ -119,6 +119,24 @@ export function Layout() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  // Sidebar Collapsible Groups State
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('sidebar_expanded_sections');
+    try {
+      return saved ? JSON.parse(saved) : { MAIN: true, AI: true, COMMUNICATIONS: true, TEAM: true, ADMIN: true };
+    } catch {
+      return { MAIN: true, AI: true, COMMUNICATIONS: true, TEAM: true, ADMIN: true };
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sidebar_expanded_sections', JSON.stringify(expandedSections));
+  }, [expandedSections]);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
   // Quick Notes drag state
   const [notesPos, setNotesPos] = useState(() => {
     const saved = localStorage.getItem('quick_notes_position');
@@ -465,40 +483,54 @@ export function Layout() {
           </div>
 
           <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-8 select-none custom-scrollbar relative z-10">
-            {Object.entries(navSections).map(([section, items]) => (
-              <div key={section} className="space-y-4">
-                <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
-                  <p className="text-[10px] font-black uppercase tracking-[0.25em] italic" style={{ color: 'var(--t-text-muted)' }}>{section}</p>
+            {Object.entries(navSections).map(([section, items]) => {
+              const isExpanded = expandedSections[section] ?? true;
+              return (
+                <div key={section} className="space-y-4">
+                  <div 
+                    onClick={() => sidebarOpen && toggleSection(section)}
+                    className={`flex items-center justify-between cursor-pointer group/header transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}
+                  >
+                    <p className="text-[10px] font-black uppercase tracking-[0.25em] italic text-[var(--t-text-muted)] group-hover/header:text-[var(--t-primary)] transition-colors">
+                      {section}
+                    </p>
+                    {sidebarOpen && (
+                      <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}>
+                        <ChevronDown size={12} className="text-[var(--t-text-muted)]" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className={`flex flex-col gap-1 overflow-hidden transition-all duration-300 ease-in-out ${isExpanded || !sidebarOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
+                    {items.map(({ to, label, icon: Icon }) => {
+                      const badge = (label === 'Tasks') ? pendingTaskCount : label === 'Team Dashboard' ? onlineCount : label === 'Team Chat' ? totalUnread : 0;
+                      return (
+                        <NavLink
+                          key={to}
+                          to={to}
+                          end={to === '/'}
+                          className={({ isActive }) => `flex items-center gap-3 px-3 py-3 text-[13px] font-bold transition-all duration-300 group relative ${isActive ? 'active-nav-item' : 'inactive-nav-item hover:translate-x-1.5'}`}
+                          style={({ isActive }) => ({
+                            borderRadius: '1rem',
+                            background: isActive ? 'var(--t-primary-dim)' : 'transparent',
+                            color: isActive ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                            border: isActive ? '1px solid var(--t-primary-dim)' : '1px solid transparent',
+                            boxShadow: isActive ? '0 10px 20px -10px var(--t-primary-dim)' : 'none',
+                          })}
+                        >
+                          <Icon size={18} className={`shrink-0 transition-all duration-300 ${sidebarOpen ? 'group-hover:scale-110' : 'mx-auto group-hover:scale-125'}`} />
+                          <span className={`flex-1 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>{label}</span>
+                          <div className={`absolute left-0 w-1 h-5 bg-[var(--t-primary)] rounded-r-full transition-all duration-300 ${location.pathname === to ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`} />
+                          {badge > 0 && sidebarOpen && (
+                            <span className="text-[9px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center" style={{ background: label === 'Tasks' ? 'var(--t-warning)' : label === 'Team Chat' ? 'var(--t-primary)' : 'var(--t-success)', color: 'var(--t-on-primary)' }}>{badge}</span>
+                          )}
+                        </NavLink>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  {items.map(({ to, label, icon: Icon }) => {
-                    const badge = (label === 'Tasks' || label === 'Tasks') ? pendingTaskCount : label === 'Team Dashboard' ? onlineCount : label === 'Team Chat' ? totalUnread : 0;
-                    return (
-                      <NavLink
-                        key={to}
-                        to={to}
-                        end={to === '/'}
-                        className={({ isActive }) => `flex items-center gap-3 px-3 py-3 text-[13px] font-bold transition-all duration-300 group relative ${isActive ? 'active-nav-item' : 'inactive-nav-item hover:translate-x-1.5'}`}
-                        style={({ isActive }) => ({
-                          borderRadius: '1rem',
-                          background: isActive ? 'var(--t-primary-dim)' : 'transparent',
-                          color: isActive ? 'var(--t-primary)' : 'var(--t-text-secondary)',
-                          border: isActive ? '1px solid var(--t-primary-dim)' : '1px solid transparent',
-                          boxShadow: isActive ? '0 10px 20px -10px var(--t-primary-dim)' : 'none',
-                        })}
-                      >
-                        <Icon size={18} className={`shrink-0 transition-all duration-300 ${sidebarOpen ? 'group-hover:scale-110' : 'mx-auto group-hover:scale-125'}`} />
-                        <span className={`flex-1 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>{label}</span>
-                        <div className={`absolute left-0 w-1 h-5 bg-[var(--t-primary)] rounded-r-full transition-all duration-300 ${location.pathname === to ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`} />
-                        {badge > 0 && sidebarOpen && (
-                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center" style={{ background: label === 'Tasks' ? 'var(--t-warning)' : label === 'Team Chat' ? 'var(--t-primary)' : 'var(--t-success)', color: 'var(--t-on-primary)' }}>{badge}</span>
-                        )}
-                      </NavLink>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
         </div>
       </aside>

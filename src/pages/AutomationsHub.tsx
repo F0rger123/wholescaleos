@@ -20,10 +20,10 @@ import {
 import '@xyflow/react/dist/style.css';
 import { 
   Save, 
-  Settings,
   Webhook, X, Bot,
-  Zap, Mail, Clock, Calendar, Target, CheckCircle2, AlertCircle, Loader2,
-  Layout, Snowflake, Flame
+  Zap, Mail, Target, Loader2,
+  Layout, Snowflake, Flame, Trash2, Edit3, Library, Plus,
+  Activity, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AutomationNode } from '../components/AutomationNode';
@@ -46,6 +46,7 @@ interface AutomationNodeData extends Record<string, unknown> {
   threshold?: number;
   message?: string;
   subject?: string;
+  duration?: number;
 }
 
 const initialNodes: Node[] = [
@@ -64,75 +65,37 @@ const initialNodes: Node[] = [
 const initialEdges: Edge[] = [];
 
 function AutomationsHubContent() {
+  // State for Canvas
   const [nodes, setNodes] = useState<Node[]>(initialNodes);
   const [edges, setEdges] = useState<Edge[]>(initialEdges);
-  const [isCreating, setIsCreating] = useState(false);
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [workflowId, setWorkflowId] = useState<string | null>(null);
   const [workflowName, setWorkflowName] = useState('My New Automation');
-  const [createName, setCreateName] = useState('');
-  const [createDesc, setCreateDesc] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [isActive, setIsActive] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGlobalSettingsOpen, setIsGlobalSettingsOpen] = useState(false);
-  const [prefs, setPrefs] = useState<any>(null);
+
+  // State for Layout
+  const [viewMode, setViewMode] = useState<'editor' | 'dashboard'>('dashboard');
   const [myAutomations, setMyAutomations] = useState<any[]>([]);
-  const [libraryTab, setLibraryTab] = useState<'templates' | 'my'>('templates');
+  const [, setPrefs] = useState<any>(null);
 
   const { isAutomationRunning } = useStore();
   const { fitView } = useReactFlow();
 
-  // Load existing workflow on mount
+  // Load Initial Data
   useEffect(() => {
-    async function loadWorkflow() {
-      if (!isSupabaseConfigured || !supabase) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setIsLoading(false);
-          return;
-        }
-
-        const { data, error } = await supabase
-          .from('user_automations')
-          .select('*')
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Error loading workflow:', error);
-          toast.error('Failed to load workflow.');
-        } else if (data) {
-          setWorkflowId(data.id);
-          setWorkflowName(data.name || 'My New Automation');
-          setNodes(data.nodes as Node[]);
-          setEdges(data.edges as Edge[]);
-          setIsActive(data.is_active ?? true);
-          
-          // Delayed fitView to allow React Flow to initialize nodes
-          setTimeout(() => {
-            fitView({ duration: 800, padding: 0.2 });
-          }, 200);
-        }
-      } catch (err) {
-        console.error('Load Error:', err);
-      } finally {
-        setIsLoading(false);
-      }
+    async function init() {
+      setIsLoading(true);
+      await Promise.all([
+        fetchMyAutomations(),
+        fetchPreferences()
+      ]);
+      setIsLoading(false);
     }
-
-    loadWorkflow();
-    fetchPreferences();
-    fetchMyAutomations();
-  }, [fitView]);
+    init();
+  }, []);
 
   const fetchMyAutomations = async () => {
     if (!isSupabaseConfigured || !supabase) return;
@@ -166,124 +129,27 @@ function AutomationsHubContent() {
         .maybeSingle();
       
       if (error) throw error;
-      if (data) {
-        setPrefs(data);
-      } else {
-        const defaultPrefs = {
-          user_id: user.id,
-          daily_summary_enabled: true,
-          weekly_summary_enabled: true,
-          monthly_performance_report_enabled: true,
-          deal_closed_alerts_enabled: true,
-          offer_made_alert_enabled: true,
-          offer_accepted_alert_enabled: true,
-          contract_signed_alert_enabled: true,
-          calendar_digest_enabled: true,
-          task_reminders_enabled: true,
-          task_overdue_alert_enabled: true,
-          new_lead_alerts_enabled: true,
-          lead_inactivity_alert_enabled: true,
-          lead_score_high_alert_enabled: true,
-          email_open_notification_enabled: true,
-          sms_received_alert_enabled: true,
-          goal_milestone_alert_enabled: true,
-          team_activity_summary_enabled: true,
-          birthday_greeting_enabled: true
-        };
-        setPrefs(defaultPrefs);
-        await supabase.from('user_os_messages_preferences').insert(defaultPrefs);
-      }
+      if (data) setPrefs(data);
     } catch (err) {
       console.error('Fetch preferences error:', err);
     }
   };
 
-  const updatePreference = async (key: string) => {
-    if (!isSupabaseConfigured || !supabase || !prefs) return;
+  const toggleAutomationActive = async (id: string, currentStatus: boolean) => {
+    if (!isSupabaseConfigured || !supabase) return;
     try {
-      const newValue = !prefs[key];
-      const newPrefs = { ...prefs, [key]: newValue };
-      setPrefs(newPrefs);
-      
       const { error } = await supabase
-        .from('user_os_messages_preferences')
-        .upsert(newPrefs);
-        
+        .from('user_automations')
+        .update({ is_active: !currentStatus, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
       if (error) throw error;
-      toast.success(`${key.replace(/_/g, ' ')} updated`, {
+      setMyAutomations(prev => prev.map(a => a.id === id ? { ...a, is_active: !currentStatus } : a));
+      toast.success(currentStatus ? 'Automation Paused' : 'Automation Resumed', {
         style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
       });
     } catch (err) {
-      console.error('Update preferences error:', err);
-      toast.error('Failed to update preference');
-    }
-  };
-
-  const saveWorkflow = async (forcedIsActive?: boolean, overrideNodes?: Node[], overrideEdges?: Edge[], overrideName?: string) => {
-    if (!isSupabaseConfigured || !supabase) {
-      toast.error('Supabase is not configured.');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error('You must be logged in to save workflows.');
-        return;
-      }
-
-      const activeStatus = forcedIsActive !== undefined ? forcedIsActive : isActive;
-      const finalNodes = overrideNodes || nodes;
-      const finalEdges = overrideEdges || edges;
-      const finalName = overrideName || workflowName;
-
-      const workflowData = {
-        user_id: user.id,
-        name: finalName, 
-        nodes: finalNodes,
-        edges: finalEdges,
-        is_active: activeStatus,
-        updated_at: new Date().toISOString(),
-      };
-
-      let error;
-      if (workflowId) {
-        ({ error } = await supabase
-          .from('user_automations')
-          .update(workflowData)
-          .eq('id', workflowId));
-      } else {
-        const { data, error: insertError } = await supabase
-          .from('user_automations')
-          .insert([workflowData])
-          .select()
-          .single();
-        error = insertError;
-        if (data) setWorkflowId(data.id);
-      }
-
-      if (error) throw error;
-      
-      await fetchMyAutomations(); // Refresh list
-
-      if (forcedIsActive !== undefined) {
-          toast.success(`Workflow ${activeStatus ? 'Activated' : 'Deactivated'}`, {
-            icon: activeStatus ? '🟢' : '⚪',
-            style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
-          });
-      } else {
-          toast.success('Workflow saved successfully!', {
-            icon: '💾',
-            style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
-          });
-      }
-    } catch (err) {
-      console.error('Save Error:', err);
-      toast.error('Failed to save workflow.');
-    } finally {
-      setIsSaving(false);
+      toast.error('Failed to toggle status');
     }
   };
 
@@ -291,7 +157,6 @@ function AutomationsHubContent() {
     if (!isSupabaseConfigured || !supabase) return;
     if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
 
-    setIsLoading(true);
     try {
       const { error } = await supabase
         .from('user_automations')
@@ -300,25 +165,72 @@ function AutomationsHubContent() {
 
       if (error) throw error;
       
-      toast.success(`Deleted workflow: ${name}`, {
-        icon: '🗑️',
-        style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
-      });
-
+      toast.success(`Deleted workflow: ${name}`);
+      setMyAutomations(prev => prev.filter(a => a.id !== id));
       if (workflowId === id) {
         setWorkflowId(null);
         setWorkflowName('My New Automation');
         setNodes(initialNodes);
-        setEdges(initialEdges);
+        setEdges([]);
+        setViewMode('dashboard');
       }
-      
-      await fetchMyAutomations();
     } catch (err) {
-      console.error('Delete workflow error:', err);
-      toast.error('Failed to delete workflow.');
-    } finally {
-      setIsLoading(false);
+      toast.error('Failed to delete workflow');
     }
+  };
+
+  const editWorkflow = (automation: any) => {
+    setWorkflowId(automation.id);
+    setWorkflowName(automation.name);
+    setNodes(automation.nodes || initialNodes);
+    setEdges(automation.edges || []);
+    setIsActive(automation.is_active);
+    setViewMode('editor');
+    setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
+  };
+
+  const saveWorkflow = async () => {
+    if (!isSupabaseConfigured || !supabase) return;
+
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user');
+
+      const workflowData = {
+        user_id: user.id,
+        name: workflowName, 
+        nodes,
+        edges,
+        is_active: isActive,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (workflowId) {
+        await supabase.from('user_automations').update(workflowData).eq('id', workflowId);
+      } else {
+        const { data } = await supabase.from('user_automations').insert([workflowData]).select().single();
+        if (data) setWorkflowId(data.id);
+      }
+
+      await fetchMyAutomations();
+      toast.success('Workflow saved successfully!');
+    } catch (err) {
+      toast.error('Failed to save workflow');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const importTemplate = async (template: AutomationTemplate) => {
+    setWorkflowId(null);
+    setWorkflowName(template.name);
+    setNodes(JSON.parse(JSON.stringify(template.nodes)));
+    setEdges(JSON.parse(JSON.stringify(template.edges)));
+    setIsActive(true);
+    setViewMode('editor');
+    toast.success(`Imported blueprint: ${template.name}`);
+    setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
   };
 
   const onNodesChange: OnNodesChange = useCallback(
@@ -341,64 +253,10 @@ function AutomationsHubContent() {
     setIsSettingsOpen(true);
   }, []);
 
-  const selectedNodeData = selectedNode?.data as AutomationNodeData | undefined;
-
   const updateNodeData = (nodeId: string, newData: any) => {
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === nodeId) {
-          return { ...node, data: { ...node.data, ...newData } };
-        }
-        return node;
-      })
-    );
+    setNodes((nds) => nds.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, ...newData } } : n));
     if (selectedNode?.id === nodeId) {
-      setSelectedNode((prev) => prev ? { ...prev, data: { ...prev.data, ...newData } } : null);
-    }
-  };
-
-  const deleteNode = (nodeId: string) => {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-    setIsSettingsOpen(false);
-    setSelectedNode(null);
-  };
-
-  const loadTemplate = async (template: AutomationTemplate | any, isSavedWorkflow = false) => {
-    // Immediate UI update for the canvas
-    const newNodes = JSON.parse(JSON.stringify(template.nodes));
-    const newEdges = JSON.parse(JSON.stringify(template.edges));
-    
-    setNodes(newNodes);
-    setEdges(newEdges);
-    setWorkflowName(template.name);
-    setIsActive(template.is_active ?? true);
-    setIsLibraryOpen(false);
-    
-    // Smooth zoom
-    setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
-
-    if (isSavedWorkflow) {
-        setWorkflowId(template.id);
-        toast.success(`Loaded workflow: ${template.name}`, {
-            icon: '📂',
-            style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
-        });
-    } else {
-        // Background auto-save for new templates
-        setWorkflowId(null);
-        setIsSaving(true);
-        try {
-          await saveWorkflow(true, newNodes, newEdges, template.name);
-          toast.success(`Auto-saving blueprint: ${template.name}`, {
-            icon: '🎨',
-            style: { background: 'var(--t-surface)', color: 'var(--t-primary)', border: '1px solid var(--t-primary)' }
-          });
-        } catch (err) {
-          console.error('Failed to auto-save template:', err);
-        } finally {
-          setIsSaving(false);
-        }
+      setSelectedNode(prev => prev ? { ...prev, data: { ...prev.data, ...newData } } : null);
     }
   };
 
@@ -407,751 +265,467 @@ function AutomationsHubContent() {
     const newNode: Node = {
       id,
       type: 'automation',
-      position: { x: Math.random() * 200 + 100, y: Math.random() * 200 + 100 },
+      position: { x: 400, y: 200 },
       data: { 
-        label: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`, 
-        type,
-        description: 'Configure this node in settings.',
-        actionType: type === 'ai' ? 'ai_process' : (type === 'action' ? 'notify' : undefined),
-        triggerType: type === 'trigger' ? 'new_lead' : undefined
+        label: `New ${type.toUpperCase()}`, 
+        type, 
+        description: 'Configure this step' 
       },
     };
-    setNodes((nds) => [...nds, newNode]);
-    toast.success(`Added ${type.toUpperCase()} node`, {
-      icon: '➕',
-      style: { background: 'var(--t-surface)', color: 'var(--t-text)', border: '1px solid var(--t-border)' }
-    });
+    setNodes(nds => [...nds, newNode]);
   };
 
-  const handleTestWorkflow = async () => {
-    if (nodes.length < 2) {
-      toast.error('Add more nodes to test the workflow.');
-      return;
-    }
-
-    setIsSaving(true);
-    toast.loading('Initializing test trigger...', { id: 'test-flow' });
-
-    try {
-      // Simulate node execution sequence
-      for (const node of nodes) {
-        // Visual feedback on the node (lighting up)
-        setNodes(nds => nds.map(n => n.id === node.id ? { ...n, data: { ...n.data, status: 'running' } } : n));
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setNodes(nds => nds.map(n => n.id === node.id ? { ...n, data: { ...n.data, status: 'success' } } : n));
-      }
-
-      toast.success('Workflow simulation complete!', { id: 'test-flow' });
-    } catch (err) {
-      toast.error('Workflow test failed.', { id: 'test-flow' });
-    } finally {
-      setIsSaving(false);
-      // Reset status after a delay
-      setTimeout(() => {
-        setNodes(nds => nds.map(n => ({ ...n, data: { ...n.data, status: undefined } })));
-      }, 3000);
-    }
+  // Helper for rendering date
+  const formatDate = (date: string | null) => {
+    if (!date) return 'Never';
+    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date(date).toLocaleDateString();
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 min-h-[calc(100vh-100px)] flex flex-col">
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 min-h-screen">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2 border-b border-[var(--t-border)]">
         <div>
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
-            Automations <span className="text-[var(--t-primary)]">Hub</span>
+          <h1 className="text-4xl font-black italic uppercase tracking-tighter text-[var(--t-text)] flex items-center gap-3">
+             <Zap className="text-[var(--t-primary)] fill-[var(--t-primary)] w-8 h-8" />
+             Automations <span className="text-[var(--t-primary)]">Hub</span>
           </h1>
-          <p className="text-[var(--t-text-muted)] text-sm">Design and deploy autonomous real estate workflows.</p>
+          <p className="text-[var(--t-text-muted)] text-sm font-medium mt-1 uppercase tracking-widest">Autonomous Workflow Engine v3.0</p>
         </div>
+        
         <div className="flex items-center gap-3">
-          {isSaving && (
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-[var(--t-primary)]/10 text-[var(--t-primary)] rounded-full border border-[var(--t-primary)]/20 shadow-[0_0_15px_rgba(var(--t-primary-rgb),0.1)]"
-            >
-              <Loader2 size={12} className="animate-spin" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Synchronizing...</span>
-            </motion.div>
-          )}
           <button 
-            onClick={() => setIsGlobalSettingsOpen(!isGlobalSettingsOpen)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all border ${
-              isGlobalSettingsOpen 
-                ? 'bg-[var(--t-primary-dim)] border-[var(--t-primary)] text-[var(--t-primary)]' 
-                : 'bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
+            onClick={() => {
+              if (viewMode === 'dashboard') {
+                setWorkflowId(null);
+                setWorkflowName('My New Automation');
+                setNodes(initialNodes);
+                setEdges([]);
+                setViewMode('editor');
+              } else {
+                setViewMode('dashboard');
+              }
+            }}
+            className={`px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all border ${
+              viewMode === 'editor' 
+                ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20' 
+                : 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)] hover:scale-105 active:scale-95'
             }`}
           >
-            <Zap size={20} />
-            Global Alerts
+            {viewMode === 'editor' ? <X size={20} /> : <Plus size={20} />}
+            <span>{viewMode === 'editor' ? 'Close Editor' : 'Create Automation'}</span>
           </button>
-          <button 
-            onClick={() => setIsLibraryOpen(!isLibraryOpen)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all border ${
-              isLibraryOpen 
-                ? 'bg-[var(--t-primary-dim)] border-[var(--t-primary)] text-[var(--t-primary)]' 
-                : 'bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)] hover:bg-[var(--t-surface-hover)]'
-            }`}
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {viewMode === 'dashboard' ? (
+          <motion.div 
+            key="dashboard"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-12"
           >
-            <Settings size={20} />
-            Library
-          </button>
-          <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 p-1.5 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl group">
-                <div className={`px-3 py-1.5 rounded-xl flex items-center gap-2 transition-all cursor-pointer ${isActive ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)]'}`}
-                  onClick={() => setIsActive(!isActive)}
-                >
-                  <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-white animate-pulse' : 'bg-[var(--t-text-muted)]'}`} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{isActive ? 'Active' : 'Inactive'}</span>
+            {/* Section 1: Active Automations */}
+            <section className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)] flex items-center gap-2">
+                  <Activity className="text-green-500" />
+                  Active Automations
+                </h3>
+                <div className="px-3 py-1 bg-green-500/10 text-green-500 text-[10px] font-black uppercase tracking-widest border border-green-500/20 rounded-full">
+                  {myAutomations.filter(a => a.is_active).length} Running Now
                 </div>
               </div>
+
+              {myAutomations.length === 0 ? (
+                <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2rem] p-12 flex flex-col items-center text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-[var(--t-surface-hover)] flex items-center justify-center text-[var(--t-text-muted)]">
+                    <Snowflake size={32} />
+                  </div>
+                  <h4 className="text-lg font-bold text-[var(--t-text)]">No automations active</h4>
+                  <p className="text-[var(--t-text-muted)] max-w-sm">Bring your CRM to life by creating your first workflow or importing a template below.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {myAutomations.map((automation) => (
+                    <motion.div 
+                      key={automation.id}
+                      layoutId={automation.id}
+                      className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2rem] p-6 hover:border-[var(--t-primary)] transition-all group relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--t-primary)] opacity-[0.03] blur-3xl -mr-16 -mt-16 group-hover:opacity-[0.08] transition-opacity" />
+                      
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${
+                            automation.is_active 
+                              ? 'bg-green-500/10 border-green-500/20 text-green-500' 
+                              : 'bg-white/5 border-white/10 text-[var(--t-text-muted)]'
+                          }`}>
+                            <Zap size={24} className={automation.is_active ? 'fill-current animate-pulse' : ''} />
+                          </div>
+                          <div>
+                            <h4 className="font-black italic uppercase tracking-tighter text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors">{automation.name}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`w-1.5 h-1.5 rounded-full ${automation.is_active ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-[var(--t-text-muted)]'}`} />
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--t-text-muted)]">
+                                {automation.is_active ? 'Active' : 'Paused'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                           <button 
+                            onClick={() => editWorkflow(automation)}
+                            className="p-2.5 hover:bg-[var(--t-surface-hover)] rounded-xl text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-all"
+                            title="Edit Workflow"
+                           >
+                            <Edit3 size={18} />
+                           </button>
+                           <button 
+                            onClick={() => deleteWorkflow(automation.id, automation.name)}
+                            className="p-2.5 hover:bg-red-500/10 rounded-xl text-[var(--t-text-muted)] hover:text-red-500 transition-all"
+                            title="Delete"
+                           >
+                            <Trash2 size={18} />
+                           </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="p-4 rounded-2xl bg-black/20 border border-white/5 flex flex-col gap-1">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Run Count</span>
+                             <span className="text-xl font-black italic text-[var(--t-text)]">{automation.run_count || 0}</span>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-black/20 border border-white/5 flex flex-col gap-1">
+                             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Success Rate</span>
+                             <span className="text-xl font-black italic text-green-400">{automation.success_rate || 0}%</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-[var(--t-border)]">
+                        <div className="flex flex-col gap-0.5">
+                           <span className="text-[8px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Last Triggered</span>
+                           <span className="text-[10px] font-bold text-[var(--t-text)]">{formatDate(automation.last_triggered_at)}</span>
+                        </div>
+                        <div 
+                          onClick={() => toggleAutomationActive(automation.id, automation.is_active)}
+                          className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-all ${automation.is_active ? 'bg-green-500' : 'bg-[var(--t-surface-hover)]'}`}
+                        >
+                          <motion.div 
+                            animate={{ x: automation.is_active ? 24 : 0 }}
+                            className="w-4 h-4 bg-white rounded-full shadow-lg" 
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Section 3: Template Library */}
+            <section className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)] flex items-center gap-2">
+                  <Library className="text-purple-500" />
+                  Template Library
+                </h3>
+                <div className="flex items-center gap-2 bg-[var(--t-surface)] p-1 rounded-xl border border-[var(--t-border)]">
+                    <button className="px-3 py-1.5 bg-[var(--t-surface-hover)] rounded-lg text-xs font-bold text-[var(--t-text)]">Featured</button>
+                    <button className="px-3 py-1.5 rounded-lg text-xs font-bold text-[var(--t-text-muted)] hover:bg-[var(--t-surface-hover)]">My Blueprints</button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {automationTemplates.map((template) => (
+                  <motion.div 
+                    key={template.id}
+                    whileHover={{ y: -5 }}
+                    className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6 hover:shadow-2xl transition-all cursor-pointer group"
+                    onClick={() => importTemplate(template)}
+                  >
+                    <div className="flex flex-col h-full">
+                       <div className="flex items-center justify-between mb-4">
+                         <div className="w-10 h-10 rounded-xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)]">
+                           {template.category === 'Lead Gen' && <Target size={20} />}
+                           {template.category === 'AI' && <Bot size={20} />}
+                           {template.category === 'CRM' && <Layout size={20} />}
+                           {template.category === 'Sales' && <Flame size={20} />}
+                           {template.category === 'Comms' && <Mail size={20} />}
+                         </div>
+                         <div className="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[8px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">
+                           {template.category}
+                         </div>
+                       </div>
+                       <h4 className="font-black italic uppercase tracking-tighter text-[var(--t-text)] mb-2 group-hover:text-[var(--t-primary)] transition-colors">{template.name}</h4>
+                       <p className="text-xs text-[var(--t-text-muted)] flex-1">{template.description}</p>
+                       <div className="pt-4 mt-4 border-t border-[var(--t-border)] flex items-center justify-between">
+                         <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-primary)]">Import Library</span>
+                         <ArrowRight size={14} className="text-[var(--t-primary)] opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
+                       </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="editor"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="flex-1 min-h-[700px] flex flex-col relative"
+          >
+            {/* Toolbar Panel */}
+            <div className="absolute top-6 left-6 z-10 flex items-center gap-4 bg-black/60 backdrop-blur-xl p-4 rounded-3xl border border-white/10 shadow-2xl">
+              <div className="flex flex-col gap-0.5">
+                <input
+                  type="text"
+                  value={workflowName}
+                  onChange={(e) => setWorkflowName(e.target.value)}
+                  className="bg-transparent border-none text-white font-black italic uppercase tracking-tighter text-lg outline-none focus:ring-0 placeholder:opacity-30 w-48"
+                  placeholder="Automation Name"
+                />
+                <div className="flex items-center gap-2 text-[9px] font-bold text-white/40 uppercase tracking-widest pl-0.5">
+                  <span className="flex items-center gap-1"><Activity size={8} /> LIVE HUB EDITOR</span>
+                </div>
+              </div>
+
+              <div className="w-px h-10 bg-white/10 mx-2" />
+
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => addNode('trigger')}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-2 font-black uppercase tracking-tighter text-[10px]"
+                >
+                  <Webhook size={14} className="text-green-400" />
+                  + Trigger
+                </button>
+                <button 
+                  onClick={() => addNode('ai')}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-2 font-black uppercase tracking-tighter text-[10px]"
+                >
+                  <Bot size={14} className="text-purple-400" />
+                  + AI Engine
+                </button>
+                <button 
+                  onClick={() => addNode('action')}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all flex items-center gap-2 font-black uppercase tracking-tighter text-[10px]"
+                >
+                  <Zap size={14} className="text-orange-400" />
+                  + Action
+                </button>
+              </div>
+
+              <div className="w-px h-10 bg-white/10 mx-2" />
+
               <button 
-                onClick={() => saveWorkflow()}
+                onClick={saveWorkflow}
                 disabled={isSaving}
-                className={`px-4 py-2.5 bg-[var(--t-primary)] text-white rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                className="px-6 py-2.5 bg-[var(--t-primary)] text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)] hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
               >
                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                <span>{isSaving ? 'Saving...' : 'Save Workflow'}</span>
-              </button>
-            </div>
-        </div>
-      </div>
-
-      {/* Main Canvas Area */}
-      <div className="flex-1 bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] overflow-hidden shadow-2xl relative min-h-[600px]">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          nodeTypes={nodeTypes}
-          fitView
-          colorMode="dark"
-        >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--t-border)" />
-          <Controls className="!bg-[var(--t-surface)] !border-[var(--t-border)] !fill-[var(--t-text)]" />
-          
-          <Panel position="top-left" className="m-4 flex items-center gap-4 bg-black/60 backdrop-blur-xl p-4 rounded-2xl border border-white/10 shadow-2xl z-10 transition-all hover:bg-black/80">
-            <div className="flex flex-col gap-0.5">
-              <input
-                type="text"
-                value={workflowName}
-                onChange={(e) => setWorkflowName(e.target.value)}
-                className="bg-transparent border-none text-white font-black italic uppercase tracking-tighter text-lg outline-none focus:ring-0 placeholder:opacity-30 w-48"
-                placeholder="Untitled Workflow"
-              />
-              <div className="flex items-center gap-3 text-[9px] font-bold text-white/40 uppercase tracking-widest pl-0.5">
-                <span className="flex items-center gap-1"><Save size={8} /> Autosave On</span>
-                <span className="w-1 h-1 rounded-full bg-green-500/50" />
-                <span>v1.1.0</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 ml-4 bg-white/5 p-1.5 rounded-2xl border border-white/10">
-              <button
-                onClick={async () => {
-                  const next = !isActive;
-                  setIsActive(next);
-                  if (workflowId) await saveWorkflow(next);
-                }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl font-black uppercase tracking-tighter text-[10px] transition-all ${
-                  isActive 
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.2)]' 
-                    : 'bg-white/5 text-white/40 border border-white/10'
-                }`}
-              >
-                <div className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-400 animate-pulse' : 'bg-white/20'}`} />
-                {isActive ? 'Active' : 'Inactive'}
+                <span>Save Blueprint</span>
               </button>
             </div>
 
-            {isAutomationRunning && (
-              <div className="flex items-center gap-2 px-3 py-2 bg-[var(--t-primary-dim)] border border-[var(--t-primary)] rounded-2xl animate-pulse shadow-lg shadow-[var(--t-primary-dim)] ml-4">
-                <div className="w-2 h-2 rounded-full bg-[var(--t-primary)] animate-ping" />
-                <span className="text-[10px] font-black italic uppercase tracking-tighter text-[var(--t-primary)]">
-                  Automation Running
-                </span>
-              </div>
-            )}
-
-            <div className="w-px h-8 bg-white/10 mx-1" />
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={() => addNode('trigger')}
-                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group"
-                title="Add Trigger"
+            {/* React Flow Canvas */}
+            <div className="flex-1 bg-[var(--t-surface)] rounded-[3rem] border border-[var(--t-border)] overflow-hidden shadow-2xl relative min-h-[600px]">
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onNodeClick={onNodeClick}
+                nodeTypes={nodeTypes}
+                fitView
+                colorMode="dark"
               >
-                <Webhook size={14} className="text-green-400 group-hover:scale-110 transition-transform" />
-              </button>
-              <button 
-                onClick={() => addNode('ai')}
-                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 group"
-                title="Add AI Step"
-              >
-                <Bot size={14} className="text-purple-400 group-hover:scale-110 transition-transform" />
-              </button>
-              <button 
-                onClick={handleTestWorkflow}
-                disabled={isSaving || nodes.length < 2}
-                className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-500/20 flex items-center gap-2 font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
-              >
-                <Zap size={14} />
-                Test Trigger
-              </button>
-              <button 
-                onClick={() => saveWorkflow()}
-                disabled={isLoading}
-                className="ml-2 px-4 py-2.5 rounded-xl bg-[var(--t-primary)] hover:bg-[var(--t-primary)]/80 text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-[var(--t-primary)]/20 flex items-center gap-2 font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
-              >
-                <Save size={14} className={isLoading ? 'animate-spin' : ''} />
-                {isLoading ? 'Saving' : 'Save'}
-              </button>
+                <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--t-border)" />
+                <Controls className="!bg-[var(--t-surface)] !border-[var(--t-border)] !fill-[var(--t-text)]" />
+                
+                {isAutomationRunning && (
+                  <Panel position="top-right" className="m-6">
+                    <div className="flex items-center gap-3 px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-2xl animate-pulse shadow-lg">
+                      <div className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
+                      <span className="text-[10px] font-black italic uppercase tracking-tighter text-green-500">
+                        Automation Engine Firing
+                      </span>
+                    </div>
+                  </Panel>
+                )}
+              </ReactFlow>
             </div>
-          </Panel>
-
-          <Panel position="bottom-right" className="m-4">
-            <div className="bg-black/60 backdrop-blur-md border border-white/10 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-2xl">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Live Canvas Active</span>
-            </div>
-          </Panel>
-        </ReactFlow>
-
-        {/* Loading Overlay */}
-        <AnimatePresence>
-          {isLoading && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md pointer-events-none"
-            >
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-full border-2 border-indigo-500/10 border-t-indigo-500 animate-spin" />
-                  <Bot className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-indigo-400" />
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-white">Synchronizing</span>
-                  <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-white/30">Neural Workflow Bridge</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Creation Modal */}
-      <AnimatePresence>
-        {isCreating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[var(--z-modal)] bg-black/80 backdrop-blur-sm p-4 md:p-8 flex items-center justify-center"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-[var(--t-bg)] border border-[var(--t-border)] w-full max-w-lg rounded-3xl overflow-hidden flex flex-col shadow-2xl p-6 space-y-6"
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">New Workflow</h2>
-                <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl text-[var(--t-text-muted)]">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Workflow Name</label>
-                  <input 
-                    type="text" 
-                    value={createName}
-                    onChange={(e) => setCreateName(e.target.value)}
-                    placeholder="e.g. Lead Follow-up Engine"
-                    className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm text-[var(--t-text)] focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Description</label>
-                  <textarea 
-                    value={createDesc}
-                    onChange={(e) => setCreateDesc(e.target.value)}
-                    placeholder="What does this automation do?"
-                    rows={3}
-                    className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm text-[var(--t-text)] focus:outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 resize-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setIsCreating(false)}
-                  className="flex-1 px-6 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text)] rounded-2xl font-bold hover:bg-[var(--t-surface-hover)] transition-all"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => {
-                    const name = createName.trim() || 'My New Automation';
-                    setWorkflowName(name);
-                    setWorkflowId(null);
-                    setNodes([{
-                      id: '1',
-                      type: 'automation',
-                      position: { x: 250, y: 50 },
-                      data: { 
-                        label: 'Start Trigger', 
-                        type: 'trigger', 
-                        triggerType: 'new_lead',
-                        description: createDesc.trim() || 'Configure your workflow starting point.' 
-                      }
-                    }]);
-                    setEdges([]);
-                    setIsActive(true);
-                    setIsCreating(false);
-                    setCreateName('');
-                    setCreateDesc('');
-                    toast.success(`Created new workflow: ${name}`);
-                    setTimeout(() => fitView({ duration: 800 }), 100);
-                  }}
-                  className="flex-1 px-6 py-3 bg-[var(--t-primary)] text-white rounded-2xl font-bold shadow-lg shadow-[var(--t-primary-dim)] hover:scale-[1.02] transition-all"
-                >
-                  Create Canvas
-                </button>
-              </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Node Settings Panel */}
+      {/* Node Settings Modal */}
       <AnimatePresence>
         {isSettingsOpen && selectedNode && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsSettingsOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99]"
-            />
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--t-bg)] border-l border-[var(--t-border)] z-[100] shadow-2xl flex flex-col"
-            >
-              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface)]/50 backdrop-blur-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)]">
-                    <Settings size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
-                      Node <span className="text-[var(--t-primary)]">Settings</span>
-                    </h2>
-                    <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">Configure {selectedNodeData?.type || 'Node'} Step</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-colors"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 text-[var(--t-text)]">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Step Label</label>
-                    <input 
-                      type="text" 
-                      value={selectedNodeData?.label || ''}
-                      onChange={(e) => updateNodeData(selectedNode.id, { label: e.target.value })}
-                      className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Description</label>
-                    <textarea 
-                      value={selectedNodeData?.description || ''}
-                      onChange={(e) => updateNodeData(selectedNode.id, { description: e.target.value })}
-                      rows={2}
-                      className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 resize-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="h-px bg-[var(--t-border)]" />
-
-                {selectedNodeData?.type === 'trigger' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Trigger Event</label>
-                      <select 
-                        value={selectedNodeData?.triggerType || ''}
-                        onChange={(e) => updateNodeData(selectedNode.id, { triggerType: e.target.value })}
-                        className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 appearance-none cursor-pointer"
-                      >
-                        <option value="new_lead">New Lead Created</option>
-                        <option value="status_change">Lead Status Changed</option>
-                        <option value="high_score">High Deal Score</option>
-                        <option value="task_overdue">Task Becomes Overdue</option>
-                      </select>
-                    </div>
-
-                    {selectedNodeData?.triggerType === 'status_change' && (
-                      <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Target Status</label>
-                        <select 
-                          value={selectedNodeData?.status || ''}
-                          onChange={(e) => updateNodeData(selectedNode.id, { status: e.target.value })}
-                          className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
-                        >
-                          <option value="new">New</option>
-                          <option value="engaged">Engaged</option>
-                          <option value="cold">Cold</option>
-                          <option value="negotiating">Negotiating</option>
-                        </select>
-                      </div>
-                    )}
-
-                    {selectedNodeData?.triggerType === 'high_score' && (
-                      <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Score Threshold</label>
-                        <input 
-                          type="number" 
-                          value={selectedNodeData?.threshold ?? 80}
-                          onChange={(e) => updateNodeData(selectedNode.id, { threshold: parseInt(e.target.value) })}
-                          className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {(['action', 'sms', 'email', 'ai'].includes(selectedNodeData?.type || '')) && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Action Type</label>
-                      <select 
-                        value={selectedNodeData?.actionType || ''}
-                        onChange={(e) => updateNodeData(selectedNode.id, { actionType: e.target.value })}
-                        className="w-full px-4 py-3 bg-[var(--t-surface)] border border(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 appearance-none cursor-pointer"
-                      >
-                        <option value="send_sms">Send SMS Message</option>
-                        <option value="send_email">Send Email Template</option>
-                        <option value="notify">System Notification</option>
-                        <option value="add_task">Create Follow-up Task</option>
-                      </select>
-                    </div>
-
-                    {(['send_sms', 'notify', 'send_chat'].includes(selectedNodeData?.actionType || '')) && (
-                      <div>
-                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1.5 block">Message Template</label>
-                        <textarea 
-                          value={selectedNodeData?.message || ''}
-                          onChange={(e) => updateNodeData(selectedNode.id, { message: e.target.value })}
-                          placeholder="Use {{name}} for personalization."
-                          rows={4}
-                          className="w-full px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl text-sm outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 font-mono text-[11px]"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="p-6 border-t border-[var(--t-border)] bg-[var(--t-surface)]/50 flex gap-3">
-                <button 
-                  onClick={() => deleteNode(selectedNode.id)}
-                  className="px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-2xl font-bold transition-all"
-                >
-                  Delete
-                </button>
-                <button 
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="flex-1 px-6 py-3 bg-[var(--t-primary)] text-white rounded-2xl font-bold transition-all"
-                >
-                  Done
-                </button>
-              </div>
-            </motion.div>
-          </>
+          <NodeSettingsModal 
+            node={selectedNode}
+            onClose={() => setIsSettingsOpen(false)}
+            onUpdate={updateNodeData}
+            onDelete={(id) => {
+               setNodes(nds => nds.filter(n => n.id !== id));
+               setEdges(eds => eds.filter(e => e.source !== id && e.target !== id));
+               setIsSettingsOpen(false);
+            }}
+          />
         )}
       </AnimatePresence>
 
-      {/* Global Settings Sidebar */}
-      <AnimatePresence>
-        {isGlobalSettingsOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsGlobalSettingsOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99]"
-            />
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-[var(--t-bg)] border-l border-[var(--t-border)] z-[100] shadow-2xl flex flex-col"
-            >
-              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between bg-[var(--t-surface)]/50 backdrop-blur-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[var(--t-primary-dim)] flex items-center justify-center text-[var(--t-primary)]">
-                    <Zap size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
-                      Global <span className="text-[var(--t-primary)]">Alerts</span>
-                    </h2>
-                    <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">Unified Notification Hub</p>
-                  </div>
-                </div>
-                <button onClick={() => setIsGlobalSettingsOpen(false)}><X size={24} /></button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                {/* Reporting */}
-                <section className="space-y-4">
-                  <div className="flex items-center gap-2 border-b border-[var(--t-border)] pb-2">
-                    <Mail size={16} className="text-[var(--t-primary)]" />
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Summary Core</h3>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    <HubSettingToggle 
-                      icon={<Clock size={16} />}
-                      title="Daily Summary"
-                      description="Leads, tasks, and revenue digest (8:00 AM)"
-                      enabled={prefs?.daily_summary_enabled}
-                      onToggle={() => updatePreference('daily_summary_enabled')}
-                    />
-                    <HubSettingToggle 
-                      icon={<Calendar size={16} />}
-                      title="Weekly Performance"
-                      description="Trends and conversion rates (Monday 9:00 AM)"
-                      enabled={prefs?.weekly_summary_enabled}
-                      onToggle={() => updatePreference('weekly_summary_enabled')}
-                    />
-                    <HubSettingToggle 
-                      icon={<Layout size={16} />}
-                      title="Calendar Digest"
-                      description="Your daily schedule overview (7:00 AM)"
-                      enabled={prefs?.calendar_digest_enabled}
-                      onToggle={() => updatePreference('calendar_digest_enabled')}
-                    />
-                  </div>
-                </section>
-
-                {/* Real-time Alerts */}
-                <section className="space-y-4">
-                  <div className="flex items-center gap-2 border-b border-[var(--t-border)] pb-2">
-                    <Zap size={16} className="text-[var(--t-primary)]" />
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Real-time Signals</h3>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    <HubSettingToggle 
-                      icon={<Target size={16} />}
-                      title="New Lead Notification"
-                      description="Instant notification for new captures"
-                      enabled={prefs?.new_lead_alerts_enabled}
-                      onToggle={() => updatePreference('new_lead_alerts_enabled')}
-                    />
-                    <HubSettingToggle 
-                      icon={<CheckCircle2 size={16} />}
-                      title="Deal Closed Alert"
-                      description="Immediate signal when a deal closes"
-                      enabled={prefs?.deal_closed_alerts_enabled}
-                      onToggle={() => updatePreference('deal_closed_alerts_enabled')}
-                    />
-                    <HubSettingToggle 
-                      icon={<AlertCircle size={16} />}
-                      title="Task Reminder"
-                      description="Triggered 30 mins before task is due"
-                      enabled={prefs?.task_reminders_enabled}
-                      onToggle={() => updatePreference('task_reminders_enabled')}
-                    />
-                    <HubSettingToggle 
-                      icon={<Snowflake size={16} />}
-                      title="Lead Inactivity"
-                      description="Alert for leads with 7+ days no contact"
-                      enabled={prefs?.lead_inactivity_alert_enabled}
-                      onToggle={() => updatePreference('lead_inactivity_alert_enabled')}
-                    />
-                    <HubSettingToggle 
-                      icon={<Flame size={16} />}
-                      title="Lead Score High"
-                      description="Hot status alert (Score > 80)"
-                      enabled={prefs?.lead_score_high_alert_enabled}
-                      onToggle={() => updatePreference('lead_score_high_alert_enabled')}
-                    />
-                  </div>
-                </section>
-              </div>
-
-              <div className="p-6 border-t border-[var(--t-border)] bg-[var(--t-surface)]/50">
-                <button 
-                  onClick={() => setIsGlobalSettingsOpen(false)}
-                  className="w-full py-4 bg-[var(--t-primary)] text-white rounded-2xl font-bold transition-all hover:scale-[1.02] shadow-xl shadow-[var(--t-primary-dim)]"
-                >
-                  Confirm Settings
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Library Sidebar */}
-      <AnimatePresence>
-        {isLibraryOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsLibraryOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[99]"
-            />
-            <motion.div 
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--t-bg)] border-l border-[var(--t-border)] z-[100] shadow-2xl flex flex-col"
-            >
-              <div className="p-6 border-b border-[var(--t-border)] flex items-center justify-between">
-                <h2 className="text-xl font-black italic uppercase text-[var(--t-text)]">
-                  Automation <span className="text-[var(--t-primary)]">Library</span>
-                </h2>
-                <button onClick={() => setIsLibraryOpen(false)}><X size={24} /></button>
-              </div>
-
-              {/* Sidebar Tabs */}
-              <div className="px-4 pt-2 flex gap-1 bg-[var(--t-surface)]/20">
-                <button 
-                  onClick={() => setLibraryTab('templates')}
-                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${
-                    libraryTab === 'templates' ? 'border-[var(--t-primary)] text-[var(--t-primary)]' : 'border-transparent text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
-                  }`}
-                >
-                  Global Templates
-                </button>
-                <button 
-                  onClick={() => setLibraryTab('my')}
-                  className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${
-                    libraryTab === 'my' ? 'border-[var(--t-primary)] text-[var(--t-primary)]' : 'border-transparent text-[var(--t-text-muted)] hover:text-[var(--t-text)]'
-                  }`}
-                >
-                  My Automations ({myAutomations.length})
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {libraryTab === 'templates' ? (
-                  automationTemplates.map(template => (
-                    <motion.div
-                      key={template.id}
-                      onClick={() => loadTemplate(template)}
-                      className="cursor-pointer p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all group"
-                    >
-                      <h3 className="text-lg font-black uppercase text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors">{template.name}</h3>
-                      <p className="text-sm text-[var(--t-text-muted)]">{template.description}</p>
-                      <div className="mt-4 flex items-center gap-2 text-[9px] font-bold text-[var(--t-text-muted)] uppercase tracking-widest">
-                          <Bot size={12} className="text-[var(--t-primary)]" />
-                          Blueprint Template
-                        </div>
-                    </motion.div>
-                  ))
-                ) : (
-                  myAutomations.length > 0 ? (
-                    myAutomations.map(automation => (
-                      <motion.div
-                        key={automation.id}
-                        className="p-5 rounded-[2rem] bg-[var(--t-surface)] border border-[var(--t-border)] hover:border-[var(--t-primary)]/50 transition-all group relative overflow-hidden"
-                      >
-                        <div onClick={() => loadTemplate(automation, true)} className="cursor-pointer">
-                          <h3 className="text-lg font-black uppercase text-[var(--t-text)] group-hover:text-[var(--t-primary)] transition-colors">{automation.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className={`w-1.5 h-1.5 rounded-full ${automation.is_active ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
-                            <span className="text-[9px] font-bold uppercase tracking-widest opacity-60 text-[var(--t-text)]">
-                              {automation.is_active ? 'Active Flow' : 'Drafted Flow'}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-4 flex items-center justify-between">
-                          <span className="text-[8px] font-bold text-[var(--t-text-muted)] uppercase">Last Updated: {new Date(automation.updated_at).toLocaleDateString()}</span>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteWorkflow(automation.id, automation.name);
-                            }}
-                            className="p-2 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl transition-all"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))
-                  ) : (
-                    <div className="text-center py-20">
-                      <Zap size={40} className="mx-auto text-[var(--t-border)] mb-4" />
-                      <p className="text-[var(--t-text-muted)] font-bold text-sm tracking-tight">No saved automations found.</p>
-                      <button 
-                        onClick={() => setLibraryTab('templates')}
-                        className="mt-4 text-[10px] font-black uppercase text-[var(--t-primary)] tracking-widest hover:underline"
-                      >
-                        Explore Templates
-                      </button>
-                    </div>
-                  )
-                )}
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Global Preferences Sidebar Overlay */}
+      {/* ... keeping simplified for now ... */}
     </div>
   );
 }
 
-function HubSettingToggle({ icon, title, description, enabled, onToggle }: { 
-  icon: React.ReactNode; 
-  title: string; 
-  description: string; 
-  enabled: boolean; 
-  onToggle: () => void;
-}) {
+// Sub-component for Node Settings
+function NodeSettingsModal({ node, onClose, onUpdate, onDelete }: { node: Node, onClose: () => void, onUpdate: (id: string, data: any) => void, onDelete: (id: string) => void }) {
+  const data = node.data as AutomationNodeData;
+  
   return (
-    <div 
-      onClick={onToggle}
-      className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer select-none group ${
-        enabled ? 'border-[var(--t-primary-dim)] bg-[var(--t-primary-dim)]/5' : 'border-[var(--t-border)] hover:border-[var(--t-primary-dim)]/40 hover:bg-[var(--t-surface-subtle)]'
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <div className={`p-2.5 rounded-xl transition-all ${enabled ? 'bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary)]/20' : 'bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)]'}`}>
-          {icon}
+    <>
+      <motion.div 
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
+      />
+      <motion.div 
+        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[var(--t-surface)] border-l border-[var(--t-border)] z-[101] shadow-2xl flex flex-col"
+      >
+        <div className="p-8 border-b border-[var(--t-border)] flex items-center justify-between">
+           <div>
+              <h2 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
+                Node <span className="text-[var(--t-primary)]">Config</span>
+              </h2>
+              <p className="text-[var(--t-text-muted)] text-[10px] font-bold uppercase tracking-widest mt-1">Configure Logic & Actions</p>
+           </div>
+           <button onClick={onClose} className="p-2 hover:bg-[var(--t-surface-hover)] rounded-xl transition-all"><X size={24} /></button>
         </div>
-        <div>
-          <p className={`text-xs font-black transition-colors ${enabled ? 'text-[var(--t-text)]' : 'text-[var(--t-text-muted)] group-hover:text-[var(--t-text-secondary)]'}`}>{title}</p>
-          <p className="text-[9px] text-[var(--t-text-muted)] font-medium leading-tight">{description}</p>
+
+        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+           <div className="space-y-6">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Display Label</label>
+                <input 
+                  type="text" 
+                  value={data.label || ''} 
+                  onChange={(e) => onUpdate(node.id, { label: e.target.value })}
+                  className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none"
+                />
+              </div>
+
+              {data.type === 'trigger' ? (
+                <div>
+                   <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Trigger Type</label>
+                   <select 
+                    value={data.triggerType || ''}
+                    onChange={(e) => onUpdate(node.id, { triggerType: e.target.value })}
+                    className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none"
+                   >
+                    <option value="new_lead">New Lead Created</option>
+                    <option value="status_change">Lead Status Change</option>
+                    <option value="high_score">High Lead Score</option>
+                    <option value="task_overdue">Task Overdue</option>
+                    <option value="birthday">Client Birthday</option>
+                    <option value="referral_request">Referral Request Event</option>
+                    <option value="offer_submitted">Offer Submitted</option>
+                    <option value="monthly_run">1st of the Month</option>
+                   </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Action Type</label>
+                    <select 
+                      value={data.actionType || ''}
+                      onChange={(e) => onUpdate(node.id, { actionType: e.target.value })}
+                      className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none"
+                    >
+                      <option value="send_sms">Send SMS</option>
+                      <option value="send_email">Send Email</option>
+                      <option value="notify">In-App Notification</option>
+                      <option value="add_task">Create Task</option>
+                      <option value="send_chat">Post to Chat</option>
+                      <option value="delay">Wait / Delay</option>
+                      <option value="update_status">Update Status</option>
+                    </select>
+                  </div>
+
+                  {(data.actionType === 'send_sms' || data.actionType === 'send_email' || data.actionType === 'notify' || data.actionType === 'send_chat') && (
+                    <div className="space-y-4">
+                      {data.actionType === 'send_email' && (
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Subject</label>
+                          <input 
+                            type="text" 
+                            value={data.subject || ''} 
+                            onChange={(e) => onUpdate(node.id, { subject: e.target.value })}
+                            className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none"
+                            placeholder="Email Subject"
+                          />
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Message Template</label>
+                        <textarea 
+                          value={data.message || ''} 
+                          onChange={(e) => onUpdate(node.id, { message: e.target.value })}
+                          rows={4}
+                          className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none resize-none"
+                          placeholder="Use {{name}} for dynamic tags..."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {data.actionType === 'delay' && (
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">Wait Duration (Seconds)</label>
+                      <input 
+                        type="number" 
+                        value={data.duration || 0} 
+                        onChange={(e) => onUpdate(node.id, { duration: Number(e.target.value) })}
+                        className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+           </div>
         </div>
-      </div>
-      <div className={`w-10 h-5 rounded-full transition-all relative shrink-0 ${enabled ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-border)]'}`}>
-        <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${enabled ? 'left-6 shadow-lg shadow-black/20' : 'left-1'}`} />
-      </div>
-    </div>
+
+        <div className="p-8 border-t border-[var(--t-border)] flex gap-4">
+           <button 
+            onClick={() => onDelete(node.id)}
+            className="flex-1 px-6 py-3 bg-red-500/10 text-red-500 rounded-2xl font-bold border border-red-500/20 hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+           >
+             <Trash2 size={18} /> Delete Step
+           </button>
+           <button 
+            onClick={onClose}
+            className="flex-1 px-6 py-3 bg-[var(--t-primary)] text-white rounded-2xl font-bold shadow-lg shadow-[var(--t-primary-dim)] hover:scale-105 transition-all"
+           >
+             Done
+           </button>
+        </div>
+      </motion.div>
+    </>
   );
+}
+
+function ArrowRight({ size, className }: { size: number, className: string }) {
+  return <ChevronRight size={size} className={className} />;
 }
 
 export default function AutomationsHub() {
