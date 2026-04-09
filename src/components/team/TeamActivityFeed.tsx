@@ -15,6 +15,23 @@ interface ActivityItem {
   metadata?: any;
 }
 
+interface TimelineData {
+  id: string;
+  type: string;
+  content: string;
+  user_name?: string;
+  created_at: string;
+  metadata?: any;
+}
+
+interface LogData {
+  id: string;
+  action: string;
+  component: string;
+  created_at: string;
+  details?: any;
+}
+
 export function TeamActivityFeed() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +59,7 @@ export function TeamActivityFeed() {
 
         // Combine and sort
         const combined = [
-          ...(timeline || []).map((t: any) => ({
+          ...(timeline as unknown as TimelineData[] || []).map((t) => ({
             id: t.id,
             type: t.type,
             content: t.content,
@@ -50,7 +67,7 @@ export function TeamActivityFeed() {
             created_at: t.created_at,
             metadata: t.metadata
           })),
-          ...(logs || []).map((l: any) => ({
+          ...(logs as unknown as LogData[] || []).map((l) => ({
             id: l.id,
             type: 'system',
             content: `${l.action}: ${l.component}`,
@@ -135,6 +152,6 @@ export function TeamActivityFeed() {
   );
 }
 
-function RefreshCcw({ size, ...props }: any) {
+function RefreshCcw({ size, ...props }: { size: number; [key: string]: any }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path><path d="M16 16h5v5"></path></svg>;
 }

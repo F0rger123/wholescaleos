@@ -16,8 +16,23 @@ interface MonthlyData {
   revenue: number;
 }
 
+interface AnalyticsStats {
+  totalUsers: number;
+  activeSubscriptions: number;
+  totalLeads: number;
+  mrr: number;
+  monthlyGrowth: number;
+  conversionRate: number;
+  suspendedUsers: number;
+  avgLeadsPerUser: number;
+  userTrend: string;
+  revTrend: string;
+  leadTrend: string;
+  churnRate: string;
+}
+
 export default function AdminPlatformAnalytics() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<AnalyticsStats>({
     totalUsers: 0,
     activeSubscriptions: 0,
     totalLeads: 0,
@@ -26,7 +41,9 @@ export default function AdminPlatformAnalytics() {
     conversionRate: 0,
     suspendedUsers: 0,
     avgLeadsPerUser: 0,
-    activeUserTrend: '+0%',
+    userTrend: '+0%',
+    revTrend: '+0%',
+    leadTrend: '+0%',
     churnRate: '0%'
   });
   const [historicalData, setHistoricalData] = useState<MonthlyData[]>([]);
@@ -124,7 +141,7 @@ export default function AdminPlatformAnalytics() {
         revTrend: calculateTrend(currentMonthData.revenue, prevMonthData.revenue),
         leadTrend: '+12%',
         churnRate: `${churnRate.toFixed(1)}%`
-      } as any);
+      });
 
       setProfiles(allProfiles || []);
       setHistoricalData(last6Months);
@@ -138,10 +155,10 @@ export default function AdminPlatformAnalytics() {
   }
 
   const kpis = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'blue', trend: (stats as any).userTrend || '+0%' },
-    { label: 'Platform MRR', value: `$${stats.mrr.toLocaleString()}`, icon: DollarSign, color: 'green', trend: (stats as any).revTrend || '+0%' },
-    { label: 'Churn Rate', value: (stats as any).churnRate, icon: TrendingUp, color: 'red', trend: '-0.2%' },
-    { label: 'Avg Leads/User', value: (stats as any).avgLeadsPerUser.toFixed(1), icon: BarChart3, color: 'orange', trend: '+1.4' }
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'blue', trend: stats.userTrend || '+0%' },
+    { label: 'Platform MRR', value: `$${stats.mrr.toLocaleString()}`, icon: DollarSign, color: 'green', trend: stats.revTrend || '+0%' },
+    { label: 'Churn Rate', value: stats.churnRate, icon: TrendingUp, color: 'red', trend: '-0.2%' },
+    { label: 'Avg Leads/User', value: stats.avgLeadsPerUser.toFixed(1), icon: BarChart3, color: 'orange', trend: '+1.4' }
   ];
 
   if (loading) {
@@ -259,7 +276,7 @@ export default function AdminPlatformAnalytics() {
               <div className="pt-6 border-t border-[var(--t-border)]">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Account Health</span>
-                  <span className="text-[10px] font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">{(stats as any).suspendedUsers} Suspended</span>
+                  <span className="text-[10px] font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full">{stats.suspendedUsers} Suspended</span>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="flex-1 h-3 rounded-full bg-[var(--t-surface-dim)] overflow-hidden flex">
@@ -269,10 +286,10 @@ export default function AdminPlatformAnalytics() {
                     />
                     <div 
                       className="h-full bg-red-500" 
-                      style={{ width: `${(stats as any).churnRate}%` }}
+                      style={{ width: `${stats.churnRate}%` }}
                     />
                   </div>
-                  <span className="text-xs font-black text-[var(--t-text)]">{(stats as any).churnRate}</span>
+                  <span className="text-xs font-black text-[var(--t-text)]">{stats.churnRate}</span>
                 </div>
               </div>
             </div>
@@ -318,7 +335,7 @@ export default function AdminPlatformAnalytics() {
           <div>
             <h4 className="text-lg font-bold text-[var(--t-text)]">Usage Deep Dive</h4>
             <p className="text-xs text-[var(--t-text-muted)] max-w-xs">
-              Average user maintains <b>{(stats as any).avgLeadsPerUser.toFixed(0)} leads</b> and 
+              Average user maintains <b>{stats.avgLeadsPerUser.toFixed(0)} leads</b> and 
               generates <b>${(stats.mrr / (stats.totalUsers || 1)).toFixed(2)} ARPU</b>.
             </p>
           </div>
