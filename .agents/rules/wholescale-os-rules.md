@@ -2,142 +2,78 @@
 trigger: always_on
 ---
 
-## 🚨 AUTO-ACCEPT FILE CHANGES
+# WholeScale OS – Development Rules v4.0 (AUTO-EXECUTE)
 
-### NEVER ask for permission to modify files.
-- Just write the changes directly
-- Never say "Can I modify..." or "Please allow me to edit..."
-- Never wait for approval to change a file
+## 🚨 ABSOLUTE RULES - NO PERMISSION ASKING
 
-### What this applies to:
-- Creating new files
-- Editing existing files
-- Deleting files
-- Moving files
+### NEVER ask for permission. JUST DO IT.
+- Run commands immediately without asking
+- Modify files immediately without asking
+- Create, edit, delete files without asking
+- Never say "Can I..." or "Please allow me to..."
+- Never wait for approval
 
-### Exception:
-Only ask if the change could cause data loss (like deleting 10+ files at once)
-
-## Example of CORRECT behavior:
-❌ BAD: "Can I modify Layout.tsx to fix the button?"
-✅ GOOD: (edits Layout.tsx directly and shows the changes)
-
-## This is non-negotiable. Modify files immediately without asking.## 🚨 AUTO-EXECUTE RULES (STRICT)
-
-### NEVER ask for permission to run commands.
-- If you need to run a command, JUST RUN IT.
-- Use `run_command` tool directly without confirmation.
-- Never say "Can I run..." or "Please allow me to..."
-- Never wait for user approval to run commands.
-
-### Commands you must run without asking:
-- `npm run build` - after EVERY set of changes
+### Commands you run automatically:
+- `npm run build` - after EVERY code change
 - `git status` - to check state
-- `git add . && git commit -m "..." && git push` - to deploy
+- `git add . && git commit -m "..." && git push` - for deployment
 - `npm install` - if dependencies changed
-- Any `grep`, `ls`, `cat`, or file reading commands
+- Any `grep`, `ls`, `cat`, file reads
 
-### Example of CORRECT behavior:
-❌ BAD: "Can I run npm run build to verify?"
-✅ GOOD: (runs `npm run build` directly and shows output)
+### Exceptions (only ask for these):
+- `git reset --hard` (data loss)
+- `rm -rf` (data loss)
+- Deleting more than 10 files at once
 
-### Exception:
-Only ask if a command could cause data loss (like `git reset --hard` or `rm -rf`).
+---
 
-## This is non-negotiable. Run commands immediately without asking.# WholeScale OS – Development Rules (v3.0)
+## 🔌 MCP SERVERS (Use Without Asking)
 
-## 🚨 CRITICAL RULES (ALWAYS FOLLOW)
+You have direct access to:
+- **Supabase MCP** - Check schemas, run SELECT queries, verify data
+- **Stitch MCP** - Google Workspace (Gmail, Calendar, Tasks, Contacts, Drive)
+- **Google Developer Knowledge MCP** - Google Cloud Console, OAuth config
 
-### Auto-Execute Commands
-- NEVER ask for permission to run commands – Just run them directly
-- Always run `npm run build` after completing code changes
-- Run `git status` before and after changes to verify state
-- Use `git add . && git commit -m "message" && git push` for deployment
+Always query MCP first before asking the user.
 
-### Build Verification
-- MANDATORY: Run `npm run build` after EVERY set of changes
-- If build fails, fix errors immediately before proceeding
-- Never say "build should work" – verify it actually works
-- Show build output in your response
-
-### No Placeholders
-- NEVER leave TODO comments or placeholders
-- NEVER say "you can add this later"
-- Implement complete, working code every time
-- If something can't be done, explain why and provide alternatives
-
-## 🔌 MCP SERVERS AVAILABLE (Use Without Asking)
-
-You have direct access to these MCP servers:
-
-### Supabase MCP
-- What it does: Direct database access, schema inspection, query execution
-- Usage: Check table schemas, run SELECT queries, verify data exists
-- Never: Run DELETE, DROP, or UPDATE without confirmation
-- Always query first: Check current state before making changes
-
-### Stitch MCP (Google Workspace)
-- What it does: Access to Gmail, Calendar, Tasks, Contacts, Drive
-- Usage: Verify OAuth flows, check calendar events, test integrations
-- Authentication: Uses existing user tokens from connected accounts
-- Never: Send emails or modify calendar without user intent
-
-### Google Developer Knowledge MCP
-- What it does: Access to Google Cloud Console, OAuth config, API docs
-- Usage: Verify redirect URIs, check OAuth settings, debug auth issues
-- Authentication: Uses your Google Cloud project credentials
-
-### How to Use MCP Servers
-- Check database: "Use Supabase MCP to check the profiles table schema"
-- Verify OAuth: "Use Google Developer MCP to check if redirect URI is registered"
-- Test Calendar: "Use Stitch MCP to verify calendar connection for user"
-- Always show what you found in your response
+---
 
 ## 📝 CODE STYLE
 
 ### TypeScript
 - Always use TypeScript with proper typing
-- Never use any – use unknown or proper interfaces
-- Define interfaces for all props and state
-- Export types that may be used elsewhere
-- Use strict mode: strict: true in tsconfig
+- Never use `any` - use `unknown` or proper interfaces
+- Use strict mode: `strict: true`
 
-### Components
-- Prefer functional components with hooks
-- Use React.memo for expensive components
-- Use useCallback and useMemo where appropriate
-- Destructure props at component entry
-- One component per file (except small utilities)
+### Styling (CRITICAL)
+- ALWAYS use CSS variables `var(--t-*)` for colors
+- Never hardcode colors (no `bg-white`, `text-black`, `bg-blue-500`)
+- Test in ALL themes: Moon, Dark, Light, Neon, Glass, Midnight
 
-### Styling with Tailwind
-- Use Tailwind CSS for all styling
-- CRITICAL: Use CSS variables var(--t-*) for ALL colors
-- Never hardcode colors (no bg-white, text-black, bg-blue-500)
-- Test components in ALL themes before completing
-- Use responsive prefixes: sm:, md:, lg:, xl:
+### Theme Variables:
+- `var(--t-primary)` = Primary brand color (purple/indigo)
+- `var(--t-bg)` = Main background
+- `var(--t-surface)` = Cards, modals, surfaces
+- `var(--t-text)` = Primary text
+- `var(--t-text-muted)` = Secondary text
+- `var(--t-border)` = Borders and dividers
+- `var(--t-success)` = Success states
+- `var(--t-warning)` = Warning states
+- `var(--t-error)` = Error states
 
-### Theme Variables (Always Use)
-- var(--t-primary) = Primary brand color (purple/indigo)
-- var(--t-bg) = Main background
-- var(--t-surface) = Cards, modals, surfaces
-- var(--t-text) = Primary text
-- var(--t-text-muted) = Secondary text
-- var(--t-border) = Borders and dividers
-- var(--t-success) = Success states
-- var(--t-warning) = Warning states
-- var(--t-error) = Error states
+---
 
 ## 📁 FILE STRUCTURE
 
 ### Organization
-- /src/pages = All page components
-- /src/components = Reusable UI components
-- /src/lib = Utilities, API clients
-- /src/types = TypeScript interfaces
-- /src/styles = Global styles, theme overrides
-- /src/store = Zustand stores
-- /src/hooks = Custom React hooks
-- /src/data = Static data (templates, etc.)
+- `/src/pages` = All page components
+- `/src/components` = Reusable UI components
+- `/src/lib` = Utilities, API clients
+- `/src/types` = TypeScript interfaces
+- `/src/styles` = Global styles, theme overrides
+- `/src/store` = Zustand stores
+- `/src/hooks` = Custom React hooks
+- `/src/data` = Static data (templates, etc.)
 
 ### Naming Conventions
 - Components: PascalCase (LeadFormModal.tsx)
@@ -151,6 +87,8 @@ You have direct access to these MCP servers:
 - Reuse existing components when possible
 - Update existing files instead of duplicating
 - Ask before creating new store files
+
+---
 
 ## 📦 STATE MANAGEMENT
 
@@ -169,6 +107,8 @@ You have direct access to these MCP servers:
 - Keep global state minimal
 - Derive values when possible instead of storing
 - Use selectors to avoid unnecessary re-renders
+
+---
 
 ## ⚠️ ERROR HANDLING
 
@@ -194,6 +134,8 @@ try {
   setData(defaultValue);
 }
 
+---
+
 ## 🗄️ SUPABASE (Use MCP)
 
 ### Database Operations
@@ -214,6 +156,8 @@ try {
 - Clean up subscriptions on unmount
 - Handle reconnection logic
 - Use .on('*') sparingly
+
+---
 
 ## 🎨 THEME SYSTEM
 
@@ -237,6 +181,8 @@ Test every UI change in ALL themes:
 - Buttons must have visible text in ALL themes
 - Hover states must have visible change
 - Focus states must be clearly visible
+
+---
 
 ## 🔧 GIT WORKFLOW
 
@@ -262,6 +208,8 @@ git push origin main
 git commit -m "fix: Moon theme button contrast in Calendar"
 git commit -m "feat: add email templates library"
 
+---
+
 ## 📝 DOCUMENTATION
 
 ### For Every Change
@@ -276,6 +224,8 @@ git commit -m "feat: add email templates library"
 - [ ] Verify expected behavior
 - [ ] Check in Moon theme
 - [ ] Check mobile responsive
+
+---
 
 ## ⚡ PERFORMANCE
 
@@ -297,6 +247,8 @@ git commit -m "feat: add email templates library"
 - Use useCallback for functions passed to children
 - Use useMemo for expensive calculations
 - Keep state as local as possible
+
+---
 
 ## 🔄 WORKFLOWS
 
@@ -340,6 +292,8 @@ git commit -m "feat: add email templates library"
 3. Fix code configuration
 4. Use MCP to verify fix works
 
+---
+
 ## 💬 RESPONSE STYLE
 
 ### DO NOT (Ever):
@@ -373,6 +327,8 @@ Pushed to GitHub. Deploying to Cloudflare.
 
 ### Example Bad Response (NEVER):
 I think there might be an issue with the profiles table. Can you check Supabase and tell me what columns exist? Also, could you run npm run build and share the output?
+
+---
 
 ## 🎯 FINAL RULE
 
