@@ -1,14 +1,16 @@
 /**
- * OS Bot Memory Store (v6.0)
- * Manages conversation history, professional context, and CRM entities locally.
- * Enhanced with Sentiment Tracking and Topic Context.
+ * OS Bot Memory Store (v7.0)
+ * Manages conversation history, professional context, and CRM entities.
+ * Enhanced with Supabase persistence and Session-Awareness.
  */
 
+import { conversationService } from '../supabase-service';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: string;
+  intent?: string;
 }
 
 export interface Entity {
@@ -22,6 +24,7 @@ export type Sentiment = 'happy' | 'neutral' | 'frustrated' | 'urgent' | 'curious
 export interface ConversationContext {
   userId?: string;
   userName?: string;
+  sessionId: string;
   lastLeadId?: string;
   lastLeadName?: string;
   activeEntity?: Entity;
@@ -36,6 +39,18 @@ export interface ConversationContext {
 
 const MEMORY_KEY = 'os_bot_permanent_memory';
 
+/**
+ * Generates or retrieves a unique session ID
+ */
+function getSessionId(): string {
+  let sid = localStorage.getItem('os_bot_session_id');
+  if (!sid) {
+    sid = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    localStorage.setItem('os_bot_session_id', sid);
+  }
+  return sid;
+}
+
 export function getMemory(): ConversationContext {
   const data = localStorage.getItem(MEMORY_KEY);
   const parsed = data ? JSON.parse(data) : { 
@@ -44,29 +59,53 @@ export function getMemory(): ConversationContext {
     entityStack: [],
     learnedFacts: {},
     sentiment: 'neutral',
-    activeEntity: undefined
+    sessionId: getSessionId()
   };
 
-  // Ensure new fields exist for legacy migrations
+  // Ensure fields exist
   if (!parsed.entityStack) parsed.entityStack = [];
   if (!parsed.learnedFacts) parsed.learnedFacts = {};
   if (!parsed.sentiment) parsed.sentiment = 'neutral';
+  if (!parsed.sessionId) parsed.sessionId = getSessionId();
   
   return parsed;
 }
 
 /**
- * Saves a message to history and caps it at last 20 messages
+ * Loads history from Supabase and syncs local memory
  */
-export function saveMessage(role: 'user' | 'assistant', content: string) {
+export async function loadHistory(userId: string) {
+  if (!userId) return;
+  const history = await conversationService.fetchHistory(userId, 20);
+  const memory = getMemory();
+  
+  const mappedHistory: Message[] = history.map((h: any) => ({
+    role: h.role,
+    content: h.content,
+    timestamp: h.created_at,
+    intent: h.intent
+  }));
+
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    userId,
+    history: mappedHistory
+  }));
+}
+
+/**
+ * Saves a message to history and syncs with Supabase if connected
+ */
+export function saveMessage(role: 'user' | 'assistant', content: string, intent?: string) {
   const memory = getMemory();
   const newMessage: Message = {
     role,
     content,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    intent
   };
   
-  // Keep last 20 messages for better long-term context
+  // Keep last 20 messages for better context
   const updatedHistory = [...memory.history, newMessage].slice(-20);
   
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
@@ -74,16 +113,51 @@ export function saveMessage(role: 'user' | 'assistant', content: string) {
     history: updatedHistory
   }));
 
+  // Sync to Supabase in background
+  if (memory.userId) {
+    conversationService.saveMessage(
+      memory.userId,
+      memory.sessionId,
+      role,
+      content,
+      intent
+    ).catch(err => console.error('Failed to sync message to Supabase:', err));
+  }
+
   // Auto-detect sentiment and topic if user message
   if (role === 'user') {
     trackSentiment(content);
     detectAndSetTopic(content);
+    
+    // Remember personal facts
+    detectLearnedFacts(content);
   }
 }
 
 /**
- * Basic sentiment tracking based on keywords
+ * Detects facts like name, address, phone from user input
  */
+function detectLearnedFacts(input: string) {
+  
+  // Name
+  const nameMatch = input.match(/(?:my name is|im|i am|call me)\s+([a-zA-Z\s]+)/i);
+  if (nameMatch && nameMatch[1]) {
+    setLearnedFact('name', nameMatch[1].trim());
+  }
+
+  // Address
+  const addressMatch = input.match(/(?:at|property is at|address is)\s+(\d+\s+[a-zA-Z0-9\s,]+(?:st|ave|rd|blvd|lane|drive|loop|ct|way|court|street|avenue))/i);
+  if (addressMatch && addressMatch[1]) {
+    setLearnedFact('last_address', addressMatch[1].trim());
+  }
+
+  // Phone
+  const phoneMatch = input.match(/(?:call me at|phone number is|text me at)\s+([\d\-\(\)\s]{7,})/i);
+  if (phoneMatch && phoneMatch[1]) {
+    setLearnedFact('phone', phoneMatch[1].trim());
+  }
+}
+
 export function trackSentiment(input: string) {
   const memory = getMemory();
   const lower = input.toLowerCase();
@@ -106,9 +180,6 @@ export function trackSentiment(input: string) {
   }));
 }
 
-/**
- * Sets the current conversation topic
- */
 export function setTopic(topic: string) {
   const memory = getMemory();
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
@@ -117,9 +188,6 @@ export function setTopic(topic: string) {
   }));
 }
 
-/**
- * Automatically detects the topic from user input
- */
 export function detectAndSetTopic(input: string) {
   const lower = input.toLowerCase();
   
@@ -136,9 +204,6 @@ export function detectAndSetTopic(input: string) {
   }
 }
 
-/**
- * Pushes an entity to the stack (LIFO) and keeps last 3
- */
 export function pushToEntityStack(entity: Entity) {
   const memory = getMemory();
   const updatedStack = [
@@ -156,15 +221,10 @@ export function pushToEntityStack(entity: Entity) {
   }));
 }
 
-/**
- * Updates the context with the most recent lead created/viewed
- */
 export function trackLead(id: string, name: string) {
   const memory = getMemory();
   const recentLeads = [{ id, name }, ...memory.recentLeads.filter(l => l.id !== id)].slice(0, 5);
-  
   pushToEntityStack({ id, name, type: 'lead' });
-
   const updatedMemory = getMemory();
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
     ...updatedMemory,
@@ -172,9 +232,6 @@ export function trackLead(id: string, name: string) {
   }));
 }
 
-/**
- * Sets a learned fact or user preference
- */
 export function setLearnedFact(key: string, value: string) {
   const memory = getMemory();
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
@@ -183,17 +240,11 @@ export function setLearnedFact(key: string, value: string) {
   }));
 }
 
-/**
- * Gets a learned fact
- */
 export function getLearnedFact(key: string): string | null {
   const memory = getMemory();
   return memory.learnedFacts[key.toLowerCase()] || null;
 }
 
-/**
- * Sets the currently active conversation state (for multi-turn)
- */
 export function setActiveState(type: string | null, data: any = {}) {
   const memory = getMemory();
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
@@ -202,9 +253,6 @@ export function setActiveState(type: string | null, data: any = {}) {
   }));
 }
 
-/**
- * Resolves pronouns like "him", "her", "them" or "it" using the entity stack
- */
 export function resolveEntityFromContext(input: string): Entity | null {
   const memory = getMemory();
   const lower = input.toLowerCase();
@@ -225,26 +273,20 @@ export function resolveEntityFromContext(input: string): Entity | null {
   return null;
 }
 
-/**
- * Injects user profile info into memory
- */
 export function syncUserProfile(profile: any) {
   if (!profile) return;
-
   const memory = getMemory();
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
     ...memory,
     userId: profile.id,
     userName: profile.name || 'Agent'
   }));
+  // Also load history if available
+  loadHistory(profile.id);
 }
 
-/**
- * Get current context for the AI engine
- */
 export function getAIContext(currentUser?: any) {
   const memory = getMemory();
-  
   return {
     user: currentUser?.name || memory.userName || 'Agent',
     lastLead: memory.lastLeadName || 'none',
@@ -254,10 +296,12 @@ export function getAIContext(currentUser?: any) {
     recentLeads: memory.recentLeads,
     history: memory.history,
     sentiment: memory.sentiment,
-    topic: memory.lastTopic
+    topic: memory.lastTopic,
+    sessionId: memory.sessionId
   };
 }
 
 export function clearMemory() {
   localStorage.removeItem(MEMORY_KEY);
+  localStorage.removeItem('os_bot_session_id');
 }

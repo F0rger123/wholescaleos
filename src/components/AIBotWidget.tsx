@@ -7,14 +7,26 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
-import { processPrompt, hasUserApiKey, createTask, updateLeadStatusViaAI, createLeadViaAI, updateLeadViaAI, deleteLeadViaAI, sendSMSViaAI, generatePageInsights } from '../lib/gemini';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { hasUserApiKey, processPrompt } from '../lib/gemini';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { SaveLeadModal } from './SaveLeadModal';
 import { RateLimitModal } from './RateLimitModal';
 import { voiceService } from '../lib/voice-service';
 import { usageTracker, UsageData } from '../lib/usage-tracking';
 import { UsageLimitModal } from './UsageLimitModal';
-import { recognizeIntent, executeTask, wrapResponse, splitMultiIntent } from '../lib/local-ai';
+import { 
+  recognizeIntent, 
+  executeTask, 
+  splitMultiIntent, 
+  generateResponse, 
+  generateUnknownResponse, 
+  generateErrorResponse 
+} from '../lib/local-ai';
+import { 
+  saveMessage, 
+  getMemory, 
+  syncUserProfile 
+} from '../lib/local-ai/memory-store';
 
 interface ChatMessage {
   id: string;
@@ -185,37 +197,39 @@ export function AIBotWidget() {
       const keyExists = await hasUserApiKey();
       setHasKey(keyExists);
 
-      if (isSupabaseConfigured && supabase) {
+      if (isSupabaseConfigured) {
         // Fetch usage data
         await fetchUsage();
         
-        await supabase
-          .from('profiles')
-          .select('settings')
-          .eq('id', currentUser.id)
-          .maybeSingle();
+        // Sync user profile and load history
+        syncUserProfile(currentUser);
         
-        // Load chat history if available
-        const savedHistory = localStorage.getItem(`ai_widget_history_${currentUser.id}`);
-        if (savedHistory) {
-          try {
-            setMessages(JSON.parse(savedHistory));
-          } catch (e) {}
+        // Load combined history from memory store
+        const memory = getMemory();
+        if (memory.history.length > 0) {
+          const chatHistory: ChatMessage[] = memory.history.map((m, i) => ({
+             id: `hist-${i}-${m.timestamp}`,
+             role: m.role === 'assistant' || m.role === 'system' ? 'ai' : 'user',
+             content: m.content,
+             timestamp: m.timestamp,
+             intent: m.intent,
+             systemLog: "🤖 OS Bot"
+          }));
+          setMessages(chatHistory);
         } else {
-            setMessages([{
-              id: 'welcome',
-              role: 'ai',
-              content: `Hi there! I'm 🤖 OS Bot. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
-              timestamp: new Date().toISOString(),
-              systemLog: "🤖 OS Bot"
-            }]);
+          setMessages([{
+            id: 'welcome',
+            role: 'ai',
+            content: `Hi there! I'm 🤖 OS Bot. How can I help you on the ${location.pathname.split('/').pop() || 'dashboard'} today?`,
+            timestamp: new Date().toISOString(),
+            systemLog: "🤖 OS Bot"
+          }]);
         }
       }
     }
     loadPrefs();
 
     window.addEventListener('ai-settings-updated', loadPrefs);
-    
     return () => window.removeEventListener('ai-settings-updated', loadPrefs);
   }, [currentUser?.id]);
 
@@ -380,6 +394,10 @@ export function AIBotWidget() {
       content: userText,
       timestamp: new Date().toISOString()
     };
+    
+    // Save to locally persistent and Supabase memory
+    saveMessage('user', userText);
+    
     setMessages(prev => [...prev, userMsg]);
     setPrompt('');
     setLoading(true);
@@ -496,7 +514,7 @@ export function AIBotWidget() {
             const aiMsg: ChatMessage = {
               id: (Date.now() + 1).toString(),
               role: 'ai',
-              content: wrapResponse(res.message, 'success', matched.intent.name),
+              content: generateResponse(matched.intent, res, userText),
               timestamp: new Date().toISOString(),
               intent: matched.intent.name,
               data: res.data,
@@ -550,13 +568,15 @@ export function AIBotWidget() {
       if (response.intent === 'rate_limit') {
         setShowRateLimitModal(true);
         const finalId = (Date.now() + 1).toString();
+        const content = response.response || "AI initialization complete.";
         setMessages(prev => [...prev, {
           id: finalId,
           role: 'ai',
-          content: response.response || "AI initialization complete.",
+          content,
           timestamp: new Date().toISOString(),
           systemLog: "🤖 OS Bot"
         }]);
+        saveMessage('assistant', content, 'rate_limit');
         setTypingMessageId(finalId);
         setLoading(false);
         return;
@@ -572,13 +592,15 @@ export function AIBotWidget() {
 
       if (response.intent === 'redirect_setup') {
         const finalId = (Date.now() + 1).toString();
+        const content = "I need your OS Cloud Key to work. Redirecting you to settings...";
         setMessages(prev => [...prev, {
           id: finalId,
           role: 'ai',
-          content: "I need your OS Cloud Key to work. Redirecting you to settings...",
+          content,
           timestamp: new Date().toISOString(),
           systemLog: "🤖 OS Bot"
         }]);
+        saveMessage('assistant', content, 'redirect_setup');
         setTypingMessageId(finalId);
         setTimeout(() => navigate('/settings/ai'), 1500);
 
@@ -600,6 +622,7 @@ export function AIBotWidget() {
             timestamp: new Date().toISOString(),
             systemLog: response.systemLog || "🤖 OS Bot"
           }]);
+          saveMessage('assistant', response.response, 'confirm_action');
           setTypingMessageId(finalId);
         } else {
           // Missing info — start SMS session to collect it conversationally
@@ -612,6 +635,7 @@ export function AIBotWidget() {
             intent: 'ask_question',
             systemLog: response.systemLog || "🤖 OS Bot"
           }]);
+          saveMessage('assistant', response.response, 'ask_question');
           setTypingMessageId(finalId);
         }
 
@@ -630,6 +654,7 @@ export function AIBotWidget() {
           data: response.data,
           systemLog: "🤖 OS Bot"
         }]);
+        saveMessage('assistant', response.response, 'ask_save_contact');
         setTypingMessageId(finalId);
       } else {
         const aiMsg: ChatMessage = {
@@ -642,6 +667,7 @@ export function AIBotWidget() {
           systemLog: response.systemLog || "🤖 OS Bot"
         };
         setMessages(prev => [...prev, aiMsg]);
+        saveMessage('assistant', response.response, response.intent);
         setTypingMessageId(aiMsg.id);
         speak(response.response);
 
@@ -658,13 +684,15 @@ export function AIBotWidget() {
         }
       }
     } catch (err) {
+      const errorMsg = "I'm not sure how to handle that request yet. Try asking for 'help' to see what I can do!";
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',
-        content: "I'm not sure how to handle that request yet. Try asking for 'help' to see what I can do!",
+        content: errorMsg,
         timestamp: new Date().toISOString(),
-        systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
+        systemLog: "🤖 OS Bot"
       }]);
+      saveMessage('assistant', errorMsg);
     } finally {
       setLoading(false);
     }

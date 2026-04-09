@@ -1,6 +1,6 @@
 import { Intent, intents } from '../ai/intents';
-import { spellCheck } from './spell-checker';
-import { resolveEntityFromContext, getMemory, setActiveState, setTopic } from './memory-store';
+import { spellCheck, getLevenshteinDistance } from './spell-checker';
+import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact } from './memory-store';
 
 export interface ParsedIntent {
   intent: Intent;
@@ -9,6 +9,7 @@ export interface ParsedIntent {
   originalText?: string;
   isAmbiguous?: boolean;
   isConfirming?: boolean;
+  suggestion?: string;
 }
 
 /**
@@ -73,8 +74,8 @@ export function calculateIntentScore(input: string, intent: Intent): number {
       const verbs = ['send', 'create', 'add', 'text', 'navigate', 'delete', 'update', 'mark', 'show'];
       if (verbs.includes(pw)) weight += 15;
       
-      const nouns = ['lead', 'task', 'pipeline', 'workflow', 'automation', 'contact'];
-      if (nouns.includes(pw)) weight += 5;
+      const nouns = ['lead', 'task', 'pipeline', 'workflow', 'automation', 'contact', 'weather', 'name'];
+      if (nouns.includes(pw)) weight += 10;
 
       score += weight;
     }
@@ -91,12 +92,59 @@ export function calculateIntentScore(input: string, intent: Intent): number {
 
 export function recognizeIntent(input: string): ParsedIntent | null {
   const memory = getMemory();
+  const lowerOrig = input.toLowerCase().trim();
+  
+  // Check for custom facts/memory first
+  if (lowerOrig === "what's my name" || lowerOrig === "whats my name" || lowerOrig === "what is my name") {
+    const name = getLearnedFact('name');
+    if (name) {
+      return {
+        intent: { name: 'small_talk', action: 'small_talk', patterns: [], template: `Your name is ${name}.` },
+        params: { text: `Your name is ${name}.` },
+        confidence: 100
+      };
+    }
+  }
+
+  if (lowerOrig.includes("address for") || lowerOrig.includes("where is")) {
+    const target = lowerOrig.replace(/^(?:what's the|whats the|where is the|address for)\s+/i, '').replace(/\s*property\s*/i, '').trim();
+    const address = getLearnedFact(`last_address`); // Or more complex logic
+    if (address && lowerOrig.includes(target)) {
+       return {
+         intent: { name: 'small_talk', action: 'small_talk', patterns: [], template: `The address for ${target} is ${address}.` },
+         params: { text: `The address for ${target} is ${address}.` },
+         confidence: 100
+       };
+    }
+  }
+
   const checked = spellCheck(input);
   const normalizedOrig = checked.toLowerCase().trim();
   const normalized = normalizeInput(normalizedOrig);
   const activeEntity = resolveEntityFromContext(normalized);
 
   console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
+
+  // Check for typo suggestions (Fuzzy matching on command keywords)
+  const commandKeywords = ['text', 'lead', 'task', 'weather', 'update', 'status', 'add', 'create'];
+  for (const keyword of commandKeywords) {
+    const inputWords = normalized.split(/\s+/);
+    for (const word of inputWords) {
+      const distance = getLevenshteinDistance(word, keyword);
+      if (distance > 0 && distance <= 2) {
+        const confidence = 100 - (distance * 20); // Simple confidence
+        if (confidence > 70) {
+          const suggestedText = normalized.replace(word, keyword);
+          return {
+            intent: { name: 'typo_suggestion', action: 'small_talk', patterns: [], template: `I think you meant '${keyword}'?` },
+            params: { text: `I think you meant '${keyword}'?`, suggestedText, keyword },
+            confidence: 100,
+            suggestion: keyword
+          };
+        }
+      }
+    }
+  }
 
   // Check Confirmation logic (Yes/No)
   if (memory.activeState?.type === 'AWAITING_INTENT_CONFIRMATION') {
@@ -131,20 +179,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     }
   }
 
-  // 2. PRIORITY REGEX HANDLERS (v6.0 - Conversational + CRM Categories)
+  // 2. PRIORITY REGEX HANDLERS
   const handlers = [
-    // --- CONVERSATIONAL & LEARNING (Priority) ---
-    {
-      intent: 'small_talk',
-      patterns: [
-        /^(?:thanks|thank you|thx|thanks lot|great job|well done|nice|cool|awesome|sweet)$/i,
-        /^(?:how are you|how it going|hows it going|how you doing|sup|whats up|how are things)$/i,
-        /^(?:bye|goodbye|see you|later|im done|exit|close)$/i,
-        /^(?:test|testing|test message|ping)$/i,
-        /^(?:tell me a joke|joke)$/i
-      ],
-      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
-    },
     {
       intent: 'greeting',
       patterns: [
@@ -158,16 +194,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       intent: 'weather_query',
       patterns: [
         /^(?:what's the weather|whats the weather|what is the weather|how is the weather|is it raining|weather forecast)$/i,
-        /^(?:weather|forecast)$/i,
+        /^(?:weather|forecast|wevver)$/i,
         /\bweather\b/i
-      ],
-      params: () => ({})
-    },
-    {
-      intent: 'get_preferences',
-      patterns: [
-        /^(?:what are my preferences|show my preferences|view my preferences|my preferences)$/i,
-        /^(?:what do you know about me|my profile|show my info)$/i
       ],
       params: () => ({})
     },
@@ -180,8 +208,6 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       ],
       params: () => ({})
     },
-
-    // --- CRM_ACTIONS ---
     {
       intent: 'send_sms',
       patterns: [
@@ -192,73 +218,12 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       params: (matches: string[]) => ({ target: matches[1].trim(), message: matches[2].trim() })
     },
     {
-      intent: 'send_sms_partial',
-      patterns: [
-        /^(?:text|textt|txt|message|tell|shoot a text to|send message to)\s+([a-zA-Z0-9\s]+)$/i,
-        /^(?:send a text|send sms|write a message)$/i
-      ],
-      params: (matches: string[]) => ({ target: matches[1]?.trim() })
-    },
-    {
-      intent: 'update_lead_status',
-      patterns: [
-        /^(?:set|change|mark|update)\s+([a-zA-Z\s]+)\s+(?:as|to|status)\s+([a-zA-Z\s]+)$/i,
-        /^(?:set|change|mark|update)\s+(?:status of\s+)?([a-zA-Z\s]+)\s+to\s+([a-zA-Z\s]+)$/i
-      ],
-      params: (matches: string[]) => {
-        setTopic('leads');
-        return { target: matches[1].trim(), status: matches[2].trim() };
-      }
-    },
-    {
-      intent: 'add_note',
-      patterns: [
-        /^(?:add note|note|add a note|record note)\s+(?:to|for)\s+([a-zA-Z\s]+)\s*[:|,]\s*(.*)$/i,
-        /^(?:add note|note|add a note|record note)\s+(?:to|for)\s+([a-zA-Z\s]+)\s+(?:saying|that)\s+(.*)$/i
-      ],
-      params: (matches: string[]) => ({ target: matches[1].trim(), note: matches[2].trim() })
-    },
-    {
-      intent: 'get_lead_info',
-      patterns: [
-        /^(?:tell me about|who is|show info for|details for|what do we know about)\s+([a-zA-Z\s]+)$/i,
-        /^(?:show|view|open)\s+([a-zA-Z\s]+)(?:'s)?\s+(?:profile|details|info)$/i
-      ],
-      params: (matches: string[]) => {
-        setTopic('leads');
-        return { name: matches[1].trim() };
-      }
-    },
-    {
-      intent: 'automation_query',
-      patterns: [
-        /^(?:automation hub|automations|workflow hub|summary setup|alert setup)$/i,
-        /^(?:what|how many|which)\s+(?:automations|workflows|background tasks|summary alerts)\s+(?:can you|are available|do I have|set up|exist)$/i
-      ],
-      params: (matches: string[]) => ({ query: matches[0] })
-    },
-    {
-      intent: 'automation_setup',
-      patterns: [
-        /^(?:setup|configure|create|open|go to)\s+(?:automation|automations|workflow|workflows|summary|pipeline alerts)$/i
-      ],
-      params: () => ({ path: 'automations' })
-    },
-    {
-      intent: 'clarify_previous',
-      patterns: [
-        /^(?:tell me more|explain that|why|elaborate|give me more details|what does that mean)$/i,
-        /^(?:why|how)$/i
-      ],
-      params: () => ({ topic: getMemory().lastTopic })
-    },
-    {
-      intent: 'create_lead',
-      patterns: [
-        /^(?:add|create|new|register)\s+(?:a\s+)?lead\s+(?:for\s+)?([a-zA-Z\s]+)$/i,
-        /^(?:add|create|new)\s+([a-zA-Z\s]+)\s+as\s+(?:a\s+)?lead$/i
-      ],
-      params: (matches: string[]) => ({ name: matches[1].trim() })
+       intent: 'send_sms_partial',
+       patterns: [
+         /^(?:text|textt|txt|message|tell|shoot a text to|send message to)\s+([a-zA-Z0-9\s]+)$/i,
+         /^(?:send a text|send sms|write a message)$/i
+       ],
+       params: (matches: string[]) => ({ target: matches[1]?.trim() })
     },
     {
       intent: 'add_task',
@@ -267,91 +232,17 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       ],
       params: (matches: string[]) => {
         setTopic('tasks');
-        const title = matches[1].trim();
-        let dueDate = matches[2]?.trim();
-        
-        // Basic relative date conversion
-        if (dueDate) {
-          const d = new Date();
-          const low = dueDate.toLowerCase();
-          if (low === 'tomorrow') d.setDate(d.getDate() + 1);
-          else if (low.includes('next week')) d.setDate(d.getDate() + 7);
-          else if (low === 'today') { /* already now */ }
-          
-          if (low === 'tomorrow' || low.includes('next week') || low === 'today') {
-            dueDate = d.toISOString().split('T')[0];
-          }
-        }
-
-        return { title, dueDate };
-      }
-    },
-
-    // --- CONVERSATIONAL & LEARNING ---
-    {
-      intent: 'set_preference',
-      patterns: [
-        /^(?:remember|save|note down|record)\s+(?:that\s+)?(?:i\s+)?(.*?)\s+(?:is|prefers?|likes?|wants?|preference)\s+(.*)$/i,
-        /^(?:remember|save)\s+(?:that\s+)?(.*)$/i
-      ],
-      params: (matches: string[]) => ({ key: matches[1]?.trim(), value: matches[2]?.trim() || matches[1]?.trim() })
-    },
-
-    // --- SYSTEM_ACTIONS ---
-    {
-      intent: 'navigate',
-      patterns: [
-        /^(?:go to|show|open|take me to|take me home|view|navigate to)\s+(leads?|tasks?|calendar|dashboard|settings|inbox|messages|summaries|ai|training)$/i,
-        /^(?:show|view|open)\s+(?:my\s+)?(leads?|tasks?|calendar|deals?|pipeline)$/i
-      ],
-      params: (matches: string[]) => {
-        let p = matches[1].toLowerCase().replace(/s$/, ''); // singularize
-        if (p === 'deal' || p === 'pipeline') p = 'leads';
-        return { path: p };
+        return { title: matches[1].trim(), dueDate: matches[2]?.trim() };
       }
     },
     {
-      intent: 'lead_query',
+      intent: 'create_lead',
       patterns: [
-        /^(?:how many|what is my|show)?\s*(?:total\s+)?leads?(?:\s+do i have)?$/i,
-        /^(?:show|how many)\s*(?:of my\s+)?deals?\s*(?:are\s+)?(?:closing|closed|active)?$/i,
-        /^what's my lead count$/i
+        /^(?:add|create|new|register)\s+(?:a\s+)?lead\s+(?:for\s+)?([a-zA-Z\s]+)$/i,
+        /^(?:add|create|new)\s+([a-zA-Z\s]+)\s+as\s+(?:a\s+)?lead$/i,
+        /^(?:leed|add leed)\s+([a-zA-Z\s]+)$/i
       ],
-      params: () => ({})
-    },
-    {
-      intent: 'task_query',
-      patterns: [
-        /^(?:how many|what are my|show)\s*(?:all\s+)?tasks?(?:\s+do i have)?$/i,
-        /^(?:how many|what are my|show)\s*(?:overdue|late|missed)\s*tasks?$/i,
-        /^how many tasks are overdue$/i
-      ],
-      params: (matches: string[]) => ({ overdueOnly: matches[0].toLowerCase().includes('overdue') })
-    },
-    {
-      intent: 'capabilities',
-      patterns: [
-        /^(?:what can you do\??|what are you\??|who are you\??|what features do you have\??|capabilities\??|what type of things can you do\??)$/i,
-        /^(?:what can you all do for me\??|how can you help\??|what are your functions\??|give me a tour\??|show me what you got\??)$/i
-      ],
-      params: () => ({})
-    },
-    {
-      intent: 'help',
-      patterns: [
-        /^(?:help\??|commands|show examples|give me examples|help me)$/i
-      ],
-      params: () => ({})
-    },
-    {
-      intent: 'calendar_query',
-      patterns: [
-        /^(?:what's on my|show my|view|check|get|what is my|tell me my)\s*(?:today's\s+|current\s+)?(?:agenda|calendar|schedule)$/i,
-        /^(?:agenda|schedule|calendar)$/i,
-        /^(?:what am i doing today|what's happening today|anything on my schedule|whats on my agenda)$/i,
-        /^(?:show|view)\s+calendar$/i
-      ],
-      params: () => ({})
+      params: (matches: string[]) => ({ name: matches[1].trim() })
     }
   ];
 
@@ -377,35 +268,20 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     }
   }
 
-  // 3. FUZZY MATCHING FALLBACK (Scoring Engine v6.1 - with Ambiguity Zone)
+  // 3. FUZZY MATCHING FALLBACK
   const scores = intents.map(intent => ({
     intent,
     score: calculateIntentScore(normalized, intent)
   })).sort((a, b) => b.score - a.score);
 
   const bestMatchResult = scores[0];
-  
-  if (bestMatchResult) {
-    if (bestMatchResult.score >= 75) {
-      console.log(`[🤖 OS Bot] Strong Match: ${bestMatchResult.intent.name} (${bestMatchResult.score}%)`);
-      return {
-        intent: bestMatchResult.intent,
-        params: {},
-        confidence: bestMatchResult.score,
-        originalText: input
-      };
-    }
-
-    if (bestMatchResult.score >= 45) {
-      console.log(`[🤖 OS Bot] Ambiguous Match: ${bestMatchResult.intent.name} (${bestMatchResult.score}%)`);
-      return {
-        intent: bestMatchResult.intent,
-        params: {},
-        confidence: bestMatchResult.score,
-        originalText: input,
-        isAmbiguous: true
-      };
-    }
+  if (bestMatchResult && bestMatchResult.score >= 75) {
+    return {
+      intent: bestMatchResult.intent,
+      params: {},
+      confidence: bestMatchResult.score,
+      originalText: input
+    };
   }
 
   return null;

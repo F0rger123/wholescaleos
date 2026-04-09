@@ -531,3 +531,48 @@ export const accessCodeService = {
     return data;
   },
 };
+// ─── Conversations Service ──────────────────────────────────────────────────
+export const conversationService = {
+  async saveMessage(userId: string, sessionId: string, role: 'user' | 'assistant', content: string, intent?: string) {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+      .from('user_conversations')
+      .insert({
+        user_id: userId,
+        session_id: sessionId,
+        role,
+        content,
+        intent
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('❌ Supabase conversationService.saveMessage error:', error);
+      return null;
+    }
+    return data;
+  },
+
+  async fetchHistory(userId: string, limit = 20) {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('user_conversations')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      console.error('❌ Supabase conversationService.fetchHistory error:', error);
+      return [];
+    }
+    // Reverse to return in chronological order
+    return (data || []).reverse();
+  },
+
+  async clearHistory(userId: string) {
+    if (!supabase) return;
+    await supabase.from('user_conversations').delete().eq('user_id', userId);
+  }
+};

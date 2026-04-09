@@ -1,230 +1,88 @@
-/**
- * OS Bot Response Generator (v6.0)
- * Generates high-impact, professional responses for property management & CRM.
- * Enhanced with Conversational Variety and Sentiment-Awareness.
- */
-
 import { useStore } from '../../store/useStore';
+import { Intent } from '../ai/intents';
 import { getAIContext } from './memory-store';
 
-export interface ResponseResult {
-  text: string;
-  intent: string;
-  systemLog?: string;
-}
-
-export function generateResponse(intent: string, result: any): string {
+export function generateResponse(
+  intent: Intent, 
+  result: any, 
+  userText: string, 
+  suggestedText?: string
+): string {
   const store = useStore.getState();
+  const context = getAIContext();
+  const aiName = store.aiName || 'OS Bot';
+  const tone = store.aiTone || 'Professional';
+  const personality = store.aiPersonality || 'Default';
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
-  const { sentiment } = getAIContext(store.currentUser);
 
-  // PASS-THROUGH INTENTS: These intents return their own rich messages from task-executor
-  const passThroughIntents = [
-    'greeting', 
-    'help', 
-    'capabilities', 
-    'get_lead_info', 
-    'lead_query', 
-    'task_query',
-    'update_lead_status',
-    'add_note',
-    'set_preference',
-    'small_talk',
-    'automation_query',
-    'bot_origin',
-    'philosophical',
-    'feedback',
-    'system_status',
-    'clarify_previous',
-    'ambiguous',
-    'cancel_confirmation',
-    'weather_query',
-    'get_preferences'
-  ];
+  // Branding prefix
+  const prefix = `🤖 ${aiName}: `;
 
-  if (passThroughIntents.includes(intent) && result.success && result.message) {
-    let msg = result.message;
-    
-    // Inject sentiment-based flair
-    if (sentiment === 'happy') {
-      msg = `🌟 ${msg}`;
-    } else if (sentiment === 'urgent') {
-      msg = `⚡ ${msg}`;
-    }
-
-    return applyToneAndPersonality(msg, store.aiTone, store.aiPersonality);
+  // 1. Handle Typo Suggestions specifically
+  if (intent.name === 'typo_suggestion' || (intent as any).name === 'typo_suggestion') {
+     const keyword = result.keyword || 'that';
+     return `${prefix}I think you meant **'${keyword}'** in your message "${userText}"? I can help! Just let me know if you want me to proceed with "${suggestedText}".`;
   }
 
-  // Handle Ambiguity Case specifically
-  if (intent === 'ambiguous') {
-    return generateAmbiguityMessage(result);
+  // 2. Handle Weather specifically (as requested)
+  if (intent.name === 'weather_query') {
+    return `${prefix}I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'.`;
   }
 
-  // Handle errors
-  if (!result || !result.success) {
-    if (intent === 'unknown') {
-      return `I'm not quite sure how to handle that specific request yet, **${userName}**. However, I'm currently optimized to help you with:\n\n` +
-             `- 👤 **Leads**: "Add lead John", "Mark John as qualified"\n` +
-             `- 📅 **Tasks**: "Remind me to call Sarah tomorrow", "Show my tasks"\n` +
-             `- 💬 **Messaging**: "Text Luke: How are we looking for the 5th?"\n` +
-             `- 📊 **CRM Info**: "How many leads do I have?", "Show my agenda"\n\n` +
-             `Try one of those, or ask "What can you do?" for a full tour!`;
-    }
-    return `I encountered an issue while trying to process that **${intent.replace('_', ' ')}** request. ${result?.message || 'Please check your connection and try again.'}`;
+  // 3. Handle Greetings
+  if (intent.name === 'greeting') {
+     return `${prefix}${result.message}`;
   }
 
-  const data = result.data || {};
+  // 4. Handle Task execution results
+  let message = result?.message || intent.template || "I've processed your request.";
 
-  // Professional Templates (v6.0 - More Varied)
-  const templates: Record<string, string[]> = {
-    navigate: [
-      `Right away, **${userName}**. I've opened that up for you.`,
-      `Taking you there now. Everything is synchronized.`,
-      `Opening the requested dashboard.`,
-      `Done. You're now viewing your ${data.path || 'requested'} page.`
-    ],
-    send_sms: [
-      result.message,
-      `✅ **SMS Sent**: Delivered to **${data.contactName || 'the recipient'}**.`,
-      `Message broadcasted. I'll log the reply as soon as it arrives.`,
-      `Sent! Your communication is now recorded in the CRM.`
-    ],
-    create_lead: [
-      `👤 **Lead Captured**: **${data.name || 'New Lead'}** has been added to your CRM.`,
-      `New lead **${data.name || 'New Lead'}** is now in your pipeline. Success!`,
-      `Success! **${data.name || 'The prospect'}** is now registered.`
-    ],
-    add_task: [
-      `📅 **Task Scheduled**: "*${data.title || 'New Task'}*" for **${data.dueDate || 'today'}**.`,
-      `Task added to your queue: "*${data.title || 'New Task'}*"`,
-      `Got it! I've set a reminder for "*${data.title || 'New Task'}*".`
-    ],
-    complete_task: [
-      `✅ **Task Completed**: Great progress, **${userName}**!`,
-      `Marked as done. Keep that momentum going!`,
-      `Task cleared. Your list is shrinking!`
-    ]
-  };
+  // Personality adjustments using context.sentiment
+  const sentiment = context.sentiment || 'neutral';
+  
+  if (sentiment === 'frustrated') {
+    message = `I understand this can be frustrating. ${message} I'm here to help fix this.`;
+  } else if (sentiment === 'happy') {
+    message = `${message} Great to see everything moving forward! ✨`;
+  }
 
-  const variations = templates[intent];
-  let response = variations 
-    ? variations[Math.floor(Math.random() * variations.length)]
-    : (result.message || `Action completed successfully, **${userName}**. What's next?`);
+  if (personality.toLowerCase() === 'enthusiastic') {
+    message = message.replace(/\./g, '!') + " 🚀 Let's crush this!";
+  } else if (personality.toLowerCase() === 'direct') {
+    message = message.replace(/,/g, '.').split('\n')[0]; // Shorten
+  } else if (personality.toLowerCase() === 'friendly') {
+    message = `Hi ${userName}! ${message} Hope that helps! 😊`;
+  }
 
-  // PERSONALIZATION & TONE (v7.0)
-  return applyToneAndPersonality(response, store.aiTone, store.aiPersonality);
+  // Add tone markers
+  if (tone.toLowerCase() === 'casual') {
+    message = message.replace('I have', "I've").replace('You have', "You've").replace('Hello', 'Hey');
+  }
+
+  // Final assembly
+  return `${prefix}${message}`;
 }
 
-/**
- * Applies tone and personality transformations to the raw response.
- * Enhanced to follow custom talking behavior instructions more robustly.
- */
-function applyToneAndPersonality(text: string, tone: string, personality: string): string {
-  let result = text;
+export function generateErrorResponse(error: string): string {
   const store = useStore.getState();
-  const t = (tone || 'Professional').toLowerCase();
-  const p = (personality || '').toLowerCase();
-  
-  // 1. DYNAMIC NAME OVERRIDE (e.g., "Call me Commander")
-  let userDisplayName = store.currentUser?.name?.split(' ')[0] || 'Agent';
-  const nameMatch = personality.match(/call me ([a-zA-Z\s]+)/i);
-  if (nameMatch && nameMatch[1]) {
-    userDisplayName = nameMatch[1].trim();
-    // Replace any existing "Agent" or original name with the new override
-    result = result.replace(new RegExp(`\\b${store.currentUser?.name?.split(' ')[0] || 'Agent'}\\b`, 'gi'), userDisplayName);
-  }
-
-  // 2. TONE TRANSFORMATIONS (Standard)
-  if (t === 'friendly') {
-    if (!result.match(/[!✨🌟]/)) {
-      result = result.replace(/\.$/, '!');
-      const emojis = ['✨', '🌟', '🚀', '✅', '🤘'];
-      result = `${result} ${emojis[Math.floor(Math.random() * emojis.length)]}`;
-    }
-  } else if (t === 'direct') {
-    result = result.replace(/^(Right away|Got it|Taking you there|Success|Done|Ok),? /i, '')
-                  .replace(/ (Success|Done|Ok|Right away)!?$/i, '')
-                  .replace(/\.? Everything is synchronized\.?/, '')
-                  .replace(/\.? I've opened that up for you\.?/, '');
-    if (!result.trim()) result = text;
-  } else if (t === 'professional') {
-    result = result.replace(/Done\./g, 'Completed.')
-                  .replace(/Got it!/g, 'Request acknowledged.');
-  }
-
-  // 3. PERSONALITY MODULES (Keyword-based)
-  
-  // PIRATE 🏴‍☠️
-  if (p.includes('pirate')) {
-    result = `Arrr! ${result.replace(/Yes/g, 'Aye').replace(/\./g, ', matey!').replace(/Hello/g, 'Ahoy')}`;
-  } 
-  
-  // SASSY/WITTY 💅
-  else if (p.includes('sassy') || p.includes('witty')) {
-    const snark = [' Obviously.', ' You\'re welcome, by the way.', ' Easy peasy.', ' I really am a genius.', ' Don\'t mention it.'];
-    result = result.replace(/\.$/, '') + snark[Math.floor(Math.random() * snark.length)];
-    if (!result.includes('💅')) result += ' 💅';
-  }
-
-  // ROBOT/TECHNICAL 🤖
-  else if (p.includes('robot') || p.includes('bot') || p.includes('mechanical')) {
-    result = `[STATUS: READY] > ${result.toUpperCase().replace(/\./g, ' //')} [END CTRL]`;
-  }
-
-  // GENTLEMAN/FORMAL 🎩
-  else if (p.includes('formal') || p.includes('gentleman') || p.includes('lady')) {
-    result = result.replace(new RegExp(`\\b${userDisplayName}\\b`, 'gi'), `Sir ${userDisplayName}`)
-                   .replace(/Done\./g, 'It has been attended to with the utmost priority.')
-                   .replace(/!/g, '.');
-  }
-
-  // CONCISE/MINIMAL
-  if (p.includes('concise') || p.includes('short') || p.includes('minimal')) {
-    const firstSentence = result.split(/[\.\!\?]/)[0];
-    if (firstSentence) result = firstSentence + '.';
-  }
-
-  // HUMOR/QUIPS
-  if (p.includes('humor') || p.includes('funny')) {
-    const quips = [' (I make this look easy, right?)', ' (Efficiency is my middle name.)', ' (Mission accomplished!)'];
-    result = `${result}${quips[Math.floor(Math.random() * quips.length)]}`;
-  }
-
-  // EMOJI OVERLOAD
-  if (p.includes('emoji') || p.includes('sparkle')) {
-    result = `✨ ${result.split(' ').join(' 🪄 ')} 🌈`;
-  }
-
-  // 4. CUSTOM PREFIX / SUFFIX (Looking for specific instruction patterns)
-  // Example: "Prefix: [Sir]" or "Suffix: [At your service]"
-  const prefixMatch = personality.match(/prefix:\s*\[(.*?)\]/i);
-  if (prefixMatch && prefixMatch[1]) {
-    result = `${prefixMatch[1]} ${result}`;
-  }
-
-  const suffixMatch = personality.match(/suffix:\s*\[(.*?)\]/i);
-  if (suffixMatch && suffixMatch[1]) {
-    result = `${result} ${suffixMatch[1]}`;
-  }
-
-  return result;
+  const aiName = store.aiName || 'OS Bot';
+  return `🤖 ${aiName}: I apologize, but I encountered an issue: ${error}. I can help with leads, tasks, and messages if you'd like to try a different command!`;
 }
 
-/**
- * Specifically generates a "Did you mean?" message for ambiguous intents.
- */
-export function generateAmbiguityMessage(result: any): string {
+export function generateUnknownResponse(input: string, suggestion?: string): string {
   const store = useStore.getState();
-  const intentName = result.intent.name.replace(/_/g, ' ');
-  const confidence = Math.round(result.confidence);
-  
-  const templates = [
-    `I'm about ${confidence}% sure you want to **${intentName}**. Is that correct?`,
-    `I think you're asking about **${intentName}** (Confidence: ${confidence}%). Should I proceed?`,
-    `Wait, did you mean **${intentName}**? Just making sure before I take action.`,
-    `I've got a ${confidence}% match for **${intentName}**. Is that what you're looking for?`
+  const aiName = store.aiName || 'OS Bot';
+  const prefix = `🤖 ${aiName}: `;
+
+  if (suggestion) {
+    return `${prefix}I'm not exactly sure what you mean by "${input}". Did you mean **"${suggestion}"**?`;
+  }
+
+  const fallbacks = [
+    `I'm not exactly sure how to help with "${input}". I specialize in leads, tasks, and SMS. Try asking to 'show my leads' or 'text a contact'.`,
+    `I didn't quite catch that. Could you rephrase? I'm great at managing your CRM data and calendar!`,
+    `That's a bit outside my current field of expertise. I can help you navigate the OS, manage your pipeline, or send texts. What's our next objective?`
   ];
   
-  const baseMessage = templates[Math.floor(Math.random() * templates.length)];
-  return applyToneAndPersonality(baseMessage, store.aiTone, store.aiPersonality);
+  return `${prefix}${fallbacks[Math.floor(Math.random() * fallbacks.length)]}`;
 }

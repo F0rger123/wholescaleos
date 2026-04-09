@@ -16,7 +16,7 @@ import {
   Undo2, Redo2, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
   Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature,
-  Menu, ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
@@ -109,8 +109,6 @@ export function Layout() {
     .filter(([key]) => key !== 'sms')
     .reduce((sum, [_, count]) => sum + (Number(count) || 0), 0);
   
-  const totalUnread = smsUnreadCount + chatUnreadCount;
-
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -386,9 +384,9 @@ export function Layout() {
         <div className="flex flex-col h-full overflow-hidden relative">
           <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_50%_0%,var(--t-primary),transparent_70%)]" />
           
-          <div className="p-6 flex items-center relative h-[80px]">
-            <Link to="/" className={`flex items-center transition-all duration-300 ${!sidebarOpen ? 'opacity-0 scale-90 invisible w-0' : 'opacity-100 scale-100 visible'}`}>
-              <Logo size={40} showText={true} className="scale-90 origin-left" />
+          <div className="p-6 flex items-center justify-center relative h-[80px]">
+            <Link to="/" className="flex items-center transition-all duration-300 transform hover:scale-105">
+              <Logo size={sidebarOpen ? 40 : 32} showText={sidebarOpen} className="origin-left" />
             </Link>
           </div>
 

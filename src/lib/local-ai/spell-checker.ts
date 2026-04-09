@@ -1,7 +1,7 @@
 /** 
  * Simple Levenshtein distance for fuzzy matching
  */
-function getLevenshteinDistance(a: string, b: string): number {
+export function getLevenshteinDistance(a: string, b: string): number {
   const tmp = [];
   for (let i = 0; i <= a.length; i++) tmp[i] = [i];
   for (let j = 0; j <= b.length; j++) tmp[0][j] = j;
@@ -37,7 +37,10 @@ const COMMON_CORRECTIONS: Record<string, string> = {
   'updt': 'update',
   'remindr': 'reminder',
   'remmind': 'remind',
-  'calender': 'calendar'
+  'calender': 'calendar',
+  'wevver': 'weather',
+  'wether': 'weather',
+  'wheather': 'weather'
 };
 
 export function spellCheck(input: string): string {
