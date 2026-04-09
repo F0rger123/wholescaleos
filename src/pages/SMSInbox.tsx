@@ -221,6 +221,8 @@ export default function SMSInbox() {
         .order('created_at', { ascending: false });
 
       setMessages(data || []);
+      // Sync the global unread count with the database state
+      useStore.getState().syncSMSUnreadCount();
     } catch (err) {
       console.error('Error fetching SMS:', err);
     } finally {
@@ -370,6 +372,13 @@ export default function SMSInbox() {
     
     if (!error) {
       useStore.getState().markSMSAsRead(phone);
+      useStore.getState().syncSMSUnreadCount();
+      
+      // Update local state for immediate UI feedback
+      setMessages(prev => prev.map(m => 
+        (normalizePhone(m.phone_number) === normalizePhone(phone)) 
+        ? { ...m, is_read: true } : m
+      ));
     }
   };
 

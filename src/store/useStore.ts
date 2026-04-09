@@ -1598,6 +1598,7 @@ interface AppState {
   setSMSMessages: (messages: SMSMessage[]) => void;
   addSMSMessage: (message: SMSMessage) => void;
   markSMSAsRead: (phoneNumber: string) => void;
+  syncSMSUnreadCount: () => Promise<void>;
 
   // Floating AI Widget
   showFloatingAIWidget: boolean;
@@ -4288,9 +4289,33 @@ export const useStore = create<AppState>((set, get) => ({
       id: lead?.id // Ensure id is present for the engine to target
     });
   },
-  markSMSAsRead: (id) => set((s: any) => ({
-    smsMessages: s.messages.map((m: any) => m.id === id ? { ...m, read: true } : m)
+  markSMSAsRead: (phoneNumber) => set((s: any) => ({
+    smsMessages: s.smsMessages.map((m: any) => 
+      m.phone_number === phoneNumber || normalizePhone(m.phone_number) === normalizePhone(phoneNumber) 
+      ? { ...m, is_read: true } : m
+    )
   })),
+  syncSMSUnreadCount: async () => {
+    const { currentUser } = get();
+    if (!currentUser?.id || !supabase) return;
+    
+    try {
+      const { count, error } = await supabase
+        .from('sms_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false)
+        .eq('direction', 'inbound')
+        .or(`user_id.eq.${currentUser.id},agent_id.eq.${currentUser.id}`);
+        
+      if (!error) {
+        set((s: any) => ({
+          unreadCounts: { ...s.unreadCounts, sms: count || 0 }
+        }));
+      }
+    } catch (err) {
+      console.error('Error syncing SMS unread count:', err);
+    }
+  },
   incrementAiUsage: () => {},
   setAiUsage: (_model, _used, _limit) => {},
 

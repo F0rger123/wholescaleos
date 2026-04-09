@@ -102,7 +102,14 @@ export function Layout() {
 
   const onlineCount = (team || []).filter(m => m.presenceStatus === 'online').length;
   const pendingTaskCount = (tasks || []).filter(t => t.status === 'todo' || t.status === 'in-progress').length;
-  const totalUnread = Object.values(unreadCounts || {}).reduce((sum, c) => sum + (Number(c) || 0), 0);
+  
+  // Calculate specific unread counts
+  const smsUnreadCount = unreadCounts?.sms || 0;
+  const chatUnreadCount = Object.entries(unreadCounts || {})
+    .filter(([key]) => key !== 'sms')
+    .reduce((sum, [_, count]) => sum + (Number(count) || 0), 0);
+  
+  const totalUnread = smsUnreadCount + chatUnreadCount;
 
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -503,7 +510,12 @@ export function Layout() {
                   
                   <div className={`flex flex-col gap-1 overflow-hidden transition-all duration-300 ease-in-out ${isExpanded || !sidebarOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'}`}>
                     {items.map(({ to, label, icon: Icon }) => {
-                      const badge = (label === 'Tasks') ? pendingTaskCount : label === 'Team Dashboard' ? onlineCount : label === 'Team Chat' ? totalUnread : 0;
+                      const badge = 
+                        (label === 'Tasks') ? pendingTaskCount : 
+                        (label === 'Team Dashboard') ? onlineCount : 
+                        (label === 'Team Chat') ? chatUnreadCount : 
+                        (label === 'Text (SMS)') ? smsUnreadCount : 
+                        0;
                       return (
                         <NavLink
                           key={to}
