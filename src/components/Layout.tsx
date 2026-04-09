@@ -16,7 +16,7 @@ import {
   Undo2, Redo2, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
   Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature,
-  Menu
+  Menu, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
@@ -386,16 +386,17 @@ export function Layout() {
         <div className="flex flex-col h-full overflow-hidden relative">
           <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_50%_0%,var(--t-primary),transparent_70%)]" />
           
-          <div className="p-6 flex items-center justify-between relative">
-            <Link to="/" className={`flex items-center transition-all duration-300 ${!sidebarOpen ? 'opacity-0 scale-90 invisible' : 'opacity-100 scale-100 visible'}`}>
+          <div className="p-6 flex items-center relative h-[80px]">
+            <Link to="/" className={`flex items-center transition-all duration-300 ${!sidebarOpen ? 'opacity-0 scale-90 invisible w-0' : 'opacity-100 scale-100 visible'}`}>
               <Logo size={40} showText={true} className="scale-90 origin-left" />
             </Link>
             
             <button 
               onClick={toggleSidebar}
-              className="p-2.5 rounded-xl hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] transition-all hover:scale-110 active:scale-95"
+              className={`absolute top-1/2 -translate-y-1/2 p-2.5 rounded-xl hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] transition-all duration-300 hover:scale-110 active:scale-95 z-[110] ${sidebarOpen ? 'right-6' : 'right-1/2 translate-x-1/2'}`}
+              title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
             >
-              <Menu size={20} />
+              {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
             </button>
           </div>
 

@@ -3099,8 +3099,14 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   // —— UI ——————————————————————————————————————————————————
-  sidebarOpen: true,
-  toggleSidebar: () => set((s: any) => ({ sidebarOpen: !s.sidebarOpen })),
+  sidebarOpen: typeof window !== 'undefined' ? localStorage.getItem('wholescale-sidebar-open') !== 'false' : true,
+  toggleSidebar: () => set((s: any) => {
+    const newState = !s.sidebarOpen;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-sidebar-open', String(newState));
+    }
+    return { sidebarOpen: newState };
+  }),
 
                                                     // â”€â”€ Map (empty â€” loaded from Supabase) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                                                     buyers: [],
