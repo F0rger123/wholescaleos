@@ -16,7 +16,7 @@ export interface ResponseResult {
 export function generateResponse(intent: string, result: any): string {
   const store = useStore.getState();
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
-  const { sentiment } = getAIContext();
+  const { sentiment } = getAIContext(store.currentUser);
 
   // PASS-THROUGH INTENTS: These intents return their own rich messages from task-executor
   const passThroughIntents = [

@@ -4,7 +4,6 @@
  * Enhanced with Sentiment Tracking and Topic Context.
  */
 
-import { useStore } from '../../store/useStore';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -229,9 +228,7 @@ export function resolveEntityFromContext(input: string): Entity | null {
 /**
  * Injects user profile info into memory
  */
-export function syncUserProfile() {
-  const store = useStore.getState();
-  const profile = store.currentUser;
+export function syncUserProfile(profile: any) {
   if (!profile) return;
 
   const memory = getMemory();
@@ -245,12 +242,11 @@ export function syncUserProfile() {
 /**
  * Get current context for the AI engine
  */
-export function getAIContext() {
+export function getAIContext(currentUser?: any) {
   const memory = getMemory();
-  const store = useStore.getState();
   
   return {
-    user: store.currentUser?.name || memory.userName || 'Agent',
+    user: currentUser?.name || memory.userName || 'Agent',
     lastLead: memory.lastLeadName || 'none',
     activeEntity: memory.activeEntity,
     entityStack: memory.entityStack,
