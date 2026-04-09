@@ -11,17 +11,16 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   LayoutDashboard, Users, 
   Settings, Search,
-  Indent, AlignLeft,
   Bot, Smartphone, StickyNote,
   CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
-  Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature
+  Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature,
+  Home, Menu
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
 import { LeadFormModal } from './LeadFormModal';
-import { Logo } from './Logo';
 
 interface UserTeam {
   teamId: string;
