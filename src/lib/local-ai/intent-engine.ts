@@ -257,9 +257,11 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       params: (matches: string[]) => ({ name: matches[1].trim() })
     },
     {
-      intent: 'help',
+      intent: 'capabilities',
       patterns: [
         /^(?:help|what can you do|capabilities|features|show commands|options)$/i,
+        /^(?:what can you do for me|what can you help me with|what are your capabilities|list your capabilities)$/i,
+        /^(?:what capabilities|list capabilities|show capabilities)$/i,
         /\b(?:help|capabilities)\b/i
       ],
       params: () => ({})

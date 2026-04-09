@@ -216,7 +216,17 @@ export const intents: Intent[] = [
   },
   {
     name: "capabilities",
-    patterns: ["what can you do", "capabilities", "features", "what are you", "who are you"],
+    patterns: [
+      "what can you do", 
+      "what can you do for me", 
+      "what can you help me with",
+      "what are your capabilities",
+      "list your capabilities",
+      "capabilities", 
+      "features", 
+      "what are you", 
+      "who are you"
+    ],
     action: "capabilities",
     template: "I can manage your leads, send SMS, create tasks, query your pipeline, and help you navigate the platform. Try asking 'show my hot leads' or 'text John saying hello'."
   },
@@ -251,6 +261,9 @@ export const intents: Intent[] = [
     template: "{response}"
   },
   {
+    name: "help_commands",
+    patterns: ["help", "help me", "show commands", "what are your commands", "list commands", "options", "command list"],
+    action: "capabilities",
     template: "Here are some things I can do:\n- 'Show my hot leads'\n- 'Text [Name] saying [Message]'\n- 'Create task: Call back John tomorrow'\n- 'Go to calendar'\n- 'How many deals are closing this month?'"
   },
   {
