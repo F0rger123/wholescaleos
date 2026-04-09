@@ -37,7 +37,9 @@ export function generateResponse(intent: string, result: any): string {
     'system_status',
     'clarify_previous',
     'ambiguous',
-    'cancel_confirmation'
+    'cancel_confirmation',
+    'weather_query',
+    'get_preferences'
   ];
 
   if (passThroughIntents.includes(intent) && result.success && result.message) {
@@ -61,7 +63,12 @@ export function generateResponse(intent: string, result: any): string {
   // Handle errors
   if (!result || !result.success) {
     if (intent === 'unknown') {
-      return `I'm not quite sure how to handle that request yet, **${userName}**. I'm currently optimized for **Leads, Tasks, Emails, and SMS**. Try rephrasing?`;
+      return `I'm not quite sure how to handle that specific request yet, **${userName}**. However, I'm currently optimized to help you with:\n\n` +
+             `- 👤 **Leads**: "Add lead John", "Mark John as qualified"\n` +
+             `- 📅 **Tasks**: "Remind me to call Sarah tomorrow", "Show my tasks"\n` +
+             `- 💬 **Messaging**: "Text Luke: How are we looking for the 5th?"\n` +
+             `- 📊 **CRM Info**: "How many leads do I have?", "Show my agenda"\n\n` +
+             `Try one of those, or ask "What can you do?" for a full tour!`;
     }
     return `I encountered an issue while trying to process that **${intent.replace('_', ' ')}** request. ${result?.message || 'Please check your connection and try again.'}`;
   }

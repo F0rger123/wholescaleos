@@ -225,14 +225,31 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       else timeGreeting = 'Good evening';
 
       const greetingText = entities.text?.toLowerCase() || '';
-      if (greetingText === 'yo') {
-        return { success: true, message: `Yo ${userName}! 🤘 Ready to crush some goals today? What's the move?` };
+      if (greetingText === 'yo' || greetingText === 'sup' || greetingText === "what's up" || greetingText === "whats up") {
+        return { success: true, message: `Hey ${userName}! 🤘 Ready to crush some goals today? What's the move?` };
       }
       
       return { 
         success: true, 
         message: `${timeGreeting}, ${userName}! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and ready to work. What's our first objective?` 
       };
+
+    case 'weather_query':
+      return {
+        success: true,
+        message: `I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'.`
+      };
+
+    case 'get_preferences':
+      const role = store.currentUser?.email?.toLowerCase() === 'drummerforger@gmail.com' ? 'Admin' : 'Member';
+      const prefsSummary = `**Your Profile & Preferences:**\n` +
+                           `- Name: **${store.currentUser?.name || userName}**\n` +
+                           `- Role: **${role}**\n` +
+                           `- Email: ${store.currentUser?.email || 'Not set'}\n` +
+                           `- Theme: ${store.currentTheme || 'Default'}\n` +
+                           `- AI Name: ${store.aiName || 'OS Bot'}\n` +
+                           `- Notification Settings: Email on (System Default)`;
+      return { success: true, message: prefsSummary };
     
     case 'automation_query':
       return {

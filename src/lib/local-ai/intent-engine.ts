@@ -147,11 +147,27 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'greeting',
       patterns: [
-        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up)$/i,
+        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up|whats up)$/i,
         /^(?:how's it going|how are you|good morning|good afternoon|good evening)$/i,
         /\b(?:hi|hello|yo|hey)\b/i
       ],
       params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
+    },
+    {
+      intent: 'weather_query',
+      patterns: [
+        /^(?:what's the weather|whats the weather|how is the weather|is it raining|weather forecast)$/i,
+        /^(?:weather|forecast)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'get_preferences',
+      patterns: [
+        /^(?:what are my preferences|show my preferences|view my preferences|my preferences)$/i,
+        /^(?:what do you know about me|my profile|show my info)$/i
+      ],
+      params: () => ({})
     },
 
     // --- CRM_ACTIONS ---
