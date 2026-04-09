@@ -49,15 +49,15 @@ export function splitMultiIntent(input: string): string[] {
  * Detects if the input requires multi-step reasoning or tool chaining.
  */
 export function detectMultiStep(input: string): boolean {
+  // Only trigger for phrases that strongly indicate a chain of actions
   const multiStepIndicators = [
     /\band then\b/i,
     /\bafter that\b/i,
-    /\balso\b/i,
-    /\bthen\b/i,
-    /\band\b/i,
     /\bnext\b/i,
     /\bfind\b.*\bthen\b/i,
+    /\bsearch\b.*\bthen\b/i,
     /\btext\b.*\band\s+email\b/i,
+    /\badd\b.*\band\b.*\btask\b/i,
   ];
   return multiStepIndicators.some(pattern => pattern.test(input));
 }
@@ -147,30 +147,7 @@ export function recognizeIntent(input: string): ParsedIntent | null {
 
   console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
 
-  // Check for typo suggestions (Fuzzy matching on command keywords)
-  const commandKeywords = ['text', 'lead', 'task', 'weather', 'update', 'status', 'add', 'create', 'hello', 'whats up', 'hey', 'yo'];
-  const inputWords = normalized.split(/\s+/);
-  
-  for (const keyword of commandKeywords) {
-    for (const word of inputWords) {
-      if (word.length < 3 && keyword.length >= 3) continue; // skip very short words
-      
-      const distance = getLevenshteinDistance(word, keyword);
-      if (distance > 0 && distance <= 2) {
-        const confidence = 100 - (distance * 20); // Simple confidence
-        if (confidence > 70) {
-          const suggestedText = normalized.replace(word, keyword);
-          return {
-            intent: { name: 'typo_suggestion', action: 'small_talk', patterns: [], template: `I think you meant '${keyword}'?` },
-            params: { text: `I think you meant '${keyword}'?`, suggestedText, keyword },
-            confidence: 100,
-            suggestion: keyword,
-            needsAgentLoop
-          };
-        }
-      }
-    }
-  }
+  // Move typo suggestions to the bottom (below Handlers check)
 
   // Handle specific "Whats u[" case specifically if it slipped through
   if (normalized === 'whats u' || normalized === 'whats up') {
@@ -341,6 +318,31 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       originalText: input,
       needsAgentLoop
     };
+  }
+
+  // 4. TYPO SUGGESTIONS AS LAST RESORT
+  const commandKeywords = ['text', 'lead', 'task', 'weather', 'update', 'status', 'add', 'create', 'hello', 'whats up', 'hey', 'yo'];
+  const inputWords = normalized.split(/\s+/);
+  
+  for (const keyword of commandKeywords) {
+    for (const word of inputWords) {
+      if (word.length < 3 && keyword.length >= 3) continue;
+      
+      const distance = getLevenshteinDistance(word, keyword);
+      if (distance > 0 && distance <= 2) {
+        const confidence = 100 - (distance * 20);
+        if (confidence > 70) {
+          const suggestedText = normalized.replace(word, keyword);
+          return {
+            intent: { name: 'typo_suggestion', action: 'small_talk', patterns: [], template: `I think you meant '${keyword}'?` },
+            params: { text: `I think you meant '${keyword}'?`, suggestedText, keyword },
+            confidence: 100,
+            suggestion: keyword,
+            needsAgentLoop
+          };
+        }
+      }
+    }
   }
 
   return null;

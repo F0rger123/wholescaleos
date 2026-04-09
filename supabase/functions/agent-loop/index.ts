@@ -144,12 +144,18 @@ Analyze the message and return the JSON plan.`;
     );
 
   } catch (error) {
-
-  } catch (error) {
-    console.error("Agent Loop Error:", error);
+    console.error("Agent Loop Error (Detailed):", {
+      message: error.message,
+      stack: error.stack,
+      userId
+    });
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        handled: false, 
+        error: error.message,
+        details: "Check Edge Function logs for stack trace."
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
