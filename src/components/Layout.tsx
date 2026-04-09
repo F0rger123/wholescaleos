@@ -16,11 +16,12 @@ import {
   Undo2, Redo2, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
   Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature,
-  Home, Menu
+  Menu
 } from 'lucide-react';
 import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
 import { LeadFormModal } from './LeadFormModal';
+import { Logo } from './Logo';
 
 interface UserTeam {
   teamId: string;
@@ -361,11 +362,8 @@ export function Layout() {
           <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_50%_0%,var(--t-primary),transparent_70%)]" />
           
           <div className="p-6 flex items-center justify-between relative">
-            <Link to="/" className={`flex items-center gap-3 transition-all duration-300 ${!sidebarOpen ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}>
-              <div className="w-10 h-10 rounded-2xl bg-[var(--t-primary)] flex items-center justify-center p-2 shadow-lg shadow-[var(--t-primary-dim)] rotate-3">
-                <Home className="text-white w-full h-full" />
-              </div>
-              <span className="font-black text-xl tracking-tighter italic uppercase text-white">WholeScale OS</span>
+            <Link to="/" className={`flex items-center transition-all duration-300 ${!sidebarOpen ? 'opacity-0 scale-90 invisible' : 'opacity-100 scale-100 visible'}`}>
+              <Logo size={40} showText={true} className="scale-90 origin-left" />
             </Link>
             
             <button 

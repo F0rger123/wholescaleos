@@ -2327,8 +2327,11 @@ export default function Imports() {
           {!showAddField && (
             <button 
               onClick={() => setShowAddField(true)} 
-              className="flex items-center gap-1 px-3 py-1.5 text-white text-sm rounded-lg transition-all"
-              style={{ background: 'var(--t-primary)' }}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg transition-all border border-[var(--t-border-light)] shadow-sm hover:scale-105"
+              style={{ 
+                background: 'var(--t-button-bg)', 
+                color: 'var(--t-button-text)' 
+              }}
             >
               <Plus className="w-3 h-3" /> Add Field
             </button>
