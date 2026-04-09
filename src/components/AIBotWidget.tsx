@@ -684,7 +684,7 @@ export function AIBotWidget() {
         }
       }
     } catch (err) {
-      const errorMsg = "I'm not sure how to handle that request yet. Try asking for 'help' to see what I can do!";
+      const errorMsg = "I didn't understand that. Try 'help' to see what I can do!";
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',

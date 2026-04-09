@@ -31,10 +31,39 @@ export function generateResponse(
 
   // 3. Handle Greetings
   if (intent.name === 'greeting') {
-     return `${prefix}${result.message}`;
+     const customGreeting = localStorage.getItem('user_custom_greeting');
+     if (customGreeting) {
+       return `${prefix}${customGreeting}`;
+     }
+     return `${prefix}Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. How can I help you today?`;
   }
 
-  // 4. Handle Task execution results
+  // 4. Handle HELP
+  if (intent.name === 'help' || intent.name === 'capabilities') {
+    return `${prefix}Here are some things I can do LOCAL (100% offline):
+- **Leads**: "Add John as a lead", "Show my hot leads"
+- **Tasks**: "Create task: Call John tomorrow", "Show my tasks"
+- **SMS**: "Text John saying Hello!", "Send message to 555-0101"
+- **Navigation**: "Go to calendar", "Show me the dashboard"
+- **Customization**: "Change your greeting to Ready to work?"`;
+  }
+
+  // 5. Handle TEST
+  if (intent.name === 'test_query') {
+    return `${prefix}OS Bot is working properly!`;
+  }
+
+  // 6. Handle CHANGE GREETING
+  if (intent.name === 'change_greeting') {
+    const newGreeting = result.newGreeting || result.message || '';
+    if (newGreeting) {
+      localStorage.setItem('user_custom_greeting', newGreeting);
+      return `${prefix}✅ I've changed my greeting to '${newGreeting}'`;
+    }
+    return `${prefix}What would you like my new greeting to be? Try: 'Change greeting to [your greeting]'`;
+  }
+
+  // 7. Handle Task execution results
   let message = result?.message || intent.template || "I've processed your request.";
 
   // Personality adjustments using context.sentiment

@@ -243,6 +243,29 @@ export function recognizeIntent(input: string): ParsedIntent | null {
         /^(?:leed|add leed)\s+([a-zA-Z\s]+)$/i
       ],
       params: (matches: string[]) => ({ name: matches[1].trim() })
+    },
+    {
+      intent: 'help',
+      patterns: [
+        /^(?:help|what can you do|capabilities|features|show commands|options)$/i,
+        /\b(?:help|capabilities)\b/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'test_query',
+      patterns: [
+        /^(?:test|testing|system test|is it working)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'change_greeting',
+      patterns: [
+        /^(?:change your greeting to|set your greeting to|update your greeting to|change greeting to)\s+(.*)$/i,
+        /^(?:change your greeting|update your greeting|change greeting|set greeting)$/i
+      ],
+      params: (matches: string[]) => ({ newGreeting: matches[1]?.trim() })
     }
   ];
 

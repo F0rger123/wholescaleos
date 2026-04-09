@@ -439,9 +439,13 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     
     // If local is explicitly selected, we MUST return something from local processing
     if (isLocalSelected) {
-      return localResponse || {
+      if (localResponse) return localResponse;
+      
+      const fallbackMsg = "I didn't understand that. Try 'help' to see what I can do.";
+      saveMessage('assistant', fallbackMsg);
+      return {
         intent: 'unknown',
-        response: "I'm not exactly sure how to help with that offline yet. 🤖 Try asking me to create a lead, send a SMS, or show me my **automations**!",
+        response: fallbackMsg,
         systemLog: '🤖 OS Bot'
       };
     }
