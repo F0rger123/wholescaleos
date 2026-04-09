@@ -11,7 +11,7 @@ export const createMultiStepWorkflow = (name: string): { nodes: Node[], edges: E
       type: 'automation',
       position: { x: 250, y: 100 },
       data: { 
-        label: 'Lead Created', 
+        label: name || 'Lead Created', 
         type: 'trigger',
         triggerType: 'new_lead',
         description: 'Triggers when a new lead enters the CRM.'
