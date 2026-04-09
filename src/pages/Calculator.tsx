@@ -305,10 +305,15 @@ export default function Calculators() {
   };
 
   return (
-    <div className="crm-container crm-page-transition">
+    <motion.div 
+      className="crm-container crm-page-transition"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="space-y-8 pb-12">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-[var(--t-surface)] p-8 rounded-[2rem] border border-[var(--t-border)] shadow-xl relative overflow-hidden astral-glass">
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-[var(--t-surface)] p-8 rounded-[2rem] border border-[var(--t-border)] shadow-xl relative overflow-hidden astral-glass">
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--t-primary-dim)] to-transparent opacity-10 pointer-events-none" />
           <div className="relative z-10 flex items-center gap-6">
             <div className="w-16 h-16 bg-[var(--t-primary)] rounded-2xl flex items-center justify-center shadow-lg shadow-[var(--t-primary-dim)] rotate-3">
@@ -328,10 +333,10 @@ export default function Calculators() {
               <span>{editingScenario ? 'Update' : 'Save'} Scenario</span>
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Calculator Type Selector */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <motion.div variants={itemVariants} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { id: 'wholesale', label: 'Wholesale Deal', icon: TrendingUp },
             { id: 'fixnflip', label: 'Fix & Flip', icon: Home },
@@ -358,9 +363,9 @@ export default function Calculators() {
               </p>
             </button>
           ))}
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Input Panel */}
           <div className="lg:col-span-8 space-y-6">
             <div className="bg-[var(--t-surface)] p-8 rounded-[2.5rem] border border-[var(--t-border)] shadow-xl astral-glass">
@@ -700,7 +705,7 @@ export default function Calculators() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Save Modal */}
@@ -808,6 +813,6 @@ export default function Calculators() {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

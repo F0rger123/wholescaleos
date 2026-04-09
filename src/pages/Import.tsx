@@ -885,10 +885,10 @@ export default function Imports() {
                 <h2 className="text-2xl font-black italic text-white uppercase tracking-tighter">Importing Intelligence</h2>
                 <div className="text-right">
                 <span className="text-sm font-bold text-white">
-                  {importProgress.total > 0 ? Math.round((importProgress.current / importProgress.total) * 100) : 0}%
+                  {importProgress && importProgress.total > 0 ? Math.round((importProgress.current / importProgress.total) * 100) : 0}%
                 </span>
                 <p className="text-[10px] text-[var(--t-text-muted)] uppercase tracking-wider font-bold">
-                  {importProgress.current.toLocaleString()} / {importProgress.total.toLocaleString()}
+                  {importProgress ? importProgress.current.toLocaleString() : 0} / {importProgress ? importProgress.total.toLocaleString() : 0}
                 </p>
               </div>
             </div>
@@ -896,14 +896,14 @@ export default function Imports() {
             <div className="h-2 w-full bg-[var(--t-surface-dim)] rounded-full overflow-hidden border border-[var(--t-border)]">
               <div 
                 className="h-full bg-[var(--t-primary)] transition-all duration-300 ease-out"
-                style={{ width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }}
+                style={{ width: `${importProgress && importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` }}
               />
             </div>
             
             <div className="mt-4 flex items-center justify-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)] animate-pulse" />
               <span className="text-[10px] font-medium text-[var(--t-text-muted)] italic">
-                {importProgress.current < importProgress.total / 2 ? 'Analyzing records...' : 'Synchronizing with database...'}
+                {importProgress && importProgress.current < importProgress.total / 2 ? 'Analyzing records...' : 'Synchronizing with database...'}
               </span>
             </div>
           </div>
@@ -920,9 +920,9 @@ export default function Imports() {
             </button>
             <div>
               <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                {(() => { const C = SOURCE_CONFIG[selectedSource]; return <><C.icon size={22} className={C.color} /> {C.label} Import</>; })()}
+                {selectedSource && (() => { const C = SOURCE_CONFIG[selectedSource as ImportSource]; return <><C.icon size={22} className={C.color} /> {C.label} Import</>; })()}
               </h1>
-              <p className="text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{SOURCE_CONFIG[selectedSource].desc}</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--t-text-muted)' }}>{selectedSource && SOURCE_CONFIG[selectedSource as ImportSource].desc}</p>
             </div>
           </div>
           <button onClick={resetWizard} className="p-2 rounded-xl transition-colors"
