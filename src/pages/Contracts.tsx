@@ -827,7 +827,8 @@ export default function Contracts() {
   };
 
   return (
-    <div className="flex h-full bg-[var(--t-bg)]">
+    <div className="crm-container crm-page-transition">
+      <div className="flex h-[calc(100vh-140px)] bg-[var(--t-bg)] rounded-3xl overflow-hidden border border-[var(--t-border)]">
       <div className="w-80 flex flex-col border-r border-[var(--t-border)] bg-[var(--t-surface)] z-10">
         <div className="p-6 border-b border-[var(--t-border)]">
           <h2 className="text-xl font-bold text-[var(--t-text)] flex items-center gap-2">
@@ -1225,6 +1226,7 @@ export default function Contracts() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

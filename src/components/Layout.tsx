@@ -351,162 +351,169 @@ export function Layout() {
   }, [currentUser?.id]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--t-bg)] text-[var(--t-text)] theme-transition">
-      <aside
-        className={`${sidebarOpen ? 'w-72' : 'w-24'} flex flex-col border-r transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] shrink-0 astral-glass border-[var(--t-sidebar-border)] relative z-[var(--z-sidebar)]`}
+    <div className="flex h-screen overflow-hidden bg-[var(--t-bg)] text-[var(--t-text)] theme-transition relative font-inter">
+      {/* Sidebar */}
+      <aside 
+        className={`fixed inset-y-0 left-0 z-[100] flex flex-col transition-all duration-300 ease-in-out border-r border-[var(--t-border)] bg-[var(--t-sidebar-bg)] shadow-2xl ${
+          sidebarOpen ? 'w-[260px]' : 'w-24'
+        }`}
       >
-
-        <Link
-          to="/"
-          className="flex items-center gap-4 px-6 py-8 border-b border-[var(--t-sidebar-border)] hover:bg-[var(--t-sidebar-hover)] transition-all group overflow-hidden"
-        >
-          <Logo size={48} showText={sidebarOpen} />
-        </Link>
-
-        <div
-          className={`mx-4 mt-6 rounded-[2rem] border overflow-visible relative transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 border-none overflow-hidden'}`}
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            borderColor: 'rgba(255,255,255,0.05)',
-          }}
-        >
-          <button
-            onClick={() => setShowTeamDropdown(!showTeamDropdown)}
-            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--t-surface-hover)]"
-          >
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'var(--t-primary-dim)' }}
+        <div className="flex flex-col h-full overflow-hidden relative">
+          <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle_at_50%_0%,var(--t-primary),transparent_70%)]" />
+          
+          <div className="p-6 flex items-center justify-between relative">
+            <Link to="/" className={`flex items-center gap-3 transition-all duration-300 ${!sidebarOpen ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}>
+              <div className="w-10 h-10 rounded-2xl bg-[var(--t-primary)] flex items-center justify-center p-2 shadow-lg shadow-[var(--t-primary-dim)] rotate-3">
+                <Home className="text-white w-full h-full" />
+              </div>
+              <span className="font-black text-xl tracking-tighter italic uppercase text-white">WholeScale OS</span>
+            </Link>
+            
+            <button 
+              onClick={toggleSidebar}
+              className="p-2.5 rounded-xl hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] transition-all hover:scale-110 active:scale-95"
             >
-              <Building2 size={13} style={{ color: 'var(--t-primary)' }} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest truncate italic" style={{ color: 'var(--t-text)' }}>
-                {teamConfig.name || 'Core Network'}
-              </p>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[#6d758c]">
-                {(team || []).length} Nodes Active
-              </p>
-            </div>
-            <ChevronDown
-              size={14}
-              className={`transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
-              style={{ color: 'var(--t-text-muted)' }}
-            />
-          </button>
+              <Menu size={20} />
+            </button>
+          </div>
 
-          {showTeamDropdown && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
+          <div
+            className={`mx-4 mt-2 mb-6 rounded-[2rem] border overflow-visible relative transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 mt-0 border-none overflow-hidden'}`}
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              borderColor: 'rgba(255,255,255,0.05)',
+            }}
+          >
+            <button
+              onClick={() => setShowTeamDropdown(!showTeamDropdown)}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--t-surface-hover)]"
+            >
               <div
-                className="absolute left-0 right-0 mt-1 z-50 rounded-xl border shadow-lg max-h-[320px] overflow-y-auto scroll-smooth"
-                style={{
-                  background: 'var(--t-sidebar-bg)',
-                  borderColor: 'var(--t-sidebar-border)',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
-                }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: 'var(--t-primary-dim)' }}
               >
-                {userTeams.length > 1 && (
-                  <div className="p-2">
-                    <p className="text-[9px] uppercase tracking-wider font-semibold px-2 py-1.5 sticky top-0 z-10"
-                      style={{ 
-                        color: 'var(--t-text-muted)',
-                        background: 'var(--t-sidebar-bg)',
-                        borderBottom: '1px solid var(--t-sidebar-border)',
-                      }}
-                    >
-                      Switch Team
-                    </p>
-                    <div className="max-h-[180px] overflow-y-auto pt-1">
-                      {userTeams.map(t => (
-                        <button
-                          key={t.teamId}
-                          onClick={() => {
-                            if (!t.isCurrent) switchToTeam(t.teamId);
-                            setShowTeamDropdown(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left transition-colors hover:bg-white/5"
-                        >
-                          <div
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ background: t.isCurrent ? 'var(--t-success)' : 'var(--t-text-muted)' }}
-                          />
-                          <span className="text-xs truncate flex-1" style={{
-                            color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text-secondary)',
-                          }}>{t.teamName}</span>
-                          {t.isCurrent && <span className="text-[9px]" style={{ color: 'var(--t-success)' }}>✓</span>}
-                        </button>
-                      ))}
+                <Building2 size={13} style={{ color: 'var(--t-primary)' }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest truncate italic" style={{ color: 'var(--t-text)' }}>
+                  {teamConfig.name || 'Core Network'}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[#6d758c]">
+                  {(team || []).length} Nodes Active
+                </p>
+              </div>
+              <ChevronDown
+                size={14}
+                className={`transition-transform ${showTeamDropdown ? 'rotate-180' : ''}`}
+                style={{ color: 'var(--t-text-muted)' }}
+              />
+            </button>
+
+            {showTeamDropdown && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowTeamDropdown(false)} />
+                <div
+                  className="absolute left-0 right-0 mt-1 z-50 rounded-xl border shadow-lg max-h-[320px] overflow-y-auto scroll-smooth"
+                  style={{
+                    background: 'var(--t-sidebar-bg)',
+                    borderColor: 'var(--t-sidebar-border)',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                  }}
+                >
+                  {userTeams.length > 1 && (
+                    <div className="p-2">
+                      <p className="text-[9px] uppercase tracking-wider font-semibold px-2 py-1.5 sticky top-0 z-10"
+                        style={{ 
+                          color: 'var(--t-text-muted)',
+                          background: 'var(--t-sidebar-bg)',
+                          borderBottom: '1px solid var(--t-sidebar-border)',
+                        }}
+                      >
+                        Switch Team
+                      </p>
+                      <div className="max-h-[180px] overflow-y-auto pt-1">
+                        {userTeams.map(t => (
+                          <button
+                            key={t.teamId}
+                            onClick={() => {
+                              if (!t.isCurrent) switchToTeam(t.teamId);
+                              setShowTeamDropdown(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left transition-colors hover:bg-white/5"
+                          >
+                            <div
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ background: t.isCurrent ? 'var(--t-success)' : 'var(--t-text-muted)' }}
+                            />
+                            <span className="text-xs truncate flex-1" style={{
+                              color: t.isCurrent ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                            }}>{t.teamName}</span>
+                            {t.isCurrent && <span className="text-[9px]" style={{ color: 'var(--t-success)' }}>✓</span>}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+                  )}
+                  <div className="p-2 space-y-1 sticky bottom-0" style={{ borderTop: '1px solid var(--t-sidebar-border)', background: 'var(--t-sidebar-bg)' }}>
+                    <button onClick={() => { setShowJoinModal(true); setShowTeamDropdown(false); }} className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5" style={{ color: 'var(--t-text-secondary)' }}>
+                      <ArrowRightLeft size={14} /> Join Team
+                    </button>
+                    <button onClick={() => { setShowCreateModal(true); setShowTeamDropdown(false); }} className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5" style={{ color: 'var(--t-text-secondary)' }}>
+                      <Plus size={14} /> Create Team
+                    </button>
                   </div>
-                )}
-                <div className="p-2 space-y-1 sticky bottom-0" style={{ borderTop: '1px solid var(--t-sidebar-border)', background: 'var(--t-sidebar-bg)' }}>
-                  <button onClick={() => { setShowJoinModal(true); setShowTeamDropdown(false); }} className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5" style={{ color: 'var(--t-text-secondary)' }}>
-                    <ArrowRightLeft size={14} /> Join Team
-                  </button>
-                  <button onClick={() => { setShowCreateModal(true); setShowTeamDropdown(false); }} className="w-full flex items-center gap-2 px-2 py-2.5 rounded-lg text-left text-xs transition-colors hover:bg-white/5" style={{ color: 'var(--t-text-secondary)' }}>
-                    <Plus size={14} /> Create Team
-                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-8 select-none custom-scrollbar relative z-10">
+            {Object.entries(navSections).map(([section, items]) => (
+              <div key={section} className="space-y-4">
+                <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] italic" style={{ color: 'var(--t-text-muted)' }}>{section}</p>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {items.map(({ to, label, icon: Icon }) => {
+                    const badge = (label === 'Tasks' || label === 'Tasks') ? pendingTaskCount : label === 'Team Dashboard' ? onlineCount : label === 'Team Chat' ? totalUnread : 0;
+                    return (
+                      <NavLink
+                        key={to}
+                        to={to}
+                        end={to === '/'}
+                        className={({ isActive }) => `flex items-center gap-3 px-3 py-3 text-[13px] font-bold transition-all duration-300 group relative ${isActive ? 'active-nav-item' : 'inactive-nav-item hover:translate-x-1.5'}`}
+                        style={({ isActive }) => ({
+                          borderRadius: '1rem',
+                          background: isActive ? 'var(--t-primary-dim)' : 'transparent',
+                          color: isActive ? 'var(--t-primary)' : 'var(--t-text-secondary)',
+                          border: isActive ? '1px solid var(--t-primary-dim)' : '1px solid transparent',
+                          boxShadow: isActive ? '0 10px 20px -10px var(--t-primary-dim)' : 'none',
+                        })}
+                      >
+                        <Icon size={18} className={`shrink-0 transition-all duration-300 ${sidebarOpen ? 'group-hover:scale-110' : 'mx-auto group-hover:scale-125'}`} />
+                        <span className={`flex-1 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>{label}</span>
+                        <div className={`absolute left-0 w-1 h-5 bg-[var(--t-primary)] rounded-r-full transition-all duration-300 ${location.pathname === to ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`} />
+                        {badge > 0 && sidebarOpen && (
+                          <span className="text-[9px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center" style={{ background: label === 'Tasks' ? 'var(--t-warning)' : label === 'Team Chat' ? 'var(--t-primary)' : 'var(--t-success)', color: 'var(--t-on-primary)' }}>{badge}</span>
+                        )}
+                      </NavLink>
+                    );
+                  })}
                 </div>
               </div>
-            </>
-          )}
+            ))}
+          </nav>
         </div>
-
-        <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-8 select-none custom-scrollbar">
-          {Object.entries(navSections).map(([section, items]) => (
-            <div key={section} className="space-y-4">
-              <div className={`transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${sidebarOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] italic" style={{ color: 'var(--t-text-muted)' }}>{section}</p>
-              </div>
-              <div className="flex flex-col gap-1">
-                {items.map(({ to, label, icon: Icon }) => {
-                  const badge = (label === 'Tasks' || label === 'Tasks') ? pendingTaskCount : label === 'Team Dashboard' ? onlineCount : label === 'Team Chat' ? totalUnread : 0;
-                  return (
-                    <NavLink
-                      key={to}
-                      to={to}
-                      end={to === '/'}
-                      className={({ isActive }) => `flex items-center gap-3 px-3 py-3 text-[13px] font-bold transition-all duration-300 group relative ${isActive ? 'active-nav-item' : 'inactive-nav-item hover:translate-x-1.5'}`}
-                      style={({ isActive }) => ({
-                        borderRadius: '1rem',
-                        background: isActive ? 'var(--t-primary-dim)' : 'transparent',
-                        color: isActive ? 'var(--t-primary)' : 'var(--t-text-secondary)',
-                        border: isActive ? '1px solid var(--t-primary-dim)' : '1px solid transparent',
-                        boxShadow: isActive ? '0 10px 20px -10px var(--t-primary-dim)' : 'none',
-                      })}
-                    >
-                      <Icon size={18} className={`shrink-0 transition-all duration-300 ${sidebarOpen ? 'group-hover:scale-110' : 'mx-auto group-hover:scale-125'}`} />
-                      <span className={`flex-1 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden whitespace-nowrap ${sidebarOpen ? 'max-w-[150px] opacity-100' : 'max-w-0 opacity-0'}`}>{label}</span>
-                      <div className={`absolute left-0 w-1 h-5 bg-[var(--t-primary)] rounded-r-full transition-all duration-300 ${location.pathname === to ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`} />
-                      {badge > 0 && sidebarOpen && (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-lg min-w-[20px] text-center" style={{ background: label === 'Tasks' ? 'var(--t-warning)' : label === 'Team Chat' ? 'var(--t-primary)' : 'var(--t-success)', color: 'var(--t-on-primary)' }}>{badge}</span>
-                      )}
-                    </NavLink>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content */}
+      <div 
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
+          sidebarOpen ? 'pl-[260px]' : 'pl-24'
+        }`}
+      >
         <header className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-[var(--t-sidebar-border)] relative" style={{ zIndex: (isUserMenuOpen || showSearchResults) ? 200 : 100 }}>
           <div className="flex items-center gap-4">
-            {/* Sidebar Toggle */}
-            <button 
-              onClick={toggleSidebar} 
-              className="p-2 rounded-xl hover:bg-[var(--t-surface-hover)] transition-all hover:scale-105 active:scale-95 group relative" 
-              style={{ color: 'var(--t-text-secondary)' }}
-              id="sidebar-toggle"
-            >
-              {sidebarOpen ? (
-                <Indent size={20} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-text)]" />
-              ) : (
-                <AlignLeft size={20} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
-              )}
-            </button>
             <div className="relative flex items-center" ref={searchRef}>
               <button
                 onClick={() => {
@@ -575,7 +582,6 @@ export function Layout() {
               </div>
             )}
             <div className="flex items-center gap-1.5 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
-              {/* Actions Cluster (Save/Undo/Redo) */}
               <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mr-1.5">
                 <button
                   onClick={undo}
@@ -598,14 +604,6 @@ export function Layout() {
                   <span className="text-[9px] font-black uppercase tracking-widest">{saveStatus === 'saving' ? 'Saving' : saveStatus === 'success' ? 'Saved' : 'Save'}</span>
                 </button>
               </div>
-
-              <div className="w-[1px] h-4 bg-[var(--t-border)] mx-1 opacity-20" />
-
-              {/* Unified Header Cluster */}
-              
-              {/* OS Bot Toggle */}
-              {/* OS Stats & Controls */}
-
 
               {showFloatingAIWidget && (
                 <>
@@ -633,7 +631,6 @@ export function Layout() {
                 </>
               )}
 
-              {/* Quick Notes Toggle */}
               {showQuickNotes && (
                 <>
                   <button
@@ -660,9 +657,7 @@ export function Layout() {
                 </>
               )}
 
-              {/* Theme & Notifications */}
               <div className="hover:scale-110 transition-transform"><ThemeSwitcher /></div>
-
               <div className="hover:scale-110 transition-transform"><NotificationPanel /></div>
             </div>
             <div className="hover:scale-105 active:scale-95 transition-all">
@@ -671,12 +666,10 @@ export function Layout() {
           </div>
         </header>
 
-        <main className={`flex-1 relative custom-scrollbar ${location.pathname.startsWith('/team-chat') ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <main className={`flex-1 relative overflow-y-auto overflow-x-hidden custom-scrollbar bg-[var(--t-bg)] ${location.pathname.startsWith('/team-chat') ? 'overflow-hidden' : ''}`}>
           <Outlet />
         </main>
       </div>
-
-
 
       <AIBotWidget />
       

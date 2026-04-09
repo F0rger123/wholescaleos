@@ -298,7 +298,7 @@ export default function Dashboard() {
 
   return (
     <DashboardErrorBoundary>
-      <div className="space-y-8 p-6 lg:p-12 min-h-screen bg-[var(--t-bg)] text-[var(--t-text)]">
+      <div className="crm-container crm-page-transition space-y-8 min-h-screen bg-[var(--t-bg)] text-[var(--t-text)]">
         {/* Header */}
         <div className={`flex items-center justify-between flex-wrap gap-6 mb-12 animate-astral-nav relative ${showPresets ? 'z-[201]' : 'z-[10]'}`}>
           <div>

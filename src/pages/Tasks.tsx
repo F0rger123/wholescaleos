@@ -313,7 +313,7 @@ export default function Tasks() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-12 pt-10 px-6 animate-in fade-in slide-in-from-bottom-4 duration-700" style={{ fontFamily: 'Inter, sans-serif' }}>
+    <div className="crm-container crm-page-transition space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 bg-[var(--t-surface)] p-4 rounded-3xl border border-[var(--t-border)] shadow-xl astral-glass">
         <div>

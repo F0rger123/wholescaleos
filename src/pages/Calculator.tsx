@@ -3,7 +3,7 @@ import { motion, Variants } from 'framer-motion';
 import { 
   Home, TrendingUp, DollarSign, PieChart, 
   RefreshCw, Save, ChevronDown, ChevronUp, Download,
-  Edit2, Trash2, Link2, X, Target
+  Edit2, Trash2, Link2, X, Target, Bot
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import type { CalculatorType, CalculatorScenario } from '../store/useStore';
@@ -305,914 +305,415 @@ export default function Calculators() {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="space-y-6"
-    >
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--t-text)' }}>Real Estate Calculators</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--t-text-secondary)' }}>
-          Analyze deals, project profits, and make data-driven decisions
-        </p>
-      </div>
-
-      {/* Calculator Type Selector */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { id: 'wholesale', label: 'Wholesale Deal', icon: TrendingUp },
-          { id: 'fixnflip', label: 'Fix & Flip', icon: Home },
-          { id: 'rental', label: 'Rental Property', icon: DollarSign },
-          { id: 'brrrr', label: 'BRRRR Method', icon: RefreshCw },
-        ].map(calc => (
-          <motion.button
-            key={calc.id}
-            whileHover={{ scale: 1.02, translateY: -2 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setActiveCalculator(calc.id as CalculatorType)}
-            className="p-4 rounded-xl border transition-all shadow-sm hover:shadow-md"
-            style={{
-              backgroundColor: activeCalculator === calc.id ? 'var(--t-primary-dim)' : 'var(--t-surface)',
-              borderColor: activeCalculator === calc.id ? 'var(--t-primary)' : 'var(--t-border)',
-              color: activeCalculator === calc.id ? 'var(--t-primary-text)' : 'var(--t-text-secondary)',
-            }}
-          >
-            <calc.icon size={24} style={{ color: activeCalculator === calc.id ? 'var(--t-primary)' : 'var(--t-text-muted)' }} />
-            <p className="text-sm font-medium mt-2">{calc.label}</p>
-          </motion.button>
-        ))}
-      </div>
-
-      {/* Main Calculator Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Input Panel */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="rounded-2xl p-6 border shadow-sm" 
-          style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
-              {activeCalculator === 'wholesale' && <><TrendingUp style={{ color: 'var(--t-primary)' }} /> Wholesale Deal Inputs</>}
-              {activeCalculator === 'fixnflip' && <><Home style={{ color: 'var(--t-success)' }} /> Fix & Flip Inputs</>}
-              {activeCalculator === 'rental' && <><DollarSign style={{ color: 'var(--t-accent)' }} /> Rental Property Inputs</>}
-              {activeCalculator === 'brrrr' && <><RefreshCw style={{ color: 'var(--t-warning)' }} /> BRRRR Method Inputs</>}
-            </h2>
-            <button
-              onClick={() => setShowDetails(!showDetails)}
-              className="transition-colors"
-              style={{ color: 'var(--t-text-muted)' }}
-              onMouseEnter={(e) => e.currentTarget.style.color = 'var(--t-text)'}
-              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--t-text-muted)'}
-            >
-              {showDetails ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-            </button>
+    <div className="crm-container crm-page-transition">
+      <div className="space-y-8 pb-12">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-[var(--t-surface)] p-8 rounded-[2rem] border border-[var(--t-border)] shadow-xl relative overflow-hidden astral-glass">
+          <div className="absolute inset-0 bg-gradient-to-br from-[var(--t-primary-dim)] to-transparent opacity-10 pointer-events-none" />
+          <div className="relative z-10 flex items-center gap-6">
+            <div className="w-16 h-16 bg-[var(--t-primary)] rounded-2xl flex items-center justify-center shadow-lg shadow-[var(--t-primary-dim)] rotate-3">
+              <PieChart size={32} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black italic tracking-tighter uppercase text-white mb-1">Deal Calculator</h1>
+              <p className="text-[var(--t-text-muted)] font-medium">Precision deal analysis for fix & flip, BRRRR, and traditional rentals.</p>
+            </div>
           </div>
-
-          {/* Wholesale Calculator Inputs */}
-          {activeCalculator === 'wholesale' && (
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>After Repair Value (ARV)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={wholesaleInputs.arv}
-                    onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, arv: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Repair Costs</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={wholesaleInputs.repairs}
-                    onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, repairs: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Desired Profit</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={wholesaleInputs.desiredProfit}
-                    onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, desiredProfit: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              {showDetails && (
-                <>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Holding Costs</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={wholesaleInputs.holdingCosts}
-                        onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, holdingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Closing Costs</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={wholesaleInputs.closingCosts}
-                        onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, closingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Fix & Flip Inputs */}
-          {activeCalculator === 'fixnflip' && (
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Purchase Price</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={flipInputs.purchasePrice}
-                    onChange={(e) => setFlipInputs({ ...flipInputs, purchasePrice: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Renovation Costs</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={flipInputs.renovationCosts}
-                    onChange={(e) => setFlipInputs({ ...flipInputs, renovationCosts: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>After Repair Value (ARV)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={flipInputs.arv}
-                    onChange={(e) => setFlipInputs({ ...flipInputs, arv: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              {showDetails && (
-                <>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Holding Costs</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={flipInputs.holdingCosts}
-                        onChange={(e) => setFlipInputs({ ...flipInputs, holdingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Closing Costs</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={flipInputs.closingCosts}
-                        onChange={(e) => setFlipInputs({ ...flipInputs, closingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Selling Costs (%)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>%</span>
-                      <input
-                        type="number"
-                        value={(flipInputs.sellingCosts / flipInputs.arv * 100).toFixed(1)}
-                        onChange={(e) => setFlipInputs({ ...flipInputs, sellingCosts: (Number(e.target.value) / 100) * flipInputs.arv })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Rental Property Inputs */}
-          {activeCalculator === 'rental' && (
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Purchase Price</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={rentalInputs.purchasePrice}
-                    onChange={(e) => setRentalInputs({ ...rentalInputs, purchasePrice: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Down Payment (%)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>%</span>
-                  <input
-                    type="number"
-                    value={rentalInputs.downPaymentPercent}
-                    onChange={(e) => setRentalInputs({ ...rentalInputs, downPaymentPercent: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Interest Rate (%)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>%</span>
-                  <input
-                    type="number"
-                    step="0.125"
-                    value={rentalInputs.interestRate}
-                    onChange={(e) => setRentalInputs({ ...rentalInputs, interestRate: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Monthly Rent</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={rentalInputs.monthlyRent}
-                    onChange={(e) => setRentalInputs({ ...rentalInputs, monthlyRent: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              {showDetails && (
-                <>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Annual Property Taxes</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={rentalInputs.propertyTaxes}
-                        onChange={(e) => setRentalInputs({ ...rentalInputs, propertyTaxes: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Annual Insurance</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={rentalInputs.insurance}
-                        onChange={(e) => setRentalInputs({ ...rentalInputs, insurance: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Annual Maintenance</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={rentalInputs.maintenance}
-                        onChange={(e) => setRentalInputs({ ...rentalInputs, maintenance: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Property Management (%)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>%</span>
-                      <input
-                        type="number"
-                        value={rentalInputs.propertyManagement}
-                        onChange={(e) => setRentalInputs({ ...rentalInputs, propertyManagement: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Vacancy Rate (%)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>%</span>
-                      <input
-                        type="number"
-                        value={rentalInputs.vacancyRate}
-                        onChange={(e) => setRentalInputs({ ...rentalInputs, vacancyRate: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* BRRRR Inputs */}
-          {activeCalculator === 'brrrr' && (
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Purchase Price</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={brrrrInputs.purchasePrice}
-                    onChange={(e) => setBrrrrInputs({ ...brrrrInputs, purchasePrice: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Renovation Costs</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={brrrrInputs.renovationCosts}
-                    onChange={(e) => setBrrrrInputs({ ...brrrrInputs, renovationCosts: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>After Repair Value</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={brrrrInputs.afterRepairValue}
-                    onChange={(e) => setBrrrrInputs({ ...brrrrInputs, afterRepairValue: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Monthly Rent</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                  <input
-                    type="number"
-                    value={brrrrInputs.monthlyRent}
-                    onChange={(e) => setBrrrrInputs({ ...brrrrInputs, monthlyRent: Number(e.target.value) })}
-                    className="w-full pl-8 pr-4 py-2 rounded-lg"
-                    style={{
-                      backgroundColor: 'var(--t-bg)',
-                      borderColor: 'var(--t-border)',
-                      color: 'var(--t-text)',
-                      border: '1px solid',
-                    }}
-                  />
-                </div>
-              </div>
-              {showDetails && (
-                <>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Holding Costs</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>$</span>
-                      <input
-                        type="number"
-                        value={brrrrInputs.holdingCosts}
-                        onChange={(e) => setBrrrrInputs({ ...brrrrInputs, holdingCosts: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Refi LTV (%)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>%</span>
-                      <input
-                        type="number"
-                        value={brrrrInputs.refiLtv}
-                        onChange={(e) => setBrrrrInputs({ ...brrrrInputs, refiLtv: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Refi Interest Rate (%)</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--t-text-muted)' }}>%</span>
-                      <input
-                        type="number"
-                        step="0.125"
-                        value={brrrrInputs.refiInterestRate}
-                        onChange={(e) => setBrrrrInputs({ ...brrrrInputs, refiInterestRate: Number(e.target.value) })}
-                        className="w-full pl-8 pr-4 py-2 rounded-lg"
-                        style={{
-                          backgroundColor: 'var(--t-bg)',
-                          borderColor: 'var(--t-border)',
-                          color: 'var(--t-text)',
-                          border: '1px solid',
-                        }}
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'var(--t-border)' }}>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+          <div className="flex gap-4 relative z-10">
+            <button 
               onClick={() => setShowSaveModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-[var(--t-primary-dim)]"
-              style={{
-                backgroundColor: 'var(--t-primary)',
-                color: 'var(--t-on-primary)',
-              }}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--t-primary)] text-white shadow-lg shadow-[var(--t-primary-dim)] hover:scale-105 active:scale-95 transition-all font-bold text-sm"
             >
-              <Save size={16} />
-              {editingScenario ? 'Update Scenario' : 'Save Scenario'}
-            </motion.button>
-            <button
-              onClick={() => {
-                // Reset to defaults
-                if (activeCalculator === 'wholesale') {
-                  setWholesaleInputs({
-                    arv: 250000,
-                    repairs: 30000,
-                    desiredProfit: 15000,
-                    holdingCosts: 3000,
-                    closingCosts: 5000,
-                  });
-                }
-                if (activeCalculator === 'fixnflip') {
-                  setFlipInputs({
-                    purchasePrice: 200000,
-                    renovationCosts: 40000,
-                    holdingCosts: 8000,
-                    closingCosts: 12000,
-                    arv: 320000,
-                    sellingCosts: 19200,
-                  });
-                }
-                if (activeCalculator === 'rental') {
-                  setRentalInputs({
-                    purchasePrice: 250000,
-                    downPaymentPercent: 20,
-                    interestRate: 6.5,
-                    loanTerm: 30,
-                    monthlyRent: 2200,
-                    propertyTaxes: 3000,
-                    insurance: 1200,
-                    maintenance: 1500,
-                    propertyManagement: 8,
-                    vacancyRate: 5,
-                  });
-                }
-                if (activeCalculator === 'brrrr') {
-                  setBrrrrInputs({
-                    purchasePrice: 150000,
-                    renovationCosts: 35000,
-                    holdingCosts: 5000,
-                    afterRepairValue: 250000,
-                    refiLtv: 75,
-                    refiInterestRate: 6.75,
-                    monthlyRent: 2000,
-                  });
-                }
-              }}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{
-                backgroundColor: 'var(--t-surface-hover)',
-                color: 'var(--t-text)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--t-surface-active)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
-              }}
-            >
-              <RefreshCw size={16} />
-              Reset
+              <Save size={18} />
+              <span>{editingScenario ? 'Update' : 'Save'} Scenario</span>
             </button>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Results Panel */}
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="rounded-2xl p-6 border shadow-sm" 
-          style={{ backgroundColor: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
-        >
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
-            <PieChart style={{ color: 'var(--t-success)' }} />
-            Results
-          </h2>
-
-          {activeCalculator === 'wholesale' && (
-            <motion.div 
-              key="wholesale-results"
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-              className="space-y-6"
+        {/* Calculator Type Selector */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[
+            { id: 'wholesale', label: 'Wholesale Deal', icon: TrendingUp },
+            { id: 'fixnflip', label: 'Fix & Flip', icon: Home },
+            { id: 'rental', label: 'Rental Property', icon: DollarSign },
+            { id: 'brrrr', label: 'BRRRR Method', icon: RefreshCw },
+          ].map(calc => (
+            <button
+              key={calc.id}
+              onClick={() => setActiveCalculator(calc.id as CalculatorType)}
+              className={`p-6 rounded-[2rem] border transition-all relative overflow-hidden group ${
+                activeCalculator === calc.id 
+                ? 'bg-[var(--t-primary-dim)] border-[var(--t-primary)] shadow-lg shadow-[var(--t-primary-dim)]' 
+                : 'bg-[var(--t-surface)] border-[var(--t-border)] hover:border-[var(--t-primary-dim)] astral-glass'
+              }`}
             >
-              <motion.div 
-                variants={itemVariants}
-                whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-primary/10" 
-                style={{
-                  background: 'linear-gradient(135deg, var(--t-primary-dim) 0%, var(--t-surface) 100%)',
-                  borderColor: 'var(--t-primary)',
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Maximum Allowable Offer</p>
-                  <Target size={16} style={{ color: 'var(--t-primary)' }} />
+              {activeCalculator === calc.id && (
+                <div className="absolute top-0 right-0 p-2 text-[var(--t-primary)] -rotate-12 translate-x-1 -translate-y-1">
+                  <Target size={40} className="opacity-10" />
                 </div>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
-                  <StatCounter value={wholesaleResult.maxOfferValue} prefix="$" />
-                </p>
-                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>ARV - Repairs - Profit - Holding - Closing</p>
-              </motion.div>
+              )}
+              <calc.icon size={24} className={`mb-3 transition-colors ${activeCalculator === calc.id ? 'text-[var(--t-primary)]' : 'text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]'}`} />
+              <p className={`text-xs font-black uppercase tracking-widest ${activeCalculator === calc.id ? 'text-white' : 'text-[var(--t-text-muted)] group-hover:text-white transition-colors'}`}>
+                {calc.label}
+              </p>
+            </button>
+          ))}
+        </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'ARV', value: wholesaleResult.arvValue, prefix: '$' },
-                  { label: 'Repairs', value: wholesaleResult.repairsValue, prefix: '$' },
-                  { label: 'Target Profit', value: wholesaleResult.profitValue, prefix: '$' },
-                  { label: 'ROI', value: wholesaleResult.roiValue, suffix: '%', decimals: 1, color: 'var(--t-success)' },
-                ].map((stat, i) => (
-                  <motion.div 
-                    key={i}
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.02 }}
-                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
-                    style={{ backgroundColor: 'var(--t-bg)' }}
-                  >
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
-                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
-                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
-                    </p>
-                  </motion.div>
-                ))}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* Input Panel */}
+          <div className="lg:col-span-8 space-y-6">
+            <div className="bg-[var(--t-surface)] p-8 rounded-[2.5rem] border border-[var(--t-border)] shadow-xl astral-glass">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-black italic text-white uppercase tracking-tighter flex items-center gap-3">
+                  <Edit2 size={20} className="text-[var(--t-primary)]" />
+                  Deal Parameters
+                </h2>
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all text-[10px] font-black uppercase tracking-widest"
+                >
+                  {showDetails ? 'Simple View' : 'Advanced Detail'}
+                  {showDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                </button>
               </div>
-            </motion.div>
-          )}
 
-          {activeCalculator === 'fixnflip' && (
-            <motion.div 
-              key="flip-results"
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-              className="space-y-6"
-            >
-              <motion.div 
-                variants={itemVariants}
-                whileHover={{ y: -5 }}
-                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-success/10" 
-                style={{
-                  background: 'linear-gradient(135deg, var(--t-success-dim) 0%, var(--t-surface) 100%)',
-                  borderColor: 'var(--t-success)',
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Net Profit</p>
-                  <TrendingUp size={16} style={{ color: 'var(--t-success)' }} />
+              {/* Wholesale Inputs */}
+              {activeCalculator === 'wholesale' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { label: 'After Repair Value (ARV)', value: wholesaleInputs.arv, key: 'arv' },
+                    { label: 'Repair Costs', value: wholesaleInputs.repairs, key: 'repairs' },
+                    { label: 'Desired Profit', value: wholesaleInputs.desiredProfit, key: 'desiredProfit' },
+                    { label: 'Holding Costs', value: wholesaleInputs.holdingCosts, key: 'holdingCosts' },
+                    { label: 'Closing Costs', value: wholesaleInputs.closingCosts, key: 'closingCosts' }
+                  ].map((field) => (
+                    <div key={field.key} className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] pl-2">{field.label}</label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[var(--t-text-muted)]">$</span>
+                        <input
+                          type="number"
+                          value={field.value}
+                          onChange={(e) => setWholesaleInputs({ ...wholesaleInputs, [field.key]: Number(e.target.value) })}
+                          className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-2xl py-4 pl-8 pr-4 text-sm font-bold text-white focus:ring-2 focus:ring-[var(--t-primary-dim)] outline-none"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
-                  <StatCounter value={flipResult.netProfitValue} prefix="$" />
-                </p>
-                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>ARV - Total Investment - Selling Costs</p>
-              </motion.div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'Total Investment', value: flipResult.totalInvestmentValue, prefix: '$' },
-                  { label: 'ARV', value: flipResult.arvValue, prefix: '$' },
-                  { label: 'ROI', value: flipResult.roiValue, suffix: '%', decimals: 1, color: 'var(--t-success)' },
-                  { label: 'Cash-on-Cash', value: flipResult.cashOnCashValue, suffix: '%', decimals: 1, color: 'var(--t-warning)' },
-                ].map((stat, i) => (
-                  <motion.div 
-                    key={i}
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.02 }}
-                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
-                    style={{ backgroundColor: 'var(--t-bg)' }}
-                  >
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
-                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
-                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {activeCalculator === 'rental' && (
-            <motion.div 
-              key="rental-results"
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-              className="space-y-6"
-            >
-              <motion.div 
-                variants={itemVariants}
-                whileHover={{ y: -5 }}
-                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-accent/10" 
-                style={{
-                  background: 'linear-gradient(135deg, var(--t-accent-dim) 0%, var(--t-surface) 100%)',
-                  borderColor: 'var(--t-accent)',
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Monthly Cash Flow</p>
-                  <DollarSign size={16} style={{ color: 'var(--t-accent)' }} />
+              {/* Fix & Flip Inputs */}
+              {activeCalculator === 'fixnflip' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { label: 'Purchase Price', value: flipInputs.purchasePrice, key: 'purchasePrice' },
+                    { label: 'Renovation Costs', value: flipInputs.renovationCosts, key: 'renovationCosts' },
+                    { label: 'After Repair Value', value: flipInputs.arv, key: 'arv' },
+                    { label: 'Holding Costs', value: flipInputs.holdingCosts, key: 'holdingCosts', advanced: true },
+                    { label: 'Closing Costs', value: flipInputs.closingCosts, key: 'closingCosts', advanced: true },
+                  ].map((field) => (
+                    (!field.advanced || showDetails) && (
+                      <div key={field.key} className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] pl-2">{field.label}</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[var(--t-text-muted)]">$</span>
+                          <input
+                            type="number"
+                            value={field.value}
+                            onChange={(e) => setFlipInputs({ ...flipInputs, [field.key]: Number(e.target.value) })}
+                            className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-2xl py-4 pl-8 pr-4 text-sm font-bold text-white focus:ring-2 focus:ring-[var(--t-primary-dim)] outline-none"
+                          />
+                        </div>
+                      </div>
+                    )
+                  ))}
                 </div>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
-                  <StatCounter value={rentalResult.monthlyCashFlowValue} prefix="$" />
-                </p>
-                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>Rent - Mortgage - Expenses</p>
-              </motion.div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'Annual Cash Flow', value: rentalResult.annualCashFlowValue, prefix: '$' },
-                  { label: 'Mortgage Payment', value: rentalResult.mortgagePaymentValue, prefix: '$' },
-                  { label: 'CoC ROI', value: rentalResult.cashOnCashROIValue, suffix: '%', decimals: 1, color: 'var(--t-success)' },
-                  { label: 'Cap Rate', value: rentalResult.capRateValue, suffix: '%', decimals: 1, color: 'var(--t-warning)' },
-                ].map((stat, i) => (
-                  <motion.div 
-                    key={i}
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.02 }}
-                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
-                    style={{ backgroundColor: 'var(--t-bg)' }}
-                  >
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
-                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
-                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
-                    </p>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {activeCalculator === 'brrrr' && (
-            <motion.div 
-              key="brrrr-results"
-              initial="hidden"
-              animate="visible"
-              variants={containerVariants}
-              className="space-y-6"
-            >
-              <motion.div 
-                variants={itemVariants}
-                whileHover={{ y: -5 }}
-                className="rounded-xl p-6 border shadow-lg transition-shadow hover:shadow-warning/10" 
-                style={{
-                  background: 'linear-gradient(135deg, var(--t-warning-dim) 0%, var(--t-surface) 100%)',
-                  borderColor: 'var(--t-warning)',
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm" style={{ color: 'var(--t-text-muted)' }}>Cash-Out at Refi</p>
-                  <RefreshCw size={16} style={{ color: 'var(--t-warning)' }} />
+              {/* Rental Property Inputs */}
+              {activeCalculator === 'rental' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { label: 'Purchase Price', value: rentalInputs.purchasePrice, key: 'purchasePrice' },
+                    { label: 'Monthly Rent', value: rentalInputs.monthlyRent, key: 'monthlyRent' },
+                    { label: 'Interest Rate (%)', value: rentalInputs.interestRate, key: 'interestRate', unit: '%' },
+                    { label: 'Down Payment (%)', value: rentalInputs.downPaymentPercent, key: 'downPaymentPercent', unit: '%' },
+                    { label: 'Property Management (%)', value: rentalInputs.propertyManagement, key: 'propertyManagement', unit: '%', advanced: true },
+                    { label: 'Vacancy Rate (%)', value: rentalInputs.vacancyRate, key: 'vacancyRate', unit: '%', advanced: true },
+                  ].map((field) => (
+                    (!field.advanced || showDetails) && (
+                      <div key={field.key} className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] pl-2">{field.label}</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[var(--t-text-muted)]">{field.unit || '$'}</span>
+                          <input
+                            type="number"
+                            value={field.value}
+                            onChange={(e) => setRentalInputs({ ...rentalInputs, [field.key]: Number(e.target.value) })}
+                            className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-2xl py-4 pl-8 pr-4 text-sm font-bold text-white focus:ring-2 focus:ring-[var(--t-primary-dim)] outline-none"
+                          />
+                        </div>
+                      </div>
+                    )
+                  ))}
                 </div>
-                <p className="text-4xl font-bold" style={{ color: 'var(--t-text)' }}>
-                  <StatCounter value={brrrrResult.cashOutValue} prefix="$" />
-                </p>
-                <p className="text-xs mt-2" style={{ color: 'var(--t-text-muted)' }}>New Loan Amount - Total Investment</p>
-              </motion.div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { label: 'New Loan', value: brrrrResult.newLoanAmountValue, prefix: '$' },
-                  { label: 'New Mortgage', value: brrrrResult.newMortgagePaymentValue, prefix: '$', suffix: '/mo' },
-                  { label: 'Monthly Cash Flow', value: brrrrResult.monthlyCashFlowValue, prefix: '$', color: 'var(--t-success)' },
-                  { label: 'CoC ROI', value: brrrrResult.cocROIValue, suffix: '%', decimals: 1, color: 'var(--t-warning)' },
-                ].map((stat, i) => (
-                  <motion.div 
-                    key={i}
-                    variants={itemVariants}
-                    whileHover={{ scale: 1.02 }}
-                    className="rounded-xl p-4 transition-colors hover:bg-white/[0.04]" 
-                    style={{ backgroundColor: 'var(--t-bg)' }}
-                  >
-                    <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{stat.label}</p>
-                    <p className="text-lg font-semibold" style={{ color: stat.color || 'var(--t-text)' }}>
-                      <StatCounter value={stat.value} prefix={stat.prefix} suffix={stat.suffix} decimals={stat.decimals} />
-                    </p>
-                  </motion.div>
-                ))}
+              {/* BRRRR Inputs */}
+              {activeCalculator === 'brrrr' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[
+                    { label: 'Purchase Price', value: brrrrInputs.purchasePrice, key: 'purchasePrice' },
+                    { label: 'Renovation Costs', value: brrrrInputs.renovationCosts, key: 'renovationCosts' },
+                    { label: 'After Repair Value', value: brrrrInputs.afterRepairValue, key: 'afterRepairValue' },
+                    { label: 'Monthly Rent', value: brrrrInputs.monthlyRent, key: 'monthlyRent' },
+                    { label: 'Refi LTV (%)', value: brrrrInputs.refiLtv, key: 'refiLtv', unit: '%', advanced: true },
+                    { label: 'Refi Interest Rate (%)', value: brrrrInputs.refiInterestRate, key: 'refiInterestRate', unit: '%', advanced: true },
+                  ].map((field) => (
+                    (!field.advanced || showDetails) && (
+                      <div key={field.key} className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] pl-2">{field.label}</label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-[var(--t-text-muted)]">{field.unit || '$'}</span>
+                          <input
+                            type="number"
+                            value={field.value}
+                            onChange={(e) => setBrrrrInputs({ ...brrrrInputs, [field.key]: Number(e.target.value) })}
+                            className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-2xl py-4 pl-8 pr-4 text-sm font-bold text-white focus:ring-2 focus:ring-[var(--t-primary-dim)] outline-none"
+                          />
+                        </div>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-8 border-t border-[var(--t-border)] mt-8">
+                <button
+                  onClick={() => {
+                    // Reset to defaults...
+                    if (activeCalculator === 'wholesale') setWholesaleInputs({ arv: 250000, repairs: 30000, desiredProfit: 15000, holdingCosts: 3000, closingCosts: 5000 });
+                    if (activeCalculator === 'fixnflip') setFlipInputs({ purchasePrice: 200000, renovationCosts: 40000, holdingCosts: 8000, closingCosts: 12000, arv: 320000, sellingCosts: 19200 });
+                    if (activeCalculator === 'rental') setRentalInputs({ purchasePrice: 250000, downPaymentPercent: 20, interestRate: 6.5, loanTerm: 30, monthlyRent: 2200, propertyTaxes: 3000, insurance: 1200, maintenance: 1500, propertyManagement: 8, vacancyRate: 5 });
+                    if (activeCalculator === 'brrrr') setBrrrrInputs({ purchasePrice: 150000, renovationCosts: 35000, holdingCosts: 5000, afterRepairValue: 250000, refiLtv: 75, refiInterestRate: 6.75, monthlyRent: 2000 });
+                  }}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] hover:text-white"
+                >
+                  <RefreshCw size={14} />
+                  Reset Defaults
+                </button>
               </div>
-            </motion.div>
-          )}
-        </motion.div>
+            </div>
+
+            {/* Saved Scenarios Table */}
+            {calculatorScenarios.length > 0 && (
+              <div className="bg-[var(--t-surface)] p-8 rounded-[2.5rem] border border-[var(--t-border)] shadow-xl astral-glass">
+                <h2 className="text-xl font-black italic text-white uppercase tracking-tighter mb-8 flex items-center gap-3">
+                  <PieChart size={20} className="text-[var(--t-primary)]" />
+                  Saved Calculations
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-[var(--t-border)]">
+                        <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Scenario</th>
+                        <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">Type</th>
+                        <th className="pb-4 text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--t-border)]">
+                      {calculatorScenarios.map(sc => (
+                        <tr key={sc.id} className="group hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4">
+                            <p className="text-sm font-black text-white">{sc.name}</p>
+                            {sc.leadId && (
+                              <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-primary)] flex items-center gap-1">
+                                <Link2 size={10} />
+                                Linked to Lead
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-4">
+                            <span className="px-3 py-1 rounded-full bg-[var(--t-surface-subtle)] border border-[var(--t-border)] text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)]">
+                              {sc.type}
+                            </span>
+                          </td>
+                          <td className="py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => handleEditScenario(sc)}
+                                className="p-2 rounded-lg hover:bg-[var(--t-primary-dim)] text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-all"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => setShowDeleteConfirm(sc.id)}
+                                className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--t-text-muted)] hover:text-red-400 transition-all"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Result Panel */}
+          <div className="lg:col-span-4 sticky top-28 space-y-8">
+            <div className="bg-gradient-to-br from-[var(--t-primary)] to-[#6366f1] p-[1.5px] rounded-[2.5rem] shadow-2xl overflow-hidden">
+              <div className="bg-[var(--t-surface)] p-8 rounded-[2.5rem] relative overflow-hidden h-full">
+                <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-[var(--t-primary)] blur-[100px] opacity-20 pointer-events-none" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-2 rounded-xl bg-[var(--t-primary)] text-white shadow-lg">
+                      <Target size={20} />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-widest text-[var(--t-text-muted)]">Analysis Results</span>
+                  </div>
+
+                  {activeCalculator === 'wholesale' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Max Allowable Offer</p>
+                        <p className="text-5xl font-black text-white tracking-tighter italic">
+                          <StatCounter value={wholesaleResult.maxOfferValue} prefix="$" />
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Target Profit</p>
+                          <p className="text-lg font-bold text-[var(--t-success)]"><StatCounter value={wholesaleResult.profitValue} prefix="$" /></p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">ROI</p>
+                          <p className="text-lg font-bold text-white"><StatCounter value={wholesaleResult.roiValue} suffix="%" decimals={1} /></p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeCalculator === 'fixnflip' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Projected Net Profit</p>
+                        <p className="text-5xl font-black text-white tracking-tighter italic">
+                          <StatCounter value={flipResult.netProfitValue} prefix="$" />
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">ROI</p>
+                          <p className="text-lg font-bold text-[var(--t-success)]"><StatCounter value={flipResult.roiValue} suffix="%" decimals={1} /></p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Cash on Cash</p>
+                          <p className="text-lg font-bold text-white"><StatCounter value={flipResult.cashOnCashValue} suffix="%" decimals={1} /></p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeCalculator === 'rental' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Monthly Cash Flow</p>
+                        <p className="text-5xl font-black text-white tracking-tighter italic">
+                          <StatCounter value={rentalResult.monthlyCashFlowValue} prefix="$" />
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Cap Rate</p>
+                          <p className="text-lg font-bold text-[var(--t-warning)]"><StatCounter value={rentalResult.capRateValue} suffix="%" decimals={1} /></p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">COC ROI</p>
+                          <p className="text-lg font-bold text-white"><StatCounter value={rentalResult.cashOnCashROIValue} suffix="%" decimals={1} /></p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {activeCalculator === 'brrrr' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Cash Out at Refi</p>
+                        <p className="text-5xl font-black text-white tracking-tighter italic">
+                          <StatCounter value={brrrrResult.cashOutValue} prefix="$" />
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">New Mortgage</p>
+                          <p className="text-lg font-bold text-white"><StatCounter value={brrrrResult.newMortgagePaymentValue} prefix="$" /></p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-[var(--t-surface-subtle)] border border(--t-border)]">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">Monthly Flow</p>
+                          <p className="text-lg font-bold text-[var(--t-success)]"><StatCounter value={brrrrResult.monthlyCashFlowValue} prefix="$" /></p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={() => {
+                      const csvContent = "data:text/csv;charset=utf-8," + "Metric,Value\n" + 
+                        Object.entries(getCurrentResults() || {}).map(([k, v]) => `${k},${v}`).join("\n");
+                      const encodedUri = encodeURI(csvContent);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", encodedUri);
+                      link.setAttribute("download", `deal_analysis_${activeCalculator}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="w-full mt-10 py-5 rounded-[2rem] bg-white text-black font-black uppercase tracking-widest text-[10px] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                  >
+                    <Download size={14} className="group-hover:translate-y-0.5 transition-transform" />
+                    Export Analysis
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Premium Note */}
+            <div className="bg-[var(--t-surface)] p-6 rounded-3xl border border-[var(--t-border)] shadow-xl astral-glass relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--t-primary-dim)] to-transparent opacity-0 group-hover:opacity-10 transition-opacity" />
+              <div className="flex gap-4 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-[var(--t-primary-dim)] text-[var(--t-primary)] flex items-center justify-center animate-pulse">
+                  <Bot size={20} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-1">WholeScale AI Agent</p>
+                  <p className="text-xs font-bold text-white italic leading-relaxed">
+                    "This deal shows high probability for success in this market segment. Recommendation: Proceed with verification."
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Save/Edit Modal */}
+      {/* Save Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="rounded-2xl p-6 max-w-md w-full border" style={{
-            backgroundColor: 'var(--t-surface)',
-            borderColor: 'var(--t-border)',
-          }}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold" style={{ color: 'var(--t-text)' }}>
-                {editingScenario ? 'Edit Scenario' : 'Save Scenario'}
-              </h3>
-              <button
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[var(--t-background)]/80 backdrop-blur-xl" onClick={() => setShowSaveModal(false)} />
+          <div className="bg-[var(--t-surface)] w-full max-w-lg rounded-[3.5rem] border border-[var(--t-border)] shadow-2xl relative z-10 overflow-hidden astral-glass p-10">
+            <div className="flex items-center justify-between mb-10">
+              <div>
+                <h2 className="text-3xl font-black italic text-white uppercase tracking-tighter">Archive Scenario</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--t-text-muted)] mt-1">Preserve your calculation history</p>
+              </div>
+              <button 
                 onClick={() => {
                   setShowSaveModal(false);
                   setEditingScenario(null);
@@ -1220,108 +721,56 @@ export default function Calculators() {
                   setScenarioNotes('');
                   setSelectedLeadId('');
                 }}
-                style={{ color: 'var(--t-text-muted)' }}
-                className="hover:opacity-75 transition-opacity"
+                className="p-3 rounded-2xl hover:bg-white/5 text-[var(--t-text-muted)] hover:text-white transition-all"
               >
-                <X size={20} />
+                <X size={24} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Scenario Name *</label>
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] pl-2">Calculation Name</label>
                 <input
                   type="text"
                   value={scenarioName}
                   onChange={(e) => setScenarioName(e.target.value)}
-                  placeholder="e.g., Downtown Flip, Rental #1"
-                  className="w-full px-4 py-2 rounded-lg"
-                  style={{
-                    backgroundColor: 'var(--t-bg)',
-                    borderColor: 'var(--t-border)',
-                    color: 'var(--t-text)',
-                    border: '1px solid',
-                  }}
-                  autoFocus
+                  placeholder="e.g., Downtown Fix & Flip Strategy"
+                  className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-3xl py-5 px-8 text-sm font-bold text-white focus:ring-2 focus:ring-[var(--t-primary-dim)] outline-none"
                 />
               </div>
 
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Link to Lead (Optional)</label>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] pl-2">Connect to Lead</label>
                 <select
                   value={selectedLeadId}
                   onChange={(e) => setSelectedLeadId(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg"
-                  style={{
-                    backgroundColor: 'var(--t-bg)',
-                    borderColor: 'var(--t-border)',
-                    color: 'var(--t-text)',
-                    border: '1px solid',
-                  }}
+                  className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-3xl py-5 px-8 text-sm font-bold text-white focus:ring-2 focus:ring-[var(--t-primary-dim)] outline-none appearance-none cursor-pointer"
                 >
-                  <option value="">No lead linked</option>
+                  <option value="">Detached Scenario</option>
                   {leads.map(lead => (
-                    <option key={lead.id} value={lead.id}>
-                      {lead.name} - {lead.propertyAddress}
-                    </option>
+                    <option key={lead.id} value={lead.id}>{lead.name} - {lead.propertyAddress}</option>
                   ))}
                 </select>
               </div>
 
-              <div>
-                <label className="text-xs mb-1.5 block" style={{ color: 'var(--t-text-muted)' }}>Notes</label>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] pl-2">Strategic Notes</label>
                 <textarea
                   value={scenarioNotes}
                   onChange={(e) => setScenarioNotes(e.target.value)}
-                  placeholder="Add any notes about this scenario..."
-                  rows={3}
-                  className="w-full px-4 py-2 rounded-lg resize-none"
-                  style={{
-                    backgroundColor: 'var(--t-bg)',
-                    borderColor: 'var(--t-border)',
-                    color: 'var(--t-text)',
-                    border: '1px solid',
-                  }}
+                  placeholder="Add context about this calculation..."
+                  rows={4}
+                  className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-3xl py-5 px-8 text-sm font-bold text-white focus:ring-2 focus:ring-[var(--t-primary-dim)] outline-none resize-none"
                 />
               </div>
 
-              <div className="flex items-center gap-3 pt-4">
-                <button
-                  onClick={editingScenario ? handleUpdateScenario : handleSaveScenario}
-                  disabled={!scenarioName.trim()}
-                  className="flex-1 px-4 py-2 rounded-lg font-medium transition-opacity disabled:opacity-50"
-                  style={{
-                    backgroundColor: 'var(--t-primary)',
-                    color: 'var(--t-on-primary)',
-                  }}
-                  onMouseEnter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.opacity = '0.8')}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
-                >
-                  {editingScenario ? 'Update' : 'Save'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSaveModal(false);
-                    setEditingScenario(null);
-                    setScenarioName('');
-                    setScenarioNotes('');
-                    setSelectedLeadId('');
-                  }}
-                  className="px-4 py-2 rounded-lg font-medium transition-colors"
-                  style={{
-                    backgroundColor: 'var(--surface-hover)',
-                    color: 'var(--t-text)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--surface-active)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
+              <button 
+                onClick={editingScenario ? handleUpdateScenario : handleSaveScenario}
+                disabled={!scenarioName.trim()}
+                className="w-full py-6 rounded-[2.5rem] bg-[var(--t-primary)] text-white font-black uppercase tracking-widest text-xs shadow-2xl shadow-[var(--t-primary-dim)] hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+              >
+                {editingScenario ? 'Update Calculation' : 'Commit to Database'}
+              </button>
             </div>
           </div>
         </div>
@@ -1329,162 +778,36 @@ export default function Calculators() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="rounded-2xl p-6 max-w-md w-full border" style={{
-            backgroundColor: 'var(--t-surface)',
-            borderColor: 'var(--t-border)',
-          }}>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Delete Scenario</h3>
-            <p className="text-sm mb-6" style={{ color: 'var(--t-text-muted)' }}>
-              Are you sure you want to delete this scenario? This action cannot be undone.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
+        <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowDeleteConfirm(null)} />
+          <div className="bg-[var(--t-surface)] w-full max-w-sm rounded-[3rem] border border-[var(--t-border)] shadow-2xl relative z-10 p-10 text-center astral-glass">
+            <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <Trash2 size={40} />
+            </div>
+            <h3 className="text-2xl font-black italic text-white uppercase tracking-tighter mb-2">Delete Scenario?</h3>
+            <p className="text-sm text-[var(--t-text-muted)] mb-8 font-medium">This record will be permanently purged from the aetheric mesh.</p>
+            <div className="flex gap-4">
+              <button 
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 py-4 rounded-2xl bg-[var(--t-surface-subtle)] text-[var(--t-text-muted)] font-black uppercase tracking-widest text-[10px] hover:bg-[var(--t-surface-hover)] transition-all"
+              >
+                No, Keep it
+              </button>
+              <button 
                 onClick={() => {
                   if (showDeleteConfirm) {
                     deleteCalculatorScenario(showDeleteConfirm);
                     setShowDeleteConfirm(null);
                   }
                 }}
-                className="flex-1 px-4 py-2 rounded-lg font-medium transition-opacity"
-                style={{
-                  backgroundColor: 'var(--t-error)',
-                  color: 'var(--t-on-primary)',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-black uppercase tracking-widest text-[10px] shadow-lg shadow-red-500/20 hover:scale-105 active:scale-95 transition-all"
               >
-                Delete
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 rounded-lg font-medium transition-colors"
-                style={{
-                  backgroundColor: 'var(--surface-hover)',
-                  color: 'var(--t-text)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--surface-active)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
-                }}
-              >
-                Cancel
+                Yes, Purge
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Saved Scenarios */}
-      {calculatorScenarios.length > 0 && (
-        <div className="rounded-2xl p-6 border" style={{
-          backgroundColor: 'var(--t-surface)',
-          borderColor: 'var(--t-border)',
-        }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
-              <Download style={{ color: 'var(--t-primary)' }} />
-              Saved Scenarios ({calculatorScenarios.length})
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {calculatorScenarios.map((scenario) => {
-              const linkedLead = leads.find(l => l.id === scenario.leadId);
-              return (
-                <div
-                  key={scenario.id}
-                  className="rounded-xl p-4 border transition-all group"
-                  style={{
-                    backgroundColor: 'var(--t-bg)',
-                    borderColor: 'var(--t-border)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--t-border-light)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--t-border)';
-                  }}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <span
-                        className="text-xs font-medium px-2 py-1 rounded-full"
-                        style={{
-                          backgroundColor: 'var(--t-primary-dim)',
-                          color: 'var(--t-primary-text)',
-                        }}
-                      >
-                        {scenario.type === 'wholesale' ? 'Wholesale' :
-                         scenario.type === 'fixnflip' ? 'Fix & Flip' :
-                         scenario.type === 'rental' ? 'Rental' : 'BRRRR'}
-                      </span>
-                      {linkedLead && (
-                        <span className="ml-2 text-xs inline-flex items-center gap-1" style={{ color: 'var(--t-primary-text)' }}>
-                          <Link2 size={10} />
-                          {linkedLead.name}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleEditScenario(scenario)}
-                        className="p-1 transition-colors"
-                        style={{ color: 'var(--t-text-muted)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--t-primary)'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--t-text-muted)'}
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => setShowDeleteConfirm(scenario.id)}
-                        className="p-1 transition-colors"
-                        style={{ color: 'var(--t-text-muted)' }}
-                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--t-error)'}
-                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--t-text-muted)'}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-sm font-medium mb-1" style={{ color: 'var(--t-text)' }}>{scenario.name}</p>
-                  <p className="text-xs mb-2" style={{ color: 'var(--t-text-muted)' }}>
-                    {new Date(scenario.lastModified).toLocaleDateString()}
-                  </p>
-                  {scenario.type === 'wholesale' && (
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Max Offer: ${scenario.results.maxOffer}</p>
-                      <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>ARV: ${scenario.results.arv} | ROI: {scenario.results.roi}%</p>
-                    </div>
-                  )}
-                  {scenario.type === 'fixnflip' && (
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Profit: ${scenario.results.netProfit}</p>
-                      <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>ROI: {scenario.results.roi}% | CoC: {scenario.results.cashOnCash}%</p>
-                    </div>
-                  )}
-                  {scenario.type === 'rental' && (
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Monthly: ${scenario.results.monthlyCashFlow}</p>
-                      <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>CoC: {scenario.results.cashOnCashROI}% | Cap: {scenario.results.capRate}%</p>
-                    </div>
-                  )}
-                  {scenario.type === 'brrrr' && (
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: 'var(--t-text)' }}>Cash Out: ${scenario.results.cashOut}</p>
-                      <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>Monthly: ${scenario.results.monthlyCashFlow} | ROI: {scenario.results.cocROI}%</p>
-                    </div>
-                  )}
-                  {scenario.notes && (
-                    <p className="text-xs mt-2 line-clamp-2" style={{ color: 'var(--t-text-muted)' }}>{scenario.notes}</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </motion.div>
+    </div>
   );
 }

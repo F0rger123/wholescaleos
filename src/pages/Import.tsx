@@ -869,23 +869,21 @@ export default function Imports() {
 
   // ─── Render ───────────────────────────────────────────────────────────
 
-  if (activeView === 'wizard' && selectedSource) {
+  if (activeView === 'wizard') {
     return (
-      <div className="space-y-6">
-        {/* Import Progress Bar */}
-        {isLoading && importProgress && (
-          <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6 mb-6 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[var(--t-primary-dim)] text-[var(--t-primary)]">
-                  <Loader2 size={18} className="animate-spin" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Importing Leads...</h3>
-                  <p className="text-xs text-[var(--t-text-muted)]">Please keep this window open while we process your data.</p>
+      <div className="crm-container crm-page-transition">
+        {isLoading && (
+          <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[var(--t-background)]/90 backdrop-blur-md">
+            <div className="w-full max-w-md p-8 text-center">
+              <div className="mb-8 relative inline-block">
+                <div className="w-24 h-24 border-4 border-[var(--t-primary-dim)] border-t-[var(--t-primary)] rounded-full animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-black text-white italic">OS</span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-black italic text-white uppercase tracking-tighter">Importing Intelligence</h2>
+                <div className="text-right">
                 <span className="text-sm font-bold text-white">
                   {importProgress.total > 0 ? Math.round((importProgress.current / importProgress.total) * 100) : 0}%
                 </span>
@@ -909,7 +907,8 @@ export default function Imports() {
               </span>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* Wizard Header */}
         <div className="flex items-center justify-between">
@@ -2306,7 +2305,8 @@ export default function Imports() {
     : importHistory.filter(h => h.source === historyFilter);
 
   return (
-    <div className="space-y-6">
+    <div className="crm-container crm-page-transition">
+      <div className="space-y-6">
       {/* CUSTOM FIELDS SECTION */}
       <div className="mb-6 p-4 border rounded-xl"
         style={{ 
@@ -2692,6 +2692,7 @@ export default function Imports() {
             <p className="text-sm text-white capitalize">{duplicateSettings.action.replace('-', ' ')}</p>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

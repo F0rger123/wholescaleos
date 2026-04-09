@@ -325,7 +325,7 @@ export default function Leads() {
 
 
   return (
-    <div className="p-6 max-w-7xl mx-auto" style={{ backgroundColor: 'var(--t-bg)' }}>
+    <div className="crm-container crm-page-transition bg-[var(--t-bg)]">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
         <div>
