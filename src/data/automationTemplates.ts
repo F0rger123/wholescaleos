@@ -139,5 +139,35 @@ export const automationTemplates: AutomationTemplate[] = [
       { id: 'e2', source: 'a1', target: 'd1', animated: true },
       { id: 'e3', source: 'd1', target: 'a2', animated: true }
     ]
+  },
+  {
+    id: 'ai-lead-scoring',
+    name: 'AI Lead Quality Scorer',
+    description: 'Uses AI to automatically score leads based on their initial notes.',
+    category: 'AI',
+    nodes: [
+      { id: 't1', type: 'automation', position: { x: 400, y: 0 }, data: { label: 'New Lead Created', type: 'trigger', triggerType: 'new_lead' } },
+      { id: 'ai1', type: 'automation', position: { x: 400, y: 150 }, data: { label: 'AI Quality Score', type: 'ai', model: 'gemini-1.5-flash', prompt: 'Analyze this lead: {{name}} interests: {{notes}}. Give them a score from 1-10 on motivation and return briefly why.' } },
+      { id: 'a1', type: 'automation', position: { x: 400, y: 300 }, data: { label: 'Add Task: High Priority', type: 'action', actionType: 'add_task', taskTitle: 'High Intent Lead: {{name}}', priority: 'high', description: 'AI Score: {{ai_output}}' } }
+    ],
+    edges: [
+      { id: 'e1', source: 't1', target: 'ai1', animated: true },
+      { id: 'e2', source: 'ai1', target: 'a1', animated: true }
+    ]
+  },
+  {
+    id: 'ai-smart-reply',
+    name: 'Smart SMS Auto-Reply',
+    description: 'Automatically replies to new leads with personalized AI-generated messages.',
+    category: 'AI',
+    nodes: [
+      { id: 't1', type: 'automation', position: { x: 400, y: 0 }, data: { label: 'New Lead Created', type: 'trigger', triggerType: 'new_lead' } },
+      { id: 'ai1', type: 'automation', position: { x: 400, y: 150 }, data: { label: 'Generate Greeting', type: 'ai', model: 'gemini-1.5-flash', prompt: 'Write a warm 1-sentence text greeting for {{name}} who is interested in {{address}}.' } },
+      { id: 'a1', type: 'automation', position: { x: 400, y: 300 }, data: { label: 'Send Smart SMS', type: 'sms', actionType: 'send_sms', message: '{{ai_output}}' } }
+    ],
+    edges: [
+      { id: 'e1', source: 't1', target: 'ai1', animated: true },
+      { id: 'e2', source: 'ai1', target: 'a1', animated: true }
+    ]
   }
 ];

@@ -31,6 +31,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { automationTemplates, AutomationTemplate } from '../data/automationTemplates';
 import { useStore } from '../store/useStore';
+import { createMultiStepWorkflow } from '../lib/workflow-builder';
 
 const nodeTypes = {
   automation: AutomationNode,
@@ -47,6 +48,8 @@ interface AutomationNodeData extends Record<string, unknown> {
   message?: string;
   subject?: string;
   duration?: number;
+  prompt?: string;
+  model?: string;
 }
 
 const initialNodes: Node[] = [
@@ -75,6 +78,7 @@ function AutomationsHubContent() {
   const [, setIsLoading] = useState(true);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string, name: string } | null>(null);
 
   // State for Layout
   const [viewMode, setViewMode] = useState<'editor' | 'dashboard'>('dashboard');
@@ -153,9 +157,9 @@ function AutomationsHubContent() {
     }
   };
 
-  const deleteWorkflow = async (id: string, name: string) => {
-    if (!isSupabaseConfigured || !supabase) return;
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+  const deleteWorkflow = async () => {
+    if (!isSupabaseConfigured || !supabase || !deleteConfirmation) return;
+    const { id, name } = deleteConfirmation;
 
     try {
       const { error } = await supabase
@@ -176,6 +180,8 @@ function AutomationsHubContent() {
       }
     } catch (err) {
       toast.error('Failed to delete workflow');
+    } finally {
+      setDeleteConfirmation(null);
     }
   };
 
@@ -230,6 +236,18 @@ function AutomationsHubContent() {
     setIsActive(true);
     setViewMode('editor');
     toast.success(`Imported blueprint: ${template.name}`);
+    setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
+  };
+
+  const createNewWorkflow = () => {
+    const { nodes, edges } = createMultiStepWorkflow('New Smart Workflow');
+    setWorkflowId(null);
+    setWorkflowName('Smart Workflow');
+    setNodes(nodes);
+    setEdges(edges);
+    setIsActive(true);
+    setViewMode('editor');
+    toast.success('Generated multi-step workflow!');
     setTimeout(() => fitView({ duration: 800, padding: 0.2 }), 100);
   };
 
@@ -315,6 +333,16 @@ function AutomationsHubContent() {
             {viewMode === 'editor' ? <X size={20} /> : <Plus size={20} />}
             <span>{viewMode === 'editor' ? 'Close Editor' : 'Create Automation'}</span>
           </button>
+          
+          {viewMode === 'dashboard' && (
+            <button 
+              onClick={createNewWorkflow}
+              className="px-6 py-3 rounded-2xl font-bold flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 text-purple-500 hover:bg-purple-500/20 transition-all shadow-lg active:scale-95"
+            >
+              <Bot size={20} />
+              <span>+ Workflow</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -385,7 +413,7 @@ function AutomationsHubContent() {
                             <Edit3 size={18} />
                            </button>
                            <button 
-                            onClick={() => deleteWorkflow(automation.id, automation.name)}
+                            onClick={() => setDeleteConfirmation({ id: automation.id, name: automation.name })}
                             className="p-2.5 hover:bg-red-500/10 rounded-xl text-[var(--t-text-muted)] hover:text-red-500 transition-all"
                             title="Delete"
                            >
@@ -581,6 +609,53 @@ function AutomationsHubContent() {
         )}
       </AnimatePresence>
 
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteConfirmation && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirmation(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2.5rem] p-10 max-w-sm w-full text-center space-y-6 shadow-2xl"
+            >
+              <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Trash2 className="text-red-500 w-10 h-10" />
+              </div>
+              <div>
+                 <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">
+                   Delete <span className="text-red-500">Automation?</span>
+                 </h3>
+                 <p className="text-[var(--t-text-muted)] text-sm mt-2">
+                   This will permanently remove <b>{deleteConfirmation.name}</b> from your dashboard and the engine.
+                 </p>
+              </div>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setDeleteConfirmation(null)}
+                  className="flex-1 py-4 px-6 bg-[var(--t-surface-hover)] text-[var(--t-text)] rounded-2xl font-bold hover:bg-[var(--t-border)] transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={deleteWorkflow}
+                  className="flex-1 py-4 px-6 bg-red-500 text-white rounded-2xl font-bold shadow-lg shadow-red-500/20 hover:scale-105 active:scale-95 transition-all"
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Global Preferences Sidebar Overlay */}
       {/* ... keeping simplified for now ... */}
     </div>
@@ -701,6 +776,39 @@ function NodeSettingsModal({ node, onClose, onUpdate, onDelete }: { node: Node, 
                     </div>
                   )}
                 </>
+              )}
+
+              {data.type === 'ai' && (
+                <div className="space-y-6">
+                   <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">AI Engine Model</label>
+                    <select 
+                      value={data.model || 'gemini-1.5-flash'}
+                      onChange={(e) => onUpdate(node.id, { model: e.target.value })}
+                      className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none"
+                    >
+                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                      <option value="gemini-1.5-pro">Gemini 1.5 Pro (Brainy)</option>
+                      <option value="gemini-2.0-flash">Gemini 2.0 Flash (Next-Gen)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-[var(--t-text-muted)] mb-2 block">AI Prompt Instructions</label>
+                    <textarea 
+                      value={data.prompt || ''} 
+                      onChange={(e) => onUpdate(node.id, { prompt: e.target.value })}
+                      rows={6}
+                      className="w-full bg-black/40 border border-[var(--t-border)] rounded-2xl px-4 py-3 text-sm focus:border-[var(--t-primary)] outline-none resize-none"
+                      placeholder="Tell the AI what to do with the data... {{name}}, {{address}}, etc."
+                    />
+                  </div>
+                  <div className="bg-purple-500/5 border border-purple-500/20 p-4 rounded-2xl">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-purple-400 mb-1">PRO TIP</p>
+                    <p className="text-[10px] text-purple-200/60 leading-relaxed">
+                      Use double curly braces like <code>{`{{name}}`}</code> to inject lead data. The AI output will be available to all following steps as <code>{`{{ai_output}}`}</code>.
+                    </p>
+                  </div>
+                </div>
               )}
            </div>
         </div>

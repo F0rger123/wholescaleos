@@ -4,6 +4,7 @@ import { Node, Edge } from '@xyflow/react';
 import { toast } from 'react-hot-toast';
 import { useStore } from '../store/useStore';
 import * as emailSummaryService from './email-summary-service';
+import { processPrompt } from './gemini';
 
 export type AutomationEventType = 
   | 'LEAD_CREATED' 
@@ -257,8 +258,8 @@ class AutomationEngine {
     for (const edge of childEdges) {
       const targetNode = allNodes.find(n => n.id === edge.target);
       if (targetNode) {
-        await this.runNodeAction(targetNode, context);
-        await this.executeFromNode(targetNode, allNodes, allEdges, context);
+        const result = await this.runNodeAction(targetNode, context);
+        await this.executeFromNode(targetNode, allNodes, allEdges, { ...context, ...result });
       }
     }
   }
@@ -337,6 +338,8 @@ class AutomationEngine {
               due_date: new Date(Date.now() + 86400000).toISOString()
             });
           }
+          break;
+
         case 'delay': {
           const seconds = Number(config.duration || config.delaySeconds || 0);
           console.log(`[AutomationEngine] Delaying for ${seconds} seconds...`);
@@ -345,10 +348,21 @@ class AutomationEngine {
           }
           break;
         }
+        case 'ai': {
+          const promptTemplate = config.prompt as string || 'Analyze this data: {{name}}';
+          const model = config.model as string || 'gemini-1.5-flash';
+          console.log(`[AutomationEngine] Running AI processing with ${model}...`);
+          
+          const fullPrompt = this.parseTemplate(promptTemplate, context);
+          const aiResponse = await processPrompt(fullPrompt, context, model);
+          
+          return { ai_output: aiResponse.response };
+        }
       }
     } catch (err) {
       console.error(`[AutomationEngine] Action failed for node ${node.id}:`, err);
     }
+    return {};
   }
 
   private parseTemplate(template: string = '', context: any): string {
