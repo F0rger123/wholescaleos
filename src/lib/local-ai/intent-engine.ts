@@ -21,7 +21,8 @@ export function normalizeInput(input: string): string {
     /^(?:i want to|i need to|i'd like to|let's)\s+/i,
     /\s+(?:please|now|right now|immediately|for me|thank you|thanks)$/i,
     /\?$/, // remove question mark at the end
-    /[\[\]\(\)\{\}\\]/g // strip common typo characters like [ or ]
+    /[\[\]\(\)\{\}\\]/g, // strip common typo characters like [ or ]
+    /^[ \t]+|[ \t]+$/g // trim whitespace
   ];
 
   let normalized = input.trim();
@@ -126,10 +127,13 @@ export function recognizeIntent(input: string): ParsedIntent | null {
   console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
 
   // Check for typo suggestions (Fuzzy matching on command keywords)
-  const commandKeywords = ['text', 'lead', 'task', 'weather', 'update', 'status', 'add', 'create'];
+  const commandKeywords = ['text', 'lead', 'task', 'weather', 'update', 'status', 'add', 'create', 'hello', 'whats up', 'hey', 'yo'];
+  const inputWords = normalized.split(/\s+/);
+  
   for (const keyword of commandKeywords) {
-    const inputWords = normalized.split(/\s+/);
     for (const word of inputWords) {
+      if (word.length < 3 && keyword.length >= 3) continue; // skip very short words
+      
       const distance = getLevenshteinDistance(word, keyword);
       if (distance > 0 && distance <= 2) {
         const confidence = 100 - (distance * 20); // Simple confidence
@@ -144,6 +148,12 @@ export function recognizeIntent(input: string): ParsedIntent | null {
         }
       }
     }
+  }
+
+  // Handle specific "Whats u[" case specifically if it slipped through
+  if (normalized === 'whats u' || normalized === 'whats up') {
+    // If it's already whats up, greeting handler will catch it, 
+    // but if it's 'whats u' it might need help
   }
 
   // Check Confirmation logic (Yes/No)
