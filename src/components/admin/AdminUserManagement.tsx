@@ -20,6 +20,16 @@ interface UserProfile {
   referral_code: string;
 }
 
+interface SystemLog {
+  id: string;
+  user_id: string;
+  action: string;
+  component: string;
+  level: 'error' | 'warning' | 'info';
+  created_at: string;
+  details?: unknown;
+}
+
 export default function AdminUserManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +50,7 @@ export default function AdminUserManagement() {
   const [addingUser, setAddingUser] = useState(false);
 
    // User Activity Modal
-  const [selectedUserLogs, setSelectedUserLogs] = useState<any[] | null>(null);
+  const [selectedUserLogs, setSelectedUserLogs] = useState<SystemLog[] | null>(null);
   const [logFilter, setLogFilter] = useState<'all' | 'error' | 'warning' | 'info'>('all');
   const [logsLoading, setLogsLoading] = useState(false);
   const [resetingId, setResetingId] = useState<string | null>(null);
@@ -88,7 +98,7 @@ export default function AdminUserManagement() {
     return matchesSearch && matchesStatus && matchesTier;
   });
 
-  const handleUpdateUser = async (userId: string, updates: any) => {
+  const handleUpdateUser = async (userId: string, updates: Partial<UserProfile>) => {
     if (!supabase) return;
     setLoadingId(userId);
     try {
@@ -101,8 +111,9 @@ export default function AdminUserManagement() {
       
       setUsers(users.map(u => u.id === userId ? { ...u, ...updates } : u));
       toast.success('User updated successfully');
-    } catch (err: any) {
-      toast.error(`Error: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Error: ${message}`);
     } finally {
       setLoadingId(null);
     }
@@ -135,8 +146,9 @@ export default function AdminUserManagement() {
         subscription_tier: 'Solo',
         subscription_status: 'active'
       });
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(message);
     } finally {
       setAddingUser(false);
     }
@@ -155,7 +167,7 @@ export default function AdminUserManagement() {
       
       if (error) throw error;
       setSelectedUserLogs(data || []);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast.error('Failed to fetch activity');
     } finally {
@@ -172,8 +184,9 @@ export default function AdminUserManagement() {
       });
       if (error) throw error;
       toast.success('Password reset email sent!');
-    } catch (err: any) {
-      toast.error(`Reset failed: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Reset failed: ${message}`);
     } finally {
       setResetingId(null);
     }
@@ -197,18 +210,18 @@ export default function AdminUserManagement() {
     setSavingUser(true);
     try {
       // 1. Update Auth if email or password changed
-      const authUpdates: any = {};
+      const authUpdates: { email?: string; password?: string } = {};
       if (editUserData.email !== editingUser.email) authUpdates.email = editUserData.email;
       if (editUserData.newPassword) authUpdates.password = editUserData.newPassword;
 
       if (Object.keys(authUpdates).length > 0) {
-        const { data: authData, error: authError } = await supabase.functions.invoke('admin-actions', {
+        const { data: authData, error: authError } = await (supabase.functions.invoke('admin-actions', {
           body: {
             action: 'update_user_auth',
             userId: editingUser.id,
             updates: authUpdates
           }
-        });
+        }) as { data: { error?: string } | null; error: any });
 
         if (authError || authData?.error) throw new Error(authError?.message || authData?.error);
         toast.success(editUserData.newPassword ? 'Auth & Password updated' : 'Authentication updated');
@@ -232,8 +245,9 @@ export default function AdminUserManagement() {
       setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...profileUpdates, email: editUserData.email } : u));
       toast.success('Profile updated successfully');
       setShowEditUserModal(false);
-    } catch (err: any) {
-      toast.error(`Edit failed: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Edit failed: ${message}`);
     } finally {
       setSavingUser(false);
     }
@@ -266,7 +280,7 @@ export default function AdminUserManagement() {
             borderColor: 'var(--t-border)', 
             color: 'var(--t-text)', 
             '--tw-ring-color': 'var(--t-primary-dim)' 
-          } as any}
+          } as React.CSSProperties}
         >
           <option value="all" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>All Status</option>
           <option value="active" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Active</option>
@@ -282,7 +296,7 @@ export default function AdminUserManagement() {
             borderColor: 'var(--t-border)', 
             color: 'var(--t-text)', 
             '--tw-ring-color': 'var(--t-primary-dim)' 
-          } as any}
+          } as React.CSSProperties}
         >
           <option value="all" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>All Tiers</option>
           <option value="Free" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>Free</option>
@@ -687,7 +701,7 @@ export default function AdminUserManagement() {
                   <p className="text-sm text-[var(--t-text-muted)] italic">No {logFilter !== 'all' ? logFilter : ''} activity found for this user.</p>
                 </div>
               ) : (
-                selectedUserLogs.filter(l => logFilter === 'all' || l.level?.toLowerCase() === logFilter).map((log: any) => (
+                selectedUserLogs.filter(l => logFilter === 'all' || l.level?.toLowerCase() === logFilter).map((log) => (
                   <div key={log.id} className="p-4 rounded-2xl border border-[var(--t-border)] bg-[var(--t-bg)] space-y-2 group hover:border-[var(--t-primary)] transition-all">
                     <div className="flex items-center justify-between">
                       <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1 ${
@@ -705,7 +719,7 @@ export default function AdminUserManagement() {
                       <p className="text-sm font-black text-[var(--t-text)] capitalize">{log.action?.replace(/-/g, ' ')}</p>
                       <p className="text-[10px] text-[var(--t-primary)] font-bold italic">{log.component}</p>
                     </div>
-                    {log.details && (
+                    {!!log.details && (
                       <details className="text-[8px] bg-black/20 p-2 rounded-lg text-[var(--t-text-muted)] overflow-hidden cursor-pointer group-hover:bg-black/40 transition-colors">
                         <summary className="font-mono list-none flex items-center justify-between">
                           <span>Payload JSON</span>
