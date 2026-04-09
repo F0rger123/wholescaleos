@@ -237,7 +237,18 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'weather_query':
       return {
         success: true,
-        message: `I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'.`
+        message: "I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'"
+      };
+
+    case 'personality_check':
+      const tone = store.aiTone || 'Professional';
+      const personality = store.aiPersonality || 'Default';
+      return {
+        success: true,
+        message: `Absolutely! I am currently operating with your custom profile settings:\n\n` +
+                 `🎭 **Tone**: ${tone}\n` +
+                 `🧠 **Personality Style**: ${personality}\n\n` +
+                 `I'll ensure my responses remain consistent with these instructions. Is there anything specific you'd like me to adjust?`
       };
 
     case 'get_preferences':

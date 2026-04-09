@@ -251,9 +251,24 @@ export const intents: Intent[] = [
     template: "{response}"
   },
   {
-    name: "help",
-    patterns: ["help", "commands", "how to use", "examples"],
-    action: "help",
     template: "Here are some things I can do:\n- 'Show my hot leads'\n- 'Text [Name] saying [Message]'\n- 'Create task: Call back John tomorrow'\n- 'Go to calendar'\n- 'How many deals are closing this month?'"
+  },
+  {
+    name: "weather_query",
+    patterns: ["weather", "forecast", "is it raining"],
+    action: "weather_query",
+    template: "{response}"
+  },
+  {
+    name: "get_preferences",
+    patterns: ["my preferences", "show my info", "my profile"],
+    action: "get_preferences",
+    template: "{response}"
+  },
+  {
+    name: "personality_check",
+    patterns: ["how you talk", "personality", "as I told you"],
+    action: "personality_check",
+    template: "{response}"
   }
 ];

@@ -390,14 +390,6 @@ export function Layout() {
             <Link to="/" className={`flex items-center transition-all duration-300 ${!sidebarOpen ? 'opacity-0 scale-90 invisible w-0' : 'opacity-100 scale-100 visible'}`}>
               <Logo size={40} showText={true} className="scale-90 origin-left" />
             </Link>
-            
-            <button 
-              onClick={toggleSidebar}
-              className={`absolute top-1/2 -translate-y-1/2 p-2.5 rounded-xl hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] transition-all duration-300 hover:scale-110 active:scale-95 z-[110] ${sidebarOpen ? 'right-6' : 'right-1/2 translate-x-1/2'}`}
-              title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
-            >
-              {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
-            </button>
           </div>
 
           <div
@@ -555,7 +547,15 @@ export function Layout() {
         }`}
       >
         <header className="flex items-center justify-between px-8 py-6 border-b shrink-0 astral-glass border-[var(--t-sidebar-border)] relative" style={{ zIndex: (isUserMenuOpen || showSearchResults) ? 200 : 100 }}>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={toggleSidebar}
+              className="p-2 rounded-lg hover:bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] transition-all duration-300 hover:scale-110 active:scale-95 border border-[var(--t-border)]"
+              title={sidebarOpen ? "Collapse Sidebar" : "Expand Sidebar"}
+              id="sidebar-toggle-btn"
+            >
+              {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+            </button>
             <div className="relative flex items-center" ref={searchRef}>
               <button
                 onClick={() => {

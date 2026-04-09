@@ -19,7 +19,8 @@ export function normalizeInput(input: string): string {
     /^(?:can you|please|could you|would you|hey os bot|os bot|bot|assistant|can you please|could you please)\s+/i,
     /^(?:i want to|i need to|i'd like to|let's)\s+/i,
     /\s+(?:please|now|right now|immediately|for me|thank you|thanks)$/i,
-    /\?$/ // remove question mark at the end
+    /\?$/, // remove question mark at the end
+    /[\[\]\(\)\{\}\\]/g // strip common typo characters like [ or ]
   ];
 
   let normalized = input.trim();
@@ -147,7 +148,7 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'greeting',
       patterns: [
-        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up|whats up)$/i,
+        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up|whats up|whats? u[\[p]?)$/i,
         /^(?:how's it going|how are you|good morning|good afternoon|good evening)$/i,
         /\b(?:hi|hello|yo|hey)\b/i
       ],
@@ -156,8 +157,9 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'weather_query',
       patterns: [
-        /^(?:what's the weather|whats the weather|how is the weather|is it raining|weather forecast)$/i,
-        /^(?:weather|forecast)$/i
+        /^(?:what's the weather|whats the weather|what is the weather|how is the weather|is it raining|weather forecast)$/i,
+        /^(?:weather|forecast)$/i,
+        /\bweather\b/i
       ],
       params: () => ({})
     },
@@ -166,6 +168,15 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       patterns: [
         /^(?:what are my preferences|show my preferences|view my preferences|my preferences)$/i,
         /^(?:what do you know about me|my profile|show my info)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'personality_check',
+      patterns: [
+        /^(?:can you talk how i told you to|talk like i told you|use my settings|how i told you to talk)$/i,
+        /^(?:like in the settings|as specified in settings)$/i,
+        /\b(?:personality|custom style|settings)\b/i
       ],
       params: () => ({})
     },
