@@ -4,7 +4,8 @@
  * Enhanced with Supabase persistence and Session-Awareness.
  */
 
-import { conversationService } from '../supabase-service';
+import { conversationService, episodicMemoryService } from '../supabase-service';
+import { retrieveMemory } from '../memory/retrieveMemory';
 
 export interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -76,7 +77,8 @@ export function getMemory(): ConversationContext {
  */
 export async function loadHistory(userId: string) {
   if (!userId) return;
-  const history = await conversationService.fetchHistory(userId, 20);
+  // Use the robust retrieveMemory helper (last 7 days, up to 20 messages)
+  const history = await retrieveMemory(userId, 20);
   const memory = getMemory();
   
   const mappedHistory: Message[] = history.map((h: any) => ({
@@ -91,6 +93,20 @@ export async function loadHistory(userId: string) {
     userId,
     history: mappedHistory
   }));
+}
+
+/**
+ * Logs a professional outcome to episodic memory (e.g. "created lead", "sent sms")
+ */
+export async function logOutcome(type: string, summary: string, details: any = {}) {
+  const memory = getMemory();
+  if (!memory.userId) return;
+
+  try {
+    await episodicMemoryService.logEpisode(memory.userId, type, summary, details);
+  } catch (err) {
+    console.error('Failed to log episode context:', err);
+  }
 }
 
 /**

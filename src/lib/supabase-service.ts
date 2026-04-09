@@ -534,45 +534,99 @@ export const accessCodeService = {
 // ─── Conversations Service ──────────────────────────────────────────────────
 export const conversationService = {
   async saveMessage(userId: string, sessionId: string, role: 'user' | 'assistant', content: string, intent?: string) {
-    if (!supabase) return null;
-    const { data, error } = await supabase
-      .from('user_conversations')
-      .insert({
-        user_id: userId,
-        session_id: sessionId,
-        role,
-        content,
-        intent
-      })
-      .select()
-      .single();
+    if (!isConnected() || !supabase) return null;
     
-    if (error) {
-      console.error('❌ Supabase conversationService.saveMessage error:', error);
+    try {
+      const { data, error } = await supabase
+        .from('conversation_memory')
+        .insert({
+          user_id: userId,
+          session_id: sessionId,
+          role,
+          content,
+          intent
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Supabase conversationService.saveMessage error:', error);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error('❌ Exception in saveMessage:', err);
       return null;
     }
-    return data;
   },
 
   async fetchHistory(userId: string, limit = 20) {
-    if (!supabase) return [];
-    const { data, error } = await supabase
-      .from('user_conversations')
+    if (!isConnected() || !supabase) return [];
+    
+    try {
+      const { data, error } = await supabase
+        .from('conversation_memory')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        console.error('❌ Supabase conversationService.fetchHistory error:', error);
+        return [];
+      }
+      // Return in chronological order (oldest first)
+      return (data || []).reverse();
+    } catch (err) {
+      console.error('❌ Exception in fetchHistory:', err);
+      return [];
+    }
+  },
+
+  async clearHistory(userId: string) {
+    if (!isConnected() || !supabase) return;
+    await supabase.from('conversation_memory').delete().eq('user_id', userId);
+  }
+};
+
+// ─── Episodic Memory Service ───────────────────────────────────────────────
+export const episodicMemoryService = {
+  async logEpisode(userId: string, type: string, summary: string, details: any = {}) {
+    if (!isConnected() || !supabase) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('episodic_memory')
+        .insert({
+          user_id: userId,
+          episode_type: type,
+          summary,
+          details
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ Supabase episodicMemoryService.logEpisode error:', error);
+        return null;
+      }
+      return data;
+    } catch (err) {
+      console.error('❌ Exception in logEpisode:', err);
+      return null;
+    }
+  },
+
+  async fetchRecentEpisodes(userId: string, limit = 10) {
+    if (!isConnected() || !supabase) return [];
+    
+    const { data } = await supabase
+      .from('episodic_memory')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit);
-    
-    if (error) {
-      console.error('❌ Supabase conversationService.fetchHistory error:', error);
-      return [];
-    }
-    // Reverse to return in chronological order
-    return (data || []).reverse();
-  },
-
-  async clearHistory(userId: string) {
-    if (!supabase) return;
-    await supabase.from('user_conversations').delete().eq('user_id', userId);
+      
+    return data || [];
   }
 };

@@ -22,10 +22,12 @@ import {
   generateUnknownResponse, 
   generateErrorResponse 
 } from '../lib/local-ai';
+import { callAgentLoop } from '../lib/agent/agent-client';
 import { 
   saveMessage, 
   getMemory, 
-  syncUserProfile 
+  syncUserProfile,
+  loadHistory
 } from '../lib/local-ai/memory-store';
 
 interface ChatMessage {
@@ -201,10 +203,11 @@ export function AIBotWidget() {
         // Fetch usage data
         await fetchUsage();
         
-        // Sync user profile and load history
+        // Sync user profile and load history from Supabase
         syncUserProfile(currentUser);
+        await loadHistory(currentUser.id);
         
-        // Load combined history from memory store
+        // Load combined history from memory store after sync
         const memory = getMemory();
         if (memory.history.length > 0) {
           const chatHistory: ChatMessage[] = memory.history.map((m, i) => ({
@@ -490,6 +493,74 @@ export function AIBotWidget() {
         // Increment usage for OS Bot
         await usageTracker.incrementUsage();
         await fetchUsage();
+
+        // ── AGENT LOOP BRIDGE (Week 3) ──────────────────────────────────
+        if (matched?.needsAgentLoop && currentUser?.id) {
+          const aiMsg: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'ai',
+            content: "I'm analyzing your request and preparing a multi-step plan... 🔄",
+            timestamp: new Date().toISOString(),
+            systemLog: "🤖 Agent Loop"
+          };
+          setMessages(prev => [...prev, aiMsg]);
+          setTypingMessageId(aiMsg.id);
+
+          try {
+            const agentResponse = await callAgentLoop(currentUser.id, userText, memory.sessionId);
+            
+            if (agentResponse.handled && agentResponse.toolCalls) {
+              const plans = agentResponse.reasoning || "Confirmed. I'll handle that for you.";
+              const planId = (Date.now() + 2).toString();
+              
+              setMessages(prev => [...prev, {
+                id: planId,
+                role: 'ai',
+                content: plans,
+                timestamp: new Date().toISOString(),
+                systemLog: "🤖 Agent Reasoning"
+              }]);
+              setTypingMessageId(planId);
+
+              // Execute tool chain sequentially
+              for (const call of agentResponse.toolCalls) {
+                const stepMsg = `Executing: ${call.toolName.replace(/_/g, ' ')}...`;
+                const stepId = (Date.now() + Math.random()).toString();
+                setMessages(prev => [...prev, {
+                   id: stepId,
+                   role: 'ai',
+                   content: stepMsg,
+                   timestamp: new Date().toISOString(),
+                   systemLog: "🤖 Agent Action"
+                }]);
+                
+                try {
+                  const result = await executeTask(call.toolName, call.params);
+                  
+                  // Update message with success result
+                  setMessages(prev => prev.map(m => 
+                    m.id === stepId ? { ...m, content: `${result.message} ✅` } : m
+                  ));
+                } catch (toolErr: any) {
+                  // Update message with error result
+                  setMessages(prev => prev.map(m => 
+                    m.id === stepId ? { ...m, content: `Failed to execute ${call.toolName}: ${toolErr.message} ❌` } : m
+                  ));
+                }
+              }
+              
+              setLoading(false);
+              return;
+            } else if (agentResponse.handled === false) {
+               console.log("Agent loop determined request is simple. Falling back to local engine.");
+               // Proceed to local recognition below
+            } else if (agentResponse.error) {
+              console.warn('Agent Loop error, falling back to local:', agentResponse.error);
+            }
+          } catch (err) {
+            console.error('Agent Loop failed:', err);
+          }
+        }
 
         // Handle Confidence Disambiguation
         if (matched && matched.confidence > 40 && matched.confidence < 80) {

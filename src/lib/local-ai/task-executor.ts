@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
-import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, trackSentiment } from './memory-store';
+import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, trackSentiment, logOutcome } from './memory-store';
 
 export interface TaskResponse {
   success: boolean;
@@ -65,6 +65,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         
         if (result.success && result.id) {
           trackLead(result.id, entities.name);
+          logOutcome('lead_added', `Created lead: ${entities.name}`, { leadId: result.id, ...entities });
         }
 
         return { 
@@ -77,16 +78,18 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'add_task':
       try {
-        store.addTask({
+        const task = {
           title: entities.title || 'New Task',
           description: entities.notes || '',
           assignedTo: store.currentUser?.id || 'system',
           dueDate: entities.dueDate || new Date().toISOString().split('T')[0],
-          priority: 'medium',
-          status: 'todo',
+          priority: 'medium' as const,
+          status: 'todo' as const,
           createdBy: store.currentUser?.id || 'system',
           leadId: undefined
-        });
+        };
+        store.addTask(task);
+        logOutcome('task_created', `Added task: ${entities.title}`, { ...entities });
         return { success: true, message: `✅ Task "${entities.title}" added.` };
       } catch (e) {
         return { success: false, message: 'Task creation error.' };
@@ -114,6 +117,9 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         if (res.success && lead) {
             pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
             setActiveState(null);
+            logOutcome('sms_sent', `Sent SMS to ${lead.name}`, { leadId: lead.id, phone, message: entities.message });
+        } else if (res.success) {
+            logOutcome('sms_sent', `Sent SMS to ${phone}`, { phone, message: entities.message });
         }
 
         return { 

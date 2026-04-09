@@ -10,6 +10,7 @@ export interface ParsedIntent {
   isAmbiguous?: boolean;
   isConfirming?: boolean;
   suggestion?: string;
+  needsAgentLoop: boolean;
 }
 
 /**
@@ -42,6 +43,23 @@ export function splitMultiIntent(input: string): string[] {
   const segments = input.split(/\s+(?:and then|then|and|also)\s+/i);
   if (segments.length <= 1) return [input];
   return segments.map(s => s.trim()).filter(s => s.length > 2);
+}
+
+/**
+ * Detects if the input requires multi-step reasoning or tool chaining.
+ */
+export function detectMultiStep(input: string): boolean {
+  const multiStepIndicators = [
+    /\band then\b/i,
+    /\bafter that\b/i,
+    /\balso\b/i,
+    /\bthen\b/i,
+    /\band\b/i,
+    /\bnext\b/i,
+    /\bfind\b.*\bthen\b/i,
+    /\btext\b.*\band\s+email\b/i,
+  ];
+  return multiStepIndicators.some(pattern => pattern.test(input));
 }
 
 export const LOCAL_INTENTS = intents.map(i => i.name);
@@ -94,6 +112,7 @@ export function calculateIntentScore(input: string, intent: Intent): number {
 export function recognizeIntent(input: string): ParsedIntent | null {
   const memory = getMemory();
   const lowerOrig = input.toLowerCase().trim();
+  const needsAgentLoop = detectMultiStep(input);
   
   // Check for custom facts/memory first
   if (lowerOrig === "what's my name" || lowerOrig === "whats my name" || lowerOrig === "what is my name") {
@@ -102,7 +121,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       return {
         intent: { name: 'small_talk', action: 'small_talk', patterns: [], template: `Your name is ${name}.` },
         params: { text: `Your name is ${name}.` },
-        confidence: 100
+        confidence: 100,
+        needsAgentLoop
       };
     }
   }
@@ -114,7 +134,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
        return {
          intent: { name: 'small_talk', action: 'small_talk', patterns: [], template: `The address for ${target} is ${address}.` },
          params: { text: `The address for ${target} is ${address}.` },
-         confidence: 100
+         confidence: 100,
+         needsAgentLoop
        };
     }
   }
@@ -143,7 +164,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
             intent: { name: 'typo_suggestion', action: 'small_talk', patterns: [], template: `I think you meant '${keyword}'?` },
             params: { text: `I think you meant '${keyword}'?`, suggestedText, keyword },
             confidence: 100,
-            suggestion: keyword
+            suggestion: keyword,
+            needsAgentLoop
           };
         }
       }
@@ -163,14 +185,16 @@ export function recognizeIntent(input: string): ParsedIntent | null {
         intent: memory.activeState.data.intent, 
         params: memory.activeState.data.params || {}, 
         confidence: 100,
-        isConfirming: true 
+        isConfirming: true,
+        needsAgentLoop
       };
     }
     if (normalized.match(/^(?:no|nope|nah|nevermind|stop|cancel|wrong)$/i)) {
       return { 
         intent: { name: 'cancel_confirmation', patterns: [], action: 'cancel', template: 'No problem.' }, 
         params: {}, 
-        confidence: 100 
+        confidence: 100,
+        needsAgentLoop
       };
     }
   }
@@ -184,7 +208,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       return { 
         intent: intentObj, 
         params: { target, message: input, is_followup: true }, 
-        confidence: 100 
+        confidence: 100,
+        needsAgentLoop
       };
     }
   }
@@ -228,12 +253,12 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       params: (matches: string[]) => ({ target: matches[1].trim(), message: matches[2].trim() })
     },
     {
-       intent: 'send_sms_partial',
-       patterns: [
-         /^(?:text|textt|txt|message|tell|shoot a text to|send message to)\s+([a-zA-Z0-9\s]+)$/i,
-         /^(?:send a text|send sms|write a message)$/i
-       ],
-       params: (matches: string[]) => ({ target: matches[1]?.trim() })
+      intent: 'send_sms_partial',
+      patterns: [
+        /^(?:text|textt|txt|message|tell|shoot a text to|send message to)\s+([a-zA-Z0-9\s]+)$/i,
+        /^(?:send a text|send sms|write a message)$/i
+      ],
+      params: (matches: string[]) => ({ target: matches[1]?.trim() })
     },
     {
       intent: 'add_task',
@@ -295,7 +320,7 @@ export function recognizeIntent(input: string): ParsedIntent | null {
             params.name = activeEntity.name;
           }
 
-          return { intent: intentObj, params, confidence: 100 };
+          return { intent: intentObj, params, confidence: 100, needsAgentLoop };
         }
       }
     }
@@ -313,7 +338,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       intent: bestMatchResult.intent,
       params: {},
       confidence: bestMatchResult.score,
-      originalText: input
+      originalText: input,
+      needsAgentLoop
     };
   }
 
