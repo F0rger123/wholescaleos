@@ -203,6 +203,28 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     }
   }
 
+  // 1.1 CALENDAR MULTI-TURN
+  if (memory.activeState?.type === 'AWAITING_CALENDAR_TITLE') {
+    const intentObj = intents.find(i => i.name === 'calendar_setup');
+    if (intentObj) {
+      return { intent: intentObj, params: { title: input, step: 'DATE' }, confidence: 100, needsAgentLoop };
+    }
+  }
+
+  if (memory.activeState?.type === 'AWAITING_CALENDAR_DATE') {
+    const intentObj = intents.find(i => i.name === 'calendar_setup');
+    if (intentObj) {
+      return { intent: intentObj, params: { date: input, step: 'TIME' }, confidence: 100, needsAgentLoop };
+    }
+  }
+
+  if (memory.activeState?.type === 'AWAITING_CALENDAR_TIME') {
+    const intentObj = intents.find(i => i.name === 'calendar_setup');
+    if (intentObj) {
+      return { intent: intentObj, params: { time: input, step: 'COMPLETE' }, confidence: 100, needsAgentLoop };
+    }
+  }
+
   // 2. PRIORITY REGEX HANDLERS
   const handlers = [
     {
@@ -224,11 +246,29 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       params: () => ({})
     },
     {
-      intent: 'personality_check',
+      intent: 'help_commands',
       patterns: [
-        /^(?:can you talk how i told you to|talk like i told you|use my settings|how i told you to talk)$/i,
-        /^(?:like in the settings|as specified in settings)$/i,
-        /\b(?:personality|custom style|settings)\b/i
+        /^(?:help|help me|show commands|what are your commands|list commands|options|command list)\??$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'capabilities',
+      patterns: [
+        /^(?:what\s+can\s+you\s+(do|help\s+with|offer)?\??)$/i,
+        /^(?:what\s+are\s+your\s+capabilities\??)$/i,
+        /^(?:capabilities|features|help)\??$/i,
+        /^(?:list\s+(?:your\s+)?capabilities\??)$/i,
+        /^(?:who\s+built\s+you|who\s+are\s+you|what\s+are\s+you)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'personality_query',
+      patterns: [
+        /^(?:can you customize how you talk|change your personality|how you talk to me)$/i,
+        /^(?:be more professional|be sassy|be funny|cursing mode|customize your tone)$/i,
+        /\b(?:personality|tone|style)\b/i
       ],
       params: () => ({})
     },
@@ -299,7 +339,31 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'test_query',
       patterns: [
-        /^(?:test|testing|system test|is it working)$/i
+        /^(?:test|testing|system test|is it working|ping)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'calendar_setup',
+      patterns: [
+        /^(?:add something to my calendar|schedule an event|create a calendar entry|add to calendar)$/i,
+        /^(?:schedule|book)\s+(.*)$/i
+      ],
+      params: (matches: string[]) => ({ title: matches[1]?.trim() })
+    },
+    {
+      intent: 'sms_reply_check',
+      patterns: [
+        /^(?:did anyone reply|did they respond|check for new messages|any replies from leads)$/i,
+        /^(?:did)\s+([a-zA-Z\s]+)\s+(?:reply|respond|text back)$/i
+      ],
+      params: (matches: string[]) => ({ name: matches[1]?.trim() })
+    },
+    {
+      intent: 'email_campaign',
+      patterns: [
+        /^(?:send email campaign|bulk email|start email blast|blast emails)$/i,
+        /\b(?:email campaign|campaign wizard)\b/i
       ],
       params: () => ({})
     },

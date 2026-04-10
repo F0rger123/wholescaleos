@@ -1690,6 +1690,8 @@ interface AppState {
   decrementPremiumMessages: () => void;
   aiPersonality: string;
   setAiPersonality: (personality: string) => void;
+  aiCustomPrompt: string;
+  setAiCustomPrompt: (prompt: string) => void;
   aiTone: string;
   setAiTone: (tone: string) => void;
   isAiFirstUse: boolean;
@@ -1849,6 +1851,7 @@ export const useStore = create<AppState>((set, get) => ({
   aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'os-bot',
   premiumMessagesLeft: 99999,
   aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
+  aiCustomPrompt: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-custom-prompt') : null) || '',
   aiTone: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-tone') : null) || 'Professional',
   aiUsage: (() => {
     try {
@@ -3196,7 +3199,7 @@ export const useStore = create<AppState>((set, get) => ({
       sendMessage: (channelId, content, type = 'text', mentions = [], replyToId = null, attachments = []) => {
         const user = get().currentUser;
         if (!user) {
-          console.log('âŒ No user, cannot send message');
+          console.log('â Œ No user, cannot send message');
           return;
         }
         const now = new Date().toISOString();
@@ -3238,10 +3241,10 @@ export const useStore = create<AppState>((set, get) => ({
               console.log('âœ… Message saved to Supabase successfully:', result);
             })
             .catch((error) => {
-              console.error('âŒ Failed to save message to Supabase:', error);
+              console.error('â Œ Failed to save message to Supabase:', error);
             });
         } else {
-          console.log('âš ï¸ Supabase not configured, message only saved locally');
+          console.log('âš ï¸  Supabase not configured, message only saved locally');
         }
       },
 
@@ -3339,7 +3342,7 @@ export const useStore = create<AppState>((set, get) => ({
 
                   // Update UI immediately
                   set((s) => {
-                    console.log('ðŸ“ Updating local state with new channel');
+                    console.log('ðŸ“  Updating local state with new channel');
                     return {
                       channels: [...s.channels, newChannel],
                       messages: { ...s.messages, [id]: [] },
@@ -3366,7 +3369,7 @@ export const useStore = create<AppState>((set, get) => ({
                       }])
                       .then(({ data, error }: any) => {
                         if (error) {
-                          console.error('âŒ Failed to save channel to Supabase:', error);
+                          console.error('â Œ Failed to save channel to Supabase:', error);
                         } else {
                           console.log('âœ… Channel saved to Supabase successfully:', data);
 
@@ -3382,7 +3385,7 @@ export const useStore = create<AppState>((set, get) => ({
                               )
                               .then(({ data: memberData, error: memberError }: any) => {
                                 if (memberError) {
-                                  console.error('âŒ Failed to save channel members:', memberError);
+                                  console.error('â Œ Failed to save channel members:', memberError);
                                 } else {
                                   console.log('âœ… Channel members saved successfully:', memberData);
                                 }
@@ -3391,7 +3394,7 @@ export const useStore = create<AppState>((set, get) => ({
                         }
                       });
                   } else {
-                    console.log('âš ï¸ Supabase not configured or user not logged in');
+                    console.log('âš ï¸  Supabase not configured or user not logged in');
                   }
 
                   return id;
@@ -3401,11 +3404,11 @@ export const useStore = create<AppState>((set, get) => ({
                     const user = get().currentUser;
                     const channel = get().channels.find(ch => ch.id === channelId);
 
-                    console.log('ðŸ—‘ï¸ Attempting to delete channel:', { channelId, user: user?.id, isCreator: user?.id === channel?.createdBy });
+                    console.log('ðŸ—‘ï¸  Attempting to delete channel:', { channelId, user: user?.id, isCreator: user?.id === channel?.createdBy });
 
                     // Check if user is creator (only creators should delete)
                     if (channel && channel.createdBy !== user?.id) {
-                      console.error('âŒ Only the creator can delete this channel');
+                      console.error('â Œ Only the creator can delete this channel');
                       return;
                     }
 
@@ -3419,7 +3422,7 @@ export const useStore = create<AppState>((set, get) => ({
                       const newChannels = s.channels.filter(ch => ch.id !== channelId);
                       const newCurrentId = s.currentChannelId === channelId ? (newChannels[0]?.id || null) : s.currentChannelId;
 
-                      console.log('ðŸ“ Updated local state - channel removed');
+                      console.log('ðŸ“  Updated local state - channel removed');
 
                       return {
                         channels: newChannels,
@@ -3439,7 +3442,7 @@ export const useStore = create<AppState>((set, get) => ({
                         .eq('id', channelId)
                         .then(({ data, error }: any) => {
                           if (error) {
-                            console.error('âŒ Failed to delete channel from Supabase:', error);
+                            console.error('â Œ Failed to delete channel from Supabase:', error);
 
                             // Revert the local deletion if Supabase fails
                             set((s) => {
@@ -3482,7 +3485,7 @@ export const useStore = create<AppState>((set, get) => ({
                           .eq('id', channelId)
                           .then(({ error }: any) => {
                             if (error) {
-                              console.error('âŒ Failed to update channel:', error);
+                              console.error('â Œ Failed to update channel:', error);
                             } else {
                               console.log('âœ… Channel updated successfully');
                             }
@@ -3517,7 +3520,7 @@ export const useStore = create<AppState>((set, get) => ({
                             }])
                             .then(({ error }: any) => {
                               if (error) {
-                                console.error('âŒ Failed to add channel member:', error);
+                                console.error('â Œ Failed to add channel member:', error);
                               } else {
                                 console.log('âœ… Channel member added successfully');
                               }
@@ -3554,7 +3557,7 @@ export const useStore = create<AppState>((set, get) => ({
                               .eq('user_id', userId)
                               .then(({ error }: any) => {
                                 if (error) {
-                                  console.error('âŒ Failed to remove channel member:', error);
+                                  console.error('â Œ Failed to remove channel member:', error);
                                 } else {
                                   console.log('âœ… Channel member removed successfully');
                                 }
@@ -3589,7 +3592,7 @@ export const useStore = create<AppState>((set, get) => ({
                                 .eq('user_id', user.id)
                                 .then(({ error }: any) => {
                                   if (error) {
-                                    console.error('âŒ Failed to leave channel:', error);
+                                    console.error('â Œ Failed to leave channel:', error);
                                   } else {
                                     console.log('âœ… Left channel successfully');
                                   }
@@ -4625,17 +4628,41 @@ export const useStore = create<AppState>((set, get) => ({
       localStorage.setItem('wholescale-ai-tone', tone);
     }
     set({ aiTone: tone });
-    
+
     if (currentUser?.id && isSupabaseConfigured && supabase) {
       const supabaseClient = supabase;
       supabaseClient.from('profiles')
         .select('settings')
         .eq('id', currentUser.id)
         .maybeSingle()
-        .then(({ data: profile }: { data: any }) => {
+        .then((res: any) => {
+          const profile = res.data;
           const currentSettings = profile?.settings || {};
           supabaseClient.from('profiles')
             .update({ settings: { ...currentSettings, ai_tone: tone } })
+            .eq('id', currentUser.id)
+            .then();
+        });
+    }
+  },
+  setAiCustomPrompt: (prompt: string) => {
+    const { currentUser } = get();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-ai-custom-prompt', prompt);
+    }
+    set({ aiCustomPrompt: prompt });
+
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      const supabaseClient = supabase;
+      supabaseClient.from('profiles')
+        .select('settings')
+        .eq('id', currentUser.id)
+        .maybeSingle()
+        .then((res: any) => {
+          const profile = res.data;
+          const currentSettings = profile?.settings || {};
+          supabaseClient.from('profiles')
+            .update({ settings: { ...currentSettings, ai_custom_prompt: prompt } })
             .eq('id', currentUser.id)
             .then();
         });

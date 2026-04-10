@@ -7,7 +7,17 @@ import {
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
-import { hasUserApiKey, processPrompt } from '../lib/gemini';
+import { 
+  hasUserApiKey, 
+  processPrompt, 
+  generatePageInsights, 
+  createTask, 
+  updateLeadStatusViaAI, 
+  createLeadViaAI, 
+  updateLeadViaAI, 
+  deleteLeadViaAI, 
+  sendSMSViaAI 
+} from '../lib/gemini';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { SaveLeadModal } from './SaveLeadModal';
 import { RateLimitModal } from './RateLimitModal';
@@ -507,6 +517,7 @@ export function AIBotWidget() {
           setTypingMessageId(aiMsg.id);
 
           try {
+            const memory = getMemory();
             const agentResponse = await callAgentLoop(currentUser.id, userText, memory.sessionId);
             
             if (agentResponse.handled && agentResponse.toolCalls) {
@@ -536,13 +547,10 @@ export function AIBotWidget() {
                 
                 try {
                   const result = await executeTask(call.toolName, call.params);
-                  
-                  // Update message with success result
                   setMessages(prev => prev.map(m => 
                     m.id === stepId ? { ...m, content: `${result.message} ✅` } : m
                   ));
                 } catch (toolErr: any) {
-                  // Update message with error result
                   setMessages(prev => prev.map(m => 
                     m.id === stepId ? { ...m, content: `Failed to execute ${call.toolName}: ${toolErr.message} ❌` } : m
                   ));
@@ -551,14 +559,13 @@ export function AIBotWidget() {
               
               setLoading(false);
               return;
-            } else if (agentResponse.handled === false) {
-               console.log("Agent loop determined request is simple. Falling back to local engine.");
-               // Proceed to local recognition below
-            } else if (agentResponse.error) {
-              console.warn('Agent Loop error, falling back to local:', agentResponse.error);
+            } else {
+              // Agent loop returned but didn't handle or failed. 
+              // We log it and let the local logic below take over using the 'matched' variable.
+              console.warn('Agent Loop did not handle request or returned error. Falling back to local.', agentResponse.error);
             }
           } catch (err) {
-            console.error('Agent Loop failed:', err);
+            console.error('Agent Loop fatal failure, falling back to local:', err);
           }
         }
 
@@ -603,7 +610,7 @@ export function AIBotWidget() {
           const aiMsg: ChatMessage = {
             id: (Date.now() + 1).toString(),
             role: 'ai',
-            content: "I'm not sure how to handle that specific request yet. Try asking for 'help' to see what I can do!",
+            content: generateUnknownResponse(userText),
             timestamp: new Date().toISOString(),
             systemLog: "🤖 OS Bot"
           };
@@ -616,12 +623,10 @@ export function AIBotWidget() {
 
       // ── Normal AI processing (Only if NOT Local Model) ──────────────────
       if (isLocalModel) {
-        // We already handled local above, but if we got here, it's a fallback.
-        // For OS Bot, we don't fall back to Gemini unless explicitly requested.
         const aiMsg: ChatMessage = {
           id: (Date.now() + 1).toString(),
           role: 'ai',
-          content: "I'm not sure how to handle that specific request offline. Try asking for 'help' to see what I can do!",
+          content: generateUnknownResponse(userText),
           timestamp: new Date().toISOString(),
           systemLog: "🤖 OS Bot"
         };
@@ -754,8 +759,8 @@ export function AIBotWidget() {
           });
         }
       }
-    } catch (err) {
-      const errorMsg = "I didn't understand that. Try 'help' to see what I can do!";
+    } catch (err: any) {
+      const errorMsg = generateErrorResponse(err?.message || "An unexpected error occurred.");
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'ai',

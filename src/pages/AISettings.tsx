@@ -17,8 +17,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [aiName, setAiName] = useState('OS Bot');
-  const [aiPersonality, setAiPersonalityState] = useState('');
-  const [aiTone, setAiTone] = useState('friendly');
+  const [aiPersonality, setAiPersonalityState] = useState('Professional');
+  const [aiCustomPrompt, setAiCustomPromptState] = useState('');
   const [showWidget, setShowWidget] = useState(false);
   
   // Google Ecosystem Toggles
@@ -37,6 +37,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     setAiPersonality: setStoreAiPersonality,
     aiTone: storeAiTone,
     setAiTone: setStoreAiTone,
+    aiCustomPrompt: storeAiCustomPrompt,
+    setAiCustomPrompt: setStoreAiCustomPrompt,
     currentUser, 
     setShowFloatingAIWidget
   } = useStore();
@@ -87,7 +89,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           
           if (profile?.settings?.ai_name) setAiName(profile.settings.ai_name);
           if (profile?.settings?.ai_personality) setAiPersonalityState(profile.settings.ai_personality);
-          if (profile?.settings?.ai_tone) setAiTone(profile.settings.ai_tone);
+          if (profile?.settings?.ai_custom_prompt) setAiCustomPromptState(profile.settings.ai_custom_prompt);
           if (profile?.settings?.show_floating_widget !== undefined) {
             setShowWidget(profile.settings.show_floating_widget);
             setShowFloatingAIWidget(profile.settings.show_floating_widget);
@@ -116,9 +118,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         if (localAiPersonality) setAiPersonalityState(localAiPersonality);
         else setAiPersonalityState(storeAiPersonality);
 
-        const localAiTone = localStorage.getItem('wholescale-ai-tone') || localStorage.getItem('user_ai_tone');
-        if (localAiTone) setAiTone(localAiTone);
-        else setAiTone(storeAiTone);
+        const localAiCustomPrompt = localStorage.getItem('user_ai_custom_prompt');
+        if (localAiCustomPrompt) setAiCustomPromptState(localAiCustomPrompt);
+        else setAiCustomPromptState(storeAiCustomPrompt);
 
         const localShowWidget = localStorage.getItem('user_show_floating_widget');
         if (localShowWidget) {
@@ -194,8 +196,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         await supabase.from('profiles').update({
           settings: {
             ...(profile?.settings || {}),
-            ai_name: aiName, ai_personality: aiPersonality, ai_tone: aiTone, show_floating_widget: showWidget,
-            active_ai_provider: provider, active_ai_model: model,
+            ai_name: aiName, 
+            ai_personality: aiPersonality, 
+            ai_custom_prompt: aiCustomPrompt,
+            show_floating_widget: showWidget,
+            active_ai_provider: provider, 
+            active_ai_model: model,
             google_integrations: googleIntegrations,
             updated_at: new Date().toISOString()
           }
@@ -207,8 +213,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         setStoreAiName(aiName);
         localStorage.setItem('user_ai_personality', aiPersonality);
         setStoreAiPersonality(aiPersonality);
-        localStorage.setItem('wholescale-ai-tone', aiTone);
-        setStoreAiTone(aiTone);
+        localStorage.setItem('user_ai_custom_prompt', aiCustomPrompt);
+        setStoreAiCustomPrompt(aiCustomPrompt);
         if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
         window.dispatchEvent(new CustomEvent('ai-settings-updated'));
         
@@ -226,9 +232,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       setStoreAiName(aiName);
       localStorage.setItem('user_ai_personality', aiPersonality);
       setStoreAiPersonality(aiPersonality);
-      localStorage.setItem('wholescale-ai-tone', aiTone);
-      setStoreAiTone(aiTone);
-      localStorage.setItem('user_ai_tone', aiTone);
+      localStorage.setItem('user_ai_custom_prompt', aiCustomPrompt);
+      setStoreAiCustomPrompt(aiCustomPrompt);
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
       if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
       window.dispatchEvent(new CustomEvent('ai-settings-updated'));
@@ -367,33 +372,37 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Response Tone</label>
+              <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Bot Personality</label>
               <select
-                value={aiTone}
-                onChange={(e) => setAiTone(e.target.value)}
+                value={aiPersonality}
+                onChange={(e) => setAiPersonalityState(e.target.value)}
                 className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all appearance-none"
               >
-                <option value="friendly">Friendly</option>
-                <option value="professional">Professional</option>
-                <option value="direct">Direct</option>
+                <option value="Professional">Professional</option>
+                <option value="Casual">Casual</option>
+                <option value="Sassy">Sassy</option>
+                <option value="Funny">Funny</option>
+                <option value="Cursing">Crushing It (Adult Mode)</option>
+                <option value="Custom">Custom Prompt</option>
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Custom AI Personality</label>
-            <textarea
-              value={aiPersonality}
-              onChange={(e) => setAiPersonalityState(e.target.value)}
-              rows={3}
-              placeholder="e.g. Call me Commander. Sassy and witty. Emoji overload."
-              className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
-            />
-            <div className="mt-2 flex flex-wrap gap-2">
-              <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Try "Call me Commander"</span>
-              <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Use Keywords: "Sassy", "Robot", "Gentleman"</span>
-              <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Prefix: [Sir]</span>
+          {aiPersonality === 'Custom' && (
+            <div>
+              <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Custom Personality Prompt</label>
+              <textarea
+                value={aiCustomPrompt}
+                onChange={(e) => setAiCustomPromptState(e.target.value)}
+                rows={3}
+                placeholder="e.g. Call me Commander. Sassy and witty. Emoji overload."
+                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
+              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Try "Talk like a pirate"</span>
+                <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: "Use lots of fire emojis"</span>
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex items-center justify-between p-4 bg-[var(--t-surface)]/50 rounded-xl border border-[var(--t-border)]">
             <div>
               <p className="text-white font-medium">Floating AI Widget</p>

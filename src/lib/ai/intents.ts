@@ -1,5 +1,61 @@
+export type IntentName = 
+  | 'show_leads'
+  | 'add_task'
+  | 'show_tasks'
+  | 'send_sms'
+  | 'who_online'
+  | 'schedule'
+  | 'update_status'
+  | 'get_leads_count'
+  | 'get_tasks_count'
+  | 'greeting'
+  | 'capabilities'
+  | 'weather_query'
+  | 'search'
+  | 'navigate'
+  | 'delete_lead'
+  | 'delete_task'
+  | 'team_assignments'
+  | 'filter_leads_source'
+  | 'filter_leads_time'
+  | 'filter_leads_location'
+  | 'unresponsive_leads'
+  | 'smart_follow_up'
+  | 'pipeline_stats'
+  | 'closing_month'
+  | 'analytics_conversion'
+  | 'set_preference'
+  | 'catch_me_up'
+  | 'train_ai'
+  | 'bot_origin'
+  | 'philosophical'
+  | 'feedback'
+  | 'system_status'
+  | 'clarify_previous'
+  | 'help_commands'
+  | 'get_preferences'
+  | 'automation_query'
+  | 'automation_setup'
+  | 'personality_check'
+  | 'send_sms_partial'
+  | 'memory_recall'
+  | 'hot_leads'
+  | 'personality_query'
+  | 'calendar_setup'
+  | 'sms_reply_check'
+  | 'email_campaign'
+  | 'test_query'
+  | 'create_lead'
+  | 'lead_query'
+  | 'task_query'
+  | 'lead_details'
+  | 'complete_task'
+  | 'small_talk'
+  | 'cancel_confirmation'
+  | 'typo_suggestion';
+
 export interface Intent {
-  name: string;
+  name: IntentName;
   patterns: string[];
   action: string;
   params?: Record<string, any>;
@@ -20,6 +76,36 @@ export const intents: Intent[] = [
     action: "hot_leads",
     params: { score_min: 80 },
     template: "You have {count} hot leads: {list}"
+  },
+  {
+    name: 'personality_query',
+    patterns: ['personality', 'how you talk', 'be more', 'change your personality', 'be sassy', 'be professional'],
+    action: 'redirect_to_settings',
+    template: "Redirecting to personality settings..."
+  },
+  {
+    name: 'calendar_setup',
+    patterns: ['add to calendar', 'schedule', 'event', 'calendar entry'],
+    action: 'start_calendar_flow',
+    template: "Starting calendar setup flow..."
+  },
+  {
+    name: 'sms_reply_check',
+    patterns: ['did they reply', 'respond to my sms', 'check messages', 'last reply'],
+    action: 'check_sms_inbox',
+    template: "Checking your SMS inbox..."
+  },
+  {
+    name: 'email_campaign',
+    patterns: ['send email campaign', 'bulk email', 'blast', 'campaign wizard'],
+    action: 'trigger_campaign',
+    template: "Launching campaign wizard..."
+  },
+  {
+    name: 'test_query',
+    patterns: ['test', 'ping', 'are you working', 'system check'],
+    action: 'system_status',
+    template: "System status: Online"
   },
   {
     name: "show_leads",

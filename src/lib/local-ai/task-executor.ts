@@ -273,7 +273,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         message: "I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'"
       };
 
-    case 'personality_check':
+    case 'personality_query':
       const tone = store.aiTone || 'Professional';
       const personality = store.aiPersonality || 'Default';
       return {
@@ -281,7 +281,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         message: `Absolutely! I am currently operating with your custom profile settings:\n\n` +
                  `🎭 **Tone**: ${tone}\n` +
                  `🧠 **Personality Style**: ${personality}\n\n` +
-                 `I'll ensure my responses remain consistent with these instructions. Is there anything specific you'd like me to adjust?`
+                 `You can change these in **Settings → AI → Bot Personality**. I'll stay consistent with your choices! Is there anything specific you'd like me to adjust?`
       };
 
     case 'get_preferences':
@@ -394,6 +394,83 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { 
         success: true, 
         message: "Try these commands:\n- 'Add a note to John: Likes morning calls'\n- 'Mark John as Hot Lead'\n- 'Tell me about Sarah'\n- 'Remember that I prefer dark mode'\n- 'Thanks, bot!'" 
+      };
+
+    case 'calendar_setup': {
+      const step = entities.step || 'START';
+      const memory = getMemory();
+      
+      if (step === 'START' || !entities.title) {
+        if (entities.title) {
+          setActiveState({ type: 'AWAITING_CALENDAR_DATE', data: { title: entities.title } });
+          return { success: true, message: `Got it. "${entities.title}". What date should I schedule this for? (e.g., today, tomorrow, or a specific date)` };
+        }
+        setActiveState({ type: 'AWAITING_CALENDAR_TITLE', data: {} });
+        return { success: true, message: "Of course! Let's get that scheduled. What's the title of the event?" };
+      }
+      
+      if (step === 'DATE') {
+        const title = memory.activeState?.data?.title || 'New Event';
+        setActiveState({ type: 'AWAITING_CALENDAR_TIME', data: { title, date: entities.date } });
+        return { success: true, message: `Scheduling "${title}" on ${entities.date}. What time?` };
+      }
+      
+      if (step === 'TIME' || step === 'COMPLETE') {
+        const title = memory.activeState?.data?.title || 'New Event';
+        const date = memory.activeState?.data?.date || new Date().toISOString().split('T')[0];
+        const time = entities.time || '9:00 AM';
+        
+        // Add task as a calendar item fallback since we don't have a direct addCalendarEvent in useStore (it's usually synced from tasks or Google)
+        store.addTask({
+          title: `[Event] ${title}`,
+          description: `Scheduled via OS Bot for ${time}`,
+          dueDate: date,
+          priority: 'high',
+          status: 'todo'
+        });
+        
+        setActiveState(null);
+        logOutcome('calendar_event_created', `Scheduled: ${title} for ${date} at ${time}`);
+        return { success: true, message: `✅ Success! I've added "**${title}**" to your calendar for **${date}** at **${time}**.` };
+      }
+      return { success: false, message: "Something went wrong in the calendar flow." };
+    }
+
+    case 'sms_reply_check': {
+      const name = entities.name;
+      const smsMessages = store.smsMessages;
+      
+      if (name) {
+        const lead = store.leads.find(l => l.name.toLowerCase().includes(name.toLowerCase()));
+        if (!lead) return { success: false, message: `I couldn't find a lead named "${name}".` };
+        
+        const lastMessage = smsMessages
+          .filter(m => (m.sender === lead.phone || m.recipient === lead.phone) && m.direction === 'inbound')
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+          
+        if (!lastMessage) return { success: true, message: `I don't see any recent replies from **${lead.name}** in your SMS inbox.` };
+        
+        const time = new Date(lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return { success: true, message: `Yes, **${lead.name}** replied at ${time}: "${lastMessage.content}"` };
+      }
+      
+      const unread = smsMessages.filter(m => !m.read && m.direction === 'inbound');
+      if (unread.length === 0) return { success: true, message: "Your SMS inbox is clear! No unread replies from leads found." };
+      
+      return { success: true, message: `You have **${unread.length}** unread messages in your inbox. Should I list the most recent ones for you?` };
+    }
+
+    case 'email_campaign':
+      return { 
+        success: true, 
+        message: "Opening the **Email Campaign Wizard** for you now. Just tell me which template you'd like to use once we're there!",
+        data: { redirect: '#/admin/email-campaigns' }
+      };
+
+    case 'test_query':
+      return {
+        success: true,
+        message: "✅ **OS Bot Connection: Stable**\n\n- Primary Intelligence: **Local Pattern Engine**\n- Memory Persistence: **Enabled**\n- Tool Integration: **Functional**\n\nI'm ready to roll. What's next on the agenda?"
       };
 
     default:

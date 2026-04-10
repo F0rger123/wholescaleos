@@ -66,26 +66,33 @@ export function generateResponse(
   // 7. Handle Task execution results
   let message = result?.message || intent.template || "I've processed your request.";
 
-  // Personality adjustments using context.sentiment
+  // Personality adjustments
+  const p = personality.toLowerCase();
+  const cPrompt = store.aiCustomPrompt;
+
+  if (p === 'custom' && cPrompt) {
+    message = `${message} (Applying your custom tone: ${cPrompt})`;
+  } else if (p === 'sassy') {
+    const sassyAdditions = [" Ugh, fine.", " Don't trip.", " 🙄", " Honestly, you're welcome.", " Done. Next?"];
+    message = `${message}${sassyAdditions[Math.floor(Math.random() * sassyAdditions.length)]}`;
+  } else if (p === 'funny') {
+    const puns = [" That's a deal-ightful choice!", " I'm on it like white on rice.", " Property management? More like property MAN-agement, am I right?", " 🤡 Work mode: ON."];
+    message = `${message}${puns[Math.floor(Math.random() * puns.length)]}`;
+  } else if (p === 'casual') {
+    message = `Hey ${userName}, ${message.toLowerCase().replace('✅ ', '')} No problem! 👊`;
+  } else if (p === 'cursing' || p === 'adult' || p.includes('cursing')) {
+    const intensities = [" Let's f***ing go!", " Crushing it.", " Get that s*** done.", " No f***ing around today.", " 🚀 Let's get this bread."];
+    message = `${message.replace('✅ ', '')}${intensities[Math.floor(Math.random() * intensities.length)]}`;
+  } else if (p === 'professional') {
+    message = `Refined: ${message}`;
+  }
+
+  // Sentiment adjustments
   const sentiment = context.sentiment || 'neutral';
-  
   if (sentiment === 'frustrated') {
-    message = `I understand this can be frustrating. ${message} I'm here to help fix this.`;
+    message = `I understand this can be frustrating. ${message} I'm here to fix this.`;
   } else if (sentiment === 'happy') {
-    message = `${message} Great to see everything moving forward! ✨`;
-  }
-
-  if (personality.toLowerCase() === 'enthusiastic') {
-    message = message.replace(/\./g, '!') + " 🚀 Let's crush this!";
-  } else if (personality.toLowerCase() === 'direct') {
-    message = message.replace(/,/g, '.').split('\n')[0]; // Shorten
-  } else if (personality.toLowerCase() === 'friendly') {
-    message = `Hi ${userName}! ${message} Hope that helps! 😊`;
-  }
-
-  // Add tone markers
-  if (tone.toLowerCase() === 'casual') {
-    message = message.replace('I have', "I've").replace('You have', "You've").replace('Hello', 'Hey');
+    message = `${message} Great work! ✨`;
   }
 
   // Final assembly
