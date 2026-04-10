@@ -11,8 +11,13 @@ export interface Intent {
 export const intents: Intent[] = [
   {
     name: "hot_leads",
-    patterns: ["hot leads", "top leads", "who should I call", "urgent leads", "show hot leads", "who is hot", "best leads", "deals to close"],
-    action: "queryLeads",
+    patterns: [
+      "hot leads", "top leads", "who should I call", "urgent leads", 
+      "show hot leads", "who is hot", "best leads", "deals to close",
+      "what are my top leads", "show me my top leads", "what are my best leads", "list my hot leads",
+      "top 5 leads", "best 5 leads"
+    ],
+    action: "hot_leads",
     params: { score_min: 80 },
     template: "You have {count} hot leads: {list}"
   },
@@ -217,11 +222,13 @@ export const intents: Intent[] = [
   {
     name: "capabilities",
     patterns: [
+      "what can you",
       "what can you do", 
       "what can you do for me", 
       "what can you help me with",
       "what are your capabilities",
       "list your capabilities",
+      "what capabilities",
       "capabilities", 
       "features", 
       "what are you", 
@@ -229,6 +236,12 @@ export const intents: Intent[] = [
     ],
     action: "capabilities",
     template: "I can manage your leads, send SMS, create tasks, query your pipeline, and help you navigate the platform. Try asking 'show my hot leads' or 'text John saying hello'."
+  },
+  {
+    name: "memory_recall",
+    patterns: ["what memories", "what do you remember", "what memories do you have", "what do you know about me", "recall memory", "show my actions"],
+    action: "memory_recall",
+    template: "Here is what I remember: {summary}"
   },
   {
     name: "bot_origin",

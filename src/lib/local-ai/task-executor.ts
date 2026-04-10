@@ -130,6 +130,15 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: false, message: e.message || 'SMS service error.' };
       }
 
+    case 'sendSMSPartial':
+      if (!entities.target) {
+        setActiveState({ type: 'AWAITING_SMS_RECIPIENT', data: {} });
+        return { success: true, message: "Who would you like to text?" };
+      } else {
+        setActiveState({ type: 'AWAITING_SMS_MESSAGE', data: { target: entities.target } });
+        return { success: true, message: `Got it. What message would you like to send to ${entities.target}?` };
+      }
+
     case 'update_lead_status':
       const leadToUpdate = store.leads.find(l => l.name.toLowerCase().includes(entities.target?.toLowerCase()));
       if (leadToUpdate) {
@@ -171,6 +180,24 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       if (hotLeads > 0) msg += ` ${hotLeads} are marked as 'Hot' (score > 80).`;
       if (statusCounts['closed-won']) msg += ` You've closed ${statusCounts['closed-won']} deals!`;
       
+      return { success: true, message: msg };
+    }
+
+    case 'hot_leads': {
+      const scoreMin = entities.score_min || 80;
+      const hotLeads = store.leads
+        .filter(l => (l.dealScore || 0) >= scoreMin)
+        .sort((a, b) => (b.dealScore || 0) - (a.dealScore || 0))
+        .slice(0, 5);
+
+      if (hotLeads.length === 0) {
+        return { success: true, message: `I couldn't find any 'Hot' leads (score > ${scoreMin}) right now. Want me to help you find some new ones?` };
+      }
+
+      let msg = `Here are your top ${hotLeads.length} leads sorted by score:\n\n`;
+      hotLeads.forEach((l, i) => {
+        msg += `${i + 1}. **${l.name}** - Score: ${l.dealScore} (${l.status})\n`;
+      });
       return { success: true, message: msg };
     }
 
@@ -340,6 +367,28 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
                  `🧠 **Learning**: I remember your preferences and facts you tell me so I can better assist you over time.\n\n` +
                  `What would you like to tackle first?`
       };
+
+    case 'memory_recall': {
+      const memory = getMemory();
+      const recentActions = memory.outcomes.slice(-3).reverse();
+      
+      if (recentActions.length === 0) {
+        return { success: true, message: `I don't have any specific action records for this session yet, but I'm monitoring your pipeline and ready to help!` };
+      }
+
+      let msg = `Here's what I remember doing for you recently:\n\n`;
+      recentActions.forEach((a, i) => {
+        const time = new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        msg += `- [${time}] **${a.type.replace('_', ' ')}**: ${a.summary}\n`;
+      });
+      
+      const lastFact = memory.facts && Object.keys(memory.facts).length > 0 
+        ? `\nI also remember that **${Object.keys(memory.facts)[0]}** is **${Object.values(memory.facts)[0]}**.` 
+        : "";
+        
+      msg += lastFact;
+      return { success: true, message: msg };
+    }
 
     case 'help':
       return { 

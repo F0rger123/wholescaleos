@@ -177,6 +177,18 @@ export function recognizeIntent(input: string): ParsedIntent | null {
   }
 
   // 1. CHECK MULTI-TURN STATE
+  if (memory.activeState?.type === 'AWAITING_SMS_RECIPIENT') {
+    const intentObj = intents.find(i => i.name === 'send_sms_partial');
+    if (intentObj) {
+      return { 
+        intent: intentObj, 
+        params: { target: input }, 
+        confidence: 100,
+        needsAgentLoop
+      };
+    }
+  }
+
   if (memory.activeState?.type === 'AWAITING_SMS_MESSAGE') {
     const target = memory.activeState.data?.target || activeEntity?.name || 'someone';
     const intentObj = intents.find(i => i.name === 'send_sms');
@@ -232,8 +244,8 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'send_sms_partial',
       patterns: [
-        /^(?:text|textt|txt|message|tell|shoot a text to|send message to)\s+([a-zA-Z0-9\s]+)$/i,
-        /^(?:send a text|send sms|write a message)$/i
+        /^(?:text|textt|txt|message|tell|shoot a text to|send message to|can you text)\s+([a-zA-Z0-9\s]+)$/i,
+        /^(?:send a text|send sms|write a message|can you text someone for me|text someone|sms someone)$/i
       ],
       params: (matches: string[]) => ({ target: matches[1]?.trim() })
     },
@@ -259,10 +271,28 @@ export function recognizeIntent(input: string): ParsedIntent | null {
     {
       intent: 'capabilities',
       patterns: [
-        /^(?:help|what can you do|capabilities|features|show commands|options)$/i,
+        /^(?:help|what can you|what can you do|capabilities|features|show commands|options)$/i,
         /^(?:what can you do for me|what can you help me with|what are your capabilities|list your capabilities)$/i,
         /^(?:what capabilities|list capabilities|show capabilities)$/i,
         /\b(?:help|capabilities)\b/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'hot_leads',
+      patterns: [
+        /^(?:what are my top leads|show me my top leads|what are my best leads|list my hot leads)$/i,
+        /^(?:top 5 leads|best leads|hot leads|show hot leads)$/i,
+        /\b(?:top leads|best leads|hot leads)\b/i
+      ],
+      params: () => ({ score_min: 80 })
+    },
+    {
+      intent: 'memory_recall',
+      patterns: [
+        /^(?:what memories|what do you remember|what memories do you have|what do you know about me)$/i,
+        /^(?:recall memory|show my actions|what have we discussed|what happened)$/i,
+        /\b(?:memories|remember)\b/i
       ],
       params: () => ({})
     },
