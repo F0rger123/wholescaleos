@@ -3,7 +3,7 @@ import { Intent } from '../ai/intents';
 import { getAIContext } from './memory-store';
 
 export function generateResponse(
-  intent: Intent, 
+  intentOrName: Intent | string, 
   result: any, 
   userText: string, 
   suggestedText?: string
@@ -17,28 +17,40 @@ export function generateResponse(
   // Branding prefix
   const prefix = `🤖 ${aiName}: `;
 
+  // Normalize intent name
+  const intentName = typeof intentOrName === 'string' ? intentOrName : intentOrName.name;
+
+  // 0. Handle virtual intents primarily used in gemini.ts
+  if (intentName === 'ambiguous') {
+    return generateUnknownResponse(userText, result?.intent?.name || result?.suggestion);
+  }
+
+  if (intentName === 'none' || intentName === 'unknown') {
+    return generateUnknownResponse(userText);
+  }
+
   // 1. Handle Typo Suggestions specifically
-  if (intent.name === 'typo_suggestion') {
+  if (intentName === 'typo_suggestion') {
      const keyword = result.keyword || 'that';
      return `${prefix}I think you meant **'${keyword}'** in your message "${userText}"? I can help! Just let me know if you want me to proceed with "${suggestedText}".`;
   }
 
   // 2. Handle Weather specifically (as requested)
-  if (intent.name === 'weather_query') {
+  if (intentName === 'weather_query') {
     return `${prefix}I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'.`;
   }
 
   // 3. Handle Greetings
-  if (intent.name === 'greeting' || intent.name === 'small_talk') {
+  if (intentName === 'greeting' || intentName === 'small_talk') {
      const customGreeting = localStorage.getItem('user_custom_greeting');
-     if (customGreeting && intent.name === 'greeting') {
+     if (customGreeting && intentName === 'greeting') {
        return `${prefix}${customGreeting}`;
      }
      return `${prefix}Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. How can I help you today?`;
   }
 
   // 4. Handle HELP
-  if (intent.name === 'help_commands' || intent.name === 'capabilities') {
+  if (intentName === 'help_commands' || intentName === 'capabilities') {
     return `${prefix}Here are some things I can do LOCAL (100% offline):
 - **Leads**: "Add John as a lead", "Show my hot leads"
 - **Tasks**: "Create task: Call John tomorrow", "Show my tasks"
@@ -48,12 +60,12 @@ export function generateResponse(
   }
 
   // 5. Handle TEST
-  if (intent.name === 'test_query') {
+  if (intentName === 'test_query') {
     return `${prefix}OS Bot is working properly!`;
   }
 
   // 6. Handle CHANGE GREETING
-  if (intent.name === 'change_greeting') {
+  if (intentName === 'change_greeting') {
     const newGreeting = result.newGreeting || result.message || '';
     if (newGreeting) {
       localStorage.setItem('user_custom_greeting', newGreeting);
@@ -63,28 +75,28 @@ export function generateResponse(
   }
 
   // 7. Handle JOKES
-  if (intent.name === 'joke') {
+  if (intentName === 'joke') {
     return `${prefix}${result.message}`;
   }
 
   // 8. Handle TIME/DATE
-  if (intent.name === 'time_query') {
+  if (intentName === 'time_query') {
     return `${prefix}${result.message}`;
   }
 
   // 9. Handle USER FACTS
-  if (intent.name === 'user_fact') {
+  if (intentName === 'user_fact') {
     const factText = result.message || "I've noted that down.";
     return `${prefix}${factText}`;
   }
 
   // 10. Handle MOOD & MOTIVATION
-  if (intent.name === 'mood_check' || intent.name === 'motivation') {
+  if (intentName === 'mood_check' || intentName === 'motivation') {
     return `${prefix}${result.message}`;
   }
 
   // 11. Handle Task execution results
-  let message = result?.message || intent.template || "I've processed your request.";
+  let message = result?.message || (typeof intentOrName !== 'string' ? intentOrName.template : '') || "I've processed your request.";
 
   // Personality adjustments
   const p = personality.toLowerCase();

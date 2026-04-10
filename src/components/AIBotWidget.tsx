@@ -39,6 +39,16 @@ import {
   syncUserProfile,
   loadHistory
 } from '../lib/local-ai/memory-store';
+import { AIBotLearningButtons } from './AIBotLearningButtons';
+import { saveLearnedIntent } from '../lib/local-ai/learning-service';
+import { intents } from '../lib/ai/intents';
+import { 
+  saveConversationTurn, 
+  getConversationContext, 
+  updateConversationTopic,
+  generateSessionId,
+  getUserPreferences
+} from '../lib/local-ai/learning-service';
 
 interface ChatMessage {
   id: string;
@@ -48,6 +58,8 @@ interface ChatMessage {
   intent?: string;
   data?: unknown;
   systemLog?: string;
+  type?: 'learning-buttons' | 'default';
+  originalPhrase?: string;
 }
 
 export interface BotResponse {
@@ -75,6 +87,8 @@ export function AIBotWidget() {
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [displayedText, setDisplayedText] = useState('');
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [sessionId, setSessionId] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
@@ -133,6 +147,27 @@ export function AIBotWidget() {
     message?: string;
     waitingFor: 'target' | 'message' | null;
   }>({ active: false, waitingFor: null });
+
+  useEffect(() => {
+    const initSession = async () => {
+      let sessionId = localStorage.getItem('os_bot_session_id');
+      if (!sessionId) {
+        sessionId = generateSessionId();
+        localStorage.setItem('os_bot_session_id', sessionId);
+      }
+      setSessionId(sessionId);
+      
+      // Load user preferences
+      const userId = currentUser?.id;
+      if (userId) {
+        const prefs = await getUserPreferences(userId);
+        if (prefs?.preferred_name) {
+          setUserName(prefs.preferred_name);
+        }
+      }
+    };
+    initSession();
+  }, [currentUser?.id]);
 
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -390,6 +425,23 @@ export function AIBotWidget() {
     }
   }, [location.pathname, isAiOpen, isMinimized, hasKey, loading]);
 
+  const getContextualResponse = async (input: string): Promise<string | null> => {
+    const userId = currentUser?.id;
+    if (!userId || !sessionId) return null;
+    
+    const context = await getConversationContext(userId, sessionId, 3);
+    
+    // Check for "it" or "that" referring to previous topic
+    if (input.toLowerCase().match(/^(it|that|this|those|these)$/)) {
+      const lastMessages = context.filter(m => m.role === 'assistant').slice(-1);
+      if (lastMessages.length > 0) {
+        return `You were asking about ${lastMessages[0].content.substring(0, 100)}... Can you be more specific?`;
+      }
+    }
+    
+    return null;
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!prompt.trim() || loading || !hasKey) return;
@@ -411,11 +463,33 @@ export function AIBotWidget() {
     // Save to locally persistent and Supabase memory
     saveMessage('user', userText);
     
+    if (sessionId && currentUser?.id) {
+      await saveConversationTurn(currentUser.id, sessionId, 'user', userText);
+    }
+    
     setMessages(prev => [...prev, userMsg]);
     setPrompt('');
     setLoading(true);
 
     try {
+      // Check for contextual follow-up
+      const contextual = await getContextualResponse(userText);
+      if (contextual) {
+        const aiMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: contextual,
+          timestamp: new Date().toISOString(),
+          systemLog: "🤖 OS Bot Context"
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        if (sessionId && currentUser?.id) {
+          await saveConversationTurn(currentUser.id, sessionId, 'assistant', contextual);
+        }
+        setTypingMessageId(aiMsg.id);
+        setLoading(false);
+        return;
+      }
       // ── SMS Session: we're waiting for target or message ──────────────────
       if (smsSession.active && smsSession.waitingFor) {
         let updatedSession = { ...smsSession };
@@ -473,12 +547,17 @@ export function AIBotWidget() {
         // Multi-Intent Processing
         const taskResults: string[] = [];
         for (const segment of segments) {
-          const matched = recognizeIntent(segment);
-          if (matched && matched.confidence >= 80) {
-            const res = await executeTask(matched.intent.action, matched.params);
-            if (res.success && res.message) {
-              taskResults.push(res.message);
+          try {
+            const matched = await recognizeIntent(segment);
+            if (matched && matched.confidence >= 80) {
+              const res = await executeTask(matched.intent.action, matched.params);
+              if (res.success && res.message) {
+                taskResults.push(res.message);
+              }
             }
+          } catch (error) {
+            console.error('Intent recognition failed for segment:', error);
+            // Fall back to general processing for this segment
           }
         }
 
@@ -497,7 +576,24 @@ export function AIBotWidget() {
         }
       }
 
-      const matched = recognizeIntent(userText);
+      let matched = null;
+      try {
+        matched = await recognizeIntent(userText);
+        
+        // Topic detection
+        if (matched && sessionId && currentUser?.id) {
+          if (matched.intent.name.includes('lead')) {
+            await updateConversationTopic(currentUser.id, sessionId, 'leads');
+          } else if (matched.intent.name.includes('task')) {
+            await updateConversationTopic(currentUser.id, sessionId, 'tasks');
+          } else if (matched.intent.name.includes('sms')) {
+            await updateConversationTopic(currentUser.id, sessionId, 'sms');
+          }
+        }
+      } catch (error) {
+        console.error('Intent recognition failed:', error);
+        // Fall back to unknown response handling below
+      }
 
       if (matched || isLocalModel) {
         // Increment usage for OS Bot
@@ -599,6 +695,9 @@ export function AIBotWidget() {
               systemLog: "🤖 OS Bot"
             };
             setMessages(prev => [...prev, aiMsg]);
+            if (sessionId && currentUser?.id) {
+              await saveConversationTurn(currentUser.id, sessionId, 'assistant', aiMsg.content);
+            }
             setTypingMessageId(aiMsg.id);
             setLoading(false);
             return;
@@ -607,15 +706,28 @@ export function AIBotWidget() {
 
         // If explicitly set to OS Bot but no intent matched, or intent failed
         if (isLocalModel) {
-          const aiMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'ai',
-            content: generateUnknownResponse(userText),
-            timestamp: new Date().toISOString(),
-            systemLog: "🤖 OS Bot"
-          };
-          setMessages(prev => [...prev, aiMsg]);
-          setTypingMessageId(aiMsg.id);
+          const response = generateUnknownResponse(userText);
+          setMessages(prev => [...prev, 
+            { 
+              id: (Date.now() + 1).toString(), 
+              role: 'ai', 
+              content: response, 
+              timestamp: new Date().toISOString(),
+              systemLog: "🤖 OS Bot"
+            },
+            { 
+              id: (Date.now() + 2).toString(), 
+              role: 'ai', 
+              content: '', 
+              type: 'learning-buttons', 
+              originalPhrase: userText,
+              timestamp: new Date().toISOString()
+            }
+          ]);
+          if (sessionId && currentUser?.id) {
+            await saveConversationTurn(currentUser.id, sessionId, 'assistant', response);
+          }
+          setTypingMessageId((Date.now() + 1).toString());
           setLoading(false);
           return;
         }
@@ -623,15 +735,28 @@ export function AIBotWidget() {
 
       // ── Normal AI processing (Only if NOT Local Model) ──────────────────
       if (isLocalModel) {
-        const aiMsg: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'ai',
-          content: generateUnknownResponse(userText),
-          timestamp: new Date().toISOString(),
-          systemLog: "🤖 OS Bot"
-        };
-        setMessages(prev => [...prev, aiMsg]);
-        setTypingMessageId(aiMsg.id);
+        const response = generateUnknownResponse(userText);
+        setMessages(prev => [...prev, 
+          { 
+            id: (Date.now() + 1).toString(), 
+            role: 'ai', 
+            content: response, 
+            timestamp: new Date().toISOString(),
+            systemLog: "🤖 OS Bot"
+          },
+          { 
+            id: (Date.now() + 2).toString(), 
+            role: 'ai', 
+            content: '', 
+            type: 'learning-buttons', 
+            originalPhrase: userText,
+            timestamp: new Date().toISOString()
+          }
+        ]);
+        if (sessionId && currentUser?.id) {
+          await saveConversationTurn(currentUser.id, sessionId, 'assistant', response);
+        }
+        setTypingMessageId((Date.now() + 1).toString());
         setLoading(false);
         return;
       }
@@ -743,6 +868,9 @@ export function AIBotWidget() {
           systemLog: response.systemLog || "🤖 OS Bot"
         };
         setMessages(prev => [...prev, aiMsg]);
+        if (sessionId && currentUser?.id) {
+          await saveConversationTurn(currentUser.id, sessionId, 'assistant', response.response);
+        }
         saveMessage('assistant', response.response, response.intent);
         setTypingMessageId(aiMsg.id);
         speak(response.response);
@@ -771,6 +899,30 @@ export function AIBotWidget() {
       saveMessage('assistant', errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLearnIntent = async (originalPhrase: string, intent: string, params: Record<string, any> = {}) => {
+    const userId = currentUser?.id;
+    if (!userId) return;
+    
+    await saveLearnedIntent(userId, originalPhrase, intent, params);
+    console.log(`[🤖 OS Bot] Learned: "${originalPhrase}" → ${intent}`);
+    
+    const intentObj = intents.find(i => i.name === intent);
+    if (intentObj) {
+      const result = await executeTask(intentObj.action, { ...params });
+      const response = generateResponse(intentObj, result, originalPhrase);
+      
+      const botMsg: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'ai',
+        content: response,
+        timestamp: new Date().toISOString(),
+        systemLog: "🤖 OS Bot"
+      };
+      setMessages(prev => [...prev, botMsg]);
+      setTypingMessageId(botMsg.id);
     }
   };
 
@@ -920,7 +1072,7 @@ export function AIBotWidget() {
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </button>
               <div className="flex flex-col">
-                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">🤖 OS Bot</h2>
+                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">🤖 {userName ? `OS Bot | ${userName}` : 'OS Bot'}</h2>
                 {usage && (
                   <span className={`text-[9px] font-bold mt-0.5 ${
                     usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
@@ -1005,73 +1157,88 @@ export function AIBotWidget() {
               </div>
             )}
 
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm"
-                  style={{ background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-surface-subtle)' }}>
-                  {msg.role === 'user' ? <User className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} /> : <Bot className="w-3 h-3" style={{ color: 'var(--t-primary)' }} />}
-                </div>
-                <div className={`max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                  <div className={`px-4 py-3 rounded-[1.5rem] text-xs leading-relaxed shadow-lg ${
-                    msg.role === 'user' ? 'rounded-tr-none bg-[var(--t-primary)] text-[var(--t-on-primary)]' : 'border rounded-tl-none bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)]'
-                  }`}>
-                    <div className="flex flex-col gap-2 min-w-[140px]">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-[var(--t-primary)] text-[var(--t-on-primary)] uppercase tracking-tighter">
-                          {msg.role === 'ai' ? '🤖 OS Bot' : 'You'}
-                        </span>
-                        {msg.systemLog && (
-                          <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest truncate max-w-[100px]">
-                            {msg.systemLog.replace('🤖 OS Bot', '').replace('✨ Gemini', '').trim()}
+            {messages.map((msg) => {
+              if (msg.type === 'learning-buttons') {
+                return (
+                  <AIBotLearningButtons
+                    key={msg.id}
+                    originalPhrase={msg.originalPhrase || ''}
+                    onSelect={(intent) => handleLearnIntent(msg.originalPhrase || '', intent)}
+                    onDismiss={() => {
+                      setMessages(prev => prev.filter(m => m.id !== msg.id));
+                    }}
+                  />
+                );
+              }
+
+              return (
+                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 shadow-sm"
+                    style={{ background: msg.role === 'user' ? 'var(--t-primary)' : 'var(--t-surface-subtle)' }}>
+                    {msg.role === 'user' ? <User className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} /> : <Bot className="w-3 h-3" style={{ color: 'var(--t-primary)' }} />}
+                  </div>
+                  <div className={`max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                    <div className={`px-4 py-3 rounded-[1.5rem] text-xs leading-relaxed shadow-lg ${
+                      msg.role === 'user' ? 'rounded-tr-none bg-[var(--t-primary)] text-[var(--t-on-primary)]' : 'border rounded-tl-none bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)]'
+                    }`}>
+                      <div className="flex flex-col gap-2 min-w-[140px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-[var(--t-primary)] text-[var(--t-on-primary)] uppercase tracking-tighter">
+                            {msg.role === 'ai' ? '🤖 OS Bot' : 'You'}
                           </span>
+                          {msg.systemLog && (
+                            <span className="text-[8px] font-bold text-[var(--t-text-muted)] opacity-50 uppercase tracking-widest truncate max-w-[100px]">
+                              {msg.systemLog.replace('🤖 OS Bot', '').replace('✨ Gemini', '').trim()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="whitespace-pre-wrap">
+                          {msg.id === typingMessageId ? (
+                            <div className="flex flex-col gap-3">
+                              <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">{displayedText}</div>
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--t-primary)]/10 rounded-full w-fit border border-[var(--t-primary)]/20 shadow-sm">
+                                <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-duration:0.8s]" />
+                                <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.2s] [animation-duration:0.8s]" />
+                                <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.4s] [animation-duration:0.8s]" />
+                              </div>
+                            </div>
+                          ) : msg.content}
+                        </div>
+
+                        {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (
+                          <div className="mt-4 flex gap-2">
+                            <button
+                              onClick={() => {
+                                const matched = (msg.data as DisambiguationData).originalIntent;
+                                handleExecuteAction(matched.intent.action, matched.params);
+                                setMessages(prev => prev.map(msgItem => msgItem.id === msg.id ? { ...msgItem, intent: 'resolved' } : msgItem));
+                              }}
+                              className="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--t-primary)] text-white hover:scale-105 transition-all shadow-md shadow-[var(--t-primary-dim)]"
+                            >
+                              Proceed
+                            </button>
+                            <button
+                              onClick={() => {
+                                setMessages(prev => [...prev, {
+                                  id: Date.now().toString(),
+                                  role: 'ai',
+                                  content: "No problem! How can I help then?",
+                                  timestamp: new Date().toISOString()
+                                }]);
+                                setMessages(prev => prev.map(msgItem => msgItem.id === msg.id ? { ...msgItem, intent: 'resolved' } : msgItem));
+                              }}
+                              className="px-4 py-1.5 bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] border border-[var(--t-border)] rounded-xl text-[10px] font-bold"
+                            >
+                              No
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <div className="whitespace-pre-wrap">
-                        {msg.id === typingMessageId ? (
-                          <div className="flex flex-col gap-3">
-                            <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">{displayedText}</div>
-                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--t-primary)]/10 rounded-full w-fit border border-[var(--t-primary)]/20 shadow-sm">
-                              <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-duration:0.8s]" />
-                              <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.2s] [animation-duration:0.8s]" />
-                              <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.4s] [animation-duration:0.8s]" />
-                            </div>
-                          </div>
-                        ) : msg.content}
-                      </div>
-
-                      {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (
-                        <div className="mt-4 flex gap-2">
-                          <button
-                            onClick={() => {
-                              const matched = (msg.data as DisambiguationData).originalIntent;
-                              handleExecuteAction(matched.intent.action, matched.params);
-                              setMessages(prev => prev.map(msgItem => msgItem.id === msg.id ? { ...msgItem, intent: 'resolved' } : msgItem));
-                            }}
-                            className="px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-[var(--t-primary)] text-white hover:scale-105 transition-all shadow-md shadow-[var(--t-primary-dim)]"
-                          >
-                            Proceed
-                          </button>
-                          <button
-                            onClick={() => {
-                              setMessages(prev => [...prev, {
-                                id: Date.now().toString(),
-                                role: 'ai',
-                                content: "No problem! How can I help then?",
-                                timestamp: new Date().toISOString()
-                              }]);
-                              setMessages(prev => prev.map(msgItem => msgItem.id === msg.id ? { ...msgItem, intent: 'resolved' } : msgItem));
-                            }}
-                            className="px-4 py-1.5 bg-[var(--t-surface-hover)] text-[var(--t-text-muted)] border border-[var(--t-border)] rounded-xl text-[10px] font-bold"
-                          >
-                            No
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {loading && (
               <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-400">

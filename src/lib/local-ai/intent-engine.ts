@@ -1,6 +1,8 @@
 import { Intent, intents } from '../ai/intents';
 import { spellCheck, getLevenshteinDistance } from './spell-checker';
 import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact } from './memory-store';
+import { getLearnedIntent, getAllLearnedIntents, findSimilarLearnedPhrase } from './learning-service';
+import { useStore } from '../../store/useStore';
 
 export interface ParsedIntent {
   intent: Intent;
@@ -111,7 +113,7 @@ export function calculateIntentScore(input: string, intent: Intent): number {
   return Math.min(Math.max(score, 0), 100);
 }
 
-export function recognizeIntent(input: string): ParsedIntent | null {
+export async function recognizeIntent(input: string): Promise<ParsedIntent | null> {
   const memory = getMemory();
   const lowerOrig = input.toLowerCase().trim();
   const needsAgentLoop = detectMultiStep(input);
@@ -513,6 +515,45 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       originalText: input,
       needsAgentLoop
     };
+  }
+
+  // 3.5 CHECK LEARNED INTENTS (from Supabase)
+  const store = useStore.getState();
+  const userId = store.currentUser?.id;
+  
+  if (userId) {
+    // Check exact learned intent first
+    const learnedIntent = await getLearnedIntent(userId, normalized);
+    if (learnedIntent) {
+      const intentObj = intents.find(i => i.name === learnedIntent.mapped_intent);
+      if (intentObj) {
+        console.log(`[🤖 OS Bot] Using learned intent: "${normalized}" → ${learnedIntent.mapped_intent}`);
+        return {
+          intent: intentObj,
+          params: { ...learnedIntent.params },
+          confidence: learnedIntent.confidence,
+          originalText: input,
+          needsAgentLoop: detectMultiStep(input)
+        };
+      }
+    }
+    
+    // Check all learned intents for similar phrases
+    const allLearned = await getAllLearnedIntents(userId);
+    const similar = findSimilarLearnedPhrase(normalized, allLearned);
+    if (similar) {
+      const intentObj = intents.find(i => i.name === similar.mapped_intent);
+      if (intentObj) {
+        console.log(`[🤖 OS Bot] Using similar learned intent: "${normalized}" ≈ "${similar.phrase}" → ${similar.mapped_intent}`);
+        return {
+          intent: intentObj,
+          params: { ...similar.params },
+          confidence: Math.floor((similar.confidence ?? 100) * 0.9), // Slightly lower confidence for similar match
+          originalText: input,
+          needsAgentLoop: detectMultiStep(input)
+        };
+      }
+    }
   }
 
   // 4. TYPO SUGGESTIONS AS LAST RESORT

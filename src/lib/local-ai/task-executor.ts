@@ -225,6 +225,49 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { success: true, message: msg };
     }
 
+    case 'tasks_due': {
+      const today = new Date().toISOString().split('T')[0];
+      const overdueTasks = store.tasks.filter(t => 
+        t.status !== 'done' && t.dueDate < today
+      );
+      const todayTasks = store.tasks.filter(t => 
+        t.status !== 'done' && t.dueDate === today
+      );
+      
+      const totalDue = overdueTasks.length + todayTasks.length;
+      
+      if (totalDue === 0) {
+        return { 
+          success: true, 
+          message: `You have no tasks due today and nothing overdue. You're all caught up! 🎉` 
+        };
+      }
+      
+      let msg = `You have **${totalDue}** tasks that need attention:\n\n`;
+      
+      if (overdueTasks.length > 0) {
+        msg += `⚠️ **Overdue (${overdueTasks.length}):**\n`;
+        overdueTasks.slice(0, 5).forEach((t, i) => {
+          msg += `  ${i + 1}. ${t.title} (Due: ${t.dueDate})\n`;
+        });
+        if (overdueTasks.length > 5) msg += `  ...and ${overdueTasks.length - 5} more\n`;
+        msg += `\n`;
+      }
+      
+      if (todayTasks.length > 0) {
+        msg += `📅 **Due Today (${todayTasks.length}):**\n`;
+        todayTasks.slice(0, 5).forEach((t, i) => {
+          const priority = t.priority === 'high' ? '⚠️' : '';
+          msg += `  ${i + 1}. ${t.title} ${priority}\n`;
+        });
+        if (todayTasks.length > 5) msg += `  ...and ${todayTasks.length - 5} more\n`;
+      }
+      
+      msg += `\nWould you like me to list all your pending tasks? Just say "show all tasks".`;
+      
+      return { success: true, message: msg };
+    }
+
     case 'calendar_query': {
       const today = new Date().toISOString().split('T')[0];
       const tasks = store.tasks.filter(t => t.dueDate === today && t.status !== 'done');

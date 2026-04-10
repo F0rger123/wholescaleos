@@ -362,7 +362,7 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * Tries to handle the prompt locally before falling back to external APIs.
  */
 export async function processWithLocalAI(prompt: string): Promise<BotResponse | null> {
-  const localResult = recognizeIntent(prompt);
+  const localResult = await recognizeIntent(prompt);
   
   if (localResult) {
     const isAmbiguous = localResult.isAmbiguous;
@@ -370,9 +370,8 @@ export async function processWithLocalAI(prompt: string): Promise<BotResponse | 
     
     // 1. HANDLE CONFIRMATION (YES)
     if (isConfirming) {
-      console.log(`[🤖 OS Bot] Confirmation Received. Executing stored intent: ${localResult.intent.name}`);
       const executionResult = await executeTask(localResult.intent.name, localResult.params);
-      const responseText = generateResponse(localResult.intent.name, executionResult);
+      const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
       setActiveState(null); // Clear confirmation state
       saveMessage('assistant', responseText);
       return {
@@ -391,7 +390,7 @@ export async function processWithLocalAI(prompt: string): Promise<BotResponse | 
         params: localResult.params 
       });
       
-      const response = generateResponse('ambiguous', localResult);
+      const response = generateResponse('ambiguous', localResult, prompt);
       saveMessage('assistant', response);
       return {
         intent: 'ambiguous',
@@ -403,9 +402,8 @@ export async function processWithLocalAI(prompt: string): Promise<BotResponse | 
 
     // 3. REGULAR EXECUTION (High Confidence)
     if (localResult.confidence >= 0.75 || (localStorage.getItem('user_ai_provider') === 'local')) {
-      console.log(`[🤖 OS Bot] Handling intent: ${localResult.intent.name} (${Math.round(localResult.confidence * 100)}%)`);
       const executionResult = await executeTask(localResult.intent.name, localResult.params);
-      const responseText = generateResponse(localResult.intent.name, executionResult);
+      const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
       
       saveMessage('assistant', responseText);
       
@@ -536,14 +534,14 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
   // 1.5 - Intercept Local Provider
   if (provider === 'local' || provider === (null as any)) {
-    const localResult = recognizeIntent(prompt);
+    const localResult = await recognizeIntent(prompt);
     let executionResult;
     
     if (localResult && localResult.confidence > 0.4) {
       executionResult = await executeTask(localResult.intent.name, localResult.params);
     }
 
-    const responseText = generateResponse(localResult ? localResult.intent.name : 'unknown', executionResult);
+    const responseText = generateResponse(localResult ? localResult.intent.name : 'unknown', executionResult, prompt);
     
     saveMessage('assistant', responseText);
     
@@ -819,11 +817,11 @@ Time: ${context.currentTime || new Date().toISOString()}`;
       }
 
       // If OS Bot is low confidence, try a generic local response instead of an error
-      const lowConfidenceLocal = recognizeIntent(prompt);
+      const lowConfidenceLocal = await recognizeIntent(prompt);
       
       if (lowConfidenceLocal) {
         const executionResult = await executeTask(lowConfidenceLocal.intent.name, lowConfidenceLocal.params);
-        const responseText = generateResponse(lowConfidenceLocal.intent.name, executionResult);
+        const responseText = generateResponse(lowConfidenceLocal.intent.name, executionResult, prompt);
         
         return {
           intent: lowConfidenceLocal.intent.name,
