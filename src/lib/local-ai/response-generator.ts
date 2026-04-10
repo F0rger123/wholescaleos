@@ -96,11 +96,10 @@ export function generateResponse(
   if (p === 'custom' && cPrompt) {
     message = `${message}\n\n[Personality: ${cPrompt}]`;
   } else if (p === 'sassy') {
-    const sassyPrefixes = ["I've got you covered.", "Here you go.", "I dealt with it.", "Done! What else you got?"];
-    const sassySuffixes = [" 😏", " You're all set.", " Next?", " 😏", " Always happy to help."];
-    message = `${sassyPrefixes[Math.floor(Math.random() * sassyPrefixes.length)]} ${message}${sassySuffixes[Math.floor(Math.random() * sassySuffixes.length)]}`;
+    const sassySuffixes = [" 😏", " You're all set.", " Next?"];
+    message = `${message}${sassySuffixes[Math.floor(Math.random() * sassySuffixes.length)]}`;
   } else if (p === 'funny') {
-    const funnyAdditions = [" 😂 Boom! Done.", " 🤡 Just doing my robot thing.", " 🚀 To the moon!", " 😂 You owe me a virtual coffee."];
+    const funnyAdditions = [" 😂", " 🚀", " 😂 You owe me a virtual coffee."];
     message = `${message}${funnyAdditions[Math.floor(Math.random() * funnyAdditions.length)]}`;
   } else if (p === 'casual') {
     message = `Hey ${userName}, all set! ${message.toLowerCase()} Got your back! 👊`;

@@ -564,6 +564,19 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       ];
       return { success: true, message: quotes[Math.floor(Math.random() * quotes.length)] };
 
+    case 'help_commands':
+      return {
+        success: true,
+        message: `I'm **OS Bot**, your AI CRM assistant! Here's exactly what I can do:\n\n` +
+                 `📁 **Leads**: "leads", "show top leads", "add [Name] as a lead"\n` +
+                 `📝 **Tasks**: "create task: Call John", "show tasks", "do i have any tasks due?"\n` +
+                 `💬 **SMS**: "text John: Hello", "did Sarah reply?"\n` +
+                 `📅 **Calendar**: "schedule a meeting", "go to calendar"\n` +
+                 `🎭 **Personality**: "be sassy", "change tone to professional"\n` +
+                 `🧠 **Memory**: "what do you remember about me?"\n\n` +
+                 `Just tell me what you need and I'll handle it.`
+      };
+
     default:
       return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
   }

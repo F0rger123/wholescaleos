@@ -304,7 +304,9 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       intent: 'tasks_due',
       patterns: [
         /^(?:what are my tasks due today|tasks due|what is due|overdue tasks|my schedule today)$/i,
-        /^(?:what do i have to do today|list my tasks due)$/i
+        /^(?:what do i have to do today|list my tasks due)$/i,
+        /^(?:do i have any tasks due|do i have anything due|anything due today|any tasks due)$/i,
+        /^(?:what's due|whats due|tasks due today|due today)$/i
       ],
       params: () => ({})
     },
