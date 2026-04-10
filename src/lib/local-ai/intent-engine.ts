@@ -273,6 +273,45 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       params: () => ({})
     },
     {
+      intent: 'hot_leads',
+      patterns: [
+        /^(?:what are my top leads|what are my top 5 leads|top leads|show my best leads|hot leads)$/i,
+        /^(?:who should i call|best leads|deals to close|who is hot)$/i
+      ],
+      params: () => ({ score_min: 80 })
+    },
+    {
+      intent: 'send_email',
+      patterns: [
+        /^(?:can you email (.*) for me|send an email to (.*)|email (.*))$/i,
+        /^(?:write an email to (.*)|compose email to (.*))$/i
+      ],
+      params: (matches: string[]) => ({ target: matches[1] || matches[2] || matches[3] })
+    },
+    {
+      intent: 'tasks_due',
+      patterns: [
+        /^(?:what are my tasks due today|tasks due|what is due|overdue tasks|my schedule today)$/i,
+        /^(?:what do i have to do today|list my tasks due)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'memory_recall',
+      patterns: [
+        /^(?:what memories|what do you remember|what memories do you have|what memories do you have saved)$/i,
+        /^(?:what do you know about me|recall memory|show my actions)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'test_query',
+      patterns: [
+        /^(?:test|ping|are you working|system check)$/i
+      ],
+      params: () => ({})
+    },
+    {
       intent: 'send_sms',
       patterns: [
         /^(?:text|textt|txt|send text to|send sms to|message|send a message to|shoot a text to|tell)\s+([a-zA-Z\s]+)\s+(?:saying|that says|message|with the message|telling them|that)\s+(.*)$/i,

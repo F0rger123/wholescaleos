@@ -35,6 +35,7 @@ export interface ConversationContext {
   lastTopic?: string;
   activeState?: { type: string; data: any };
   recentLeads: Array<{ id: string; name: string }>;
+  outcomes: Array<{ timestamp: string; type: string; summary: string; details: any }>;
   history: Message[];
 }
 
@@ -60,6 +61,7 @@ export function getMemory(): ConversationContext {
     entityStack: [],
     learnedFacts: {},
     sentiment: 'neutral',
+    outcomes: [],
     sessionId: getSessionId()
   };
 
@@ -68,6 +70,7 @@ export function getMemory(): ConversationContext {
   if (!parsed.learnedFacts) parsed.learnedFacts = {};
   if (!parsed.sentiment) parsed.sentiment = 'neutral';
   if (!parsed.sessionId) parsed.sessionId = getSessionId();
+  if (!parsed.outcomes) parsed.outcomes = [];
   
   return parsed;
 }
@@ -104,6 +107,14 @@ export async function logOutcome(type: string, summary: string, details: any = {
 
   try {
     await episodicMemoryService.logEpisode(memory.userId, type, summary, details);
+    
+    // Also store locally for session recall
+    const updatedMemory = getMemory();
+    const newOutcome = { timestamp: new Date().toISOString(), type, summary, details };
+    localStorage.setItem(MEMORY_KEY, JSON.stringify({
+      ...updatedMemory,
+      outcomes: [newOutcome, ...updatedMemory.outcomes].slice(0, 10)
+    }));
   } catch (err) {
     console.error('Failed to log episode context:', err);
   }

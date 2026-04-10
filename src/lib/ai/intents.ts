@@ -52,7 +52,9 @@ export type IntentName =
   | 'complete_task'
   | 'small_talk'
   | 'cancel_confirmation'
-  | 'typo_suggestion';
+  | 'typo_suggestion'
+  | 'send_email'
+  | 'tasks_due';
 
 export interface Intent {
   name: IntentName;
@@ -378,9 +380,21 @@ export const intents: Intent[] = [
     template: "{response}"
   },
   {
-    name: "personality_check",
+    name: 'personality_check',
     patterns: ["how you talk", "personality", "as I told you"],
     action: "personality_check",
     template: "{response}"
+  },
+  {
+    name: 'send_email',
+    patterns: ['send email', 'email someone', 'compose email', 'send an email to', 'email [name]'],
+    action: 'send_email',
+    template: "Opening email compose modal..."
+  },
+  {
+    name: 'tasks_due',
+    patterns: ['tasks due today', 'overdue tasks', 'what is due', 'my schedule today'],
+    action: 'queryTasks',
+    template: "You have {count} tasks due: {list}"
   }
 ];

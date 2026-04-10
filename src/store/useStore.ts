@@ -1850,7 +1850,7 @@ export const useStore = create<AppState>((set, get) => ({
   aiName: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-name') : null) || 'OS Bot',
   aiModel: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-model') : null) || 'os-bot',
   premiumMessagesLeft: 99999,
-  aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional, efficient, and proactive real estate assistant.',
+  aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional',
   aiCustomPrompt: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-custom-prompt') : null) || '',
   aiTone: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-tone') : null) || 'Professional',
   aiUsage: (() => {

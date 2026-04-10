@@ -110,15 +110,15 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         const localModel = localStorage.getItem('user_ai_model');
         if (localModel) setModel(localModel);
         
-        const localAiName = localStorage.getItem('user_ai_name');
+        const localAiName = localStorage.getItem('wholescale-ai-name');
         if (localAiName) setAiName(localAiName);
         else setAiName(storeAiName);
 
-        const localAiPersonality = localStorage.getItem('user_ai_personality');
+        const localAiPersonality = localStorage.getItem('wholescale-ai-personality');
         if (localAiPersonality) setAiPersonalityState(localAiPersonality);
         else setAiPersonalityState(storeAiPersonality);
 
-        const localAiCustomPrompt = localStorage.getItem('user_ai_custom_prompt');
+        const localAiCustomPrompt = localStorage.getItem('wholescale-ai-custom-prompt');
         if (localAiCustomPrompt) setAiCustomPromptState(localAiCustomPrompt);
         else setAiCustomPromptState(storeAiCustomPrompt);
 
@@ -208,13 +208,19 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         }).eq('id', currentUser.id);
 
         localStorage.setItem('user_ai_provider', provider);
-        localStorage.setItem('user_ai_model', model);
-        localStorage.setItem('user_ai_name', aiName);
+        localStorage.setItem('wholescale-ai-model', model);
+        localStorage.setItem('wholescale-ai-name', aiName);
         setStoreAiName(aiName);
-        localStorage.setItem('user_ai_personality', aiPersonality);
+        localStorage.setItem('wholescale-ai-personality', aiPersonality);
         setStoreAiPersonality(aiPersonality);
-        localStorage.setItem('user_ai_custom_prompt', aiCustomPrompt);
+        localStorage.setItem('wholescale-ai-custom-prompt', aiCustomPrompt);
         setStoreAiCustomPrompt(aiCustomPrompt);
+        // Also sync tone to match personality if not custom
+        if (aiPersonality !== 'Custom') {
+           setStoreAiTone(aiPersonality);
+           localStorage.setItem('wholescale-ai-tone', aiPersonality);
+        }
+
         if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
         window.dispatchEvent(new CustomEvent('ai-settings-updated'));
         
@@ -227,13 +233,19 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     } else {
       localStorage.setItem('user_gemini_api_key', geminiKey);
       localStorage.setItem('user_ai_provider', provider);
-      localStorage.setItem('user_ai_model', model);
-      localStorage.setItem('user_ai_name', aiName);
+      localStorage.setItem('wholescale-ai-model', model);
+      localStorage.setItem('wholescale-ai-name', aiName);
       setStoreAiName(aiName);
-      localStorage.setItem('user_ai_personality', aiPersonality);
+      localStorage.setItem('wholescale-ai-personality', aiPersonality);
       setStoreAiPersonality(aiPersonality);
-      localStorage.setItem('user_ai_custom_prompt', aiCustomPrompt);
+      localStorage.setItem('wholescale-ai-custom-prompt', aiCustomPrompt);
       setStoreAiCustomPrompt(aiCustomPrompt);
+      // Also sync tone
+      if (aiPersonality !== 'Custom') {
+         setStoreAiTone(aiPersonality);
+         localStorage.setItem('wholescale-ai-tone', aiPersonality);
+      }
+
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
       if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
       window.dispatchEvent(new CustomEvent('ai-settings-updated'));

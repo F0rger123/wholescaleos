@@ -70,29 +70,39 @@ export function generateResponse(
   const p = personality.toLowerCase();
   const cPrompt = store.aiCustomPrompt;
 
+  // Standardize the message
+  message = message.replace('✅ ', '');
+
   if (p === 'custom' && cPrompt) {
-    message = `${message} (Applying your custom tone: ${cPrompt})`;
+    message = `${message}\n\n[Custom Prompt Apply: ${cPrompt}]`;
   } else if (p === 'sassy') {
-    const sassyAdditions = [" Ugh, fine.", " Don't trip.", " 🙄", " Honestly, you're welcome.", " Done. Next?"];
-    message = `${message}${sassyAdditions[Math.floor(Math.random() * sassyAdditions.length)]}`;
+    const sassyPrefixes = ["Look, I did it.", "Fine, here.", "Don't say I never did anything for you.", "Done. Next?"];
+    const sassySuffixes = [" Happy now?", " Try not to break anything.", " 🙄", " Honestly, you're welcome.", " You're lucky I like you."];
+    message = `${sassyPrefixes[Math.floor(Math.random() * sassyPrefixes.length)]} ${message}${sassySuffixes[Math.floor(Math.random() * sassySuffixes.length)]}`;
   } else if (p === 'funny') {
-    const puns = [" That's a deal-ightful choice!", " I'm on it like white on rice.", " Property management? More like property MAN-agement, am I right?", " 🤡 Work mode: ON."];
-    message = `${message}${puns[Math.floor(Math.random() * puns.length)]}`;
+    const funnyAdditions = [" 🤡 Work mode: ON.", " 🚀 To the moon!", " 🎩 Classy.", " 👊 Boom."];
+    message = `${message}${funnyAdditions[Math.floor(Math.random() * funnyAdditions.length)]}`;
   } else if (p === 'casual') {
-    message = `Hey ${userName}, ${message.toLowerCase().replace('✅ ', '')} No problem! 👊`;
+    message = `Hey ${userName}, ${message.toLowerCase()} Got you covered! 👊`;
   } else if (p === 'cursing' || p === 'adult' || p.includes('cursing')) {
-    const intensities = [" Let's f***ing go!", " Crushing it.", " Get that s*** done.", " No f***ing around today.", " 🚀 Let's get this bread."];
-    message = `${message.replace('✅ ', '')}${intensities[Math.floor(Math.random() * intensities.length)]}`;
+    const cursedAdditions = [
+      " Let's f***ing go!", 
+      " Absolute beast mode.", 
+      " Get that s*** handled.", 
+      " No f***ing around today.", 
+      " 🚀 Let's get this bread."
+    ];
+    message = `${message} ${cursedAdditions[Math.floor(Math.random() * cursedAdditions.length)]}`;
   } else if (p === 'professional') {
-    message = `Refined: ${message}`;
+    message = `Acknowledged. ${message} Please let me know if you require further assistance with your CRM data.`;
   }
 
-  // Sentiment adjustments
+  // Sentiment adjustments (Subtle micro-enhancements)
   const sentiment = context.sentiment || 'neutral';
   if (sentiment === 'frustrated') {
-    message = `I understand this can be frustrating. ${message} I'm here to fix this.`;
+    message = `I understand. ${message} I'm here to ensure this workflow remains efficient.`;
   } else if (sentiment === 'happy') {
-    message = `${message} Great work! ✨`;
+    message = `${message} Exceptional work! ✨`;
   }
 
   // Final assembly

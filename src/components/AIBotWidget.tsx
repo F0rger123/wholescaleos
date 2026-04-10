@@ -1149,7 +1149,7 @@ export function AIBotWidget() {
             setAiOpen(true);
             setIsMinimized(false);
           } else if (isAiOpen) {
-            // Slide to Jarvis area (dock)
+            // Slide to OS Bot area (dock)
             setAiDocked(true);
             setAiOpen(false);
           } else {

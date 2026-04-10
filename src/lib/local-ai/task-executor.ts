@@ -132,10 +132,10 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'sendSMSPartial':
       if (!entities.target) {
-        setActiveState({ type: 'AWAITING_SMS_RECIPIENT', data: {} });
+        setActiveState('AWAITING_SMS_RECIPIENT', {});
         return { success: true, message: "Who would you like to text?" };
       } else {
-        setActiveState({ type: 'AWAITING_SMS_MESSAGE', data: { target: entities.target } });
+        setActiveState('AWAITING_SMS_MESSAGE', { target: entities.target });
         return { success: true, message: `Got it. What message would you like to send to ${entities.target}?` };
       }
 
@@ -249,6 +249,24 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `Talk to you later, ${userName}! Have a productive day.` };
       }
       return { success: true, message: `I hear you! Conversation is the key to business growth. How can I help you move forward today?` };
+
+    case 'send_email':
+      const targetEmail = entities.target || 'someone';
+      return { 
+        success: true, 
+        message: `Opening email compose for **${targetEmail}**. What would you like the subject line to be?`,
+        data: { openEmailModal: true, recipient: targetEmail }
+      };
+
+    case 'send_sms_partial': {
+      const targetSMS = entities.target;
+      if (targetSMS) {
+        setActiveState('AWAITING_SMS_MESSAGE', { target: targetSMS });
+        return { success: true, message: `Got it. Sending a text to **${targetSMS}**. What should the message say?` };
+      }
+      setActiveState('AWAITING_SMS_RECIPIENT', {});
+      return { success: true, message: "Who would you like to text? You can give me a name or a phone number." };
+    }
 
     case 'greeting':
       const hour = new Date().getHours();
@@ -377,13 +395,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       let msg = `Here's what I remember doing for you recently:\n\n`;
-      recentActions.forEach((a, i) => {
+      recentActions.forEach((a: any) => {
         const time = new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         msg += `- [${time}] **${a.type.replace('_', ' ')}**: ${a.summary}\n`;
       });
       
-      const lastFact = memory.facts && Object.keys(memory.facts).length > 0 
-        ? `\nI also remember that **${Object.keys(memory.facts)[0]}** is **${Object.values(memory.facts)[0]}**.` 
+      const lastFact = memory.learnedFacts && Object.keys(memory.learnedFacts).length > 0 
+        ? `\nI also remember that **${Object.keys(memory.learnedFacts)[0]}** is **${Object.values(memory.learnedFacts)[0]}**.` 
         : "";
         
       msg += lastFact;
@@ -402,16 +420,16 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       
       if (step === 'START' || !entities.title) {
         if (entities.title) {
-          setActiveState({ type: 'AWAITING_CALENDAR_DATE', data: { title: entities.title } });
+          setActiveState('AWAITING_CALENDAR_DATE', { title: entities.title });
           return { success: true, message: `Got it. "${entities.title}". What date should I schedule this for? (e.g., today, tomorrow, or a specific date)` };
         }
-        setActiveState({ type: 'AWAITING_CALENDAR_TITLE', data: {} });
+        setActiveState('AWAITING_CALENDAR_TITLE', {});
         return { success: true, message: "Of course! Let's get that scheduled. What's the title of the event?" };
       }
       
       if (step === 'DATE') {
         const title = memory.activeState?.data?.title || 'New Event';
-        setActiveState({ type: 'AWAITING_CALENDAR_TIME', data: { title, date: entities.date } });
+        setActiveState('AWAITING_CALENDAR_TIME', { title, date: entities.date });
         return { success: true, message: `Scheduling "${title}" on ${entities.date}. What time?` };
       }
       
@@ -426,7 +444,9 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           description: `Scheduled via OS Bot for ${time}`,
           dueDate: date,
           priority: 'high',
-          status: 'todo'
+          status: 'todo',
+          assignedTo: store.currentUser?.id || 'system',
+          createdBy: store.currentUser?.id || 'system'
         });
         
         setActiveState(null);
@@ -445,16 +465,16 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         if (!lead) return { success: false, message: `I couldn't find a lead named "${name}".` };
         
         const lastMessage = smsMessages
-          .filter(m => (m.sender === lead.phone || m.recipient === lead.phone) && m.direction === 'inbound')
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+          .filter(m => (m.phone_number === lead.phone && m.direction === 'inbound'))
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
           
         if (!lastMessage) return { success: true, message: `I don't see any recent replies from **${lead.name}** in your SMS inbox.` };
         
-        const time = new Date(lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const time = new Date(lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         return { success: true, message: `Yes, **${lead.name}** replied at ${time}: "${lastMessage.content}"` };
       }
       
-      const unread = smsMessages.filter(m => !m.read && m.direction === 'inbound');
+      const unread = smsMessages.filter(m => !m.is_read && m.direction === 'inbound');
       if (unread.length === 0) return { success: true, message: "Your SMS inbox is clear! No unread replies from leads found." };
       
       return { success: true, message: `You have **${unread.length}** unread messages in your inbox. Should I list the most recent ones for you?` };
