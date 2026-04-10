@@ -1192,9 +1192,7 @@ export function AIBotWidget() {
                     key={msg.id}
                     originalPhrase={msg.originalPhrase || ''}
                     onSelect={(intent) => handleLearnIntent(msg.originalPhrase || '', intent)}
-                    onDismiss={() => {
-                      setMessages(prev => prev.filter(m => m.id !== msg.id));
-                    }}
+                    onDismiss={() => setMessages(prev => prev.filter(m => m.id !== msg.id))}
                   />
                 );
               }

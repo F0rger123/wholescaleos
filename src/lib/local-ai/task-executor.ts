@@ -1,6 +1,7 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
 import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome } from './memory-store';
+import { getConversationContext } from './learning-service';
 
 export interface TaskResponse {
   success: boolean;
@@ -36,6 +37,56 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `Navigating to ${path}.` };
       }
       return { success: false, message: `I don't know how to navigate to "${path}".` };
+
+    case 'small_talk': {
+      const text = (entities.text || '').toLowerCase();
+      const memory = getMemory();
+      const sessionId = memory.sessionId;
+      const userId = store.currentUser?.id;
+      
+      // Acknowledgments
+      if (text.match(/\b(okay|ok|k|got it|alr|alright|sounds good|bet|cool|nice|great|awesome|perfect|fine|good)\b/)) {
+        const responses = ["Got it! What's next?", "Cool. Ready when you are.", "👍 Anything else?", "Alright, let's keep moving."];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+      }
+      
+      // Gratitude
+      if (text.match(/\b(thanks|thank you|thx|ty|appreciate it)\b/)) {
+        const responses = ["You're welcome! What's next?", "Happy to help! Anything else?", "Anytime. What else can I do?", "You got it. Ready for more?"];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+      }
+      
+      // Stop/Cancel
+      if (text.match(/\b(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm)\b/)) {
+        return { success: true, message: "No problem. I'll wait. Ready when you are." };
+      }
+      
+      // Confusion
+      if (text.match(/\b(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|repeat that|say that again)\b/)) {
+        if (userId && sessionId) {
+          try {
+            const history = await getConversationContext(userId, sessionId, 2);
+            // The last assistant message would be history[history.length-1] if we just processed user input
+            // But getConversationContext usually returns the full history. 
+            // We want the most recent ASSISTANT message that isn't the current "what" query.
+            const lastAssistantMsg = [...history].reverse().find(m => m.role === 'assistant');
+            if (lastAssistantMsg) {
+              return { success: true, message: `I said: "${lastAssistantMsg.content.substring(0, 200)}${lastAssistantMsg.content.length > 200 ? '...' : ''}"` };
+            }
+          } catch (e) {
+            console.error('Failed to get context:', e);
+          }
+        }
+        return { success: true, message: "I was just helping with your CRM. What would you like to do next?" };
+      }
+      
+      // Farewell
+      if (text.match(/\b(bye|goodbye|see you|see ya|later|cya|peace)\b/)) {
+        return { success: true, message: "Talk to you later! I'll be here when you need me. 👋" };
+      }
+      
+      return { success: true, message: "I hear you! What would you like to work on?" };
+    }
 
     case 'create_lead':
       try {
@@ -210,7 +261,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       let msg = `Here are your top ${hotLeads.length} leads:\n\n`;
       hotLeads.forEach((l, i) => {
-        msg += `${i + 1}. **${l.name}** - Score: ${l.dealScore} (${l.status})\n`;
+        const score = l.dealScore || l.score || l.lead_score || 'N/A';
+        msg += `${i + 1}. **${l.name}** - Score: ${score} (${l.status})\n`;
       });
       return { success: true, message: msg };
     }
@@ -289,23 +341,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'set_preference':
       setLearnedFact(entities.key || 'generic', entities.value || 'true');
       return { success: true, message: `✅ Got it. I'll remember that ${entities.key} is ${entities.value}.` };
-
-    case 'small_talk': {
-      const text = (entities.text || '').toLowerCase();
-      if (text.match(/^(okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)$/)) {
-        return { success: true, message: `Got it! What's next?` };
-      }
-      if (text.match(/^(stop|cancel|nevermind|nvm|wait|hold on|pause)$/)) {
-        return { success: true, message: `No problem. Ready when you are.` };
-      }
-      if (text.match(/^(bye|goodbye|see you|see ya|later|cya)$/)) {
-        return { success: true, message: `Talk to you later! 👋` };
-      }
-      if (text.match(/^(lol|haha|hehe|nice one|good one)$/)) {
-        return { success: true, message: `😄 What can I help with next?` };
-      }
-      return { success: true, message: `I hear you! What would you like to work on?` };
-    }
 
     case 'send_email':
       const targetEmail = entities.target || 'someone';

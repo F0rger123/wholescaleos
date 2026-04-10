@@ -236,10 +236,8 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'small_talk',
       patterns: [
-        /^(?:okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)\s*$/i,
-        /^(?:stop|cancel|nevermind|nvm|wait|hold on|pause)\s*$/i,
-        /^(?:bye|goodbye|see you|see ya|later|cya)\s*$/i,
-        /^(?:lol|haha|hehe|nice one|good one)\s*$/i
+        /^(?:okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine|alr|alright|wait|hold up|stop|cancel|nevermind|nvm|bye|goodbye|see you|see ya|later|cya|lol|haha|hehe|huh|what|hmm|umm)\b/i,
+        /^(?:what did you say|say that again|repeat that|come again|pardon|excuse me)\b/i
       ],
       params: (matches: string[]) => ({ text: matches[0].toLowerCase().trim() })
     },
