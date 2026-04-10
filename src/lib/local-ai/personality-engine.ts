@@ -12,7 +12,7 @@ export function getBotIdentity(): IdentityProfile {
   return {
     name: state.aiName || 'OS Bot',
     role: 'Real Estate Assistant',
-    tone: ((state as any).settings?.ai_tone as any) || 'professional',
+    tone: (state.aiTone?.toLowerCase() as any) || 'professional',
     agentName: state.currentUser?.email?.split('@')[0] || 'Agent'
   };
 }

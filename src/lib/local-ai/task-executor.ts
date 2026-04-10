@@ -183,6 +183,19 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { success: true, message: msg };
     }
 
+    case 'list_leads': {
+      const leads = store.leads;
+      if (leads.length === 0) {
+        return { success: true, message: "You don't have any leads in your CRM yet. Try saying 'Add John Smith as a lead' to get started!" };
+      }
+      let msg = `You have ${leads.length} leads:\n`;
+      leads.slice(0, 10).forEach((l, i) => {
+        msg += `${i + 1}. **${l.name}** (${l.status.replace('-', ' ')})\n`;
+      });
+      if (leads.length > 10) msg += `...and ${leads.length - 10} more. Go to the Leads page to see the full list.`;
+      return { success: true, message: msg };
+    }
+
     case 'hot_leads': {
       const scoreMin = entities.score_min || 80;
       const hotLeads = store.leads
@@ -349,19 +362,20 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
       return { success: true, message: `Thank you for the feedback, ${userName}! It's my mission to help you succeed. 🚀` };
 
-    case 'system_status':
-      const leadCount = store.leads.length;
-      const taskCount = store.tasks.filter(t => t.status === 'todo').length;
+    case 'system_status': {
+      const currentLeadCount = store.leads.length;
+      const currentTaskCount = store.tasks.filter(t => t.status === 'todo').length;
       return {
         success: true,
         message: `System is running at **Peak Performance**, ${userName}. 🚀\n\n` +
                  `📊 **Quick Snapshot:**\n` +
-                 `- Active Leads: **${leadCount}**\n` +
-                 `- Pending Tasks: **${taskCount}**\n` +
+                 `- Active Leads: **${currentLeadCount}**\n` +
+                 `- Pending Tasks: **${currentTaskCount}**\n` +
                  `- AI Engine: **Online** (Native Mode)\n` +
                  `- Integrations: **Verified**\n\n` +
                  `Everything looks healthy. Ready for your next move!`
       };
+    }
 
     case 'clarify_previous':
       const topic = entities?.topic || 'general';
@@ -411,7 +425,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'help':
       return { 
         success: true, 
-        message: "Try these commands:\n- 'Add a note to John: Likes morning calls'\n- 'Mark John as Hot Lead'\n- 'Tell me about Sarah'\n- 'Remember that I prefer dark mode'\n- 'Thanks, bot!'" 
+        message: `I'm **OS Bot**, your AI CRM assistant! Here's what I can do for you:\n\n` +
+                 `📁 **Leads**: "leads", "show top leads", "add [Name] as a lead"\n` +
+                 `📝 **Tasks**: "create task: Call John", "show tasks", "is anything due?"\n` +
+                 `💬 **SMS**: "text John: Hello", "did Sarah reply?"\n` +
+                 `📅 **Calendar**: "schedule a meeting", "go to calendar"\n` +
+                 `🎭 **Personality**: "be sassy", "change tone to professional"\n\n` +
+                 `What should we handle next?`
       };
 
     case 'calendar_setup': {
@@ -492,6 +512,57 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         success: true,
         message: "✅ **OS Bot Connection: Stable**\n\n- Primary Intelligence: **Local Pattern Engine**\n- Memory Persistence: **Enabled**\n- Tool Integration: **Functional**\n\nI'm ready to roll. What's next on the agenda?"
       };
+
+    case 'joke':
+      const jokes = [
+        "Why did the real estate agent cross the road? To see the property for sale on the other side!",
+        "What's a real estate agent's favorite kind of music? House music.",
+        "Why was the house so cold? Because it had no window panes.",
+        "How do real estate agents stay cool? They have a lot of fans... and great central air.",
+        "Why did the developer go broke? Because he lost his ZIP code."
+      ];
+      return { success: true, message: jokes[Math.floor(Math.random() * jokes.length)] };
+
+    case 'time_query':
+      const now = new Date();
+      return { 
+        success: true, 
+        message: `The current time is **${now.toLocaleTimeString()}** on **${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**.`
+      };
+
+    case 'store_fact':
+      if (entities.type === 'name' && entities.value) {
+        setLearnedFact('name', entities.value);
+        return { success: true, message: `✅ Got it, I'll call you **${entities.value}** from now on!` };
+      }
+      const factKey = entities.type || 'preference';
+      const factVal = entities.value || entities.fact || 'true';
+      setLearnedFact(factKey, factVal);
+      return { success: true, message: `✅ I've noted that down. I'll remember the details for you.` };
+
+    case 'mood_check': {
+      const mLeadCount = store.leads.length;
+      const mHotLeads = store.leads.filter(l => (l.dealScore || 0) >= 80).length;
+      const mClosedDeals = store.leads.filter(l => l.status === 'closed-won').length;
+      
+      let moodMsg = "";
+      if (mClosedDeals > 0) moodMsg = `You're crushing it, ${userName}! With **${mClosedDeals}** closed deals and **${mHotLeads}** hot prospects, you're in the top tier of agents. Keep that momentum!`;
+      else if (mHotLeads > 0) moodMsg = `You're doing great. You've got **${mHotLeads}** high-score leads that are ready to close. Focus on them today and you'll see results soon.`;
+      else if (mLeadCount > 0) moodMsg = `You're building a solid foundation. You have **${mLeadCount}** leads to work with. Consistency is key—start making those calls!`;
+      else moodMsg = `Every empire starts with a single lead. Let's get out there and find your first opportunity today. I'm ready when you are.`;
+      
+      return { success: true, message: moodMsg };
+    }
+
+    case 'motivation':
+      const quotes = [
+        "The best way to predict the future is to create it. Let's go sell some houses!",
+        "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+        "Don't wait for opportunity. Create it.",
+        "Your only limit is you. Now let's go move some properties!",
+        "Wake up with determination, go to bed with satisfaction. What's our first lead today?"
+      ];
+      return { success: true, message: quotes[Math.floor(Math.random() * quotes.length)] };
 
     default:
       return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };

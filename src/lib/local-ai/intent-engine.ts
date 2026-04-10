@@ -19,8 +19,10 @@ export interface ParsedIntent {
 export function normalizeInput(input: string): string {
   const fillers = [
     /^(?:can you|please|could you|would you|hey os bot|os bot|bot|assistant|can you please|could you please)\s+/i,
-    /^(?:i want to|i need to|i'd like to|let's)\s+/i,
-    /\s+(?:please|now|right now|immediately|for me|thank you|thanks)$/i,
+    /^(?:i want to|i need to|i'd like to|let's|tell me|show me|can you tell me|do you know|remember that)\s+/i,
+    /^(?:am i|is my|are you|how are|how is|i am having a|i'm having a|give me)\s+/i,
+    /\bsir$|\bma'am$/i,
+    /\s+(?:please|now|right now|immediately|for me|thank you|thanks|buddy|friend|bot)$/i,
     /\?$/, // remove question mark at the end
     /[\[\]\(\)\{\}\\]/g, // strip common typo characters like [ or ]
     /^[ \t]+|[ \t]+$/g // trim whitespace
@@ -147,12 +149,14 @@ export function recognizeIntent(input: string): ParsedIntent | null {
 
   console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
 
-  // Move typo suggestions to the bottom (below Handlers check)
-
-  // Handle specific "Whats u[" case specifically if it slipped through
-  if (normalized === 'whats u' || normalized === 'whats up') {
-    // If it's already whats up, greeting handler will catch it, 
-    // but if it's 'whats u' it might need help
+  const keywords = ['lead', 'leads', 'task', 'tasks', 'sms', 'text', 'message', 'calendar', 'hot', 'hot leads', 'top leads', 'update', 'status', 'add', 'create', 'hello', 'whats up', 'hey', 'yo', 'motivation', 'mood', 'quote'];
+  for (const kw of keywords) {
+    if (normalized === kw || normalized === kw + 's') {
+      const intent = intents.find(i => 
+        i.patterns.some(p => typeof p === 'string' ? p.toLowerCase() === kw || p.toLowerCase() === kw + 's' : false)
+      );
+      if (intent) return { intent: intent, params: {}, confidence: 100, needsAgentLoop };
+    }
   }
 
   // Check Confirmation logic (Yes/No)
@@ -249,6 +253,14 @@ export function recognizeIntent(input: string): ParsedIntent | null {
       intent: 'help_commands',
       patterns: [
         /^(?:help|help me|show commands|what are your commands|list commands|options|command list)\??$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'list_leads',
+      patterns: [
+        /^(?:leads|show leads|list leads|my leads|view leads)$/i,
+        /^(?:show all leads|list all leads|get leads|show leeds|list leeds)$/i
       ],
       params: () => ({})
     },
@@ -413,6 +425,52 @@ export function recognizeIntent(input: string): ParsedIntent | null {
         /^(?:change your greeting|update your greeting|change greeting|set greeting)$/i
       ],
       params: (matches: string[]) => ({ newGreeting: matches[1]?.trim() })
+    },
+    {
+      intent: 'joke',
+      patterns: [
+        /^(?:tell me a joke|make me laugh|humor me|tell a joke|joke)$/i,
+        /\b(?:joke|funny)\b/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'time_query',
+      patterns: [
+        /^(?:what time is it|what is the time|current time|what is the date|today's date|what day is it)$/i,
+        /\b(?:time|date|clock)\b/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'user_fact',
+      patterns: [
+        /^(?:my name is|i am|call me)\s+([a-zA-Z\s]+)$/i,
+        /^(?:remember that|i like|i love)\s+(.*)$/i,
+        /^(?:my favorite color is|my birthday is)\s+(.*)$/i
+      ],
+      params: (matches: string[]) => {
+        if (normalized.match(/^(?:my name is|i am|call me)/i)) {
+          return { type: 'name', value: matches[1].trim() };
+        }
+        return { type: 'preference', fact: matches[1] || matches[0] };
+      }
+    },
+    {
+      intent: 'mood_check',
+      patterns: [
+        /^(?:am i doing good|how am i doing|am i failing|is my business ok|how are things looking)$/i,
+        /\b(?:doing|failing|business)\b/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'motivation',
+      patterns: [
+        /^(?:encourage me|need motivation|give me a quote|tough day|motivate me|inspire me)$/i,
+        /\b(?:motivation|quote|inspire|tough)\b/i
+      ],
+      params: () => ({})
     }
   ];
 
@@ -456,10 +514,9 @@ export function recognizeIntent(input: string): ParsedIntent | null {
   }
 
   // 4. TYPO SUGGESTIONS AS LAST RESORT
-  const commandKeywords = ['text', 'lead', 'task', 'weather', 'update', 'status', 'add', 'create', 'hello', 'whats up', 'hey', 'yo'];
   const inputWords = normalized.split(/\s+/);
   
-  for (const keyword of commandKeywords) {
+  for (const keyword of keywords) {
     for (const word of inputWords) {
       if (word.length < 3 && keyword.length >= 3) continue;
       

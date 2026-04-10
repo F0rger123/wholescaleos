@@ -35,10 +35,9 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     setAiName: setStoreAiName,
     aiPersonality: storeAiPersonality, 
     setAiPersonality: setStoreAiPersonality,
-    aiTone: storeAiTone,
-    setAiTone: setStoreAiTone,
     aiCustomPrompt: storeAiCustomPrompt,
     setAiCustomPrompt: setStoreAiCustomPrompt,
+    setAiTone,
     currentUser, 
     setShowFloatingAIWidget
   } = useStore();
@@ -217,7 +216,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         setStoreAiCustomPrompt(aiCustomPrompt);
         // Also sync tone to match personality if not custom
         if (aiPersonality !== 'Custom') {
-           setStoreAiTone(aiPersonality);
+           setAiTone(aiPersonality);
            localStorage.setItem('wholescale-ai-tone', aiPersonality);
         }
 
@@ -242,7 +241,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       setStoreAiCustomPrompt(aiCustomPrompt);
       // Also sync tone
       if (aiPersonality !== 'Custom') {
-         setStoreAiTone(aiPersonality);
+         setAiTone(aiPersonality);
          localStorage.setItem('wholescale-ai-tone', aiPersonality);
       }
 
@@ -387,7 +386,14 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
               <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">Bot Personality</label>
               <select
                 value={aiPersonality}
-                onChange={(e) => setAiPersonalityState(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'Cursing') {
+                    const confirmed = window.confirm("Cursing mode will use mild profanity (hell, damn, s***) in responses. Are you sure you want to enable this?");
+                    if (!confirmed) return;
+                  }
+                  setAiPersonalityState(val);
+                }}
                 className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all appearance-none"
               >
                 <option value="Professional">Professional</option>

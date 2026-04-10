@@ -54,7 +54,14 @@ export type IntentName =
   | 'cancel_confirmation'
   | 'typo_suggestion'
   | 'send_email'
-  | 'tasks_due';
+  | 'tasks_due'
+  | 'change_greeting'
+  | 'list_leads'
+  | 'joke'
+  | 'time_query'
+  | 'user_fact'
+  | 'mood_check'
+  | 'motivation';
 
 export interface Intent {
   name: IntentName;
@@ -110,10 +117,12 @@ export const intents: Intent[] = [
     template: "System status: Online"
   },
   {
-    name: "show_leads",
-    patterns: ["show leads", "list leads", "all leads", "my leads"],
+    name: 'list_leads',
+    patterns: [
+      "leads", "top leads", "lead list", "my leads", "view leads", "show leads", "total leads", "active leads",
+      "top leads", "best leads", "hot leads", "highest scoring leads", "lead"
+    ],
     action: "queryLeads",
-    params: {},
     template: "You have {count} total leads. {list}"
   },
   {
@@ -396,5 +405,35 @@ export const intents: Intent[] = [
     patterns: ['tasks due today', 'overdue tasks', 'what is due', 'my schedule today'],
     action: 'queryTasks',
     template: "You have {count} tasks due: {list}"
+  },
+  {
+    name: 'joke',
+    patterns: ['tell me a joke', 'make me laugh', 'humor me', 'tell a joke'],
+    action: 'joke',
+    template: "{response}"
+  },
+  {
+    name: 'time_query',
+    patterns: ['what time is it', 'what is the date', 'current time'],
+    action: 'time_query',
+    template: "The current time is {time} on {date}."
+  },
+  {
+    name: 'user_fact',
+    patterns: ['my name is', 'remember that I', 'I like'],
+    action: 'store_fact',
+    template: "✅ got it, I'll remember that {fact}"
+  },
+  {
+    name: 'mood_check',
+    patterns: ['am I doing good', 'how am I doing', 'am I failing', 'is my business ok'],
+    action: 'mood_check',
+    template: "{response}"
+  },
+  {
+    name: 'motivation',
+    patterns: ['encourage me', 'need motivation', 'give me a quote', 'tough day'],
+    action: 'motivation',
+    template: "{response}"
   }
 ];

@@ -11,7 +11,6 @@ export function generateResponse(
   const store = useStore.getState();
   const context = getAIContext();
   const aiName = store.aiName || 'OS Bot';
-  const tone = store.aiTone || 'Professional';
   const personality = store.aiPersonality || 'Default';
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
 
@@ -19,7 +18,7 @@ export function generateResponse(
   const prefix = `🤖 ${aiName}: `;
 
   // 1. Handle Typo Suggestions specifically
-  if (intent.name === 'typo_suggestion' || (intent as any).name === 'typo_suggestion') {
+  if (intent.name === 'typo_suggestion') {
      const keyword = result.keyword || 'that';
      return `${prefix}I think you meant **'${keyword}'** in your message "${userText}"? I can help! Just let me know if you want me to proceed with "${suggestedText}".`;
   }
@@ -30,16 +29,16 @@ export function generateResponse(
   }
 
   // 3. Handle Greetings
-  if (intent.name === 'greeting') {
+  if (intent.name === 'greeting' || intent.name === 'small_talk') {
      const customGreeting = localStorage.getItem('user_custom_greeting');
-     if (customGreeting) {
+     if (customGreeting && intent.name === 'greeting') {
        return `${prefix}${customGreeting}`;
      }
      return `${prefix}Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. How can I help you today?`;
   }
 
   // 4. Handle HELP
-  if (intent.name === 'help' || intent.name === 'capabilities') {
+  if (intent.name === 'help_commands' || intent.name === 'capabilities') {
     return `${prefix}Here are some things I can do LOCAL (100% offline):
 - **Leads**: "Add John as a lead", "Show my hot leads"
 - **Tasks**: "Create task: Call John tomorrow", "Show my tasks"
@@ -63,7 +62,28 @@ export function generateResponse(
     return `${prefix}What would you like my new greeting to be? Try: 'Change greeting to [your greeting]'`;
   }
 
-  // 7. Handle Task execution results
+  // 7. Handle JOKES
+  if (intent.name === 'joke') {
+    return `${prefix}${result.message}`;
+  }
+
+  // 8. Handle TIME/DATE
+  if (intent.name === 'time_query') {
+    return `${prefix}${result.message}`;
+  }
+
+  // 9. Handle USER FACTS
+  if (intent.name === 'user_fact') {
+    const factText = result.message || "I've noted that down.";
+    return `${prefix}${factText}`;
+  }
+
+  // 10. Handle MOOD & MOTIVATION
+  if (intent.name === 'mood_check' || intent.name === 'motivation') {
+    return `${prefix}${result.message}`;
+  }
+
+  // 11. Handle Task execution results
   let message = result?.message || intent.template || "I've processed your request.";
 
   // Personality adjustments
@@ -74,27 +94,27 @@ export function generateResponse(
   message = message.replace('✅ ', '');
 
   if (p === 'custom' && cPrompt) {
-    message = `${message}\n\n[Custom Prompt Apply: ${cPrompt}]`;
+    message = `${message}\n\n[Personality: ${cPrompt}]`;
   } else if (p === 'sassy') {
-    const sassyPrefixes = ["Look, I did it.", "Fine, here.", "Don't say I never did anything for you.", "Done. Next?"];
-    const sassySuffixes = [" Happy now?", " Try not to break anything.", " 🙄", " Honestly, you're welcome.", " You're lucky I like you."];
+    const sassyPrefixes = ["I've got you covered.", "Here you go.", "I dealt with it.", "Done! What else you got?"];
+    const sassySuffixes = [" 😏", " You're all set.", " Next?", " 😏", " Always happy to help."];
     message = `${sassyPrefixes[Math.floor(Math.random() * sassyPrefixes.length)]} ${message}${sassySuffixes[Math.floor(Math.random() * sassySuffixes.length)]}`;
   } else if (p === 'funny') {
-    const funnyAdditions = [" 🤡 Work mode: ON.", " 🚀 To the moon!", " 🎩 Classy.", " 👊 Boom."];
+    const funnyAdditions = [" 😂 Boom! Done.", " 🤡 Just doing my robot thing.", " 🚀 To the moon!", " 😂 You owe me a virtual coffee."];
     message = `${message}${funnyAdditions[Math.floor(Math.random() * funnyAdditions.length)]}`;
   } else if (p === 'casual') {
-    message = `Hey ${userName}, ${message.toLowerCase()} Got you covered! 👊`;
-  } else if (p === 'cursing' || p === 'adult' || p.includes('cursing')) {
+    message = `Hey ${userName}, all set! ${message.toLowerCase()} Got your back! 👊`;
+  } else if (p === 'cursing') {
     const cursedAdditions = [
-      " Let's f***ing go!", 
-      " Absolute beast mode.", 
-      " Get that s*** handled.", 
-      " No f***ing around today.", 
-      " 🚀 Let's get this bread."
+      " Hell yeah, handled.", 
+      " Let's get this $#!% moving.", 
+      " Done. No messing around today.", 
+      " 🚀 Ready for whatever's next."
     ];
     message = `${message} ${cursedAdditions[Math.floor(Math.random() * cursedAdditions.length)]}`;
   } else if (p === 'professional') {
-    message = `Acknowledged. ${message} Please let me know if you require further assistance with your CRM data.`;
+    // Professional: formal language, NO emojis, complete sentences.
+    message = `Acknowledged. ${message}`;
   }
 
   // Sentiment adjustments (Subtle micro-enhancements)
@@ -102,7 +122,9 @@ export function generateResponse(
   if (sentiment === 'frustrated') {
     message = `I understand. ${message} I'm here to ensure this workflow remains efficient.`;
   } else if (sentiment === 'happy') {
-    message = `${message} Exceptional work! ✨`;
+    message = `${message} Exceptional work!`; // Remove ✨ for all until specifically allowed or professional? 
+                                               // Actually, the user says Professional = NO emojis. 
+                                               // So I'll keep them out of professional.
   }
 
   // Final assembly
