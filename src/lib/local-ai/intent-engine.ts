@@ -114,6 +114,7 @@ export function calculateIntentScore(input: string, intent: Intent): number {
 }
 
 export async function recognizeIntent(input: string): Promise<ParsedIntent | null> {
+  console.log('[DEBUG] Raw input:', input);
   const memory = getMemory();
   const lowerOrig = input.toLowerCase().trim();
   const needsAgentLoop = detectMultiStep(input);
@@ -147,6 +148,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   const checked = spellCheck(input);
   const normalizedOrig = checked.toLowerCase().trim();
   const normalized = normalizeInput(normalizedOrig);
+  console.log('[DEBUG] Normalized:', normalized);
   const activeEntity = resolveEntityFromContext(normalized);
 
   console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
@@ -236,10 +238,13 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'small_talk',
       patterns: [
-        /^(?:okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine|alr|alright|wait|hold up|stop|cancel|nevermind|nvm|bye|goodbye|see you|see ya|later|cya|lol|haha|hehe|huh|what|hmm|umm)\b/i,
-        /^(?:what did you say|say that again|repeat that|come again|pardon|excuse me)\b/i
+        /^(okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine|alr|alright|wait|hold up|stop|cancel|nevermind|nvm|bye|goodbye|see you|later|cya|lol|haha|hehe|huh|what|hmm|umm)$/i,
+        /^(what did you say|say that again|repeat that|come again|pardon|excuse me)$/i
       ],
-      params: (matches: string[]) => ({ text: matches[0].toLowerCase().trim() })
+      params: (matches: string[]) => { 
+        console.log('[DEBUG] small_talk matched!', matches[0]);
+        return { text: matches[0].toLowerCase().trim() }; 
+      }
     },
     {
       intent: 'greeting',
@@ -496,6 +501,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     for (const pattern of h.patterns) {
       const match = normalized.match(pattern);
       if (match) {
+        console.log('[DEBUG] Matched intent:', h.intent, 'with pattern', pattern);
         const intentObj = intents.find(i => i.name === h.intent);
         if (intentObj) {
           const params = h.params(match as string[]) as Record<string, any>;
