@@ -49,16 +49,6 @@ export function generateResponse(
      return `${prefix}Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. How can I help you today?`;
   }
 
-  // 4. Handle HELP
-  if (intentName === 'help_commands' || intentName === 'capabilities') {
-    return `${prefix}Here are some things I can do LOCAL (100% offline):
-- **Leads**: "Add John as a lead", "Show my hot leads"
-- **Tasks**: "Create task: Call John tomorrow", "Show my tasks"
-- **SMS**: "Text John saying Hello!", "Send message to 555-0101"
-- **Navigation**: "Go to calendar", "Show me the dashboard"
-- **Customization**: "Change your greeting to Ready to work?"`;
-  }
-
   // 5. Handle TEST
   if (intentName === 'test_query') {
     return `${prefix}OS Bot is working properly!`;

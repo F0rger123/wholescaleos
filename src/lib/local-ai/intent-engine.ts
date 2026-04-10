@@ -243,6 +243,16 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
     },
     {
+      intent: 'small_talk',
+      patterns: [
+        /^(?:okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)$/i,
+        /^(?:stop|cancel|nevermind|nvm|wait|hold on|pause)$/i,
+        /^(?:bye|goodbye|see you|see ya|later|cya)$/i,
+        /^(?:lol|haha|hehe|nice one|good one)$/i
+      ],
+      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
+    },
+    {
       intent: 'weather_query',
       patterns: [
         /^(?:what's the weather|whats the weather|what is the weather|how is the weather|is it raining|weather forecast)$/i,
@@ -290,9 +300,15 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'hot_leads',
       patterns: [
         /^(?:what are my top leads|what are my top 5 leads|top leads|show my best leads|hot leads)$/i,
-        /^(?:who should i call|best leads|deals to close|who is hot)$/i
+        /^(?:who should i call|best leads|deals to close|who is hot)$/i,
+        /^(?:what are my (\d+)\s+highest\s+scored\s+leads|show\s+my\s+top\s+(\d+)\s+leads|top\s+(\d+)\s+leads)$/i,
+        /^(?:what are my top|show top)\s+(\d+)\s+leads$/i,
+        /^(?:highest scored|best scoring)\s+leads$/i
       ],
-      params: () => ({ score_min: 80 })
+      params: (matches: string[]) => {
+        const num = parseInt(matches[1] || matches[2] || matches[3] || '5');
+        return { score_min: 0, limit: num };
+      }
     },
     {
       intent: 'send_email',

@@ -190,6 +190,8 @@ export function AIBotWidget() {
     phone: '',
   });
 
+  const [pendingTypoSuggestion, setPendingTypoSuggestion] = useState<{suggestedText: string, keyword: string} | null>(null);
+
   // Handle Dragging
   const startDrag = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -452,7 +454,16 @@ export function AIBotWidget() {
       return;
     }
 
-    const userText = prompt.trim();
+    let input = prompt.trim();
+    if (input.toLowerCase().match(/^(yes|yeah|yep|yup|sure|ok|okay|proceed|confirm)$/i)) {
+      if (pendingTypoSuggestion?.suggestedText) {
+        // Reprocess with the suggested text
+        input = pendingTypoSuggestion.suggestedText;
+        setPendingTypoSuggestion(null);
+      }
+    }
+
+    const userText = input;
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -694,7 +705,17 @@ export function AIBotWidget() {
               data: res.data,
               systemLog: "🤖 OS Bot"
             };
-            setMessages(prev => [...prev, aiMsg]);
+
+            if (matched.intent.name === 'typo_suggestion') {
+              setMessages(prev => [
+                ...prev, 
+                aiMsg,
+                { id: Date.now() + '-learning', role: 'ai', content: '', type: 'learning-buttons', originalPhrase: userText, timestamp: new Date().toISOString() }
+              ]);
+            } else {
+              setMessages(prev => [...prev, aiMsg]);
+            }
+
             if (sessionId && currentUser?.id) {
               await saveConversationTurn(currentUser.id, sessionId, 'assistant', aiMsg.content);
             }
@@ -707,7 +728,8 @@ export function AIBotWidget() {
         // If explicitly set to OS Bot but no intent matched, or intent failed
         if (isLocalModel) {
           const response = generateUnknownResponse(userText);
-          setMessages(prev => [...prev, 
+          setMessages(prev => [
+            ...prev, 
             { 
               id: (Date.now() + 1).toString(), 
               role: 'ai', 
@@ -731,6 +753,13 @@ export function AIBotWidget() {
           setLoading(false);
           return;
         }
+      }
+
+      if (matched && matched.intent.name === 'typo_suggestion') {
+        setPendingTypoSuggestion({
+          suggestedText: matched.params.suggestedText,
+          keyword: matched.params.keyword
+        });
       }
 
       // ── Normal AI processing (Only if NOT Local Model) ──────────────────

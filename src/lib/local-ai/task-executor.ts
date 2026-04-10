@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
-import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, trackSentiment, logOutcome } from './memory-store';
+import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome } from './memory-store';
 
 export interface TaskResponse {
   success: boolean;
@@ -289,22 +289,22 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       setLearnedFact(entities.key || 'generic', entities.value || 'true');
       return { success: true, message: `✅ Got it. I'll remember that ${entities.key} is ${entities.value}.` };
 
-    case 'small_talk':
-      const phrase = entities.text?.toLowerCase() || '';
-      if (phrase.includes('test') || phrase.includes('ping')) {
-        return { success: true, message: "Beep boop! 🤖 Test received. I'm online, fully functional, and ready to help you dominate the market. What's our next move?" };
+    case 'small_talk': {
+      const text = entities.text || '';
+      if (text.match(/^(okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)$/i)) {
+        return { success: true, message: `Got it! What's next?` };
       }
-      if (phrase.includes('thank') || phrase.includes('thx') || phrase.includes('great') || phrase.includes('nice')) {
-        trackSentiment(phrase);
-        return { success: true, message: `You're very welcome, ${userName}! Always happy to help. What else is on your mind?` };
+      if (text.match(/^(stop|cancel|nevermind|nvm|wait|hold on|pause)$/i)) {
+        return { success: true, message: `No problem. I've stopped. Ready when you are.` };
       }
-      if (phrase.includes('how are you') || phrase.includes('how its going')) {
-        return { success: true, message: `I'm functioning at 100% capacity and ready to assist! It's a great day to close some deals. How about you?` };
+      if (text.match(/^(bye|goodbye|see you|see ya|later|cya)$/i)) {
+        return { success: true, message: `Talk to you later! I'll be here when you need me. 👋` };
       }
-      if (phrase.includes('bye') || phrase.includes('see you') || phrase.includes('later')) {
-        return { success: true, message: `Talk to you later, ${userName}! Have a productive day.` };
+      if (text.match(/^(lol|haha|hehe|nice one|good one)$/i)) {
+        return { success: true, message: `😄 Glad you liked that! What can I help with next?` };
       }
-      return { success: true, message: `I hear you! Conversation is the key to business growth. How can I help you move forward today?` };
+      return { success: true, message: `I hear you! What would you like to work on?` };
+    }
 
     case 'send_email':
       const targetEmail = entities.target || 'someone';
