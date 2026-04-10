@@ -114,7 +114,6 @@ export function calculateIntentScore(input: string, intent: Intent): number {
 }
 
 export async function recognizeIntent(input: string): Promise<ParsedIntent | null> {
-  console.log('[DEBUG] Raw input:', input);
   const memory = getMemory();
   const lowerOrig = input.toLowerCase().trim();
   const needsAgentLoop = detectMultiStep(input);
@@ -148,12 +147,25 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   const checked = spellCheck(input);
   const normalizedOrig = checked.toLowerCase().trim();
   const normalized = normalizeInput(normalizedOrig);
-  console.log('[DEBUG] Normalized:', normalized);
   const activeEntity = resolveEntityFromContext(normalized);
 
   console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
 
-  const keywords = ['lead', 'leads', 'task', 'tasks', 'sms', 'text', 'message', 'calendar', 'hot', 'hot leads', 'top leads', 'update', 'status', 'add', 'create', 'hello', 'whats up', 'hey', 'yo', 'motivation', 'mood', 'quote'];
+  const keywords = [
+    // CRM keywords
+    'lead', 'leads', 'task', 'tasks', 'sms', 'text', 'message', 'calendar', 
+    'hot', 'hot leads', 'top leads', 'update', 'status', 'add', 'create',
+    // Greetings
+    'hello', 'hi', 'hey', 'yo', 'whats up', 'good morning', 'good afternoon',
+    // Small talk
+    'okay', 'ok', 'k', 'thanks', 'thank you', 'thx', 'stop', 'wait', 
+    'cancel', 'nevermind', 'nvm', 'bye', 'goodbye', 'later', 'cya',
+    'lol', 'haha', 'hehe', 'nice', 'cool', 'great', 'awesome', 'perfect',
+    'huh', 'what', 'hmm', 'umm', 'pardon', 'excuse me',
+    'how are you', 'how you doing', 'whats new', 'how goes it',
+    // Other
+    'motivation', 'mood', 'quote', 'joke', 'help'
+  ];
   for (const kw of keywords) {
     if (normalized === kw || normalized === kw + 's') {
       const intent = intents.find(i => 
@@ -238,13 +250,18 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'small_talk',
       patterns: [
-        /^(okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine|alr|alright|wait|hold up|stop|cancel|nevermind|nvm|bye|goodbye|see you|later|cya|lol|haha|hehe|huh|what|hmm|umm)$/i,
-        /^(what did you say|say that again|repeat that|come again|pardon|excuse me)$/i
+        /^(okay|ok|k|got it|thanks|thank you|thx|ty|appreciate it|nice|great|awesome|cool|perfect|good|fine|alr|alright|sure|bet|sounds good)$/i,
+        /^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks)$/i,
+        /^(bye|goodbye|see you|see ya|later|cya|peace|im out|got gotta go)$/i,
+        /^(lol|haha|hehe|lmao|nice one|good one|funny)$/i,
+        /^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that)$/i,
+        /^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things|how do you do)$/i,
+        /^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i,
+        /^(tell me a joke|make me laugh|joke|funny|humor me)$/i,
+        /^(what do you think|your opinion|thoughts)$/i,
+        /^(who are you|what are you|introduce yourself)$/i
       ],
-      params: (matches: string[]) => { 
-        console.log('[DEBUG] small_talk matched!', matches[0]);
-        return { text: matches[0].toLowerCase().trim() }; 
-      }
+      params: (matches: string[]) => ({ text: matches[0].toLowerCase().trim() })
     },
     {
       intent: 'greeting',
@@ -501,7 +518,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     for (const pattern of h.patterns) {
       const match = normalized.match(pattern);
       if (match) {
-        console.log('[DEBUG] Matched intent:', h.intent, 'with pattern', pattern);
         const intentObj = intents.find(i => i.name === h.intent);
         if (intentObj) {
           const params = h.params(match as string[]) as Record<string, any>;

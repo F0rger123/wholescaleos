@@ -1,12 +1,12 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
 import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome } from './memory-store';
-import { getConversationContext } from './learning-service';
 
 export interface TaskResponse {
   success: boolean;
   message: string;
   data?: any;
+  clean?: boolean;
 }
 
 export async function executeTask(action: string, entities: any): Promise<TaskResponse> {
@@ -40,52 +40,81 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'small_talk': {
       const text = (entities.text || '').toLowerCase();
-      const memory = getMemory();
-      const sessionId = memory.sessionId;
-      const userId = store.currentUser?.id;
       
       // Acknowledgments
-      if (text.match(/\b(okay|ok|k|got it|alr|alright|sounds good|bet|cool|nice|great|awesome|perfect|fine|good)\b/)) {
-        const responses = ["Got it! What's next?", "Cool. Ready when you are.", "👍 Anything else?", "Alright, let's keep moving."];
+      if (text.match(/^(okay|ok|k|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine)$/)) {
+        const responses = ["Got it! What's next?", "Cool. Ready when you are.", "👍 Anything else?", "Alright, let's keep moving.", "Sounds good. What would you like to do?"];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
       // Gratitude
-      if (text.match(/\b(thanks|thank you|thx|ty|appreciate it)\b/)) {
-        const responses = ["You're welcome! What's next?", "Happy to help! Anything else?", "Anytime. What else can I do?", "You got it. Ready for more?"];
+      if (text.match(/^(thanks|thank you|thx|ty|appreciate it)$/)) {
+        const responses = ["You're welcome! What's next?", "Happy to help! Anything else?", "Anytime. What else can I do?", "You got it. Ready for more?", "My pleasure. What's on your mind?"];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
       // Stop/Cancel
-      if (text.match(/\b(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm)\b/)) {
+      if (text.match(/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks)$/)) {
         return { success: true, message: "No problem. I'll wait. Ready when you are." };
       }
       
-      // Confusion
-      if (text.match(/\b(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|repeat that|say that again)\b/)) {
-        if (userId && sessionId) {
-          try {
-            const history = await getConversationContext(userId, sessionId, 2);
-            // The last assistant message would be history[history.length-1] if we just processed user input
-            // But getConversationContext usually returns the full history. 
-            // We want the most recent ASSISTANT message that isn't the current "what" query.
-            const lastAssistantMsg = [...history].reverse().find(m => m.role === 'assistant');
-            if (lastAssistantMsg) {
-              return { success: true, message: `I said: "${lastAssistantMsg.content.substring(0, 200)}${lastAssistantMsg.content.length > 200 ? '...' : ''}"` };
-            }
-          } catch (e) {
-            console.error('Failed to get context:', e);
-          }
-        }
-        return { success: true, message: "I was just helping with your CRM. What would you like to do next?" };
-      }
-      
       // Farewell
-      if (text.match(/\b(bye|goodbye|see you|see ya|later|cya|peace)\b/)) {
-        return { success: true, message: "Talk to you later! I'll be here when you need me. 👋" };
+      if (text.match(/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go)$/)) {
+        const responses = ["Talk to you later! I'll be here when you need me. 👋", "Goodbye! Come back anytime.", "See ya! Good luck with those leads.", "Later! I'll hold down the fort."];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      return { success: true, message: "I hear you! What would you like to work on?" };
+      // Laughter
+      if (text.match(/^(lol|haha|hehe|lmao|nice one|good one|funny)$/)) {
+        const responses = ["😄 Glad you liked that!", "😂 I'm here all week!", "Happy to entertain! What's next?", "😏 I've got more where that came from."];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+      }
+      
+      // Confusion / Repeat
+      if (text.match(/^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that)$/)) {
+        return { success: true, message: "I was just helping with your CRM. Want me to repeat my last response or try something else?" };
+      }
+      
+      // How are you
+      if (text.match(/^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things)$/)) {
+        const responses = ["I'm running at 100% and ready to help! How are you?", "All systems operational! How's your day going?", "Doing great! Ready to crush some real estate goals with you. How about you?"];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+      }
+      
+      // Greetings (time-based)
+      if (text.match(/^(good morning|morning|good afternoon|afternoon|good evening|evening)$/)) {
+        const hour = new Date().getHours();
+        let greeting = "Hello";
+        if (hour < 12) greeting = "Good morning";
+        else if (hour < 18) greeting = "Good afternoon";
+        else greeting = "Good evening";
+        return { success: true, message: `${greeting}! Ready to work on some leads?` };
+      }
+      
+      // Joke
+      if (text.match(/^(tell me a joke|make me laugh|joke|funny|humor me)$/)) {
+        const jokes = [
+          "Why did the real estate agent cross the road? To get to the other side of the deal!",
+          "What's a house's favorite music? Heavy metal... because of all the studs!",
+          "Why don't houses ever get lost? They always have good foundations!",
+          "What do you call a real estate agent who can sing? A listing agent!",
+          "Why was the open house so quiet? The walls had ears but no mouth!"
+        ];
+        return { success: true, message: jokes[Math.floor(Math.random() * jokes.length)] };
+      }
+      
+      // Who are you
+      if (text.match(/^(who are you|what are you|introduce yourself)$/)) {
+        return { success: true, message: "I'm 🤖 OS Bot, your AI-powered CRM assistant. I help manage leads, tasks, SMS, and more. Think of me as your co-pilot for real estate domination!" };
+      }
+      
+      // What do you think
+      if (text.match(/^(what do you think|your opinion|thoughts)$/)) {
+        return { success: true, message: "I think you're doing great! Want me to analyze your pipeline or suggest some next steps?" };
+      }
+      
+      // Default
+      return { success: true, message: "I hear you! What would you like to work on? Leads? Tasks? SMS?" };
     }
 
     case 'create_lead':
@@ -261,7 +290,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       let msg = `Here are your top ${hotLeads.length} leads:\n\n`;
       hotLeads.forEach((l, i) => {
-        const score = l.dealScore || l.score || l.lead_score || 'N/A';
+        const leadAny = l as any;
+        const score = l.dealScore || leadAny.score || leadAny.lead_score || 'N/A';
         msg += `${i + 1}. **${l.name}** - Score: ${score} (${l.status})\n`;
       });
       return { success: true, message: msg };
