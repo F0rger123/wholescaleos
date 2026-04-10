@@ -710,7 +710,7 @@ export function AIBotWidget() {
               setMessages(prev => [
                 ...prev, 
                 aiMsg,
-                { id: Date.now() + '-learning', role: 'ai', content: '', type: 'learning-buttons', originalPhrase: userText, timestamp: new Date().toISOString() }
+                { id: (Date.now() + 100).toString(), role: 'ai', type: 'learning-buttons', content: '', originalPhrase: userText, timestamp: new Date().toISOString() }
               ]);
             } else {
               setMessages(prev => [...prev, aiMsg]);
@@ -734,14 +734,13 @@ export function AIBotWidget() {
               id: (Date.now() + 1).toString(), 
               role: 'ai', 
               content: response, 
-              timestamp: new Date().toISOString(),
-              systemLog: "🤖 OS Bot"
+              timestamp: new Date().toISOString()
             },
             { 
-              id: (Date.now() + 2).toString(), 
+              id: (Date.now() + 100).toString(), 
               role: 'ai', 
-              content: '', 
-              type: 'learning-buttons', 
+              type: 'learning-buttons',
+              content: '',
               originalPhrase: userText,
               timestamp: new Date().toISOString()
             }

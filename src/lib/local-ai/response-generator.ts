@@ -88,12 +88,14 @@ export function generateResponse(
   // 11. Handle Task execution results
   let message = result?.message || (typeof intentOrName !== 'string' ? intentOrName.template : '') || "I've processed your request.";
 
+  // Standardize the message
+  message = message.replace('✅ ', '');
+
+  if (result.clean) return `${prefix}${message}`;
+
   // Personality adjustments
   const p = personality.toLowerCase();
   const cPrompt = store.aiCustomPrompt;
-
-  // Standardize the message
-  message = message.replace('✅ ', '');
 
   if (p === 'custom' && cPrompt) {
     message = `${message}\n\n[Personality: ${cPrompt}]`;
@@ -121,7 +123,7 @@ export function generateResponse(
   // Sentiment adjustments (Subtle micro-enhancements)
   const sentiment = context.sentiment || 'neutral';
   if (sentiment === 'frustrated') {
-    message = `I understand. ${message} I'm here to ensure this workflow remains efficient.`;
+    message = `${message} I'm here to ensure this workflow remains efficient.`;
   } else if (sentiment === 'happy') {
     message = `${message} Exceptional work!`; // Remove ✨ for all until specifically allowed or professional? 
                                                // Actually, the user says Professional = NO emojis. 

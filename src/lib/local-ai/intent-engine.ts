@@ -234,21 +234,21 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // 2. PRIORITY REGEX HANDLERS
   const handlers = [
     {
+      intent: 'small_talk',
+      patterns: [
+        /^(?:okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)\s*$/i,
+        /^(?:stop|cancel|nevermind|nvm|wait|hold on|pause)\s*$/i,
+        /^(?:bye|goodbye|see you|see ya|later|cya)\s*$/i,
+        /^(?:lol|haha|hehe|nice one|good one)\s*$/i
+      ],
+      params: (matches: string[]) => ({ text: matches[0].toLowerCase().trim() })
+    },
+    {
       intent: 'greeting',
       patterns: [
         /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up|whats up|whats? u[\[p]?)$/i,
         /^(?:how's it going|how are you|good morning|good afternoon|good evening)$/i,
         /\b(?:hi|hello|yo|hey)\b/i
-      ],
-      params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
-    },
-    {
-      intent: 'small_talk',
-      patterns: [
-        /^(?:okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)$/i,
-        /^(?:stop|cancel|nevermind|nvm|wait|hold on|pause)$/i,
-        /^(?:bye|goodbye|see you|see ya|later|cya)$/i,
-        /^(?:lol|haha|hehe|nice one|good one)$/i
       ],
       params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
     },

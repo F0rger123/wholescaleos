@@ -197,17 +197,18 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     case 'hot_leads': {
-      const scoreMin = entities.score_min || 80;
+      const scoreMin = entities.score_min !== undefined ? entities.score_min : 0;
+      const limit = entities.limit || 5;
       const hotLeads = store.leads
         .filter(l => (l.dealScore || 0) >= scoreMin)
         .sort((a, b) => (b.dealScore || 0) - (a.dealScore || 0))
-        .slice(0, 5);
+        .slice(0, limit);
 
       if (hotLeads.length === 0) {
-        return { success: true, message: `I couldn't find any 'Hot' leads (score > ${scoreMin}) right now. Want me to help you find some new ones?` };
+        return { success: true, message: `I couldn't find any leads matching that criteria. Want me to help you find some new ones?` };
       }
 
-      let msg = `Here are your top ${hotLeads.length} leads sorted by score:\n\n`;
+      let msg = `Here are your top ${hotLeads.length} leads:\n\n`;
       hotLeads.forEach((l, i) => {
         msg += `${i + 1}. **${l.name}** - Score: ${l.dealScore} (${l.status})\n`;
       });
@@ -290,18 +291,18 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { success: true, message: `✅ Got it. I'll remember that ${entities.key} is ${entities.value}.` };
 
     case 'small_talk': {
-      const text = entities.text || '';
-      if (text.match(/^(okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)$/i)) {
+      const text = (entities.text || '').toLowerCase();
+      if (text.match(/^(okay|ok|k|got it|thanks|thank you|thx|nice|great|awesome|cool|perfect|good|fine)$/)) {
         return { success: true, message: `Got it! What's next?` };
       }
-      if (text.match(/^(stop|cancel|nevermind|nvm|wait|hold on|pause)$/i)) {
-        return { success: true, message: `No problem. I've stopped. Ready when you are.` };
+      if (text.match(/^(stop|cancel|nevermind|nvm|wait|hold on|pause)$/)) {
+        return { success: true, message: `No problem. Ready when you are.` };
       }
-      if (text.match(/^(bye|goodbye|see you|see ya|later|cya)$/i)) {
-        return { success: true, message: `Talk to you later! I'll be here when you need me. 👋` };
+      if (text.match(/^(bye|goodbye|see you|see ya|later|cya)$/)) {
+        return { success: true, message: `Talk to you later! 👋` };
       }
-      if (text.match(/^(lol|haha|hehe|nice one|good one)$/i)) {
-        return { success: true, message: `😄 Glad you liked that! What can I help with next?` };
+      if (text.match(/^(lol|haha|hehe|nice one|good one)$/)) {
+        return { success: true, message: `😄 What can I help with next?` };
       }
       return { success: true, message: `I hear you! What would you like to work on?` };
     }
@@ -610,6 +611,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'help_commands':
       return {
         success: true,
+        clean: true,
         message: `I'm **OS Bot**, your AI CRM assistant! Here's exactly what I can do:\n\n` +
                  `📁 **Leads**: "leads", "show top leads", "add [Name] as a lead"\n` +
                  `📝 **Tasks**: "create task: Call John", "show tasks", "do i have any tasks due?"\n` +
