@@ -756,8 +756,8 @@ export function AIBotWidget() {
 
       if (matched && matched.intent.name === 'typo_suggestion') {
         setPendingTypoSuggestion({
-          suggestedText: matched.params.suggestedText,
-          keyword: matched.params.keyword
+          suggestedText: matched.params.suggestedText as string,
+          keyword: matched.params.keyword as string
         });
       }
 

@@ -204,8 +204,8 @@ export const intents: Intent[] = [
   },
   {
     name: "show_tasks",
-    patterns: ["show tasks", "my tasks", "what do I need to do", "pending tasks", "list tasks"],
-    action: "listTasks",
+    patterns: ["tasks", "task", "show tasks", "my tasks", "what do I need to do", "pending tasks", "list tasks", "view tasks", "show my tasks", "what are my tasks"],
+    action: "show_tasks",
     template: "You have {count} pending tasks. {list}"
   },
   {

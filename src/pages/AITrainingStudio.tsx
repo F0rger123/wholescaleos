@@ -140,7 +140,7 @@ const AITrainingStudio = () => {
                         <label className="text-xs text-[var(--t-text-muted)] mb-1 block">Map to Action (Intent)</label>
                         <select
                           value={newAction}
-                          onChange={e => setNewAction(e.target.value)}
+                          onChange={e => setNewAction(e.target.value as typeof LOCAL_INTENTS[number])}
                           className="w-full bg-[var(--t-background)] border border-[var(--t-border)] rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all text-sm"
                         >
                           {LOCAL_INTENTS.map((intent: string) => (

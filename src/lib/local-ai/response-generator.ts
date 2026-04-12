@@ -37,7 +37,7 @@ export function generateResponse(
   suggestedText?: string
 ): string {
   const store = useStore.getState();
-  const context = getAIContext();
+  const _context = getAIContext();
   const aiName = store.aiName || 'OS Bot';
   const personality = store.aiPersonality || 'Default';
 

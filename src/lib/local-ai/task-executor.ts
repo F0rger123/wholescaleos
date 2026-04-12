@@ -5,7 +5,6 @@ import {
   getConversationContext, 
   updateConversationTopic, 
   addMentionedLead,
-  getUserPreferences,
   getAllLearnedIntents,
   deleteLearnedIntent
 } from './learning-service';
@@ -50,48 +49,48 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'small_talk': {
       const text = (entities.text || '').toLowerCase();
       
-      // Acknowledgments
-      if (text.match(/^(okay|ok|k|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine)$/)) {
-        const responses = ["Got it! What's next?", "Cool. Ready when you are.", "👍 Anything else?", "Alright, let's keep moving.", "Sounds good. What would you like to do?"];
+      // Acknowledgments (expanded with casual variants)
+      if (/^(okay|ok|k|kk|okk|okayyy|okayy|okie|okey|oki|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine|right|noted|understood|roger|copy|yep|yup|ya|yah|ye|word|facts|true|fair|valid|aight|ight|ite|kewl|noice|dope)$/i.test(text)) {
+        const responses = ["Got it! What's next?", "Cool. Ready when you are.", "👍 Anything else?", "Alright, let's keep moving.", "Sounds good. What would you like to do?", "Noted! What else?", "Perfect, I'm here when you need me."];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Gratitude
-      if (text.match(/^(thanks|thank you|thx|ty|appreciate it)$/)) {
+      // Gratitude (expanded)
+      if (/^(thanks|thank you|thx|ty|appreciate it|tysm|tyvm|much appreciated|thank u|thnx|thnks|tanks)$/i.test(text)) {
         const responses = ["You're welcome! What's next?", "Happy to help! Anything else?", "Anytime. What else can I do?", "You got it. Ready for more?", "My pleasure. What's on your mind?"];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Stop/Cancel/No
-      if (text.match(/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no)$/)) {
+      // Stop/Cancel/No (expanded)
+      if (/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no|nope|naw|neh)$/i.test(text)) {
         return { success: true, message: "No problem. I'll wait. Ready when you are." };
       }
       
-      // Farewell
-      if (text.match(/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night)$/)) {
+      // Farewell (expanded)
+      if (/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night|gn|ttyl|bai|byeee|laterr)$/i.test(text)) {
         const responses = ["Talk to you later! I'll be here when you need me. 👋", "Goodbye! Come back anytime.", "See ya! Good luck with those leads.", "Later! I'll hold down the fort."];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Laughter
-      if (text.match(/^(lol|haha|hehe|lmao|nice one|good one|funny)$/)) {
+      // Laughter (expanded)
+      if (/^(lol|haha|hehe|lmao|lmfao|rofl|nice one|good one|funny|dead|bruh|bro|ong|fr|no cap)$/i.test(text)) {
         const responses = ["😄 Glad you liked that!", "😂 I'm here all week!", "Happy to entertain! What's next?", "😏 I've got more where that came from."];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Confusion / Repeat / Don't get it
-      if (text.match(/^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it)$/)) {
-        return { success: true, message: "I was just sharing a joke or helping with your CRM. Want me to explain differently or try something else?" };
+      // Confusion / Repeat / Don't get it (expanded)
+      if (/^(huh|what|hmm|umm|um|uh|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it|wut|wat|hm)$/i.test(text)) {
+        return { success: true, message: "No worries! I'm here to help with your CRM. Try saying 'leads', 'tasks', 'help', or ask me a question!" };
       }
       
-      // How are you
-      if (text.match(/^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things)$/)) {
+      // How are you / Status (expanded)
+      if (/^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things|sup|wassup|wsg)$/i.test(text)) {
         const responses = ["I'm running at 100% and ready to help! How are you?", "All systems operational! How's your day going?", "Doing great! Ready to crush some real estate goals with you. How about you?"];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
       // Greetings (time-based)
-      if (text.match(/^(good morning|morning|good afternoon|afternoon|good evening|evening)$/)) {
+      if (/^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i.test(text)) {
         const hour = new Date().getHours();
         let greeting = "Hello";
         if (hour < 12) greeting = "Good morning";
@@ -100,8 +99,14 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `${greeting}! Ready to work on some leads?` };
       }
       
+      // Casual greetings
+      if (/^(yo|hey|hi|hello|henlo|heya|hiya)$/i.test(text)) {
+        const responses = ["Hey there! What can I help with?", "Hi! Ready to work on your CRM?", "Yo! What's the plan?"];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+      }
+      
       // Joke (with multiple jokes)
-      if (text.match(/^(tell me a joke|make me laugh|joke|funny|humor me|another joke|different joke|give me another)$/)) {
+      if (/^(tell me a joke|make me laugh|joke|humor me|another joke|different joke|give me another)$/i.test(text)) {
         const jokes = [
           "Why did the real estate agent cross the road? To get to the other side of the deal!",
           "What's a house's favorite music? Heavy metal... because of all the studs!",
@@ -118,16 +123,22 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
       
       // Who are you
-      if (text.match(/^(who are you|what are you|introduce yourself)$/)) {
+      if (/^(who are you|what are you|introduce yourself)$/i.test(text)) {
         return { success: true, message: "I'm 🤖 OS Bot, your AI-powered CRM assistant. I help manage leads, tasks, SMS, and more. Think of me as your co-pilot for real estate domination! What would you like to work on?" };
       }
       
       // What do you think
-      if (text.match(/^(what do you think|your opinion|thoughts)$/)) {
+      if (/^(what do you think|your opinion|thoughts)$/i.test(text)) {
         return { success: true, message: "I think you're doing great! Want me to analyze your pipeline or suggest some next steps?" };
       }
       
-      // Default
+      // Gen-Z / casual fillers
+      if (/^(plz|pls|tho|tbh|idk|idc|imo|smh|welp|well|hmm ok|ok cool|ok thanks|ok bye|yeah|yea|yass|yas)$/i.test(text)) {
+        const responses = ["I got you! What do you need?", "I'm listening! What's up?", "Ready when you are! What can I do?"];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+      }
+      
+      // Default small talk fallback
       return { success: true, message: "I hear you! What would you like to work on? Leads? Tasks? SMS?" };
     }
 
@@ -318,6 +329,22 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       if (overdue > 0) msg += ` ${overdue} are currently overdue! ⚠️`;
       else msg += ` Everything is on track.`;
       
+      return { success: true, message: msg };
+    }
+
+    case 'listTasks':
+    case 'show_tasks': {
+      const allTasks = store.tasks.filter(t => t.status !== 'done');
+      if (allTasks.length === 0) {
+        return { success: true, message: "You don't have any pending tasks. Nice work! Want me to create one? Say 'create task: [title]'." };
+      }
+      let msg = `You have **${allTasks.length}** pending tasks:\n\n`;
+      allTasks.slice(0, 10).forEach((t, i) => {
+        const priority = t.priority === 'high' ? ' ⚠️' : t.priority === 'medium' ? ' 🔸' : '';
+        const due = t.dueDate ? ` (Due: ${t.dueDate})` : '';
+        msg += `${i + 1}. **${t.title}**${priority}${due}\n`;
+      });
+      if (allTasks.length > 10) msg += `\n...and ${allTasks.length - 10} more. Go to the Tasks page to see the full list.`;
       return { success: true, message: msg };
     }
 
@@ -691,7 +718,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'follow_up': {
       const topic = entities.topic || 'general';
-      const context = await getConversationContext(store.currentUser?.id, sessionId, 5);
+      const context = await getConversationContext(store.currentUser?.id || '', sessionId, 5);
       const lastTopic = context[context.length - 1]?.content || '';
       
       if (topic === 'leads' || lastTopic.includes('lead')) {
@@ -769,7 +796,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `I don't have a last contact date for ${lead.name} yet. Want to send a message now?` };
       }
       
-      const score = lead.dealScore || lead.score || lead.lead_score || 'N/A';
+      const score = lead.dealScore || (lead as Record<string, unknown>).score || (lead as Record<string, unknown>).lead_score || 'N/A';
       return { 
         success: true, 
         message: `**${lead.name}**\n📞 ${lead.phone || 'No phone'}\n📧 ${lead.email || 'No email'}\n📍 ${lead.propertyAddress || 'No address'}\n📊 Status: ${lead.status}\n🎯 Score: ${score}\n📝 Notes: ${lead.notes || 'None'}` 

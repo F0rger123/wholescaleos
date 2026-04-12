@@ -1,37 +1,61 @@
 import { Intent, intents } from '../ai/intents';
 import { spellCheck, getLevenshteinDistance } from './spell-checker';
 import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact } from './memory-store';
-import { getLearnedIntent, getAllLearnedIntents, findSimilarLearnedPhrase } from './learning-service';
+import { getLearnedIntent, getAllLearnedIntents } from './learning-service';
 import { useStore } from '../../store/useStore';
+
+// Debug mode — toggle to true to see detailed intent matching logs
+const DEBUG_MODE = true;
+
+function debugLog(stage: string, message: string, data?: unknown) {
+  if (!DEBUG_MODE) return;
+  console.log(`[🐛 OS Bot Debug][${stage}] ${message}`, data ?? '');
+}
 
 export interface ParsedIntent {
   intent: Intent;
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   confidence: number;
   originalText?: string;
   isAmbiguous?: boolean;
   isConfirming?: boolean;
   suggestion?: string;
   needsAgentLoop: boolean;
+  matchedBy?: string; // Debug: which stage matched this intent
 }
 
 /**
- * Strips filler words and common phrases to help regex matching
+ * Strips filler words and common phrases to help regex matching.
+ * IMPORTANT: Does NOT strip standalone small-talk words — those are
+ * handled by the small_talk handler before this function is relevant.
  */
 export function normalizeInput(input: string): string {
-  const fillers = [
+  // Only strip leading filler phrases (multi-word prefixes)
+  const leadingFillers = [
     /^(?:can you|please|could you|would you|hey os bot|os bot|bot|assistant|can you please|could you please)\s+/i,
-    /^(?:i want to|i need to|i'd like to|let's|tell me|show me|can you tell me|do you know|remember that)\s+/i,
-    /^(?:am i|is my|are you|how are|how is|i am having a|i'm having a|give me)\s+/i,
-    /\bsir$|\bma'am$/i,
-    /\s+(?:please|now|right now|immediately|for me|thank you|thanks|buddy|friend|bot)$/i,
+    /^(?:i want to|i need to|i'd like to|let's|tell me|show me|can you tell me|do you know)\s+/i,
+    /^(?:give me)\s+/i,
+  ];
+
+  // Only strip trailing filler phrases (multi-word suffixes)
+  const trailingFillers = [
+    /\s+(?:please|for me|thank you|buddy|friend)\s*$/i,
     /\?$/, // remove question mark at the end
     /[\[\]\(\)\{\}\\]/g, // strip common typo characters like [ or ]
     /^[ \t]+|[ \t]+$/g // trim whitespace
   ];
 
   let normalized = input.trim();
-  fillers.forEach(regex => {
+  
+  // Only apply leading filler stripping if the input has multiple words
+  const wordCount = normalized.split(/\s+/).length;
+  if (wordCount > 2) {
+    leadingFillers.forEach(regex => {
+      normalized = normalized.replace(regex, '');
+    });
+  }
+  
+  trailingFillers.forEach(regex => {
     normalized = normalized.replace(regex, '');
   });
   
@@ -85,7 +109,7 @@ export function calculateIntentScore(input: string, intent: Intent): number {
     }
   });
 
-  // 2. Keyword density
+  // 2. Keyword density — only consider words > 2 chars
   const words = lower.split(/\s+/);
   const patternWords = intent.patterns.flatMap(p => p.toLowerCase().split(/\s+/));
   const uniquePatternWords = [...new Set(patternWords)].filter(w => w.length > 3);
@@ -104,13 +128,112 @@ export function calculateIntentScore(input: string, intent: Intent): number {
     }
   });
 
-  // 3. Negative signals (Anti-patterns)
-  const negatives = ['not', 'don\'t', 'never', 'stop', 'no', 'none'];
-  if (negatives.some(n => words.includes(n))) {
-    score -= 50;
+  // 3. Negative signals (Anti-patterns) — BUT NOT for small_talk intent
+  if (intent.name !== 'small_talk') {
+    const negatives = ['don\'t', 'never', 'none'];
+    if (negatives.some(n => words.includes(n))) {
+      score -= 50;
+    }
   }
 
   return Math.min(Math.max(score, 0), 100);
+}
+
+/**
+ * Checks if an input is a common short/casual phrase that should be treated
+ * as small talk rather than a command. This prevents short words from
+ * being sent to typo suggestion or "I didn't understand."
+ */
+function isSmallTalkPhrase(input: string): boolean {
+  const lower = input.toLowerCase().trim();
+  
+  // Comprehensive list of short conversational phrases
+  const smallTalkPhrases = new Set([
+    // Acknowledgments
+    'okay', 'ok', 'k', 'kk', 'okk', 'okayyy', 'okayy', 'okie', 'okey', 'oki',
+    'got it', 'alr', 'alright', 'sure', 'bet', 'sounds good', 'cool', 'nice',
+    'great', 'awesome', 'perfect', 'good', 'fine', 'right', 'noted', 'understood',
+    'roger', 'copy', 'yep', 'yup', 'ya', 'yah', 'ye', 'word', 'facts', 'true',
+    'fair', 'valid', 'aight', 'ight', 'ite', 'kewl', 'noice', 'dope',
+    // Gratitude
+    'thanks', 'thank you', 'thx', 'ty', 'appreciate it', 'tysm', 'tyvm',
+    'much appreciated', 'thank u', 'thnx', 'thnks', 'tanks',
+    // Stop/Cancel/No
+    'stop', 'wait', 'hold up', 'hold on', 'pause', 'cancel', 'nevermind', 
+    'nvm', 'nah', 'no thanks', 'no', 'nope', 'naw', 'neh',
+    // Farewell
+    'bye', 'goodbye', 'see you', 'see ya', 'later', 'cya', 'peace', 'im out',
+    'gotta go', 'good night', 'gn', 'ttyl', 'bai', 'byeee', 'laterr',
+    // Laughter
+    'lol', 'haha', 'hehe', 'lmao', 'lmfao', 'rofl', 'nice one', 'good one',
+    'funny', 'dead', 'bruh', 'bro', 'ong', 'fr', 'no cap',
+    // Confusion
+    'huh', 'what', 'hmm', 'umm', 'um', 'uh', 'pardon', 'excuse me',
+    'come again', 'say what', 'what did you say', 'say that again',
+    'repeat that', 'i dont get it', "i don't get it", 'wut', 'wat', 'hm',
+    // Status Check
+    'how are you', 'how you doing', 'how goes it', 'whats up', "what's up",
+    'whats new', 'how are things', 'sup', 'wassup', 'wsg',
+    // Time-based greetings
+    'good morning', 'morning', 'good afternoon', 'afternoon',
+    'good evening', 'evening',
+    // Jokes
+    'tell me a joke', 'make me laugh', 'joke', 'humor me',
+    'another joke', 'different joke', 'give me another',
+    // Identity
+    'who are you', 'what are you', 'introduce yourself',
+    // Opinion
+    'what do you think', 'your opinion', 'thoughts',
+    // Fillers/misc
+    'yo', 'hey', 'hi', 'hello', 'henlo', 'heya', 'hiya',
+    'plz', 'pls', 'tho', 'tbh', 'idk', 'idc', 'imo', 'smh',
+    'welp', 'well', 'hmm ok', 'ok cool', 'ok thanks', 'ok bye',
+    'yeah', 'yea', 'yass', 'yas',
+  ]);
+
+  return smallTalkPhrases.has(lower);
+}
+
+/**
+ * Categorizes a small-talk phrase for the task executor
+ */
+function categorizeSmallTalk(input: string): string {
+  const lower = input.toLowerCase().trim();
+
+  // Acknowledgments
+  if (/^(okay|ok|k|kk|okk|okayyy|okayy|okie|okey|oki|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine|right|noted|understood|roger|copy|yep|yup|ya|yah|ye|word|facts|true|fair|valid|aight|ight|ite|kewl|noice|dope)$/i.test(lower)) return lower;
+  
+  // Gratitude
+  if (/^(thanks|thank you|thx|ty|appreciate it|tysm|tyvm|much appreciated|thank u|thnx|thnks|tanks)$/i.test(lower)) return lower;
+  
+  // Stop/Cancel
+  if (/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no|nope|naw|neh)$/i.test(lower)) return lower;
+  
+  // Farewell
+  if (/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night|gn|ttyl|bai|byeee|laterr)$/i.test(lower)) return lower;
+  
+  // Laughter
+  if (/^(lol|haha|hehe|lmao|lmfao|rofl|nice one|good one|funny|dead|bruh|bro|ong|fr|no cap)$/i.test(lower)) return lower;
+  
+  // Confusion
+  if (/^(huh|what|hmm|umm|um|uh|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it|wut|wat|hm)$/i.test(lower)) return lower;
+  
+  // Status
+  if (/^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things|sup|wassup|wsg)$/i.test(lower)) return lower;
+  
+  // Time-based greetings
+  if (/^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i.test(lower)) return lower;
+  
+  // Jokes
+  if (/^(tell me a joke|make me laugh|joke|humor me|another joke|different joke|give me another)$/i.test(lower)) return lower;
+  
+  // Identity
+  if (/^(who are you|what are you|introduce yourself)$/i.test(lower)) return lower;
+  
+  // Opinion
+  if (/^(what do you think|your opinion|thoughts)$/i.test(lower)) return lower;
+  
+  return lower;
 }
 
 export async function recognizeIntent(input: string): Promise<ParsedIntent | null> {
@@ -118,168 +241,211 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   const lowerOrig = input.toLowerCase().trim();
   const needsAgentLoop = detectMultiStep(input);
   
-  // Check for custom facts/memory first
+  debugLog('START', `Input: "${input}" | Lower: "${lowerOrig}"`);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 0: SMALL TALK EARLY EXIT
+  // Check for common conversational phrases FIRST, before any processing.
+  // This prevents "okay", "thanks", "lol", "stop" etc. from ever reaching
+  // typo suggestion or "I didn't understand".
+  // ═══════════════════════════════════════════════════════════════════════
+  if (isSmallTalkPhrase(lowerOrig)) {
+    const smallTalkIntent = intents.find(i => i.name === 'small_talk');
+    if (smallTalkIntent) {
+      const text = categorizeSmallTalk(lowerOrig);
+      debugLog('MATCHED', `Small talk early exit: "${lowerOrig}" → small_talk`, { text });
+      return {
+        intent: smallTalkIntent,
+        params: { text },
+        confidence: 100,
+        needsAgentLoop,
+        matchedBy: 'small_talk_early_exit'
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 0.5: CUSTOM FACTS/MEMORY
+  // ═══════════════════════════════════════════════════════════════════════
   if (lowerOrig === "what's my name" || lowerOrig === "whats my name" || lowerOrig === "what is my name") {
     const name = getLearnedFact('name');
     if (name) {
+      debugLog('MATCHED', 'Name recall from memory');
       return {
         intent: { name: 'small_talk', action: 'small_talk', patterns: [], template: `Your name is ${name}.` },
         params: { text: `Your name is ${name}.` },
         confidence: 100,
-        needsAgentLoop
+        needsAgentLoop,
+        matchedBy: 'memory_fact'
       };
     }
   }
 
   if (lowerOrig.includes("address for") || lowerOrig.includes("where is")) {
     const target = lowerOrig.replace(/^(?:what's the|whats the|where is the|address for)\s+/i, '').replace(/\s*property\s*/i, '').trim();
-    const address = getLearnedFact(`last_address`); // Or more complex logic
+    const address = getLearnedFact(`last_address`);
     if (address && lowerOrig.includes(target)) {
+       debugLog('MATCHED', 'Address recall from memory');
        return {
          intent: { name: 'small_talk', action: 'small_talk', patterns: [], template: `The address for ${target} is ${address}.` },
          params: { text: `The address for ${target} is ${address}.` },
          confidence: 100,
-         needsAgentLoop
+         needsAgentLoop,
+         matchedBy: 'memory_fact'
        };
     }
   }
 
-  const checked = spellCheck(input);
-  const normalizedOrig = checked.toLowerCase().trim();
-  const normalized = normalizeInput(normalizedOrig);
-  const activeEntity = resolveEntityFromContext(normalized);
-
-  console.log(`[🤖 OS Bot] Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
-
-  const keywords = [
-    // CRM keywords
-    'lead', 'leads', 'task', 'tasks', 'sms', 'text', 'message', 'calendar', 
-    'hot', 'hot leads', 'top leads', 'update', 'status', 'add', 'create',
-    // Greetings
-    'hello', 'hi', 'hey', 'yo', 'whats up', 'good morning', 'good afternoon',
-    // Small talk - acknowledgments
-    'okay', 'ok', 'k', 'got it', 'alr', 'alright', 'sure', 'bet', 'sounds good',
-    'cool', 'nice', 'great', 'awesome', 'perfect', 'good', 'fine',
-    // Small talk - gratitude
-    'thanks', 'thank you', 'thx', 'ty', 'appreciate it',
-    // Small talk - stop/cancel
-    'stop', 'wait', 'hold up', 'hold on', 'pause', 'cancel', 'nevermind', 'nvm', 'nah', 'no thanks', 'no',
-    // Small talk - farewell
-    'bye', 'goodbye', 'see you', 'see ya', 'later', 'cya', 'peace', 'im out', 'gotta go', 'good night',
-    // Small talk - laughter
-    'lol', 'haha', 'hehe', 'lmao', 'nice one', 'good one', 'funny',
-    // Small talk - confusion
-    'huh', 'what', 'hmm', 'umm', 'pardon', 'excuse me', 'come again', 'say what',
-    'what did you say', 'say that again', 'repeat that', 'i dont get it', "i don't get it",
-    // Small talk - status
-    'how are you', 'how you doing', 'how goes it', 'whats new', 'how are things',
-    // Other
-    'motivation', 'mood', 'quote', 'joke', 'help', 'who are you', 'what are you'
-  ];
-  for (const kw of keywords) {
-    if (normalized === kw || normalized === kw + 's') {
-      const intent = intents.find(i => 
-        i.patterns.some(p => typeof p === 'string' ? p.toLowerCase() === kw || p.toLowerCase() === kw + 's' : false)
-      );
-      if (intent) return { intent: intent, params: {}, confidence: 100, needsAgentLoop };
-    }
-  }
-
-  // Check Confirmation logic (Yes/No)
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 1: CONFIRMATION / MULTI-TURN STATE
+  // ═══════════════════════════════════════════════════════════════════════
   if (memory.activeState?.type === 'AWAITING_INTENT_CONFIRMATION') {
-    if (normalized.match(/^(?:yes|yep|yup|yeah|sure|do it|ok|okay|confirm)$/i)) {
+    if (lowerOrig.match(/^(?:yes|yep|yup|yeah|sure|do it|ok|okay|confirm)$/i)) {
+      debugLog('MATCHED', 'Confirmation: YES');
       return { 
         intent: memory.activeState.data.intent, 
         params: memory.activeState.data.params || {}, 
         confidence: 100,
         isConfirming: true,
-        needsAgentLoop
+        needsAgentLoop,
+        matchedBy: 'confirmation_yes'
       };
     }
-    if (normalized.match(/^(?:no|nope|nah|nevermind|stop|cancel|wrong)$/i)) {
+    if (lowerOrig.match(/^(?:no|nope|nah|nevermind|stop|cancel|wrong)$/i)) {
+      debugLog('MATCHED', 'Confirmation: NO');
       return { 
         intent: { name: 'cancel_confirmation', patterns: [], action: 'cancel', template: 'No problem.' }, 
         params: {}, 
         confidence: 100,
-        needsAgentLoop
+        needsAgentLoop,
+        matchedBy: 'confirmation_no'
       };
     }
   }
 
-  // 1. CHECK MULTI-TURN STATE
+  // SMS Multi-turn
   if (memory.activeState?.type === 'AWAITING_SMS_RECIPIENT') {
     const intentObj = intents.find(i => i.name === 'send_sms_partial');
     if (intentObj) {
-      return { 
-        intent: intentObj, 
-        params: { target: input }, 
-        confidence: 100,
-        needsAgentLoop
-      };
+      debugLog('MATCHED', 'SMS recipient multi-turn');
+      return { intent: intentObj, params: { target: input }, confidence: 100, needsAgentLoop, matchedBy: 'multi_turn_sms' };
     }
   }
 
   if (memory.activeState?.type === 'AWAITING_SMS_MESSAGE') {
-    const target = memory.activeState.data?.target || activeEntity?.name || 'someone';
+    const target = memory.activeState.data?.target || 'someone';
     const intentObj = intents.find(i => i.name === 'send_sms');
     if (intentObj) {
       setActiveState(null);
+      debugLog('MATCHED', 'SMS message multi-turn');
       return { 
         intent: intentObj, 
         params: { target, message: input, is_followup: true }, 
         confidence: 100,
-        needsAgentLoop
+        needsAgentLoop,
+        matchedBy: 'multi_turn_sms'
       };
     }
   }
 
-  // 1.1 CALENDAR MULTI-TURN
+  // Calendar Multi-turn
   if (memory.activeState?.type === 'AWAITING_CALENDAR_TITLE') {
     const intentObj = intents.find(i => i.name === 'calendar_setup');
     if (intentObj) {
-      return { intent: intentObj, params: { title: input, step: 'DATE' }, confidence: 100, needsAgentLoop };
+      debugLog('MATCHED', 'Calendar title multi-turn');
+      return { intent: intentObj, params: { title: input, step: 'DATE' }, confidence: 100, needsAgentLoop, matchedBy: 'multi_turn_calendar' };
     }
   }
 
   if (memory.activeState?.type === 'AWAITING_CALENDAR_DATE') {
     const intentObj = intents.find(i => i.name === 'calendar_setup');
     if (intentObj) {
-      return { intent: intentObj, params: { date: input, step: 'TIME' }, confidence: 100, needsAgentLoop };
+      debugLog('MATCHED', 'Calendar date multi-turn');
+      return { intent: intentObj, params: { date: input, step: 'TIME' }, confidence: 100, needsAgentLoop, matchedBy: 'multi_turn_calendar' };
     }
   }
 
   if (memory.activeState?.type === 'AWAITING_CALENDAR_TIME') {
     const intentObj = intents.find(i => i.name === 'calendar_setup');
     if (intentObj) {
-      return { intent: intentObj, params: { time: input, step: 'COMPLETE' }, confidence: 100, needsAgentLoop };
+      debugLog('MATCHED', 'Calendar time multi-turn');
+      return { intent: intentObj, params: { time: input, step: 'COMPLETE' }, confidence: 100, needsAgentLoop, matchedBy: 'multi_turn_calendar' };
     }
   }
 
-  // 2. PRIORITY REGEX HANDLERS
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 2: NORMALIZE AND SPELL-CHECK
+  // ═══════════════════════════════════════════════════════════════════════
+  const checked = spellCheck(input);
+  const normalizedOrig = checked.toLowerCase().trim();
+  const normalized = normalizeInput(normalizedOrig);
+  const activeEntity = resolveEntityFromContext(normalized);
+
+  debugLog('NORMALIZE', `Spell-checked: "${checked}" | Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 3: EXACT KEYWORD MATCHING
+  // Map standalone words/phrases to their intent definitions.
+  // ═══════════════════════════════════════════════════════════════════════
+  const exactKeywordMap: Record<string, string> = {
+    // Tasks — map to show_tasks which has a task executor case 
+    'tasks': 'show_tasks',
+    'task': 'show_tasks',
+    'my tasks': 'show_tasks',
+    'show tasks': 'show_tasks',
+    'list tasks': 'show_tasks',
+    'pending tasks': 'show_tasks',
+    
+    // Leads
+    'leads': 'list_leads',
+    'lead': 'list_leads',
+    'my leads': 'list_leads',
+    'show leads': 'list_leads',
+    'list leads': 'list_leads',
+    'view leads': 'list_leads',
+
+    // Help
+    'help': 'help_commands',
+    'help me': 'help_commands',
+    'commands': 'help_commands',
+    
+    // Hot/Top leads
+    'hot leads': 'hot_leads',
+    'top leads': 'hot_leads',
+    'best leads': 'hot_leads',
+    
+    // Test
+    'test': 'test_query',
+    'ping': 'test_query',
+  };
+
+  const keywordIntent = exactKeywordMap[normalized] || exactKeywordMap[lowerOrig];
+  if (keywordIntent) {
+    const intentObj = intents.find(i => i.name === keywordIntent);
+    if (intentObj) {
+      debugLog('MATCHED', `Exact keyword: "${normalized}" → ${keywordIntent}`);
+      return { intent: intentObj, params: {}, confidence: 100, needsAgentLoop, matchedBy: 'exact_keyword' };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 4: PRIORITY REGEX HANDLERS
+  // These are ordered by priority. More specific patterns first.
+  // ═══════════════════════════════════════════════════════════════════════
   const handlers = [
     {
-      intent: 'follow_up',
+      intent: 'list_learned',
       patterns: [
-        /^(what about leads|and leads|what about tasks|and tasks|what else|anything else|what about sms|and calendar|tell me more|go on)$/i,
-        /^(what about|and) (leads|tasks|sms|calendar)$/i
-      ],
-      params: (matches: string[]) => ({ topic: matches[2] || 'general' })
-    },
-    {
-      intent: 'proactive_suggestion',
-      patterns: [
-        /^(what should i do|suggest something|any recommendations|whats next|what should i focus on|give me a task|what now)$/i
+        /^what have i taught you$/i,
+        /^show learned commands$/i,
+        /^what did you learn$/i,
+        /^list my phrases$/i,
+        /^what have you remembered$/i,
+        /^what have you learned$/i,
+        /^show what i taught you$/i,
+        /^my custom commands$/i,
       ],
       params: () => ({})
-    },
-    {
-      intent: 'lead_context_query',
-      patterns: [
-        /^(?:whats|what is) (?:his|her|their) (phone|email|address|status)$/i,
-        /^(?:show me the notes for|notes on|when did i last contact|tell me about) (.+)$/i,
-        /^lead details for (.+)$/i
-      ],
-      params: (matches: string[]) => ({ leadName: matches[1]?.trim(), field: matches[1] })
     },
     {
       intent: 'forget_learned',
@@ -289,47 +455,52 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^remove that command$/i,
         /^stop remembering that$/i,
         /^delete that phrase$/i,
-        /^forget what i taught you about (.+)$/i
+        /^forget what i taught you about (.+)$/i,
+        /^forget (.+)$/i,
       ],
       params: (matches: string[]) => ({ phrase: matches[1]?.trim() })
     },
     {
-      intent: 'list_learned',
+      intent: 'proactive_suggestion',
       patterns: [
-        /^what have i taught you$/i,
-        /^show learned commands$/i,
-        /^what did you learn$/i,
-        /^list my phrases$/i,
-        /^what have you remembered$/i
+        /^what should i do$/i,
+        /^suggest something$/i,
+        /^any recommendations$/i,
+        /^whats next$/i,
+        /^what's next$/i,
+        /^what should i focus on$/i,
+        /^give me a task$/i,
+        /^what now$/i,
+        /^what do i do$/i,
+        /^what should i work on$/i,
+        /^i'm bored$/i,
+        /^im bored$/i,
+        /^nothing to do$/i,
       ],
       params: () => ({})
     },
     {
-      intent: 'small_talk',
+      intent: 'follow_up',
       patterns: [
-        /^(okay|ok|k|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine)$/i,
-        /^(thanks|thank you|thx|ty|appreciate it)$/i,
-        /^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no)$/i,
-        /^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night)$/i,
-        /^(lol|haha|hehe|lmao|nice one|good one|funny)$/i,
-        /^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it)$/i,
-        /^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things)$/i,
-        /^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i,
-        /^(tell me a joke|make me laugh|joke|funny|humor me|another joke|different joke|give me another)$/i,
-        /^(what do you think|your opinion|thoughts)$/i,
-        /^(who are you|what are you|introduce yourself)$/i
+        /^(what about leads|and leads|what about tasks|and tasks|what else|anything else|what about sms|and calendar|tell me more|go on)$/i,
+        /^(what about|and) (leads|tasks|sms|calendar)$/i
       ],
-      params: (matches: string[]) => {
-        console.log('[DEBUG] small_talk matched!', matches[0]);
-        return { text: matches[0].toLowerCase().trim() };
-      }
+      params: (matches: string[]) => ({ topic: matches[2] || 'general' })
+    },
+    {
+      intent: 'lead_context_query',
+      patterns: [
+        /^(?:whats|what is|what's) (?:his|her|their) (phone|email|address|status)$/i,
+        /^(?:show me the notes for|notes on|when did i last contact|tell me about) (.+)$/i,
+        /^lead details for (.+)$/i
+      ],
+      params: (matches: string[]) => ({ leadName: matches[1]?.trim(), field: matches[1] })
     },
     {
       intent: 'greeting',
       patterns: [
-        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|sup|what's up|whats up|whats? u[\[p]?)$/i,
+        /^(?:yo|hi|hello|hey|hey there|hi there|hola|howdy|henlo|heya|hiya)$/i,
         /^(?:how's it going|how are you|good morning|good afternoon|good evening)$/i,
-        /\b(?:hi|hello|yo|hey)\b/i
       ],
       params: (matches: string[]) => ({ text: matches[0].toLowerCase() })
     },
@@ -357,8 +528,22 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^list leads$/i,
         /^my leads$/i,
         /^view leads$/i,
-        /^(?:leads|show leads|list leads|my leads|view leads)$/i,
         /^(?:show all leads|list all leads|get leads|show leeds|list leeds)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'show_tasks',
+      patterns: [
+        /^tasks$/i,
+        /^my tasks$/i,
+        /^show tasks$/i,
+        /^list tasks$/i,
+        /^pending tasks$/i,
+        /^view tasks$/i,
+        /^show my tasks$/i,
+        /^what do i need to do$/i,
+        /^what are my tasks$/i,
       ],
       params: () => ({})
     },
@@ -367,7 +552,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       patterns: [
         /^(?:what\s+can\s+you\s+(do|help\s+with|offer)?\??)$/i,
         /^(?:what\s+are\s+your\s+capabilities\??)$/i,
-        /^(?:capabilities|features|help)\??$/i,
+        /^(?:capabilities|features)$/i,
         /^(?:list\s+(?:your\s+)?capabilities\??)$/i,
         /^(?:who\s+built\s+you|who\s+are\s+you|what\s+are\s+you)$/i
       ],
@@ -390,8 +575,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^top (\d+) leads$/i,
         /^(?:what are my top leads|what are my top 5 leads|top leads|show my best leads|hot leads)$/i,
         /^(?:who should i call|best leads|deals to close|who is hot)$/i,
-        /^(?:what are my (\d+)\s+highest\s+scored\s+leads|show\s+my\s+top\s+(\d+)\s+leads|top\s+(\d+)\s+leads)$/i,
-        /^(?:what are my top|show top)\s+(\d+)\s+leads$/i,
         /^(?:highest scored|best scoring)\s+leads$/i
       ],
       params: (matches: string[]) => {
@@ -428,7 +611,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'test_query',
       patterns: [
-        /^(?:test|ping|are you working|system check)$/i
+        /^(?:test|ping|are you working|system check|testing)$/i
       ],
       params: () => ({})
     },
@@ -469,41 +652,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       params: (matches: string[]) => ({ name: matches[1].trim() })
     },
     {
-      intent: 'capabilities',
-      patterns: [
-        /^(?:help|what can you|what can you do|capabilities|features|show commands|options)$/i,
-        /^(?:what can you do for me|what can you help me with|what are your capabilities|list your capabilities)$/i,
-        /^(?:what capabilities|list capabilities|show capabilities)$/i,
-        /\b(?:help|capabilities)\b/i
-      ],
-      params: () => ({})
-    },
-    {
-      intent: 'hot_leads',
-      patterns: [
-        /^(?:what are my top leads|show me my top leads|what are my best leads|list my hot leads)$/i,
-        /^(?:top 5 leads|best leads|hot leads|show hot leads)$/i,
-        /\b(?:top leads|best leads|hot leads)\b/i
-      ],
-      params: () => ({ score_min: 80 })
-    },
-    {
-      intent: 'memory_recall',
-      patterns: [
-        /^(?:what memories|what do you remember|what memories do you have|what do you know about me)$/i,
-        /^(?:recall memory|show my actions|what have we discussed|what happened)$/i,
-        /\b(?:memories|remember)\b/i
-      ],
-      params: () => ({})
-    },
-    {
-      intent: 'test_query',
-      patterns: [
-        /^(?:test|testing|system test|is it working|ping)$/i
-      ],
-      params: () => ({})
-    },
-    {
       intent: 'calendar_setup',
       patterns: [
         /^(?:add something to my calendar|schedule an event|create a calendar entry|add to calendar)$/i,
@@ -539,7 +687,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'joke',
       patterns: [
         /^(?:tell me a joke|make me laugh|humor me|tell a joke|joke)$/i,
-        /\b(?:joke|funny)\b/i
       ],
       params: () => ({})
     },
@@ -547,7 +694,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'time_query',
       patterns: [
         /^(?:what time is it|what is the time|current time|what is the date|today's date|what day is it)$/i,
-        /\b(?:time|date|clock)\b/i
       ],
       params: () => ({})
     },
@@ -569,7 +715,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'mood_check',
       patterns: [
         /^(?:am i doing good|how am i doing|am i failing|is my business ok|how are things looking)$/i,
-        /\b(?:doing|failing|business)\b/i
       ],
       params: () => ({})
     },
@@ -577,75 +722,70 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'motivation',
       patterns: [
         /^(?:encourage me|need motivation|give me a quote|tough day|motivate me|inspire me)$/i,
-        /\b(?:motivation|quote|inspire|tough)\b/i
       ],
       params: () => ({})
     }
   ];
 
-  for (const h of handlers) {
-    for (const pattern of h.patterns) {
-      const match = normalized.match(pattern);
-      if (match) {
-        const intentObj = intents.find(i => i.name === h.intent);
-        if (intentObj) {
-          const params = h.params(match as string[]) as Record<string, any>;
-          
-          const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'the contact', 'the task'];
-          if (params.target && activeEntity && pronouns.includes(params.target.toLowerCase())) {
-            params.target = activeEntity.name;
-          }
-          if (params.name && activeEntity && pronouns.includes(params.name.toLowerCase())) {
-            params.name = activeEntity.name;
-          }
+  // Test both the original lowered input AND the normalized version
+  const inputsToTest = [lowerOrig, normalized];
+  // Remove duplicates
+  const uniqueInputs = [...new Set(inputsToTest)];
 
-          return { intent: intentObj, params, confidence: 100, needsAgentLoop };
+  for (const h of handlers) {
+    for (const testInput of uniqueInputs) {
+      for (const pattern of h.patterns) {
+        const match = testInput.match(pattern);
+        if (match) {
+          const intentObj = intents.find(i => i.name === h.intent);
+          if (intentObj) {
+            const params = h.params(match as string[]) as Record<string, unknown>;
+            
+            const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'the contact', 'the task'];
+            if (typeof params.target === 'string' && activeEntity && pronouns.includes((params.target as string).toLowerCase())) {
+              params.target = activeEntity.name;
+            }
+            if (typeof params.name === 'string' && activeEntity && pronouns.includes((params.name as string).toLowerCase())) {
+              params.name = activeEntity.name;
+            }
+
+            debugLog('MATCHED', `Regex handler: "${testInput}" matched ${h.intent}`, { pattern: pattern.toString(), params });
+            return { intent: intentObj, params, confidence: 100, needsAgentLoop, matchedBy: `regex_handler:${h.intent}` };
+          }
         }
       }
     }
   }
 
-  // 3. FUZZY MATCHING FALLBACK
-  const scores = intents.map(intent => ({
-    intent,
-    score: calculateIntentScore(normalized, intent)
-  })).sort((a, b) => b.score - a.score);
-
-  const bestMatchResult = scores[0];
-  if (bestMatchResult && bestMatchResult.score >= 75) {
-    return {
-      intent: bestMatchResult.intent,
-      params: {},
-      confidence: bestMatchResult.score,
-      originalText: input,
-      needsAgentLoop
-    };
-  }
-
-  // 3.5 CHECK LEARNED INTENTS (from Supabase)
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 5: LEARNED INTENTS (from Supabase)
+  // Check learned intents BEFORE fuzzy matching / typo suggestions
+  // ═══════════════════════════════════════════════════════════════════════
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   
   if (userId) {
+    debugLog('LEARNED', 'Checking learned intents...');
+    
     // Check exact learned intent first
     const learnedIntent = await getLearnedIntent(userId, normalized);
     if (learnedIntent) {
       const intentObj = intents.find(i => i.name === learnedIntent.mapped_intent);
       if (intentObj) {
-        console.log(`[🤖 OS Bot] Using learned intent: "${normalized}" → ${learnedIntent.mapped_intent}`);
+        debugLog('MATCHED', `Learned intent (exact): "${normalized}" → ${learnedIntent.mapped_intent}`);
         return {
           intent: intentObj,
           params: { ...learnedIntent.params },
           confidence: learnedIntent.confidence,
           originalText: input,
-          needsAgentLoop: detectMultiStep(input)
+          needsAgentLoop: detectMultiStep(input),
+          matchedBy: 'learned_exact'
         };
       }
     }
     
     // Check all learned intents for similar phrases
     const allLearned = await getAllLearnedIntents(userId);
-    // If no exact match, try to find learned intents with high word overlap (>60%)
     if (!learnedIntent && allLearned.length > 0) {
       const words = normalized.split(/\s+/);
       for (const learned of allLearned) {
@@ -656,13 +796,14 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         if (similarity >= 0.6) {
           const intentObj = intents.find(i => i.name === learned.mapped_intent);
           if (intentObj) {
-            console.log(`[🤖 OS Bot] Using similar learned intent (${Math.round(similarity*100)}%): "${normalized}" ≈ "${learned.phrase}"`);
+            debugLog('MATCHED', `Learned intent (similar ${Math.round(similarity*100)}%): "${normalized}" ≈ "${learned.phrase}"`);
             return {
               intent: intentObj,
               params: { ...learned.params },
               confidence: Math.floor((learned.confidence || 100) * similarity),
               originalText: input,
-              needsAgentLoop: detectMultiStep(input)
+              needsAgentLoop: detectMultiStep(input),
+              matchedBy: 'learned_similar'
             };
           }
         }
@@ -670,29 +811,81 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     }
   }
 
-  // 4. TYPO SUGGESTIONS AS LAST RESORT
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 6: FUZZY SCORE-BASED MATCHING
+  // Only for longer inputs (3+ words) to avoid false positives on short phrases
+  // ═══════════════════════════════════════════════════════════════════════
+  const wordCount = normalized.split(/\s+/).length;
+  
+  if (wordCount >= 3) {
+    const scores = intents
+      .filter(i => i.name !== 'small_talk' && i.name !== 'greeting') // Don't fuzzy-match small talk
+      .map(intent => ({
+        intent,
+        score: calculateIntentScore(normalized, intent)
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    const bestMatchResult = scores[0];
+    debugLog('FUZZY', `Best fuzzy match: ${bestMatchResult?.intent.name} (score: ${bestMatchResult?.score})`);
+    
+    if (bestMatchResult && bestMatchResult.score >= 75) {
+      debugLog('MATCHED', `Fuzzy match: "${normalized}" → ${bestMatchResult.intent.name} (score: ${bestMatchResult.score})`);
+      return {
+        intent: bestMatchResult.intent,
+        params: {},
+        confidence: bestMatchResult.score,
+        originalText: input,
+        needsAgentLoop,
+        matchedBy: 'fuzzy_score'
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 7: TYPO SUGGESTIONS (LAST RESORT)
+  // Only suggest typos for words that are very close (distance 1) to known
+  // command keywords, and only if the word is at least 4 chars long.
+  // ═══════════════════════════════════════════════════════════════════════
+  const commandKeywords = [
+    'lead', 'leads', 'task', 'tasks', 'sms', 'text', 'message', 'calendar',
+    'email', 'schedule', 'pipeline', 'automation', 'workflow', 'dashboard',
+    'settings', 'help', 'weather', 'motivation', 'quote', 'joke',
+  ];
+
   const inputWords = normalized.split(/\s+/);
   
-  for (const keyword of keywords) {
-    for (const word of inputWords) {
-      if (word.length < 3 && keyword.length >= 3) continue;
-      
-      const distance = getLevenshteinDistance(word, keyword);
-      if (distance > 0 && distance <= 2) {
-        const confidence = 100 - (distance * 20);
-        if (confidence > 70) {
+  // Only attempt typo correction if input has 1-3 words 
+  // (longer phrases should go to clarification, not typo suggestion)
+  if (inputWords.length <= 3) {
+    for (const keyword of commandKeywords) {
+      for (const word of inputWords) {
+        // Skip short words and words that are already valid small-talk
+        if (word.length < 4) continue;
+        if (isSmallTalkPhrase(word)) continue;
+        
+        const distance = getLevenshteinDistance(word, keyword);
+        // Only suggest if distance is exactly 1 (very close match)
+        if (distance === 1) {
           const suggestedText = normalized.replace(word, keyword);
+          debugLog('MATCHED', `Typo suggestion: "${word}" → "${keyword}" (distance: ${distance})`);
           return {
             intent: { name: 'typo_suggestion', action: 'small_talk', patterns: [], template: `I think you meant '${keyword}'?` },
             params: { text: `I think you meant '${keyword}'?`, suggestedText, keyword },
             confidence: 100,
             suggestion: keyword,
-            needsAgentLoop
+            needsAgentLoop,
+            matchedBy: 'typo_suggestion'
           };
         }
       }
     }
   }
 
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 8: GRACEFUL FALLBACK — ASK FOR CLARIFICATION
+  // Instead of "I didn't understand", ask the user what they meant.
+  // ═══════════════════════════════════════════════════════════════════════
+  debugLog('NO_MATCH', `No intent matched for: "${input}"`);
   return null;
 }
