@@ -53,8 +53,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Stop/Cancel
-      if (text.match(/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks)$/)) {
+      // Stop/Cancel/No
+      if (text.match(/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no)$/)) {
         return { success: true, message: "No problem. I'll wait. Ready when you are." };
       }
       
@@ -70,9 +70,9 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Confusion / Repeat
-      if (text.match(/^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that)$/)) {
-        return { success: true, message: "I was just helping with your CRM. Want me to repeat my last response or try something else?" };
+      // Confusion / Repeat / Don't get it
+      if (text.match(/^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it)$/)) {
+        return { success: true, message: "I was just sharing a joke or helping with your CRM. Want me to explain differently or try something else?" };
       }
       
       // How are you
@@ -91,14 +91,17 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `${greeting}! Ready to work on some leads?` };
       }
       
-      // Joke
-      if (text.match(/^(tell me a joke|make me laugh|joke|funny|humor me)$/)) {
+      // Joke (with multiple jokes)
+      if (text.match(/^(tell me a joke|make me laugh|joke|funny|humor me|another joke|different joke|give me another)$/)) {
         const jokes = [
           "Why did the real estate agent cross the road? To get to the other side of the deal!",
           "What's a house's favorite music? Heavy metal... because of all the studs!",
           "Why don't houses ever get lost? They always have good foundations!",
           "What do you call a real estate agent who can sing? A listing agent!",
-          "Why was the open house so quiet? The walls had ears but no mouth!"
+          "Why was the open house so quiet? The walls had ears but no mouth!",
+          "What do you call a house that tells jokes? A stand-up property!",
+          "Why did the house go to school? To improve its foundation!",
+          "What's a real estate agent's favorite drink? A closing cocktail!"
         ];
         return { success: true, message: jokes[Math.floor(Math.random() * jokes.length)] };
       }

@@ -251,13 +251,13 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'small_talk',
       patterns: [
         /^(okay|ok|k|got it|thanks|thank you|thx|ty|appreciate it|nice|great|awesome|cool|perfect|good|fine|alr|alright|sure|bet|sounds good)$/i,
-        /^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks)$/i,
-        /^(bye|goodbye|see you|see ya|later|cya|peace|im out|got gotta go)$/i,
+        /^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no)$/i,
+        /^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go)$/i,
         /^(lol|haha|hehe|lmao|nice one|good one|funny)$/i,
-        /^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that)$/i,
+        /^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it)$/i,
         /^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things|how do you do)$/i,
         /^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i,
-        /^(tell me a joke|make me laugh|joke|funny|humor me)$/i,
+        /^(tell me a joke|make me laugh|joke|funny|humor me|another joke|different joke|give me another)$/i,
         /^(what do you think|your opinion|thoughts)$/i,
         /^(who are you|what are you|introduce yourself)$/i
       ],
