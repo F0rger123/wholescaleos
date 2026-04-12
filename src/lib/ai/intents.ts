@@ -61,7 +61,12 @@ export type IntentName =
   | 'time_query'
   | 'user_fact'
   | 'mood_check'
-  | 'motivation';
+  | 'motivation'
+  | 'follow_up'
+  | 'proactive_suggestion'
+  | 'lead_context_query'
+  | 'forget_learned'
+  | 'list_learned';
 
 export interface Intent {
   name: IntentName;
@@ -74,6 +79,71 @@ export interface Intent {
 }
 
 export const intents: Intent[] = [
+  {
+    name: 'follow_up',
+    patterns: [
+      'what about leads', 'and tasks', 'what else', 'anything else',
+      'what about sms', 'and calendar', 'tell me more', 'go on'
+    ],
+    action: 'follow_up',
+    template: '{response}'
+  },
+  {
+    name: 'proactive_suggestion',
+    patterns: [
+      'what should i do', 'suggest something', 'any recommendations',
+      'whats next', 'what should i focus on', 'give me a task'
+    ],
+    action: 'proactive_suggestion',
+    template: '{response}'
+  },
+  {
+    name: 'lead_context_query',
+    patterns: [
+      'whats his phone', 'whats her email', 'whats the address',
+      'show me the notes', 'when did i last contact', 'whats the status of',
+      'tell me about this lead', 'lead details for'
+    ],
+    action: 'lead_context_query',
+    required_params: ['leadName'],
+    template: '{response}'
+  },
+  {
+    name: 'forget_learned',
+    patterns: [
+      'forget that', 'unlearn that', 'remove that command',
+      'stop remembering', 'delete that phrase', 'forget what i taught you about'
+    ],
+    action: 'forget_learned',
+    template: '{response}'
+  },
+  {
+    name: 'list_learned',
+    patterns: [
+      'what have i taught you', 'show learned commands',
+      'what did you learn', 'list my phrases', 'what have you remembered'
+    ],
+    action: 'list_learned',
+    template: '{response}'
+  },
+  {
+    name: 'small_talk',
+    patterns: [
+      'okay', 'ok', 'k', 'got it', 'alr', 'alright', 'sure', 'bet', 'sounds good',
+      'cool', 'nice', 'great', 'awesome', 'perfect', 'good', 'fine',
+      'thanks', 'thank you', 'thx', 'ty', 'appreciate it',
+      'stop', 'wait', 'hold up', 'hold on', 'pause', 'cancel', 'nevermind', 'nvm', 'nah', 'no thanks', 'no',
+      'bye', 'goodbye', 'see you', 'see ya', 'later', 'cya', 'peace', 'good night',
+      'lol', 'haha', 'hehe', 'lmao', 'nice one', 'good one', 'funny',
+      'huh', 'what', 'hmm', 'umm', 'pardon', 'excuse me', 'i dont get it',
+      'how are you', 'how you doing', 'whats up', 'whats new', 'how are things',
+      'good morning', 'good afternoon', 'good evening',
+      'tell me a joke', 'make me laugh', 'another joke',
+      'who are you', 'what are you', 'introduce yourself'
+    ],
+    action: 'small_talk',
+    template: '{response}'
+  },
   {
     name: "hot_leads",
     patterns: [
@@ -354,7 +424,7 @@ export const intents: Intent[] = [
   },
   {
     name: "feedback",
-    patterns: ["you are great", "good job", "bad bot", "you're slow", "awesome work", "love you", "thanks"],
+    patterns: ["you are great", "bad bot", "you're slow", "awesome work"],
     action: "feedback",
     template: "{response}"
   },

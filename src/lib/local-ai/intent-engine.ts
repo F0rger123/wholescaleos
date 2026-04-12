@@ -258,6 +258,53 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // 2. PRIORITY REGEX HANDLERS
   const handlers = [
     {
+      intent: 'follow_up',
+      patterns: [
+        /^(what about leads|and leads|what about tasks|and tasks|what else|anything else|what about sms|and calendar|tell me more|go on)$/i,
+        /^(what about|and) (leads|tasks|sms|calendar)$/i
+      ],
+      params: (matches: string[]) => ({ topic: matches[2] || 'general' })
+    },
+    {
+      intent: 'proactive_suggestion',
+      patterns: [
+        /^(what should i do|suggest something|any recommendations|whats next|what should i focus on|give me a task|what now)$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'lead_context_query',
+      patterns: [
+        /^(?:whats|what is) (?:his|her|their) (phone|email|address|status)$/i,
+        /^(?:show me the notes for|notes on|when did i last contact|tell me about) (.+)$/i,
+        /^lead details for (.+)$/i
+      ],
+      params: (matches: string[]) => ({ leadName: matches[1]?.trim(), field: matches[1] })
+    },
+    {
+      intent: 'forget_learned',
+      patterns: [
+        /^forget that$/i,
+        /^unlearn that$/i,
+        /^remove that command$/i,
+        /^stop remembering that$/i,
+        /^delete that phrase$/i,
+        /^forget what i taught you about (.+)$/i
+      ],
+      params: (matches: string[]) => ({ phrase: matches[1]?.trim() })
+    },
+    {
+      intent: 'list_learned',
+      patterns: [
+        /^what have i taught you$/i,
+        /^show learned commands$/i,
+        /^what did you learn$/i,
+        /^list my phrases$/i,
+        /^what have you remembered$/i
+      ],
+      params: () => ({})
+    },
+    {
       intent: 'small_talk',
       patterns: [
         /^(okay|ok|k|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine)$/i,
@@ -598,18 +645,27 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     
     // Check all learned intents for similar phrases
     const allLearned = await getAllLearnedIntents(userId);
-    const similar = findSimilarLearnedPhrase(normalized, allLearned);
-    if (similar) {
-      const intentObj = intents.find(i => i.name === similar.mapped_intent);
-      if (intentObj) {
-        console.log(`[🤖 OS Bot] Using similar learned intent: "${normalized}" ≈ "${similar.phrase}" → ${similar.mapped_intent}`);
-        return {
-          intent: intentObj,
-          params: { ...similar.params },
-          confidence: Math.floor((similar.confidence ?? 100) * 0.9), // Slightly lower confidence for similar match
-          originalText: input,
-          needsAgentLoop: detectMultiStep(input)
-        };
+    // If no exact match, try to find learned intents with high word overlap (>60%)
+    if (!learnedIntent && allLearned.length > 0) {
+      const words = normalized.split(/\s+/);
+      for (const learned of allLearned) {
+        const learnedWords = learned.phrase.split(/\s+/);
+        const overlap = words.filter(w => learnedWords.includes(w)).length;
+        const similarity = overlap / Math.max(words.length, learnedWords.length);
+        
+        if (similarity >= 0.6) {
+          const intentObj = intents.find(i => i.name === learned.mapped_intent);
+          if (intentObj) {
+            console.log(`[🤖 OS Bot] Using similar learned intent (${Math.round(similarity*100)}%): "${normalized}" ≈ "${learned.phrase}"`);
+            return {
+              intent: intentObj,
+              params: { ...learned.params },
+              confidence: Math.floor((learned.confidence || 100) * similarity),
+              originalText: input,
+              needsAgentLoop: detectMultiStep(input)
+            };
+          }
+        }
       }
     }
   }

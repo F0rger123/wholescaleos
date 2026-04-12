@@ -2,6 +2,34 @@ import { useStore } from '../../store/useStore';
 import { Intent } from '../ai/intents';
 import { getAIContext } from './memory-store';
 
+const applyPersonality = (msg: string, personality: string, customPrompt?: string): string => {
+  const p = personality.toLowerCase();
+  
+  if (p === 'custom' && customPrompt) {
+    return `${msg}\n\n[Personality: ${customPrompt}]`;
+  }
+  if (p === 'sassy') {
+    const suffixes = [" 😏", " You're all set.", " Next?"];
+    return `${msg}${suffixes[Math.floor(Math.random() * suffixes.length)]}`;
+  }
+  if (p === 'funny') {
+    const additions = [" 😂", " 🚀", " 😂 You owe me a virtual coffee."];
+    return `${msg}${additions[Math.floor(Math.random() * additions.length)]}`;
+  }
+  if (p === 'casual') {
+    return `Hey, all set! ${msg.toLowerCase()} Got your back! 👊`;
+  }
+  if (p === 'cursing') {
+    const cursed = [" Hell yeah, handled.", " Let's get this $#!% moving.", " Done. No messing around."];
+    return `${msg} ${cursed[Math.floor(Math.random() * cursed.length)]}`;
+  }
+  if (p === 'professional') {
+    return `Acknowledged. ${msg}`;
+  }
+  
+  return msg;
+};
+
 export function generateResponse(
   intentOrName: Intent | string, 
   result: any, 
@@ -12,7 +40,6 @@ export function generateResponse(
   const context = getAIContext();
   const aiName = store.aiName || 'OS Bot';
   const personality = store.aiPersonality || 'Default';
-  const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
 
   // Branding prefix
   const prefix = `🤖 ${aiName}: `;
@@ -29,108 +56,48 @@ export function generateResponse(
     return generateUnknownResponse(userText);
   }
 
+  let message = result?.message || (typeof intentOrName !== 'string' ? intentOrName.template : '') || "I've processed your request.";
+
   // 1. Handle Typo Suggestions specifically
   if (intentName === 'typo_suggestion') {
      const keyword = result.keyword || 'that';
-     return `${prefix}I think you meant **'${keyword}'** in your message "${userText}"? I can help! Just let me know if you want me to proceed with "${suggestedText}".`;
+     message = `I think you meant **'${keyword}'** in your message "${userText}"? I can help! Just let me know if you want me to proceed with "${suggestedText}".`;
   }
-
-  // 2. Handle Weather specifically (as requested)
-  if (intentName === 'weather_query') {
-    return `${prefix}I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'.`;
+  else if (intentName === 'weather_query') {
+    message = `I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'.`;
   }
-
-  // 3. Handle Greetings
-  if (intentName === 'greeting' || intentName === 'small_talk') {
+  else if (intentName === 'greeting' || intentName === 'small_talk') {
      const customGreeting = localStorage.getItem('user_custom_greeting');
      if (customGreeting && intentName === 'greeting') {
-       return `${prefix}${customGreeting}`;
+       message = customGreeting;
+     } else if (!result?.message) {
+       message = `Hello! I'm OS Bot, your intelligent real estate assistant. How can I help you today?`;
      }
-     return `${prefix}Hello! I'm 🤖 OS Bot, your intelligent real estate assistant. How can I help you today?`;
   }
-
-  // 5. Handle TEST
-  if (intentName === 'test_query') {
-    return `${prefix}OS Bot is working properly!`;
+  else if (intentName === 'test_query') {
+    message = `OS Bot is working properly!`;
   }
-
-  // 6. Handle CHANGE GREETING
-  if (intentName === 'change_greeting') {
+  else if (intentName === 'change_greeting') {
     const newGreeting = result.newGreeting || result.message || '';
     if (newGreeting) {
       localStorage.setItem('user_custom_greeting', newGreeting);
-      return `${prefix}✅ I've changed my greeting to '${newGreeting}'`;
+      message = `I've changed my greeting to '${newGreeting}'`;
+    } else {
+      message = `What would you like my new greeting to be? Try: 'Change greeting to [your greeting]'`;
     }
-    return `${prefix}What would you like my new greeting to be? Try: 'Change greeting to [your greeting]'`;
   }
-
-  // 7. Handle JOKES
-  if (intentName === 'joke') {
-    return `${prefix}${result.message}`;
+  else if (intentName === 'user_fact' && !result?.message) {
+    message = "I've noted that down.";
   }
-
-  // 8. Handle TIME/DATE
-  if (intentName === 'time_query') {
-    return `${prefix}${result.message}`;
-  }
-
-  // 9. Handle USER FACTS
-  if (intentName === 'user_fact') {
-    const factText = result.message || "I've noted that down.";
-    return `${prefix}${factText}`;
-  }
-
-  // 10. Handle MOOD & MOTIVATION
-  if (intentName === 'mood_check' || intentName === 'motivation') {
-    return `${prefix}${result.message}`;
-  }
-
-  // 11. Handle Task execution results
-  let message = result?.message || (typeof intentOrName !== 'string' ? intentOrName.template : '') || "I've processed your request.";
 
   // Standardize the message
   message = message.replace('✅ ', '');
 
-  if (result.clean) return `${prefix}${message}`;
+  if (result?.clean) return `${prefix}${message}`;
 
-  // Personality adjustments
-  const p = personality.toLowerCase();
-  const cPrompt = store.aiCustomPrompt;
+  // Apply Personality
+  message = applyPersonality(message, personality, store.aiCustomPrompt);
 
-  if (p === 'custom' && cPrompt) {
-    message = `${message}\n\n[Personality: ${cPrompt}]`;
-  } else if (p === 'sassy') {
-    const sassySuffixes = [" 😏", " You're all set.", " Next?"];
-    message = `${message}${sassySuffixes[Math.floor(Math.random() * sassySuffixes.length)]}`;
-  } else if (p === 'funny') {
-    const funnyAdditions = [" 😂", " 🚀", " 😂 You owe me a virtual coffee."];
-    message = `${message}${funnyAdditions[Math.floor(Math.random() * funnyAdditions.length)]}`;
-  } else if (p === 'casual') {
-    message = `Hey ${userName}, all set! ${message.toLowerCase()} Got your back! 👊`;
-  } else if (p === 'cursing') {
-    const cursedAdditions = [
-      " Hell yeah, handled.", 
-      " Let's get this $#!% moving.", 
-      " Done. No messing around today.", 
-      " 🚀 Ready for whatever's next."
-    ];
-    message = `${message} ${cursedAdditions[Math.floor(Math.random() * cursedAdditions.length)]}`;
-  } else if (p === 'professional') {
-    // Professional: formal language, NO emojis, complete sentences.
-    message = `Acknowledged. ${message}`;
-  }
-
-  // Sentiment adjustments (Subtle micro-enhancements)
-  const sentiment = context.sentiment || 'neutral';
-  if (sentiment === 'frustrated') {
-    message = `${message} I'm here to ensure this workflow remains efficient.`;
-  } else if (sentiment === 'happy') {
-    message = `${message} Exceptional work!`; // Remove ✨ for all until specifically allowed or professional? 
-                                               // Actually, the user says Professional = NO emojis. 
-                                               // So I'll keep them out of professional.
-  }
-
-  // Final assembly
   return `${prefix}${message}`;
 }
 

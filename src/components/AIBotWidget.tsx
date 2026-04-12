@@ -653,7 +653,7 @@ export function AIBotWidget() {
                 }]);
                 
                 try {
-                  const result = await executeTask(call.toolName, call.params);
+                  const result = await executeTask(call.toolName, { ...call.params, sessionId });
                   setMessages(prev => prev.map(m => 
                     m.id === stepId ? { ...m, content: `${result.message} ✅` } : m
                   ));
@@ -694,7 +694,7 @@ export function AIBotWidget() {
         }
 
         if (matched && matched.confidence >= 80) {
-          const res = await executeTask(matched.intent.action, matched.params);
+          const res = await executeTask(matched.intent.action, { ...matched.params, sessionId });
           if (res.success) {
             const aiMsg: ChatMessage = {
               id: (Date.now() + 1).toString(),

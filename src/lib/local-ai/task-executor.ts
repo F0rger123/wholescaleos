@@ -1,6 +1,14 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
 import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome } from './memory-store';
+import { 
+  getConversationContext, 
+  updateConversationTopic, 
+  addMentionedLead,
+  getUserPreferences,
+  getAllLearnedIntents,
+  deleteLearnedIntent
+} from './learning-service';
 
 export interface TaskResponse {
   success: boolean;
@@ -12,6 +20,7 @@ export interface TaskResponse {
 export async function executeTask(action: string, entities: any): Promise<TaskResponse> {
   const store = useStore.getState();
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
+  const sessionId = entities.sessionId || 'default-session';
 
   switch (action) {
     case 'navigate':
@@ -679,6 +688,126 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         "Wake up with determination, go to bed with satisfaction. What's our first lead today?"
       ];
       return { success: true, message: quotes[Math.floor(Math.random() * quotes.length)] };
+
+    case 'follow_up': {
+      const topic = entities.topic || 'general';
+      const context = await getConversationContext(store.currentUser?.id, sessionId, 5);
+      const lastTopic = context[context.length - 1]?.content || '';
+      
+      if (topic === 'leads' || lastTopic.includes('lead')) {
+        const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70).slice(0, 3);
+        if (hotLeads.length > 0) {
+          return { success: true, message: `You were asking about leads. Here are ${hotLeads.length} hot ones: ${hotLeads.map(l => l.name).join(', ')}. Want details on any?` };
+        }
+        return { success: true, message: `You have ${store.leads.length} leads total. Want to see the list or add a new one?` };
+      }
+      
+      if (topic === 'tasks' || lastTopic.includes('task')) {
+        const pending = store.tasks.filter(t => t.status !== 'done').length;
+        return { success: true, message: `You have ${pending} pending tasks. Should I list them or create a new one?` };
+      }
+      
+      return { success: true, message: `What would you like to focus on next? Leads, tasks, or something else?` };
+    }
+
+    case 'proactive_suggestion': {
+      const hour = new Date().getHours();
+      const pendingTasks = store.tasks.filter(t => t.status !== 'done' && t.priority === 'high').length;
+      const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 80).length;
+      const overdueTasks = store.tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < new Date()).length;
+      
+      let suggestion = '';
+      
+      if (overdueTasks > 0) {
+        suggestion = `You have ${overdueTasks} overdue tasks. Want me to list them?`;
+      } else if (hotLeads > 0) {
+        suggestion = `You have ${hotLeads} hot leads ready to close. Should I show them?`;
+      } else if (pendingTasks > 0) {
+        suggestion = `You have ${pendingTasks} high-priority tasks. Want to review them?`;
+      } else if (hour < 10) {
+        suggestion = `Good morning! Ready to check today's schedule or find new leads?`;
+      } else if (hour > 17) {
+        suggestion = `End of day wrap-up? I can show tomorrow's tasks or today's activity.`;
+      } else {
+        suggestion = `How about checking your pipeline or sending a follow-up SMS to a lead?`;
+      }
+      
+      return { success: true, message: suggestion };
+    }
+
+    case 'lead_context_query': {
+      const leadName = entities.leadName;
+      const field = entities.field;
+      
+      const lead = store.leads.find(l => l.name.toLowerCase().includes(leadName?.toLowerCase()));
+      if (!lead) {
+        return { success: false, message: `I couldn't find a lead named "${leadName}".` };
+      }
+      
+      // Store in memory that we're discussing this lead
+      if (store.currentUser?.id) {
+        await addMentionedLead(store.currentUser.id, sessionId, lead.name);
+        await updateConversationTopic(store.currentUser.id, sessionId, `lead:${lead.name}`);
+      }
+      
+      if (field === 'phone' || entities.text?.includes('phone')) {
+        return { success: true, message: `${lead.name}'s phone number is ${lead.phone || 'not available'}.` };
+      }
+      if (field === 'email' || entities.text?.includes('email')) {
+        return { success: true, message: `${lead.name}'s email is ${lead.email || 'not available'}.` };
+      }
+      if (field === 'address' || entities.text?.includes('address')) {
+        return { success: true, message: `${lead.name}'s property address is ${lead.propertyAddress || 'not available'}.` };
+      }
+      if (entities.text?.includes('status')) {
+        return { success: true, message: `${lead.name} is currently in ${lead.status} stage.` };
+      }
+      if (entities.text?.includes('notes')) {
+        return { success: true, message: `Notes for ${lead.name}: ${lead.notes || 'No notes yet.'}` };
+      }
+      if (entities.text?.includes('last contact')) {
+        return { success: true, message: `I don't have a last contact date for ${lead.name} yet. Want to send a message now?` };
+      }
+      
+      const score = lead.dealScore || lead.score || lead.lead_score || 'N/A';
+      return { 
+        success: true, 
+        message: `**${lead.name}**\n📞 ${lead.phone || 'No phone'}\n📧 ${lead.email || 'No email'}\n📍 ${lead.propertyAddress || 'No address'}\n📊 Status: ${lead.status}\n🎯 Score: ${score}\n📝 Notes: ${lead.notes || 'None'}` 
+      };
+    }
+
+    case 'forget_learned': {
+      const phrase = entities.phrase;
+      const userId = store.currentUser?.id;
+      
+      if (!phrase) {
+        return { success: true, message: "What phrase would you like me to forget? Say 'forget [phrase]'." };
+      }
+      
+      const success = userId ? await deleteLearnedIntent(userId, phrase) : false;
+      if (success) {
+        return { success: true, message: `✅ I've forgotten "${phrase}". I won't use that learned command anymore.` };
+      }
+      return { success: false, message: `I couldn't find "${phrase}" in my learned commands.` };
+    }
+
+    case 'list_learned': {
+      const userId = store.currentUser?.id;
+      const learned = userId ? await getAllLearnedIntents(userId) : [];
+      
+      if (learned.length === 0) {
+        return { success: true, message: "You haven't taught me any custom commands yet. When I don't understand something, use the learning buttons to teach me!" };
+      }
+      
+      let msg = `**You've taught me ${learned.length} commands:**\n\n`;
+      learned.slice(0, 10).forEach((item, i) => {
+        msg += `${i + 1}. "${item.phrase}" → ${item.mapped_intent}\n`;
+      });
+      if (learned.length > 10) msg += `\n...and ${learned.length - 10} more.`;
+      msg += `\n\nSay "forget [phrase]" to remove one.`;
+      
+      return { success: true, message: msg };
+    }
 
     default:
       return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
