@@ -157,14 +157,24 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     'hot', 'hot leads', 'top leads', 'update', 'status', 'add', 'create',
     // Greetings
     'hello', 'hi', 'hey', 'yo', 'whats up', 'good morning', 'good afternoon',
-    // Small talk
-    'okay', 'ok', 'k', 'thanks', 'thank you', 'thx', 'stop', 'wait', 
-    'cancel', 'nevermind', 'nvm', 'bye', 'goodbye', 'later', 'cya',
-    'lol', 'haha', 'hehe', 'nice', 'cool', 'great', 'awesome', 'perfect',
-    'huh', 'what', 'hmm', 'umm', 'pardon', 'excuse me',
-    'how are you', 'how you doing', 'whats new', 'how goes it',
+    // Small talk - acknowledgments
+    'okay', 'ok', 'k', 'got it', 'alr', 'alright', 'sure', 'bet', 'sounds good',
+    'cool', 'nice', 'great', 'awesome', 'perfect', 'good', 'fine',
+    // Small talk - gratitude
+    'thanks', 'thank you', 'thx', 'ty', 'appreciate it',
+    // Small talk - stop/cancel
+    'stop', 'wait', 'hold up', 'hold on', 'pause', 'cancel', 'nevermind', 'nvm', 'nah', 'no thanks', 'no',
+    // Small talk - farewell
+    'bye', 'goodbye', 'see you', 'see ya', 'later', 'cya', 'peace', 'im out', 'gotta go', 'good night',
+    // Small talk - laughter
+    'lol', 'haha', 'hehe', 'lmao', 'nice one', 'good one', 'funny',
+    // Small talk - confusion
+    'huh', 'what', 'hmm', 'umm', 'pardon', 'excuse me', 'come again', 'say what',
+    'what did you say', 'say that again', 'repeat that', 'i dont get it', "i don't get it",
+    // Small talk - status
+    'how are you', 'how you doing', 'how goes it', 'whats new', 'how are things',
     // Other
-    'motivation', 'mood', 'quote', 'joke', 'help'
+    'motivation', 'mood', 'quote', 'joke', 'help', 'who are you', 'what are you'
   ];
   for (const kw of keywords) {
     if (normalized === kw || normalized === kw + 's') {
@@ -250,18 +260,22 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'small_talk',
       patterns: [
-        /^(okay|ok|k|got it|thanks|thank you|thx|ty|appreciate it|nice|great|awesome|cool|perfect|good|fine|alr|alright|sure|bet|sounds good)$/i,
+        /^(okay|ok|k|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine)$/i,
+        /^(thanks|thank you|thx|ty|appreciate it)$/i,
         /^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no)$/i,
-        /^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go)$/i,
+        /^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night)$/i,
         /^(lol|haha|hehe|lmao|nice one|good one|funny)$/i,
         /^(huh|what|hmm|umm|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it)$/i,
-        /^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things|how do you do)$/i,
+        /^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things)$/i,
         /^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i,
         /^(tell me a joke|make me laugh|joke|funny|humor me|another joke|different joke|give me another)$/i,
         /^(what do you think|your opinion|thoughts)$/i,
         /^(who are you|what are you|introduce yourself)$/i
       ],
-      params: (matches: string[]) => ({ text: matches[0].toLowerCase().trim() })
+      params: (matches: string[]) => {
+        console.log('[DEBUG] small_talk matched!', matches[0]);
+        return { text: matches[0].toLowerCase().trim() };
+      }
     },
     {
       intent: 'greeting',
@@ -291,6 +305,11 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'list_leads',
       patterns: [
+        /^leads$/i,
+        /^show leads$/i,
+        /^list leads$/i,
+        /^my leads$/i,
+        /^view leads$/i,
         /^(?:leads|show leads|list leads|my leads|view leads)$/i,
         /^(?:show all leads|list all leads|get leads|show leeds|list leeds)$/i
       ],
@@ -319,6 +338,9 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'hot_leads',
       patterns: [
+        /^what are my (\d+) highest scored leads$/i,
+        /^show my top (\d+) leads$/i,
+        /^top (\d+) leads$/i,
         /^(?:what are my top leads|what are my top 5 leads|top leads|show my best leads|hot leads)$/i,
         /^(?:who should i call|best leads|deals to close|who is hot)$/i,
         /^(?:what are my (\d+)\s+highest\s+scored\s+leads|show\s+my\s+top\s+(\d+)\s+leads|top\s+(\d+)\s+leads)$/i,

@@ -59,7 +59,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
       
       // Farewell
-      if (text.match(/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go)$/)) {
+      if (text.match(/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night)$/)) {
         const responses = ["Talk to you later! I'll be here when you need me. 👋", "Goodbye! Come back anytime.", "See ya! Good luck with those leads.", "Later! I'll hold down the fort."];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
@@ -101,14 +101,16 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           "Why was the open house so quiet? The walls had ears but no mouth!",
           "What do you call a house that tells jokes? A stand-up property!",
           "Why did the house go to school? To improve its foundation!",
-          "What's a real estate agent's favorite drink? A closing cocktail!"
+          "What's a real estate agent's favorite drink? A closing cocktail!",
+          "Why don't houses play cards? They're afraid of getting decked!",
+          "What's a property's favorite exercise? Flipping!"
         ];
         return { success: true, message: jokes[Math.floor(Math.random() * jokes.length)] };
       }
       
       // Who are you
       if (text.match(/^(who are you|what are you|introduce yourself)$/)) {
-        return { success: true, message: "I'm 🤖 OS Bot, your AI-powered CRM assistant. I help manage leads, tasks, SMS, and more. Think of me as your co-pilot for real estate domination!" };
+        return { success: true, message: "I'm 🤖 OS Bot, your AI-powered CRM assistant. I help manage leads, tasks, SMS, and more. Think of me as your co-pilot for real estate domination! What would you like to work on?" };
       }
       
       // What do you think
@@ -283,8 +285,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       const scoreMin = entities.score_min !== undefined ? entities.score_min : 0;
       const limit = entities.limit || 5;
       const hotLeads = store.leads
-        .filter(l => (l.dealScore || 0) >= scoreMin)
-        .sort((a, b) => (b.dealScore || 0) - (a.dealScore || 0))
+        .filter(l => ((l as any).dealScore || (l as any).score || (l as any).lead_score || 0) >= scoreMin)
+        .sort((a, b) => ((b as any).dealScore || (b as any).score || (b as any).lead_score || 0) - ((a as any).dealScore || (a as any).score || (a as any).lead_score || 0))
         .slice(0, limit);
 
       if (hotLeads.length === 0) {
@@ -293,8 +295,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       let msg = `Here are your top ${hotLeads.length} leads:\n\n`;
       hotLeads.forEach((l, i) => {
-        const leadAny = l as any;
-        const score = l.dealScore || leadAny.score || leadAny.lead_score || 'N/A';
+        const score = (l as any).dealScore || (l as any).score || (l as any).lead_score || 'N/A';
         msg += `${i + 1}. **${l.name}** - Score: ${score} (${l.status})\n`;
       });
       return { success: true, message: msg };
@@ -535,15 +536,18 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     case 'help':
-      return { 
-        success: true, 
-        message: `I'm **OS Bot**, your AI CRM assistant! Here's what I can do for you:\n\n` +
-                 `📁 **Leads**: "leads", "show top leads", "add [Name] as a lead"\n` +
-                 `📝 **Tasks**: "create task: Call John", "show tasks", "is anything due?"\n` +
+    case 'help_commands':
+      return {
+        success: true,
+        message: `I'm **OS Bot**, your AI CRM assistant! Here's exactly what I can do:\n\n` +
+                 `📁 **Leads**: "leads", "show top leads", "add [Name] as a lead", "what are my top 5 leads"\n` +
+                 `📝 **Tasks**: "create task: Call John", "show tasks", "do i have any tasks due?"\n` +
                  `💬 **SMS**: "text John: Hello", "did Sarah reply?"\n` +
                  `📅 **Calendar**: "schedule a meeting", "go to calendar"\n` +
-                 `🎭 **Personality**: "be sassy", "change tone to professional"\n\n` +
-                 `What should we handle next?`
+                 `🎭 **Personality**: "be sassy", "change tone to professional"\n` +
+                 `🧠 **Memory**: "what do you remember about me?", "remember that I like morning calls"\n` +
+                 `💬 **Small Talk**: I can chat! Try "how are you", "tell me a joke", "thanks"\n\n` +
+                 `Just tell me what you need and I'll handle it.`
       };
 
     case 'calendar_setup': {
@@ -675,20 +679,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         "Wake up with determination, go to bed with satisfaction. What's our first lead today?"
       ];
       return { success: true, message: quotes[Math.floor(Math.random() * quotes.length)] };
-
-    case 'help_commands':
-      return {
-        success: true,
-        clean: true,
-        message: `I'm **OS Bot**, your AI CRM assistant! Here's exactly what I can do:\n\n` +
-                 `📁 **Leads**: "leads", "show top leads", "add [Name] as a lead"\n` +
-                 `📝 **Tasks**: "create task: Call John", "show tasks", "do i have any tasks due?"\n` +
-                 `💬 **SMS**: "text John: Hello", "did Sarah reply?"\n` +
-                 `📅 **Calendar**: "schedule a meeting", "go to calendar"\n` +
-                 `🎭 **Personality**: "be sassy", "change tone to professional"\n` +
-                 `🧠 **Memory**: "what do you remember about me?"\n\n` +
-                 `Just tell me what you need and I'll handle it.`
-      };
 
     default:
       return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
