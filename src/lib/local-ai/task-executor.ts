@@ -1107,6 +1107,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       case 'proactive_suggestion': {
+        const memory = getMemory();
         const hour = new Date().getHours();
         const today = new Date();
         const targetRaw = entities.target;
@@ -1193,7 +1194,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         });
 
         // ──── Gather Habit Intelligence ────
-        const memory = getMemory();
         const prefs = memory.learnedFacts || {};
         const history = (memory.history || []).filter(h => h && typeof h.content === 'string');
         

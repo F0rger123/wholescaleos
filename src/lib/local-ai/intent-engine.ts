@@ -4,7 +4,6 @@ import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearn
 import { getLearnedIntent, getAllLearnedIntents } from './learning-service';
 import { useStore } from '../../store/useStore';
 import { expandSynonyms } from './utils/synonym-mapper';
-import { resolveDate } from './utils/date-resolver';
 
 // Debug mode — toggle to true to see detailed intent matching logs
 const DEBUG_MODE = true;
@@ -879,7 +878,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         if (match) {
           const intentObj = intents.find(i => i.name === h.intent);
           if (intentObj) {
-            const params = h.params(match as string[], testInput) as Record<string, unknown>;
+            const params = h.params(match as string[]) as Record<string, unknown>;
             
             const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'that lead', 'this lead', 'the contact', 'the task'];
             if (typeof params.target === 'string' && activeEntity && pronouns.includes((params.target as string).toLowerCase())) {
