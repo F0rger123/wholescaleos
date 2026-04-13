@@ -67,7 +67,8 @@ export type IntentName =
   | 'lead_context_query'
   | 'forget_learned'
   | 'list_learned'
-  | 'repeat_last';
+  | 'repeat_last'
+  | 'change_personality';
 
 export interface Intent {
   name: IntentName;
@@ -171,6 +172,16 @@ export const intents: Intent[] = [
     patterns: ['personality', 'how you talk', 'be more', 'change your personality', 'be sassy', 'be professional', 'what personality', 'what tone', 'current tone', 'current personality'],
     action: 'redirect_to_settings',
     template: "Redirecting to personality settings..."
+  },
+  {
+    name: 'change_personality',
+    patterns: [
+      'be sassy', 'be professional', 'be funny', 'be casual', 'turn on cursing', 
+      'switch to sassy mode', 'talk like a professional', 'change your tone to', 
+      'change personality to'
+    ],
+    action: 'change_personality',
+    template: '{response}'
   },
   {
     name: 'calendar_setup',
@@ -454,7 +465,7 @@ export const intents: Intent[] = [
     name: "help_commands",
     patterns: ["help", "help me", "show commands", "what are your commands", "list commands", "options", "command list"],
     action: "capabilities",
-    template: "Here are some things I can do:\n- 'Show my hot leads'\n- 'Text [Name] saying [Message]'\n- 'Create task: Call back John tomorrow'\n- 'Go to calendar'\n- 'How many deals are closing this month?'"
+    template: "Here are some things I can do:\n- 'Show my hot leads'\n- 'Text [Name] saying [Message]'\n- 'Create task: Call back John tomorrow'\n- 'Go to calendar'\n- 'Change personality to [Sassy/Professional/Funny]'\n- 'How many deals are closing this month?'"
   },
   {
     name: "weather_query",

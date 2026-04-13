@@ -537,6 +537,56 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         message: "I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'"
       };
 
+    case 'change_personality': {
+      const targetRaw = (entities.target_personality as string) || '';
+      
+      const lowerTarget = targetRaw.toLowerCase();
+      let newPersonality = 'Professional';
+      if (lowerTarget.includes('sassy')) newPersonality = 'Sassy';
+      else if (lowerTarget.includes('funny')) newPersonality = 'Funny';
+      else if (lowerTarget.includes('casual')) newPersonality = 'Casual';
+      else if (lowerTarget.includes('cursing')) newPersonality = 'Cursing';
+      else if (lowerTarget.includes('professional')) newPersonality = 'Professional';
+
+      const isQuestion = /^\s*can\s+you\s+(?:be|change)/i.test(text) || /\?$/i.test(text);
+
+      if (isQuestion) {
+        setLastSuggestion('change_personality_confirm', { target_personality: newPersonality }, `Switch to ${newPersonality} mode`);
+        return { success: true, message: `Want me to switch to **${newPersonality}** mode right now?` };
+      }
+
+      if (store.setAiPersonality) store.setAiPersonality(newPersonality);
+      if (store.setAiTone) store.setAiTone(newPersonality);
+      localStorage.setItem('wholescale-ai-personality', newPersonality);
+      localStorage.setItem('wholescale-ai-tone', newPersonality);
+
+      let confirmMsg = `Got it. I'm operating in ${newPersonality} mode. What's next?`;
+      if (newPersonality === 'Sassy') confirmMsg = `Got it. I'm sassy now. 😏 What's next?`;
+      else if (newPersonality === 'Professional') confirmMsg = `Understood. I will operate in Professional mode going forward. How may I assist you?`;
+      else if (newPersonality === 'Funny') confirmMsg = `You got it boss! 😂 I'm switching to funny mode. What's next?`;
+      else if (newPersonality === 'Casual') confirmMsg = `No problem, I'll keep it casual. 🤙 What's up?`;
+      else if (newPersonality === 'Cursing') confirmMsg = `F*** yeah, let's do this. 🤬 I'm in cursing mode. What's next?`;
+
+      return { success: true, message: confirmMsg, clean: true }; 
+    }
+
+    case 'change_personality_confirm': {
+      const newPersonality = (entities.target_personality as string) || 'Professional';
+      if (store.setAiPersonality) store.setAiPersonality(newPersonality);
+      if (store.setAiTone) store.setAiTone(newPersonality);
+      localStorage.setItem('wholescale-ai-personality', newPersonality);
+      localStorage.setItem('wholescale-ai-tone', newPersonality);
+      
+      let confirmMsg = `Got it. I'm operating in ${newPersonality} mode. What's next?`;
+      if (newPersonality === 'Sassy') confirmMsg = `Got it. I'm sassy now. 😏 What's next?`;
+      else if (newPersonality === 'Professional') confirmMsg = `Understood. I will operate in Professional mode. How may I assist you?`;
+      else if (newPersonality === 'Funny') confirmMsg = `You got it boss! 😂 I'm in funny mode. What's next?`;
+      else if (newPersonality === 'Casual') confirmMsg = `No problem, I'll keep it casual. 🤙 What's up?`;
+      else if (newPersonality === 'Cursing') confirmMsg = `F*** yeah, let's do this. 🤬 I'm in cursing mode. What's next?`;
+
+      return { success: true, message: confirmMsg, clean: true };
+    }
+
     case 'personality_query':
       const tone = store.aiTone || 'Professional';
       const personality = store.aiPersonality || 'Default';

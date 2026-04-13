@@ -597,10 +597,22 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       params: () => ({})
     },
     {
+      intent: 'change_personality',
+      patterns: [
+        /^(?:be|act|talk|sound)(?:\s+more|\s+like\s+a)?\s+(professional|sassy|funny|casual|cursing)$/i,
+        /^(?:change|set|switch)(?:\s+your)?\s+(?:personality|tone|mode|style)(?:\s+to)?\s+(professional|sassy|funny|casual|cursing)(?:\s+mode)?$/i,
+        /^(?:turn\s+on)\s+(professional|sassy|funny|casual|cursing)(?:\s+mode)?$/i,
+        /^(?:i\s+want\s+you\s+to\s+be)\s+(professional|sassy|funny|casual|cursing)$/i,
+        /^(?:can\s+you\s+be)\s+(professional|sassy|funny|casual|cursing)$/i,
+        /^(?:no\s+)?(?:can\s+you\s+change\s+(?:them|it)\s+(?:from\s+here|now)|change\s+(?:them|it)\s+here|can\s+you\s+change\s+(?:your\s+)?(?:personality|tone))$/i,
+        /^(?:can\s+you\s+be)\s+(?:something\s+else|different)$/i
+      ],
+      params: (matches: string[]) => ({ target_personality: matches[1] || matches[2] || matches[3] || matches[4] || matches[5] })
+    },
+    {
       intent: 'personality_query',
       patterns: [
-        /^(?:can you customize how you talk|change your personality|how you talk to me)$/i,
-        /^(?:be more professional|be sassy|be funny|cursing mode|customize your tone)$/i,
+        /^(?:can you customize how you talk|how you talk to me|customize your tone)$/i,
         /^(?:what personality do you have|what personality are you|what is your personality|whats your personality)$/i,
         /^(?:what tone do you have|what tone are you|what is your tone|whats your tone)$/i,
         /^(?:what personality do you have right now|what tone do you have turned on)$/i,
