@@ -538,6 +538,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       };
 
     case 'change_personality': {
+      const text = (entities.text || '').toLowerCase();
       const targetRaw = (entities.target_personality as string) || '';
       
       const lowerTarget = targetRaw.toLowerCase();
@@ -1059,7 +1060,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `I don't have a last contact date for ${lead.name} yet. Want to send a message now?` };
       }
       
-      const score = lead.dealScore || (lead as Record<string, unknown>).score || (lead as Record<string, unknown>).lead_score || 'N/A';
+      const score = lead.dealScore || (lead as unknown as Record<string, unknown>).score || (lead as unknown as Record<string, unknown>).lead_score || 'N/A';
       return { 
         success: true, 
         message: `**${lead.name}**\n📞 ${lead.phone || 'No phone'}\n📧 ${lead.email || 'No email'}\n📍 ${lead.propertyAddress || 'No address'}\n📊 Status: ${lead.status}\n🎯 Score: ${score}\n📝 Notes: ${lead.notes || 'None'}` 
