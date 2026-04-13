@@ -97,7 +97,11 @@ export const intents: Intent[] = [
     name: 'proactive_suggestion',
     patterns: [
       'what should i do', 'suggest something', 'any recommendations',
-      'whats next', 'what should i focus on', 'give me a task'
+      'whats next', 'what should i focus on', 'give me a task',
+      'what would you recommend i do with him', 'what should i do with this lead',
+      'any suggestions for him', "what's next with this lead", 'what now',
+      'what should i do with him', 'what would you recommend i do with her',
+      'any suggestions for her', 'what should i do with the lead'
     ],
     action: 'proactive_suggestion',
     template: '{response}'

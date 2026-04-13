@@ -554,8 +554,9 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^i'm bored$/i,
         /^im bored$/i,
         /^nothing to do$/i,
+        /^(?:what would you recommend i do with|what should i do with|any suggestions for|what's next with|whats next with)\s+(him|her|this lead|the lead|(.+))$/i
       ],
-      params: () => ({})
+      params: (matches: string[]) => ({ target: matches[1]?.trim() === 'this lead' ? 'this' : matches[1]?.trim() })
     },
     {
       intent: 'repeat_last',

@@ -1109,8 +1109,68 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       case 'proactive_suggestion': {
         const hour = new Date().getHours();
         const today = new Date();
-        
-        // ──── Gather CRM intelligence ────
+        const targetRaw = entities.target;
+        let leadToSuggestFor = null;
+
+        if (targetRaw) {
+          if (/^(him|her|this|the lead)$/i.test(targetRaw)) {
+            const activeEntity = memory.entityStack?.[0];
+            if (activeEntity?.type === 'lead') {
+              leadToSuggestFor = store.leads.find(l => l.id === activeEntity.id);
+            }
+          } else {
+            const { lead } = findLeadFuzzy(targetRaw, store.leads);
+            leadToSuggestFor = lead;
+          }
+        }
+
+        if (leadToSuggestFor) {
+          // ──── Lead-Specific Diagnostic Logic ────
+          const lead = leadToSuggestFor;
+          const name = lead.name;
+          const status = lead.status?.toLowerCase();
+          const score = lead.dealScore || 0;
+          const lastUpdate = lead.updatedAt || lead.createdAt;
+          const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 999;
+
+          // Push to context so "him" continues to work
+          pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
+
+          // 1. Check for Missing Contact Info
+          if (!lead.phone || lead.phone === 'None') {
+            return { success: true, message: `**${name}** doesn't have a phone number on file. Want to add one so I can start reaching out for you?` };
+          }
+          if (!lead.email || lead.email === 'None') {
+            return { success: true, message: `**${name}** doesn't have an email address listed. Should we find and add one to their profile?` };
+          }
+
+          // 2. Check for Stale Contact
+          if (daysSince >= 5 && status !== 'closed-won' && status !== 'closed-lost') {
+             setLastSuggestion('send_sms_partial', { target: name }, `Text ${name}`);
+             return { success: true, message: `You haven't reached out to **${name}** in ${daysSince} days. Want to send a quick text to check in?` };
+          }
+
+          // 3. Status-Based Contextual Advice
+          if (status === 'closed-won') {
+             setLastSuggestion('add_note', { target: name }, `Add follow-up note for ${name}`);
+             return { success: true, message: `**${name}** is in 'Closed-Won' status! 🎉 Great job. Want to add a final follow-up note or set a reminder for a 30-day follow-up?` };
+          }
+          
+          if (status === 'new' || status === 'qualified') {
+             setLastSuggestion('update_lead_status', { target: name, status: 'negotiating' }, `Update ${name} to Negotiating`);
+             return { success: true, message: `**${name}** is currently marked as '${status}'. If you've started talking numbers, we should advance them to 'Negotiating'. Want me to update that for you?` };
+          }
+
+          // 4. Score-Based Prioritization
+          if (score >= 85) {
+             setLastSuggestion('send_sms_partial', { target: name }, `Text ${name}`);
+             return { success: true, message: `**${name}** has a high deal score of ${score}! They are a top priority. Should we reach out right now?` };
+          }
+
+          return { success: true, message: `**${name}** looks healthy! I'd recommend keeping them warm with regular check-ins. Want me to set a task to follow up next week?` };
+        }
+
+        // ──── Gather CRM intelligence (Broad Pool) ────
         const overdueTasks = store.tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < today);
         const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70);
         const negotiatingLeads = store.leads.filter(l => l.status === 'negotiating' || l.status === 'qualified');
