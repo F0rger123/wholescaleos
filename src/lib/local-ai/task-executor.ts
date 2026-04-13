@@ -25,7 +25,7 @@ import {
   saveUserPreference,
   rememberFact
 } from './learning-service';
-import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_SCRIPTS, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
+import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_SCRIPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
 
 export interface TaskResponse {
   success: boolean;
@@ -1651,7 +1651,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       if (selected) {
         return {
           success: true,
-          message: `### ${selected.title}\n\n${selected.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n**🎯 Pro Tip:** ${selected.proTip}\n\nShall we look for leads in your CRM that fit this specific model?`
+          message: `### ${selected.title}\n\n${selected.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}\n\n**🎯 Pro Tip:** ${selected.proTip}\n\nShall we look for leads in your CRM that fit this specific model?`
         };
       }
 
