@@ -1,6 +1,6 @@
 import { Intent, intents } from '../ai/intents';
 import { spellCheck, getLevenshteinDistance } from './spell-checker';
-import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact } from './memory-store';
+import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact, getLastSuggestion, clearLastSuggestion } from './memory-store';
 import { getLearnedIntent, getAllLearnedIntents } from './learning-service';
 import { useStore } from '../../store/useStore';
 
@@ -244,6 +244,31 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   debugLog('START', `Input: "${input}" | Lower: "${lowerOrig}"`);
 
   // ═══════════════════════════════════════════════════════════════════════
+  // STAGE -1: SUGGESTION CONFIRMATION
+  // If the bot just offered a suggestion ("Want me to show your tasks?")
+  // and the user replies with a confirmation phrase, execute that suggestion.
+  // This MUST come before small talk, since "yes" / "sure" are small talk.
+  // ═══════════════════════════════════════════════════════════════════════
+  const confirmationPattern = /^(?:yes|yep|yup|yeah|sure|do it|ok do it|okay do it|yes do that|yeah do that|yeah go ahead|go ahead|sure thing|yes please|yea do it|do that|go for it|yeah please|yep do it|absolutely|definitely|please do|make it happen|let's do it|lets do it|ye|ya|bet)$/i;
+  
+  const pendingSuggestion = getLastSuggestion();
+  if (pendingSuggestion && confirmationPattern.test(lowerOrig)) {
+    debugLog('MATCHED', `Suggestion confirmation: "${lowerOrig}" → executing last suggestion: ${pendingSuggestion.action}`, pendingSuggestion);
+    clearLastSuggestion();
+    
+    const intentObj = intents.find(i => i.name === pendingSuggestion.action || i.action === pendingSuggestion.action);
+    if (intentObj) {
+      return {
+        intent: intentObj,
+        params: pendingSuggestion.params as Record<string, unknown>,
+        confidence: 100,
+        needsAgentLoop,
+        matchedBy: 'suggestion_confirmation'
+      };
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
   // STAGE 0: SMALL TALK EARLY EXIT
   // Check for common conversational phrases FIRST, before any processing.
   // This prevents "okay", "thanks", "lol", "stop" etc. from ever reaching
@@ -300,7 +325,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // STAGE 1: CONFIRMATION / MULTI-TURN STATE
   // ═══════════════════════════════════════════════════════════════════════
   if (memory.activeState?.type === 'AWAITING_INTENT_CONFIRMATION') {
-    if (lowerOrig.match(/^(?:yes|yep|yup|yeah|sure|do it|ok|okay|confirm)$/i)) {
+    if (confirmationPattern.test(lowerOrig)) {
       debugLog('MATCHED', 'Confirmation: YES');
       return { 
         intent: memory.activeState.data.intent, 
@@ -311,7 +336,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         matchedBy: 'confirmation_yes'
       };
     }
-    if (lowerOrig.match(/^(?:no|nope|nah|nevermind|stop|cancel|wrong)$/i)) {
+    if (lowerOrig.match(/^(?:no|nope|nah|nevermind|nvm|stop|cancel|wrong|no thanks|forget it|never mind)$/i)) {
       debugLog('MATCHED', 'Confirmation: NO');
       return { 
         intent: { name: 'cancel_confirmation', patterns: [], action: 'cancel', template: 'No problem.' }, 

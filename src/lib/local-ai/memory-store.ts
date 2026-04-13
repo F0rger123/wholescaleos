@@ -22,6 +22,13 @@ export interface Entity {
 
 export type Sentiment = 'happy' | 'neutral' | 'frustrated' | 'urgent' | 'curious';
 
+export interface LastSuggestion {
+  action: string;
+  params: Record<string, unknown>;
+  description: string;
+  timestamp: string;
+}
+
 export interface ConversationContext {
   userId?: string;
   userName?: string;
@@ -34,6 +41,7 @@ export interface ConversationContext {
   sentiment: Sentiment;
   lastTopic?: string;
   activeState?: { type: string; data: any };
+  lastSuggestion?: LastSuggestion;
   recentLeads: Array<{ id: string; name: string }>;
   outcomes: Array<{ timestamp: string; type: string; summary: string; details: any }>;
   history: Message[];
@@ -277,6 +285,47 @@ export function setActiveState(type: string | null, data: any = {}) {
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
     ...memory,
     activeState: type ? { type, data } : undefined
+  }));
+}
+
+/**
+ * Stores the last suggestion the bot offered, so "yes" / "do that" can recall it.
+ */
+export function setLastSuggestion(action: string, params: Record<string, unknown>, description: string) {
+  const memory = getMemory();
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    lastSuggestion: {
+      action,
+      params,
+      description,
+      timestamp: new Date().toISOString()
+    }
+  }));
+}
+
+/**
+ * Retrieves the last suggestion the bot offered. Returns null if stale (>5 min old).
+ */
+export function getLastSuggestion(): LastSuggestion | null {
+  const memory = getMemory();
+  if (!memory.lastSuggestion) return null;
+  
+  // Only valid for 5 minutes
+  const age = Date.now() - new Date(memory.lastSuggestion.timestamp).getTime();
+  if (age > 5 * 60 * 1000) return null;
+  
+  return memory.lastSuggestion;
+}
+
+/**
+ * Clears the last suggestion after it's been executed.
+ */
+export function clearLastSuggestion() {
+  const memory = getMemory();
+  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+    ...memory,
+    lastSuggestion: undefined
   }));
 }
 

@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
-import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome } from './memory-store';
+import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome, setLastSuggestion } from './memory-store';
 import { 
   getConversationContext, 
   updateConversationTopic, 
@@ -48,98 +48,179 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'small_talk': {
       const text = (entities.text || '').toLowerCase();
+      const hour = new Date().getHours();
       
-      // Acknowledgments (expanded with casual variants)
+      // Acknowledgments — varied and natural
       if (/^(okay|ok|k|kk|okk|okayyy|okayy|okie|okey|oki|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine|right|noted|understood|roger|copy|yep|yup|ya|yah|ye|word|facts|true|fair|valid|aight|ight|ite|kewl|noice|dope)$/i.test(text)) {
-        const responses = ["Got it! What's next?", "Cool. Ready when you are.", "👍 Anything else?", "Alright, let's keep moving.", "Sounds good. What would you like to do?", "Noted! What else?", "Perfect, I'm here when you need me."];
+        const responses = [
+          "Got it! 👍",
+          "Cool, I'm here whenever you need me.",
+          "Sounds good.",
+          "Alright, let's keep the momentum going.",
+          "Noted! Just holler when you're ready.",
+          "Perfect. Standing by.",
+          "👍",
+          "All good! I'm not going anywhere.",
+          "Roger that.",
+          "You got it.",
+        ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Gratitude (expanded)
+      // Gratitude — warm and genuine
       if (/^(thanks|thank you|thx|ty|appreciate it|tysm|tyvm|much appreciated|thank u|thnx|thnks|tanks)$/i.test(text)) {
-        const responses = ["You're welcome! What's next?", "Happy to help! Anything else?", "Anytime. What else can I do?", "You got it. Ready for more?", "My pleasure. What's on your mind?"];
+        const responses = [
+          "You're welcome!",
+          "Happy to help! 😊",
+          "Anytime.",
+          "You got it. That's what I'm here for.",
+          "My pleasure.",
+          "No problem at all.",
+          "Glad I could help!",
+          "🙏 Always happy to assist.",
+          "Of course! Don't hesitate to ask again.",
+        ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Stop/Cancel/No (expanded)
+      // Stop/Cancel/No — calm and patient
       if (/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no|nope|naw|neh)$/i.test(text)) {
-        return { success: true, message: "No problem. I'll wait. Ready when you are." };
+        const responses = [
+          "No problem. I'll be right here when you're ready.",
+          "All good — just say the word when you want to continue.",
+          "Understood. Take your time.",
+          "No worries, pausing. Let me know when you need me.",
+          "Okay, standing by.",
+        ];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Farewell (expanded)
+      // Farewell — warm send-off
       if (/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night|gn|ttyl|bai|byeee|laterr)$/i.test(text)) {
-        const responses = ["Talk to you later! I'll be here when you need me. 👋", "Goodbye! Come back anytime.", "See ya! Good luck with those leads.", "Later! I'll hold down the fort."];
+        const responses = [
+          "Talk to you later! I'll be here when you need me. 👋",
+          "Catch you later! Good luck out there.",
+          "See ya! Go close some deals. 💪",
+          "Later! I'll hold down the fort.",
+          "Take care! I'll keep an eye on your pipeline.",
+          hour >= 20 ? "Good night! Rest up and we'll crush it tomorrow. 🌙" : "See you soon! 👋",
+          "Peace! ✌️",
+        ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Laughter (expanded)
+      // Laughter — share the fun
       if (/^(lol|haha|hehe|lmao|lmfao|rofl|nice one|good one|funny|dead|bruh|bro|ong|fr|no cap)$/i.test(text)) {
-        const responses = ["😄 Glad you liked that!", "😂 I'm here all week!", "Happy to entertain! What's next?", "😏 I've got more where that came from."];
+        const responses = [
+          "😄 Glad that landed!",
+          "😂 I try!",
+          "Ha! I'm here all week.",
+          "😏 I've got a million of 'em.",
+          "If you think that was good, wait till you hear my lead scoring jokes.",
+          "Comedy AND CRM management — I'm a full-service bot.",
+          "😆",
+        ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Confusion / Repeat / Don't get it (expanded)
+      // Confusion / Repeat 
       if (/^(huh|what|hmm|umm|um|uh|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it|wut|wat|hm)$/i.test(text)) {
-        return { success: true, message: "No worries! I'm here to help with your CRM. Try saying 'leads', 'tasks', 'help', or ask me a question!" };
+        const responses = [
+          "No worries! Try 'help' to see what I can do, or just tell me what you need.",
+          "All good — I'm here to help. Try saying 'leads', 'tasks', or 'help'.",
+          "Let me make it simpler: I handle leads, tasks, SMS, and scheduling. What sounds useful right now?",
+          "My bad if I was unclear. What would you like help with?",
+        ];
+        return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // How are you / Status (expanded)
+      // How are you / Status 
       if (/^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things|sup|wassup|wsg)$/i.test(text)) {
-        const responses = ["I'm running at 100% and ready to help! How are you?", "All systems operational! How's your day going?", "Doing great! Ready to crush some real estate goals with you. How about you?"];
+        const responses = [
+          "Running great! How about you?",
+          "All systems go! 🟢 Ready to help whenever you are.",
+          "Doing well! Your pipeline's looking good today. Anything you want to dive into?",
+          "I'm good! Just been keeping an eye on your CRM. How's your day going?",
+          "Can't complain — I don't sleep! 😄 What's on your mind?",
+          hour < 12 ? "Good morning! Ready to make today count?" : hour < 17 ? "Afternoon! How's the day treating you?" : "Evening! Wrapping up or just getting started?",
+        ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
       // Greetings (time-based)
       if (/^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i.test(text)) {
-        const hour = new Date().getHours();
         let greeting = "Hello";
         if (hour < 12) greeting = "Good morning";
         else if (hour < 18) greeting = "Good afternoon";
         else greeting = "Good evening";
-        return { success: true, message: `${greeting}! Ready to work on some leads?` };
+        const addons = [
+          "What's on the agenda?",
+          "Ready to tackle some leads?",
+          "How can I help you today?",
+          "Let's make it a productive one!",
+        ];
+        return { success: true, message: `${greeting}! ${addons[Math.floor(Math.random() * addons.length)]}` };
       }
       
       // Casual greetings
       if (/^(yo|hey|hi|hello|henlo|heya|hiya)$/i.test(text)) {
-        const responses = ["Hey there! What can I help with?", "Hi! Ready to work on your CRM?", "Yo! What's the plan?"];
+        const responses = [
+          `Hey! What can I help with?`,
+          `Hi there! What's the plan?`,
+          `Yo! Ready to get to work?`,
+          `Hey hey! What's on your mind?`,
+          `What's up! Need anything?`,
+        ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
-      // Joke (with multiple jokes)
+      // Joke
       if (/^(tell me a joke|make me laugh|joke|humor me|another joke|different joke|give me another)$/i.test(text)) {
         const jokes = [
           "Why did the real estate agent cross the road? To get to the other side of the deal!",
-          "What's a house's favorite music? Heavy metal... because of all the studs!",
+          "What's a house's favorite music? Heavy metal… because of all the studs!",
           "Why don't houses ever get lost? They always have good foundations!",
           "What do you call a real estate agent who can sing? A listing agent!",
           "Why was the open house so quiet? The walls had ears but no mouth!",
-          "What do you call a house that tells jokes? A stand-up property!",
-          "Why did the house go to school? To improve its foundation!",
           "What's a real estate agent's favorite drink? A closing cocktail!",
           "Why don't houses play cards? They're afraid of getting decked!",
-          "What's a property's favorite exercise? Flipping!"
+          "What's a property's favorite exercise? Flipping!",
+          "What did the mortgage say to the borrower? I've got you covered!",
+          "Why did the house break up with the garage? It needed more space!",
         ];
         return { success: true, message: jokes[Math.floor(Math.random() * jokes.length)] };
       }
       
       // Who are you
       if (/^(who are you|what are you|introduce yourself)$/i.test(text)) {
-        return { success: true, message: "I'm 🤖 OS Bot, your AI-powered CRM assistant. I help manage leads, tasks, SMS, and more. Think of me as your co-pilot for real estate domination! What would you like to work on?" };
+        return { success: true, message: "I'm 🤖 OS Bot, your AI-powered CRM assistant built for real estate pros. I manage leads, tasks, SMS, scheduling, and more. Think of me as your co-pilot for closing deals!" };
       }
       
       // What do you think
       if (/^(what do you think|your opinion|thoughts)$/i.test(text)) {
-        return { success: true, message: "I think you're doing great! Want me to analyze your pipeline or suggest some next steps?" };
+        return { success: true, message: "I think you're on the right track! Want me to pull up your pipeline data or suggest some next moves?" };
       }
       
       // Gen-Z / casual fillers
       if (/^(plz|pls|tho|tbh|idk|idc|imo|smh|welp|well|hmm ok|ok cool|ok thanks|ok bye|yeah|yea|yass|yas)$/i.test(text)) {
-        const responses = ["I got you! What do you need?", "I'm listening! What's up?", "Ready when you are! What can I do?"];
+        const responses = [
+          "I got you! What do you need?",
+          "I'm all ears.",
+          "Say the word.",
+          "Ready and waiting!",
+          "Go for it — I'm listening.",
+        ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
       }
       
       // Default small talk fallback
-      return { success: true, message: "I hear you! What would you like to work on? Leads? Tasks? SMS?" };
+      const defaults = [
+        "I hear you! What would you like to work on?",
+        "I'm here for you. Leads, tasks, SMS — what sounds good?",
+        "What can I help you with?",
+        "Ready when you are!",
+      ];
+      return { success: true, message: defaults[Math.floor(Math.random() * defaults.length)] };
     }
 
     case 'create_lead':
@@ -386,7 +467,10 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         if (todayTasks.length > 5) msg += `  ...and ${todayTasks.length - 5} more\n`;
       }
       
-      msg += `\nWould you like me to list all your pending tasks? Just say "show all tasks".`;
+      msg += `\nWant me to list all your pending tasks? Just say "show all tasks" or "yes".`;
+      
+      // Store suggestion so "yes" triggers show_tasks
+      setLastSuggestion('show_tasks', {}, 'Show all pending tasks');
       
       return { success: true, message: msg };
     }
@@ -649,7 +733,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       const unread = smsMessages.filter(m => !m.is_read && m.direction === 'inbound');
       if (unread.length === 0) return { success: true, message: "Your SMS inbox is clear! No unread replies from leads found." };
       
-      return { success: true, message: `You have **${unread.length}** unread messages in your inbox. Should I list the most recent ones for you?` };
+      setLastSuggestion('list_leads', {}, 'List recent SMS replies');
+      return { success: true, message: `You have **${unread.length}** unread messages in your inbox. Want me to list the most recent ones?` };
     }
 
     case 'email_campaign':
@@ -724,14 +809,17 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       if (topic === 'leads' || lastTopic.includes('lead')) {
         const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70).slice(0, 3);
         if (hotLeads.length > 0) {
-          return { success: true, message: `You were asking about leads. Here are ${hotLeads.length} hot ones: ${hotLeads.map(l => l.name).join(', ')}. Want details on any?` };
+          setLastSuggestion('hot_leads', { score_min: 70, limit: 5 }, 'Show hot leads');
+          return { success: true, message: `You were asking about leads. Here are ${hotLeads.length} hot ones: ${hotLeads.map(l => l.name).join(', ')}. Want details on any of them?` };
         }
+        setLastSuggestion('list_leads', {}, 'Show all leads');
         return { success: true, message: `You have ${store.leads.length} leads total. Want to see the list or add a new one?` };
       }
       
       if (topic === 'tasks' || lastTopic.includes('task')) {
         const pending = store.tasks.filter(t => t.status !== 'done').length;
-        return { success: true, message: `You have ${pending} pending tasks. Should I list them or create a new one?` };
+        setLastSuggestion('show_tasks', {}, 'Show pending tasks');
+        return { success: true, message: `You have ${pending} pending tasks. Want me to list them?` };
       }
       
       return { success: true, message: `What would you like to focus on next? Leads, tasks, or something else?` };
@@ -742,21 +830,48 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       const pendingTasks = store.tasks.filter(t => t.status !== 'done' && t.priority === 'high').length;
       const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 80).length;
       const overdueTasks = store.tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < new Date()).length;
+      const todayTasks = store.tasks.filter(t => t.status !== 'done' && t.dueDate === new Date().toISOString().split('T')[0]).length;
+      const totalLeads = store.leads.length;
       
       let suggestion = '';
+      let suggestionAction = '';
+      let suggestionParams: Record<string, unknown> = {};
       
       if (overdueTasks > 0) {
-        suggestion = `You have ${overdueTasks} overdue tasks. Want me to list them?`;
+        suggestion = `You have ${overdueTasks} overdue task${overdueTasks > 1 ? 's' : ''} that need attention. Want me to pull them up?`;
+        suggestionAction = 'tasks_due';
       } else if (hotLeads > 0) {
-        suggestion = `You have ${hotLeads} hot leads ready to close. Should I show them?`;
+        suggestion = `You've got ${hotLeads} hot lead${hotLeads > 1 ? 's' : ''} with scores above 80 — ready to close. Should I show them?`;
+        suggestionAction = 'hot_leads';
+        suggestionParams = { score_min: 80, limit: 5 };
       } else if (pendingTasks > 0) {
-        suggestion = `You have ${pendingTasks} high-priority tasks. Want to review them?`;
+        suggestion = `There ${pendingTasks === 1 ? 'is' : 'are'} ${pendingTasks} high-priority task${pendingTasks > 1 ? 's' : ''} on your plate. Want to review them?`;
+        suggestionAction = 'show_tasks';
+      } else if (todayTasks > 0) {
+        suggestion = `You have ${todayTasks} task${todayTasks > 1 ? 's' : ''} due today. Want me to list them?`;
+        suggestionAction = 'tasks_due';
       } else if (hour < 10) {
-        suggestion = `Good morning! Ready to check today's schedule or find new leads?`;
+        suggestion = totalLeads > 0 
+          ? `Good morning! You have ${totalLeads} leads in your pipeline. Want to check today's schedule or dive into your top prospects?`
+          : `Good morning! Your pipeline is empty — want me to help you add your first lead?`;
+        suggestionAction = totalLeads > 0 ? 'tasks_due' : 'help_commands';
       } else if (hour > 17) {
-        suggestion = `End of day wrap-up? I can show tomorrow's tasks or today's activity.`;
+        suggestion = `End of day! Want me to show tomorrow's tasks or summarize today's activity?`;
+        suggestionAction = 'show_tasks';
       } else {
-        suggestion = `How about checking your pipeline or sending a follow-up SMS to a lead?`;
+        const ideas = [
+          { msg: `How about following up with a lead via SMS? Just say 'text [name]: [message]'.`, action: 'help_commands' },
+          { msg: `Want to check your pipeline health? I can show you lead stats and task progress.`, action: 'mood_check' },
+          { msg: `Need to add a new lead? Just say 'add [name] as a lead' and I'll handle the rest.`, action: 'help_commands' },
+        ];
+        const pick = ideas[Math.floor(Math.random() * ideas.length)];
+        suggestion = pick.msg;
+        suggestionAction = pick.action;
+      }
+      
+      // Store the suggestion so "yes" / "do that" can trigger it
+      if (suggestionAction) {
+        setLastSuggestion(suggestionAction, suggestionParams, suggestion);
       }
       
       return { success: true, message: suggestion };
