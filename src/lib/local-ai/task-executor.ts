@@ -11,8 +11,7 @@ import {
   getLastSuggestion, 
   clearLastSuggestion,
   resolveEntitiesFromContext,
-  Entity,
-  setActiveState
+  Entity
 } from './memory-store';
 import { resolveDate, formatHumanDate } from './utils/date-resolver';
 import { expandSynonyms } from './utils/synonym-mapper';
