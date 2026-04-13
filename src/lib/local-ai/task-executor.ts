@@ -1124,6 +1124,14 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           }
         }
 
+        // Contextual Fallback: If no target mentioned (e.g. "what now"), check active context
+        if (!leadToSuggestFor) {
+           const activeEntity = memory.entityStack?.[0];
+           if (activeEntity?.type === 'lead') {
+              leadToSuggestFor = store.leads.find(l => l.id === activeEntity.id);
+           }
+        }
+
         if (leadToSuggestFor) {
           // ──── Lead-Specific Diagnostic Logic ────
           const lead = leadToSuggestFor;
