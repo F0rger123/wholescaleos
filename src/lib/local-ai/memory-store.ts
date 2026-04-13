@@ -40,6 +40,7 @@ export interface ConversationContext {
   learnedFacts: Record<string, string>; 
   sentiment: Sentiment;
   lastTopic?: string;
+  activeTopic?: string;
   activeState?: { type: string; data: any };
   lastSuggestion?: LastSuggestion;
   recentLeads: Array<{ id: string; name: string }>;

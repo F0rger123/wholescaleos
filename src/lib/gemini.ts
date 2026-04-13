@@ -404,7 +404,7 @@ export async function processWithLocalAI(prompt: string): Promise<BotResponse | 
       // 3. REGULAR EXECUTION (High Confidence)
       if (localResult.confidence >= 0.75 || (localStorage.getItem('user_ai_provider') === 'local')) {
         const executionResult = await executeTask(localResult.intent.name, localResult.params);
-        const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
+        const responseText = generateResponse(localResult.intent.name, executionResult as any, prompt);
         
         saveMessage('assistant', responseText);
         

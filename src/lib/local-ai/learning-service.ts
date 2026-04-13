@@ -212,7 +212,7 @@ export async function getRecentMemorySummary(userId: string): Promise<string> {
 
     if (!data || data.length === 0) return "We haven't worked on anything recently.";
 
-    const msgs = data.flatMap(d => {
+    const msgs = data.flatMap((d: any) => {
       let m = d.messages;
       if (typeof m === 'string') m = JSON.parse(m);
       return m || [];

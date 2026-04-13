@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { Intent } from '../ai/intents';
-import { getAIContext } from './memory-store';
+import { getMemory } from './memory-store';
 
 /**
  * Response Suffixes — these trailing phrases are stripped before personality
@@ -157,7 +157,7 @@ const applyPersonality = (
 
 export function generateResponse(
   intentOrName: Intent | string,
-  result: Record<string, unknown>,
+  result: any,
   userText: string,
   suggestedText?: string
 ): string {
@@ -181,13 +181,13 @@ export function generateResponse(
   const intentName = typeof intentOrName === 'string' ? intentOrName : intentOrName.name;
 
   // Topic Transitions
-  if (memory.lastTopic && memory.activeTopic && memory.lastTopic !== memory.activeTopic) {
+  if (context.lastTopic && context.activeTopic && context.lastTopic !== context.activeTopic) {
     if (!result?.clean && intentName !== 'greeting' && intentName !== 'small_talk') {
       const transitions = [
-        `By the way, moving over to ${memory.activeTopic} now. `,
-        `Switching gears to ${memory.activeTopic}... `,
-        `Alright, let's look at ${memory.activeTopic}. `,
-        `Pivoting to ${memory.activeTopic}. `,
+        `By the way, moving over to ${context.activeTopic} now. `,
+        `Switching gears to ${context.activeTopic}... `,
+        `Alright, let's look at ${context.activeTopic}. `,
+        `Pivoting to ${context.activeTopic}. `,
       ];
       prefix += pick(transitions, 'transition');
     }

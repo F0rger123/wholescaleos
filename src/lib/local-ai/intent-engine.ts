@@ -250,9 +250,7 @@ function categorizeSmallTalk(input: string): string {
 export async function recognizeIntent(input: string): Promise<ParsedIntent | null> {
   try {
     const memory = getMemory();
-    const sessionId = memory.sessionId;
     const lowerOrig = input.toLowerCase().trim();
-    const store = useStore.getState();
     const needsAgentLoop = detectMultiStep(input);
 
     if (!input || input.trim().length === 0) return null;

@@ -23,7 +23,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
   const store = useStore.getState();
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
   const memory = getMemory();
-  const sessionId = entities.sessionId || memory.sessionId || 'default-session';
+  const safeEntities = entities || {};
+  const sessionId = safeEntities.sessionId || memory.sessionId || 'default-session';
 
   try {
     switch (action) {
@@ -381,6 +382,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: false, message: `I don't have any records for "${entities.name}".` };
 
       case 'lead_query': {
+        console.log('[⚙️ OS Bot] Processing lead_query with entities:', entities);
         const leads = store.leads;
         const count = leads.length;
         const hotLeads = leads.filter(l => (l.dealScore || 0) >= 80).length;
@@ -623,18 +625,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
                    `🧠 **Personality Style**: ${personality}\n\n` +
                    `You can change these in **Settings → AI → Bot Personality**. I'll stay consistent with your choices! Is there anything specific you'd like me to adjust?`
         };
-
-
-
-
-
-      case 'clarify_context':
-        const contextMemory = getMemory();
-        const lastEntity = contextMemory.entityStack[0];
-        if (lastEntity) {
-          return { success: true, message: `Are you talking about ${lastEntity.type} ${lastEntity.name}? Try phrasing it like "show me ${lastEntity.name}'s details".` };
-        }
-        return { success: true, message: `I'm not exactly sure who or what you're referring to. Could you be a bit more specific?` };
 
       case 'get_preferences':
         const role = store.currentUser?.email?.toLowerCase() === 'drummerforger@gmail.com' ? 'Admin' : 'Member';
@@ -1139,6 +1129,32 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       return { success: true, message: msg };
     }
 
+    case 'clarify_context': {
+      const memory = getMemory();
+      const activeEntity = memory.entityStack?.[0];
+      const activeTopic = memory.lastTopic;
+
+      if (activeEntity) {
+        return { 
+          success: true, 
+          message: `I'm assuming you mean **${activeEntity.name}** since we were just talking about them. Is that correct?`,
+          data: { entity: activeEntity, action: activeEntity.type === 'lead' ? 'lead_context_query' : 'task_query' }
+        };
+      }
+
+      if (activeTopic) {
+        return {
+          success: true,
+          message: `We were just discussing **${activeTopic}**. What specifically about it would you like to know?`
+        };
+      }
+
+      return {
+        success: true,
+        message: "I'm not exactly sure what we're referring to. Could you give me a bit more context, like a lead name or a task?"
+      };
+    }
+
     // ──── REPEAT LAST (PART 4) ────
     case 'repeat_last': {
       const mem = getMemory();
@@ -1151,9 +1167,10 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     default:
       return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
-  }
+    }
   } catch (error) {
-    console.error('[💩 OS Bot] Task Executor CRASH:', error);
-    return { success: false, message: "Something went wrong while executing that command. Let's try something else!" };
+    const safeEntities = entities || {};
+    console.error(`[❌ OS Bot] executeTask Error [Action: ${action}]`, error, { entities: safeEntities });
+    throw error;
   }
 }
