@@ -45,7 +45,13 @@ export function normalizeInput(input: string): string {
     /^[ \t]+|[ \t]+$/g // trim whitespace
   ];
 
-  let normalized = input.trim();
+  // Input safety
+  if (!input || typeof input !== 'string') return '';
+  
+  let normalized = input.toLowerCase().trim();
+  
+  // Strip common conversational filler at start
+  normalized = normalized.replace(/^(?:bot|ai|assistant|os bot|hey|yo|please|can you|could you|i want to|i need to|tell me|show me)\s+/i, '');
   
   // Only apply leading filler stripping if the input has multiple words
   const wordCount = normalized.split(/\s+/).length;
@@ -242,22 +248,27 @@ function categorizeSmallTalk(input: string): string {
 }
 
 export async function recognizeIntent(input: string): Promise<ParsedIntent | null> {
-  const memory = getMemory();
-  const lowerOrig = input.toLowerCase().trim();
-  const needsAgentLoop = detectMultiStep(input);
-  
-  debugLog('START', `Input: "${input}" | Lower: "${lowerOrig}"`);
+  try {
+    const memory = getMemory();
+    const sessionId = memory.sessionId;
+    const lowerOrig = input.toLowerCase().trim();
+    const store = useStore.getState();
+    const needsAgentLoop = detectMultiStep(input);
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STAGE -1: SUGGESTION CONFIRMATION
-  // If the bot just offered a suggestion ("Want me to show your tasks?")
-  // and the user replies with a confirmation phrase, execute that suggestion.
-  // This MUST come before small talk, since "yes" / "sure" are small talk.
-  // ═══════════════════════════════════════════════════════════════════════
-  const confirmationPattern = /^(?:yes|yep|yup|yeah|sure|do it|ok do it|okay do it|yes do that|yeah do that|yeah go ahead|go ahead|sure thing|yes please|yea do it|do that|go for it|yeah please|yep do it|absolutely|definitely|please do|make it happen|let's do it|lets do it|ye|ya|bet)$/i;
-  
-  const pendingSuggestion = getLastSuggestion();
-  if (pendingSuggestion && confirmationPattern.test(lowerOrig)) {
+    if (!input || input.trim().length === 0) return null;
+
+    debugLog('START', `Input: "${input}" | Lower: "${lowerOrig}"`);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // STAGE -1: SUGGESTION CONFIRMATION
+    // If the bot just offered a suggestion ("Want me to show your tasks?")
+    // and the user replies with a confirmation phrase, execute that suggestion.
+    // This MUST come before small talk, since "yes" / "sure" are small talk.
+    // ═══════════════════════════════════════════════════════════════════════
+    const confirmationPattern = /^(?:yes|yep|yup|yeah|sure|do it|ok do it|okay do it|yes do that|yeah do that|yeah go ahead|go ahead|sure thing|yes please|yea do it|do that|go for it|yeah please|yep do it|absolutely|definitely|please do|make it happen|let's do it|lets do it|ye|ya|bet)$/i;
+    
+    const pendingSuggestion = getLastSuggestion();
+    if (pendingSuggestion && confirmationPattern.test(lowerOrig)) {
     debugLog('MATCHED', `Suggestion confirmation: "${lowerOrig}" → executing last suggestion: ${pendingSuggestion.action}`, pendingSuggestion);
     clearLastSuggestion();
     
@@ -536,9 +547,10 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       patterns: [
         /^(?:whats|what is|what's) (?:his|her|their) (phone|email|address|status)$/i,
         /^(?:show me the notes for|notes on|when did i last contact|tell me about) (.+)$/i,
+        /^(?:what|whats|what's) info (?:do you have|you got) (?:on|about) (.+)$/i,
         /^lead details for (.+)$/i
       ],
-      params: (matches: string[]) => ({ leadName: matches[1]?.trim(), field: matches[1] })
+      params: (matches: string[]) => ({ leadName: matches[1]?.trim() || matches[2]?.trim(), field: matches[1] })
     },
     {
       intent: 'greeting',
@@ -850,8 +862,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // STAGE 5: LEARNED INTENTS (from Supabase)
   // Check learned intents BEFORE fuzzy matching / typo suggestions
   // ═══════════════════════════════════════════════════════════════════════
-  const store = useStore.getState();
-  const userId = store.currentUser?.id;
+  const userId = useStore.getState().currentUser?.id;
   
   if (userId) {
     debugLog('LEARNED', 'Checking learned intents...');
@@ -978,4 +989,8 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // ═══════════════════════════════════════════════════════════════════════
   debugLog('NO_MATCH', `No intent matched for: "${input}"`);
   return null;
+  } catch (error) {
+    console.error('[💩 OS Bot] Crash in recognizeIntent:', error);
+    return null;
+  }
 }

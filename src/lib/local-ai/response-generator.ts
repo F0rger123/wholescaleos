@@ -173,7 +173,7 @@ export function generateResponse(
   // Late Night Awareness
   const hour = new Date().getHours();
   let prefix = `🤖 ${aiName}: `;
-  if ((hour >= 22 || hour <= 4) && Math.random() > 0.7 && !result.clean) {
+  if ((hour >= 22 || hour <= 4) && Math.random() > 0.7 && !result?.clean) {
     prefix = `🤖 ${aiName}: (Burning the midnight oil, I see. 🌙) `;
   }
 
@@ -182,7 +182,7 @@ export function generateResponse(
 
   // Topic Transitions
   if (memory.lastTopic && memory.activeTopic && memory.lastTopic !== memory.activeTopic) {
-    if (!result.clean && intentName !== 'greeting' && intentName !== 'small_talk') {
+    if (!result?.clean && intentName !== 'greeting' && intentName !== 'small_talk') {
       const transitions = [
         `By the way, moving over to ${memory.activeTopic} now. `,
         `Switching gears to ${memory.activeTopic}... `,

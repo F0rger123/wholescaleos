@@ -362,61 +362,69 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * Tries to handle the prompt locally before falling back to external APIs.
  */
 export async function processWithLocalAI(prompt: string): Promise<BotResponse | null> {
-  const localResult = await recognizeIntent(prompt);
-  
-  if (localResult) {
-    const isAmbiguous = localResult.isAmbiguous;
-    const isConfirming = localResult.isConfirming;
+  try {
+    const localResult = await recognizeIntent(prompt);
     
-    // 1. HANDLE CONFIRMATION (YES)
-    if (isConfirming) {
-      const executionResult = await executeTask(localResult.intent.name, localResult.params);
-      const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
-      setActiveState(null); // Clear confirmation state
-      saveMessage('assistant', responseText);
-      return {
-        intent: localResult.intent.name,
-        response: responseText,
-        data: { ...localResult.params, ...executionResult.data },
-        systemLog: '🤖 OS Bot'
-      };
-    }
+    if (localResult) {
+      const isAmbiguous = localResult.isAmbiguous;
+      const isConfirming = localResult.isConfirming;
+      
+      // 1. HANDLE CONFIRMATION (YES)
+      if (isConfirming) {
+        const executionResult = await executeTask(localResult.intent.name, localResult.params);
+        const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
+        setActiveState(null); // Clear confirmation state
+        saveMessage('assistant', responseText);
+        return {
+          intent: localResult.intent.name,
+          response: responseText,
+          data: { ...localResult.params, ...executionResult.data },
+          systemLog: '🤖 OS Bot'
+        };
+      }
 
-    // 2. HANDLE AMBIGUITY ("Did you mean?")
-    if (isAmbiguous) {
-      console.log(`[🤖 OS Bot] Ambiguous prompt detected. Setting AWAITING_CONFIRMATION state.`);
-      setActiveState('AWAITING_INTENT_CONFIRMATION', { 
-        intent: localResult.intent, 
-        params: localResult.params 
-      });
-      
-      const response = generateResponse('ambiguous', localResult, prompt);
-      saveMessage('assistant', response);
-      return {
-        intent: 'ambiguous',
-        response: response,
-        data: { originalText: prompt, suggestedIntent: localResult.intent.name },
-        systemLog: '🤖 OS Bot'
-      };
-    }
+      // 2. HANDLE AMBIGUITY ("Did you mean?")
+      if (isAmbiguous) {
+        console.log(`[🤖 OS Bot] Ambiguous prompt detected. Setting AWAITING_CONFIRMATION state.`);
+        setActiveState('AWAITING_INTENT_CONFIRMATION', { 
+          intent: localResult.intent, 
+          params: localResult.params 
+        });
+        
+        const response = generateResponse('ambiguous', localResult, prompt);
+        saveMessage('assistant', response);
+        return {
+          intent: 'ambiguous',
+          response: response,
+          data: { originalText: prompt, suggestedIntent: localResult.intent.name },
+          systemLog: '🤖 OS Bot'
+        };
+      }
 
-    // 3. REGULAR EXECUTION (High Confidence)
-    if (localResult.confidence >= 0.75 || (localStorage.getItem('user_ai_provider') === 'local')) {
-      const executionResult = await executeTask(localResult.intent.name, localResult.params);
-      const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
-      
-      saveMessage('assistant', responseText);
-      
-      return {
-        intent: localResult.intent.name,
-        response: responseText,
-        data: { ...localResult.params, ...executionResult.data },
-        systemLog: '🤖 OS Bot'
-      };
+      // 3. REGULAR EXECUTION (High Confidence)
+      if (localResult.confidence >= 0.75 || (localStorage.getItem('user_ai_provider') === 'local')) {
+        const executionResult = await executeTask(localResult.intent.name, localResult.params);
+        const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
+        
+        saveMessage('assistant', responseText);
+        
+        return {
+          intent: localResult.intent.name,
+          response: responseText,
+          data: { ...localResult.params, ...executionResult.data },
+          systemLog: '🤖 OS Bot'
+        };
+      }
     }
+    return null;
+  } catch (error) {
+    console.error('[💩 OS Bot] Local AI pipeline crash:', error);
+    return {
+      intent: 'error',
+      response: "I encountered a technical glitch. Try phrasing that differently?",
+      systemLog: '🤖 OS Bot (Recovery)'
+    };
   }
-  
-  return null;
 }
 
 /**
@@ -439,6 +447,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
     if (isLocalSelected) {
       if (localResponse) return localResponse;
       
+      // If Local AI return null but we are IN Local Mode, it means it's unknown locally
       const fallbackMsg = "I didn't understand that. Try 'help' to see what I can do.";
       saveMessage('assistant', fallbackMsg);
       return {
