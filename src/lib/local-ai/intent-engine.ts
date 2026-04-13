@@ -510,6 +510,102 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // ═══════════════════════════════════════════════════════════════════════
   const handlers = [
     {
+      intent: 'real_estate_strategy',
+      patterns: [
+        /^(?:give me a strategy for|how do i invest in|provide a plan for)\s+(.*)$/i,
+        /^(wholesaling|flipping|brrrr|house hacking)\s+strategy$/i,
+        /^(?:how to|should i)\s+(wholesaling|flipping|brrrr|house hacking|investing|flip this|wholesale this)$/i,
+        /\bbrrrr method\b/i
+      ],
+      params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
+    },
+    {
+      intent: 'business_advice',
+      patterns: [
+        /^(?:how do i scale|growing my business|business advice)$/i,
+        /^(?:marketing tips|how to find cash buyers|how to get more deals)$/i,
+        /\b(?:scale|marketing|cash buyers)\b/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'property_analysis',
+      patterns: [
+        /^(?:analyze|look at|is this a good deal)\??$/i,
+        /^(?:analyze|is this a good deal|is it a good deal)\s+(?:the property for|the property of|the property for lead|lead|deal|property|for)?\s+(.*)$/i,
+        /^(?:analyze)\s+(.*)$/i
+      ],
+      params: (matches: string[]) => ({ target: matches[1]?.trim() })
+    },
+    {
+      intent: 'investment_strategy',
+      patterns: [
+        /^(?:tell me about|how do i|explain)\s+(wholesaling|flipping|brrrr|house hacking|1031 exchange)/i,
+        /^(?:investment strategies|ways to invest)$/i
+      ],
+      params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
+    },
+    {
+      intent: 'real_estate_knowledge',
+      patterns: [
+        /^(?:what is a|what is|whats a|definition of|explain|tell me about)\s+([a-zA-Z\s]+)$/i,
+        /^(?:what does)\s+([a-zA-Z\s]+)\s+(?:mean|represent)$/i,
+        /^(?:how does)\s+([a-zA-Z\s]+)\s+(?:work)$/i
+      ],
+      params: (matches: string[]) => ({ concept: matches[1]?.trim() })
+    },
+    {
+      intent: 'deal_calculator',
+      patterns: [
+        /^(?:calculate|run numbers|analyze)(?:\s+this)?\s+(flip|rental)$/i,
+        /^(?:run a|calculate a)\s+(flip|rental)(?:\s+deal)?$/i,
+        /^(?:calculate|run numbers|math for)\s+(.*)$/i
+      ],
+      params: (matches: string[]) => ({ type: matches[1]?.trim(), raw: matches[2]?.trim() })
+    },
+    {
+      intent: 'agent_script',
+      patterns: [
+        /^(?:give me a|show me a|need a)\s+(.*)\s+script$/i,
+        /^(?:what do i say to|how do i handle)\s+(.*)$/i,
+        /^(?:cold call|expired|fsbo|objection)\s+script$/i
+      ],
+      params: (matches: string[]) => ({ category: matches[1]?.trim() })
+    },
+    {
+      intent: 'financing_question',
+      patterns: [
+        /^(?:tell me about|how does|what is a)\s+(fha|va|usda|conventional|hard money|private money|seller financing)\b/i,
+        /^(?:interest rates|mortgage rates|down payment|pmi)$/i,
+        /\b(?:loan|mortgage|financing)\b/i
+      ],
+      params: (matches: string[]) => ({ topic: matches[1]?.trim() })
+    },
+    {
+      intent: 'legal_question',
+      patterns: [
+        /^(?:explain|what is a|tell me about)\s+(contingency|disclosure|inspection|escrow|title insurance|closing costs)$/i,
+        /^(?:purchase agreement|legal requirements|compliance)$/i
+      ],
+      params: (matches: string[]) => ({ topic: matches[1]?.trim() })
+    },
+    {
+      intent: 'market_analysis',
+      patterns: [
+        /^(?:how is the market|market trends|market report|neighborhood analysis)$/i,
+        /^(?:what are the comps for|comps for|valuation for)\s+(.*)$/i
+      ],
+      params: (matches: string[]) => ({ location: matches[1]?.trim() })
+    },
+    {
+      intent: 'explain_logic',
+      patterns: [
+        /^(?:how did you get that|explain the math|show me the breakdown|why|how|explain)\??$/i,
+        /^(?:how do you calculate|what is the formula for)\s+(.*)$/i
+      ],
+      params: (matches: string[]) => ({ detail: matches[1]?.trim() })
+    },
+    {
       intent: 'list_learned',
       patterns: [
         /^what have i taught you$/i,
@@ -865,82 +961,19 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     },
     // --- REAL ESTATE DOMAIN EXPERT HANDLERS ---
     {
-      intent: 'real_estate_knowledge',
+      intent: 'list_learned',
       patterns: [
-        /^(?:what is a|what is|whats a|definition of|explain|tell me about)\s+([a-zA-Z\s]+)$/i,
-        /^(?:what does)\s+([a-zA-Z\s]+)\s+(?:mean|represent)$/i,
-        /^(?:how does)\s+([a-zA-Z\s]+)\s+(?:work)$/i
+        /^what have i taught you$/i,
+        /^show learned commands$/i,
+        /^what did you learn$/i,
+        /^list my phrases$/i,
+        /^what have you remembered$/i,
+        /^what have you learned$/i,
+        /^show what i taught you$/i,
+        /^my custom commands$/i,
       ],
-      params: (matches: string[]) => ({ concept: matches[1]?.trim() })
+      params: () => ({})
     },
-    {
-      intent: 'deal_calculator',
-      patterns: [
-        /^(?:calculate|run numbers|analyze)(?:\s+this)?\s+(flip|rental)$/i,
-        /^(?:run a|calculate a)\s+(flip|rental)(?:\s+deal)?$/i,
-        /^(?:calculate|run numbers|math for)\s+(.*)$/i
-      ],
-      params: (matches: string[]) => ({ type: matches[1]?.trim(), raw: matches[2]?.trim() })
-    },
-    {
-      intent: 'property_analysis',
-      patterns: [
-        /^(?:analyze|look at|is this a good deal)\??$/i,
-        /^(?:analyze|is this a good deal|is it a good deal)\s+(?:this|the|that)?\s+(?:lead|deal|property)$/i,
-        /^(?:analyze)\s+(.*)$/i
-      ],
-      params: (matches: string[]) => ({ target: matches[1]?.trim() })
-    },
-    {
-      intent: 'agent_script',
-      patterns: [
-        /^(?:give me a|show me a|need a)\s+(.*)\s+script$/i,
-        /^(?:what do i say to|how do i handle)\s+(.*)$/i,
-        /^(?:cold call|expired|fsbo|objection)\s+script$/i
-      ],
-      params: (matches: string[]) => ({ category: matches[1]?.trim() })
-    },
-    {
-      intent: 'financing_question',
-      patterns: [
-        /^(?:tell me about|how does|what is a)\s+(fha|va|usda|conventional|hard money|private money|seller financing)\b/i,
-        /^(?:interest rates|mortgage rates|down payment|pmi)$/i,
-        /\b(?:loan|mortgage|financing)\b/i
-      ],
-      params: (matches: string[]) => ({ topic: matches[1]?.trim() })
-    },
-    {
-      intent: 'investment_strategy',
-      patterns: [
-        /^(?:tell me about|how do i|explain)\s+(wholesaling|flipping|brrrr|house hacking|1031 exchange)$/i,
-        /^(?:investment strategies|ways to invest)$/i
-      ],
-      params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
-    },
-    {
-      intent: 'legal_question',
-      patterns: [
-        /^(?:explain|what is a|tell me about)\s+(contingency|disclosure|inspection|escrow|title insurance|closing costs)$/i,
-        /^(?:purchase agreement|legal requirements|compliance)$/i
-      ],
-      params: (matches: string[]) => ({ topic: matches[1]?.trim() })
-    },
-    {
-      intent: 'market_analysis',
-      patterns: [
-        /^(?:how is the market|market trends|market report|neighborhood analysis)$/i,
-        /^(?:what are the comps for|comps for|valuation for)\s+(.*)$/i
-      ],
-      params: (matches: string[]) => ({ location: matches[1]?.trim() })
-    },
-    {
-      intent: 'explain_logic',
-      patterns: [
-        /^(?:how did you get that|explain the math|show me the breakdown|why|how|explain)\??$/i,
-        /^(?:how do you calculate|what is the formula for)\s+(.*)$/i
-      ],
-      params: (matches: string[]) => ({ detail: matches[1]?.trim() })
-    }
   ];
 
   // Test both the original lowered input AND the normalized version

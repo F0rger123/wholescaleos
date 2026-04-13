@@ -1580,7 +1580,12 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           lead = store.leads.find(l => l.id === activeEntity.id);
         }
       } else {
-        const { lead: found } = findLeadFuzzy(target, store.leads);
+        // Clean up common prefixes from target string
+        const cleanedTarget = target
+          .replace(/^(?:the property for|the lead for|the deal for|info for|the property of|lead|deal|property|for)\s+/i, '')
+          .trim();
+        
+        const { lead: found } = findLeadFuzzy(cleanedTarget, store.leads);
         lead = found;
       }
 
