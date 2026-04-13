@@ -174,7 +174,8 @@ export function saveMessage(role: 'user' | 'assistant', content: string, intent?
  * Detects facts like name, address, phone from user input
  */
 function detectLearnedFacts(input: string) {
-  
+  const lower = input.toLowerCase();
+
   // Name
   const nameMatch = input.match(/(?:my name is|im|i am|call me)\s+([a-zA-Z\s]+)/i);
   if (nameMatch && nameMatch[1]) {
@@ -191,6 +192,19 @@ function detectLearnedFacts(input: string) {
   const phoneMatch = input.match(/(?:call me at|phone number is|text me at)\s+([\d\-\(\)\s]{7,})/i);
   if (phoneMatch && phoneMatch[1]) {
     setLearnedFact('phone', phoneMatch[1].trim());
+  }
+
+  // Working Hours
+  const hoursMatch = lower.match(/(?:i work|available|working|offline)\s+(?:until|from|between|at)\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i);
+  if (hoursMatch && hoursMatch[1]) {
+    setLearnedFact('working_hours', hoursMatch[1].trim());
+  }
+
+  // Tone/Style Preference
+  if (lower.includes('keep it short') || lower.includes('brief') || lower.includes('concise')) {
+    setLearnedFact('style_preference', 'concise');
+  } else if (lower.includes('detailed') || lower.includes('elaborate') || lower.includes('more info')) {
+    setLearnedFact('style_preference', 'detailed');
   }
 
   // General Preferences
@@ -367,25 +381,40 @@ export function resolveEntityFromContext(input: string): Entity | null {
 }
 
 /**
- * Resolves one or more entities from the context based on plural or singular pronouns.
+ * Resolves one or more entities from the context based on plural, singular, or ordinal references.
  */
 export function resolveEntitiesFromContext(input: string): Entity[] {
   const memory = getMemory();
   const lower = input.toLowerCase();
   
+  // Plural check
   const pluralKeywords = ['both', 'them', 'all', 'those', 'these', 'everyone'];
   const hasPlural = pluralKeywords.some(p => lower.includes(` ${p} `) || lower.endsWith(` ${p}`) || lower === p);
   
   if (hasPlural) {
-    // Lead context takes priority for plural SMS/bulk actions
     const leadEntries = memory.entityStack.filter(e => e.type === 'lead' || e.type === 'contact');
-    
-    if (lower.includes('both')) {
-      return leadEntries.slice(0, 2);
-    }
-    
-    // Default to last 5 for "all" or "them"
+    if (lower.includes('both')) return leadEntries.slice(0, 2);
     return leadEntries.slice(0, 5);
+  }
+
+  // Ordinal / Index check (e.g. "the first one", "last lead")
+  const ordinals: Record<string, number> = {
+    'first': 0, '1st': 0,
+    'second': 1, '2nd': 1,
+    'third': 2, '3rd': 2,
+    'last': -1
+  };
+
+  for (const [word, index] of Object.entries(ordinals)) {
+    if (lower.includes(word)) {
+      const type = lower.includes('task') ? 'task' : 'lead';
+      const stack = memory.entityStack.filter(e => e.type === type || (type === 'lead' && e.type === 'contact'));
+      
+      if (index === -1) {
+        return stack.length > 0 ? [stack[stack.length - 1]] : [];
+      }
+      return stack[index] ? [stack[index]] : [];
+    }
   }
   
   const single = resolveEntityFromContext(input);

@@ -31,7 +31,8 @@ import {
   splitMultiIntent, 
   generateResponse, 
   generateUnknownResponse, 
-  generateErrorResponse 
+  generateErrorResponse,
+  mergeResponses 
 } from '../lib/local-ai';
 import { callAgentLoop } from '../lib/agent/agent-client';
 import { 
@@ -555,34 +556,41 @@ export function AIBotWidget() {
       const isLocalModel = aiModel === 'os-bot';
       const segments = isLocalModel ? splitMultiIntent(userText) : [userText];
 
-      if (isLocalModel && segments.length > 1) {
+      if (isLocalModel) {
         // Multi-Intent Processing
-        const taskResults: string[] = [];
+        const multiResults: { intent: any; result: any; segment: string }[] = [];
         for (const segment of segments) {
           try {
             const matched = await recognizeIntent(segment);
             if (matched && matched.confidence >= 80) {
-              const res = await executeTask(matched.intent.action, matched.params);
-              if (res.success && res.message) {
-                taskResults.push(res.message);
+              const res = await executeTask(matched.intent.action, { ...matched.params, sessionId });
+              if (res.success) {
+                multiResults.push({ intent: matched.intent, result: res, segment });
               }
             }
           } catch (error) {
             console.error('Intent recognition failed for segment:', error);
-            // Fall back to general processing for this segment
           }
         }
 
-        if (taskResults.length > 0) {
+        if (multiResults.length > 0) {
+          const personality = useStore.getState().aiPersonality || 'Default';
+          const aiName = useStore.getState().aiName || 'OS Bot';
+          const mergedResponse = mergeResponses(multiResults, personality, aiName);
+          
           const aiMsg: ChatMessage = {
             id: Date.now().toString(),
             role: 'ai',
-            content: taskResults.join('\n\n'),
+            content: mergedResponse.replace(/^🤖\s*[^:]+:\s*/, ''),
             timestamp: new Date().toISOString(),
-            systemLog: "🤖 OS Bot"
+            systemLog: `🤖 ${aiName}`
           };
           setMessages(prev => [...prev, aiMsg]);
           setTypingMessageId(aiMsg.id);
+          
+          if (sessionId && currentUser?.id) {
+            await saveConversationTurn(currentUser.id, sessionId, 'assistant', aiMsg.content);
+          }
           setLoading(false);
           return;
         }

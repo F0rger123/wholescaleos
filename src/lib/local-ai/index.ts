@@ -3,5 +3,5 @@ export type { ParsedIntent } from './intent-engine';
 export { executeTask } from './task-executor';
 export { TrainingManager } from './training-manager';
 export type { LocalTrainingRule } from './training-manager';
-export { generateResponse, generateUnknownResponse, generateErrorResponse } from './response-generator';
+export { generateResponse, generateUnknownResponse, generateErrorResponse, mergeResponses } from './response-generator';
 export { getBotIdentity } from './personality-engine';

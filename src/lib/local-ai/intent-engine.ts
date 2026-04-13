@@ -79,13 +79,10 @@ export function normalizeInput(input: string): string {
   return normalized.trim();
 }
 
-/**
- * Splits complex user input into multiple command segments.
- * Example: "Add John as a lead AND text him hello" -> ["Add John as a lead", "text him hello"]
- */
 export function splitMultiIntent(input: string): string[] {
-  // Simple delimiter-based splitting
-  const segments = input.split(/\s+(?:and then|then|and|also)\s+/i);
+  // Use a more robust regex that handles compound delimiters first
+  // Delimiters: "and also", "and then", "after that", "and", "plus", "also", "then", "as well as"
+  const segments = input.split(/\s+(?:and also|and then|after that|as well as|then|and|plus|also)\s+/i);
   if (segments.length <= 1) return [input];
   return segments.map(s => s.trim()).filter(s => s.length > 2);
 }
@@ -98,6 +95,8 @@ export function detectMultiStep(input: string): boolean {
   const multiStepIndicators = [
     /\band then\b/i,
     /\bafter that\b/i,
+    /\band also\b/i,
+    /\bplus\b/i,
     /\bnext\b/i,
     /\bfind\b.*\bthen\b/i,
     /\bsearch\b.*\bthen\b/i,

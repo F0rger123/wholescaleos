@@ -144,14 +144,13 @@ const applyPersonality = (
     return `${base} ${pick(cursed, 'cursing')}`;
   }
 
-  // Default — add a light conversational ending
-  const defaultEndings = [
-    '',
-    ' Anything else I can help with?',
-    ' What would you like to do next?',
-    ' Let me know if you need more.',
-    '',
-  ];
+  // Handle style preference (concise)
+  const stylePref = getMemory().learnedFacts?.style_preference;
+  if (stylePref === 'concise' && base.length > 50) {
+    // If user prefers concise and message is long, just return base
+    return base;
+  }
+
   return `${base}${pick(defaultEndings, 'default')}`;
 };
 
@@ -233,7 +232,24 @@ export function generateResponse(
     }
   }
   else if (intentName === 'user_fact' && !result?.message) {
-    message = "I've noted that down.";
+    const factType = result?.type || 'fact';
+    if (factType === 'name') {
+      message = `Got it! I'll call you ${result.value} from now on.`;
+    } else {
+      message = "I've noted that down for you.";
+    }
+  }
+
+  // Personalize with Name if known
+  const userName = getLearnedFact('name');
+  if (userName && !result?.clean && Math.random() > 0.4 && intentName !== 'greeting') {
+    const nameWrappers = [
+      `${userName}, `,
+      `Got it, ${userName}. `,
+      `Sure thing, ${userName}. `,
+      `Alright ${userName}, `,
+    ];
+    prefix += pick(nameWrappers, 'name_wrapper');
   }
 
   // Standardize the message — remove stale ✅ prefix (executor adds its own)
@@ -290,4 +306,73 @@ export function generateUnknownResponse(input: string, suggestion?: string): str
   ];
 
   return `${prefix}${pick(fallbacks, 'unknown')}`;
+}
+
+export function mergeResponses(
+  results: { intent: Intent; result: any; segment: string }[],
+  personality: string,
+  aiName: string
+): string {
+  if (results.length === 0) return `🤖 ${aiName}: I'm not sure how to help with that.`;
+  if (results.length === 1) {
+    return generateResponse(results[0].intent, results[0].result, results[0].segment);
+  }
+
+  // Specialized merging for Lead Info + Proactive Suggestion
+  const leadInfoIdx = results.findIndex(r => r.intent.name === 'lead_context_query' || r.intent.name === 'get_lead_info');
+  const suggestionIdx = results.findIndex(r => r.intent.name === 'proactive_suggestion');
+
+  if (leadInfoIdx !== -1 && suggestionIdx !== -1) {
+    const info = results[leadInfoIdx];
+    const suggestion = results[suggestionIdx];
+
+    // Get lead name to deduplicate
+    const leadName = info.intent.params?.name || info.result.name;
+    let suggestionMsg = suggestion.result.message;
+
+    // If suggestion starts with the lead name in bold, make it more natural
+    if (leadName) {
+      const boldNamePattern = new RegExp(`\\*\\*${leadName}\\*\\*`, 'gi');
+      if (boldNamePattern.test(suggestionMsg)) {
+        suggestionMsg = suggestionMsg.replace(boldNamePattern, 'they').trim();
+        // Capitalize first letter if it was at the start
+        suggestionMsg = suggestionMsg.charAt(0).toUpperCase() + suggestionMsg.slice(1);
+      }
+    }
+
+    let mergedMessage = info.result.message.trim();
+    if (!mergedMessage.endsWith('.') && !mergedMessage.endsWith('!') && !mergedMessage.endsWith('?')) {
+      mergedMessage += '.';
+    }
+    
+    // Add a natural transition
+    const transition = suggestionMsg.toLowerCase().includes('recommend') || suggestionMsg.toLowerCase().includes('should')
+      ? ` Based on that, `
+      : ` Also, `;
+    
+    mergedMessage += transition + suggestionMsg;
+
+    // Apply personality once at the end
+    const prefix = `🤖 ${aiName}: `;
+    const finalMessage = applyPersonality(mergedMessage.replace('✅ ', ''), personality, 'compound_intent', '');
+    return `${prefix}${finalMessage}`;
+  }
+
+  // Default merging: Join with transitions
+  let combinedMessage = "";
+  results.forEach((r, i) => {
+    let msg = r.result.message || "";
+    msg = msg.replace('✅ ', '').trim();
+    
+    if (i > 0) {
+      const transitions = [" Additionally, ", " Also, ", " Separately, ", " Furthermore, "];
+      combinedMessage += transitions[i % transitions.length];
+    }
+    
+    combinedMessage += msg;
+  });
+
+  const prefix = `🤖 ${aiName}: `;
+  const finalMessage = applyPersonality(combinedMessage, personality, 'compound_intent', '');
+  return `${prefix}${finalMessage}`;
 }
