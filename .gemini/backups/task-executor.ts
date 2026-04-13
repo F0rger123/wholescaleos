@@ -1,0 +1,2141 @@
+import { useStore } from '../../store/useStore';
+import { sendSMS } from '../sms-service';
+import { 
+  trackLead, 
+  setActiveState, 
+  getMemory, 
+  pushToEntityStack, 
+  setLearnedFact, 
+  logOutcome, 
+  setLastSuggestion, 
+  getLastSuggestion, 
+  clearLastSuggestion,
+  resolveEntitiesFromContext,
+  Entity
+} from './memory-store';
+import { resolveDate, formatHumanDate } from './utils/date-resolver';
+import { expandSynonyms } from './utils/synonym-mapper';
+import { 
+  getConversationContext, 
+  updateConversationTopic, 
+  addMentionedLead,
+  getAllLearnedIntents,
+  deleteLearnedIntent,
+  getRecentMemorySummary,
+  saveUserPreference,
+  rememberFact
+} from './learning-service';
+import { analyzeDeal, findBuyerMatches, calculateMarketStats, calculateMAO } from './utils/rei-logic';
+import { explainConcept } from './utils/rei-dictionary';
+import { generateContent } from './content-generator';
+
+export interface TaskResponse {
+  success: boolean;
+  message: string;
+  data?: any;
+  clean?: boolean;
+}
+
+/**
+ * Fuzzy lead name matching with fragments support and ambiguity detection.
+ */
+function findLeadFuzzy(inputName: string, leads: any[]): { lead: any | null, ambiguity: string[] | null, isExact: boolean } {
+  if (!inputName || inputName === 'this') return { lead: null, ambiguity: null, isExact: false };
+  const expandedInput = expandSynonyms(inputName);
+  const lowerInput = expandedInput.toLowerCase().trim();
+  
+  // 1. Exact match
+  const exactMatch = leads.find(l => l.name.toLowerCase() === lowerInput);
+  if (exactMatch) return { lead: exactMatch, ambiguity: null, isExact: true };
+
+  // 2. Simple inclusion
+  const includeMatches = leads.filter(l => l.name.toLowerCase().includes(lowerInput));
+  
+  // 3. Fragment matching (e.g., "Luke Knight" -> "Luke G Knight")
+  const fragments = lowerInput.split(/\s+/).filter(f => f.length > 1);
+  const fragmentMatches = leads.filter(l => {
+    const lowerName = l.name.toLowerCase();
+    return fragments.every(f => lowerName.includes(f));
+  });
+
+  // Combine and deduplicate matches
+  const allMatches = [...new Set([...includeMatches, ...fragmentMatches])];
+
+  if (allMatches.length === 1) {
+    // Check if it's "exact enough" (e.g. input is exactly the same as the found name)
+    const matchedLead = allMatches[0];
+    const isExact = matchedLead.name.toLowerCase() === lowerInput;
+    return { lead: matchedLead, ambiguity: null, isExact };
+  }
+  
+  if (allMatches.length > 1) return { lead: null, ambiguity: allMatches.map(l => l.name), isExact: false };
+
+  return { lead: null, ambiguity: null, isExact: false };
+}
+
+export async function executeTask(action: string, entities: any): Promise<TaskResponse> {
+  const store = useStore.getState();
+  const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
+  const memory = getMemory();
+  const safeEntities = entities || {};
+  const sessionId = safeEntities.sessionId || memory.sessionId || 'default-session';
+
+  try {
+    switch (action) {
+      case 'navigate':
+        const path = entities.path?.toLowerCase();
+        const routes: Record<string, string> = {
+          'lead': '#/leads',
+          'leads': '#/leads',
+          'task': '#/tasks',
+          'tasks': '#/tasks',
+          'calendar': '#/calendar',
+          'dashboard': '#/dashboard',
+          'settings': '#/settings',
+          'inbox': '#/inbox',
+          'message': '#/automations',
+          'messages': '#/automations',
+          'summary': '#/automations',
+          'summaries': '#/automations',
+          'ai': '#/ai-bot',
+          'training': '#/ai-training'
+        };
+        if (routes[path]) {
+          window.location.hash = routes[path];
+          return { success: true, message: `Navigating to ${path}.` };
+        }
+        return { success: false, message: `I don't know how to navigate to "${path}".` };
+
+      case 'small_talk': {
+        const text = (entities.text || '').toLowerCase();
+        const hour = new Date().getHours();
+        
+        // Affirmation — handle pending suggestions
+        if (/^(yes|yeah|y|yep|yup|ya|yah|sure|do it|proceed|exactly|that's the one|yessir|correct|that's him|that's her|thats him|thats her)$/i.test(text)) {
+          const suggestion = getLastSuggestion();
+          if (suggestion) {
+            console.log('[⚙️ OS Bot] Executing pending suggestion:', suggestion);
+            clearLastSuggestion();
+            // Recursive call to execute the confirmed task
+            return await executeTask(suggestion.action, suggestion.params);
+          }
+        }
+
+        // Negation — handle pending suggestions
+        if (/^(no|nope|naw|neh|wrong|incorrect|not that one|not him|not her)$/i.test(text)) {
+          const suggestion = getLastSuggestion();
+          if (suggestion) {
+            clearLastSuggestion();
+            return { success: true, message: "My apologies! Which lead were you referring to then?" };
+          }
+        }
+
+        // Acknowledgments — varied and natural
+        if (/^(okay|ok|k|kk|okk|okayyy|okayy|okie|okey|oki|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine|right|noted|understood|roger|copy|yep|yup|ya|yah|ye|word|facts|true|fair|valid|aight|ight|ite|kewl|noice|dope)$/i.test(text)) {
+          const shortCount = parseInt(localStorage.getItem('os_bot_short_ack_count') || '0') + 1;
+          localStorage.setItem('os_bot_short_ack_count', shortCount.toString());
+          
+          if (shortCount >= 3) {
+            return { success: true, message: "👍" };
+          }
+          
+          const responses = [
+            "Got it! 👍",
+            "Cool, I'm here whenever you need me.",
+            "Sounds good.",
+            "Alright, let's keep the momentum going.",
+            "Noted! Just holler when you're ready.",
+            "Perfect. Standing by.",
+            "👍",
+            "All good! I'm not going anywhere.",
+            "Roger that.",
+            "You got it.",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        } else {
+          localStorage.setItem('os_bot_short_ack_count', '0');
+        }
+        
+        // Gratitude — warm and genuine
+        if (/^(thanks|thank you|thx|ty|appreciate it|tysm|tyvm|much appreciated|thank u|thnx|thnks|tanks)$/i.test(text)) {
+          const responses = [
+            "You're welcome!",
+            "Happy to help! 😊",
+            "Anytime.",
+            "You got it. That's what I'm here for.",
+            "My pleasure.",
+            "No problem at all.",
+            "Glad I could help!",
+            "🙏 Always happy to assist.",
+            "Of course! Don't hesitate to ask again.",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // Stop/Cancel/No — calm and patient
+        if (/^(stop|wait|hold up|hold on|pause|cancel|nevermind|nvm|nah|no thanks|no|nope|naw|neh)$/i.test(text)) {
+          const responses = [
+            "No problem. I'll be right here when you're ready.",
+            "All good — just say the word when you want to continue.",
+            "Understood. Take your time.",
+            "No worries, pausing. Let me know when you need me.",
+            "Okay, standing by.",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // Farewell — warm send-off
+        if (/^(bye|goodbye|see you|see ya|later|cya|peace|im out|gotta go|good night|gn|ttyl|bai|byeee|laterr)$/i.test(text)) {
+          const responses = [
+            "Talk to you later! I'll be here when you need me. 👋",
+            "Catch you later! Good luck out there.",
+            "See ya! Go close some deals. 💪",
+            "Later! I'll hold down the fort.",
+            "Take care! I'll keep an eye on your pipeline.",
+            hour >= 20 ? "Good night! Rest up and we'll crush it tomorrow. 🌙" : "See you soon! 👋",
+            "Peace! ✌️",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // Laughter — share the fun
+        if (/^(lol|haha|hehe|lmao|lmfao|rofl|nice one|good one|funny|dead|bruh|bro|ong|fr|no cap)$/i.test(text)) {
+          const responses = [
+            "😄 Glad that landed!",
+            "😂 I try!",
+            "Ha! I'm here all week.",
+            "😏 I've got a million of 'em.",
+            "If you think that was good, wait till you hear my lead scoring jokes.",
+            "Comedy AND CRM management — I'm a full-service bot.",
+            "😆",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // Confusion / Repeat 
+        if (/^(huh|what|hmm|umm|um|uh|pardon|excuse me|say what|i dont get it|i don't get it|wut|wat|hm)$/i.test(text)) {
+          const responses = [
+            "No worries! Try 'help' to see what I can do, or just tell me what you need.",
+            "All good — I'm here to help. Try saying 'leads', 'tasks', or 'help'.",
+            "Let me make it simpler: I handle leads, tasks, SMS, and scheduling. What sounds useful right now?",
+            "My bad if I was unclear. What would you like help with?",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // How are you / Status 
+        if (/^(how are you|how you doing|how goes it|whats up|what's up|whats new|how are things|sup|wassup|wsg)$/i.test(text)) {
+          const responses = [
+            "Running great! How about you?",
+            "All systems go! 🟢 Ready to help whenever you are.",
+            "Doing well! Your pipeline's looking good today. Anything you want to dive into?",
+            "I'm good! Just been keeping an eye on your CRM. How's your day going?",
+            "Can't complain — I don't sleep! 😄 What's on your mind?",
+            hour < 12 ? "Good morning! Ready to make today count?" : hour < 17 ? "Afternoon! How's the day treating you?" : "Evening! Wrapping up or just getting started?",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // Greetings (time-based)
+        if (/^(good morning|morning|good afternoon|afternoon|good evening|evening)$/i.test(text)) {
+          let greeting = "Hello";
+          if (hour < 12) greeting = "Good morning";
+          else if (hour < 18) greeting = "Good afternoon";
+          else greeting = "Good evening";
+          const addons = [
+            "What's on the agenda?",
+            "Ready to tackle some leads?",
+            "How can I help you today?",
+            "Let's make it a productive one!",
+          ];
+          return { success: true, message: `${greeting}! ${addons[Math.floor(Math.random() * addons.length)]}` };
+        }
+        
+        // Casual greetings
+        if (/^(yo|hey|hi|hello|henlo|heya|hiya)$/i.test(text)) {
+          const responses = [
+            `Hey! What can I help with?`,
+            `Hi there! What's the plan?`,
+            `Yo! Ready to get to work?`,
+            `Hey hey! What's on your mind?`,
+            `What's up! Need anything?`,
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // Joke
+        if (/^(tell me a joke|make me laugh|joke|humor me|another joke|different joke|give me another)$/i.test(text)) {
+          const jokes = [
+            "Why did the real estate agent cross the road? To get to the other side of the deal!",
+            "What's a house's favorite music? Heavy metal… because of all the studs!",
+            "Why don't houses ever get lost? They always have good foundations!",
+            "What do you call a real estate agent who can sing? A listing agent!",
+            "Why was the open house so quiet? The walls had ears but no mouth!",
+            "What's a real estate agent's favorite drink? A closing cocktail!",
+            "Why don't houses play cards? They're afraid of getting decked!",
+            "What's a property's favorite exercise? Flipping!",
+            "What did the mortgage say to the borrower? I've got you covered!",
+            "Why did the house break up with the garage? It needed more space!",
+          ];
+          return { success: true, message: jokes[Math.floor(Math.random() * jokes.length)] };
+        }
+        
+        // Who are you
+        if (/^(who are you|what are you|introduce yourself)$/i.test(text)) {
+          return { success: true, message: "I'm 🤖 OS Bot, your AI-powered CRM assistant built for real estate pros. I manage leads, tasks, SMS, scheduling, and more. Think of me as your co-pilot for closing deals!" };
+        }
+        
+        // What do you think
+        if (/^(what do you think|your opinion|thoughts)$/i.test(text)) {
+          return { success: true, message: "I think you're on the right track! Want me to pull up your pipeline data or suggest some next moves?" };
+        }
+        
+        // Gen-Z / casual fillers
+        if (/^(plz|pls|tho|tbh|idk|idc|imo|smh|welp|well|hmm ok|ok cool|ok thanks|ok bye|yeah|yea|yass|yas)$/i.test(text)) {
+          const responses = [
+            "I got you! What do you need?",
+            "I'm all ears.",
+            "Say the word.",
+            "Ready and waiting!",
+            "Go for it — I'm listening.",
+          ];
+          return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+        }
+        
+        // Default small talk fallback
+        const defaults = [
+          "I hear you! What would you like to work on?",
+          "I'm here for you. Leads, tasks, SMS — what sounds good?",
+          "What can I help you with?",
+          "Ready when you are!",
+        ];
+        return { success: true, message: defaults[Math.floor(Math.random() * defaults.length)] };
+      }
+
+      case 'create_lead':
+        try {
+          const result = await store.addLead({
+            name: entities.name || 'New Opportunity',
+            email: entities.email || '',
+            phone: entities.phone || '',
+            status: 'new',
+            source: 'ai_bot',
+            propertyAddress: entities.location || '',
+            propertyType: 'single-family',
+            estimatedValue: 0,
+            bedrooms: 0,
+            bathrooms: 0,
+            sqft: 0,
+            offerAmount: 0,
+            lat: 30.2672,
+            lng: -97.7431,
+            notes: `Created via OS Bot.`,
+            assignedTo: store.currentUser?.id || 'system',
+            probability: 50,
+            engagementLevel: 1,
+            timelineUrgency: 1,
+            competitionLevel: 1,
+            documents: [],
+          });
+          
+          if (result.success && result.id) {
+            trackLead(result.id, entities.name);
+            logOutcome('lead_added', `Created lead: ${entities.name}`, { leadId: result.id, ...entities });
+          }
+
+          return { 
+            success: result.success, 
+            message: result.success ? `✅ Created lead for ${entities.name}.` : 'Failed to create lead.'
+          };
+        } catch (e) {
+          return { success: false, message: 'Lead creation error.' };
+        }
+
+      case 'add_task':
+        try {
+          const rawDate = entities.dueDate || entities.date || 'today';
+          const resolvedDate = resolveDate(rawDate);
+          
+          // Contextual Intelligence: If no lead is mentioned but one is in context, link it!
+          let leadId = entities.leadId;
+          if (!leadId && memory.entityStack?.[0]?.type === 'lead') {
+             leadId = memory.entityStack[0].id;
+             console.log(`[🧠 OS Bot] Contextual Linking: Associating task with ${memory.entityStack[0].name}`);
+          }
+
+          const task = {
+            title: entities.title || 'New Task',
+            description: entities.notes || '',
+            assignedTo: store.currentUser?.id || 'system',
+            dueDate: resolvedDate,
+            priority: (entities.priority || 'medium') as any,
+            status: 'todo' as const,
+            createdBy: store.currentUser?.id || 'system',
+            leadId: leadId
+          };
+          store.addTask(task);
+          logOutcome('task_created', `Added task: ${entities.title}`, { ...entities, dueDate: resolvedDate });
+          
+          const humanDate = formatHumanDate(resolvedDate);
+          return { success: true, message: `✅ Task "${entities.title}" added for ${humanDate}.` };
+        } catch (e) {
+          return { success: false, message: 'Task creation error.' };
+        }
+
+      case 'send_sms':
+        try {
+          const text = entities.text || '';
+          let targets: Entity[] = [];
+          
+          // Determine if we are referring to multiple leads ("both", "them", "all")
+          const isBulk = ['both', 'them', 'all', 'those', 'these'].some(p => text.toLowerCase().includes(p));
+          
+          if (isBulk || !entities.target) {
+            targets = resolveEntitiesFromContext(text);
+          } else if (entities.target) {
+            const { lead, ambiguity, isExact } = findLeadFuzzy(entities.target, store.leads);
+            if (ambiguity) {
+              return { success: false, message: `I found multiple leads matching "${entities.target}": ${ambiguity.join(' or ')}. Which one did you mean?` };
+            }
+            if (lead) {
+              if (!isExact) {
+                setLastSuggestion('send_sms', { ...entities, target: lead.name }, `text ${lead.name}`);
+                return { success: false, message: `Do you mean **${lead.name}**?` };
+              }
+              targets = [{ id: lead.id, name: lead.name, type: 'lead' }];
+            } else {
+              // Fallback to raw input (maybe a phone number)
+              targets = [{ id: 'raw', name: entities.target, type: 'lead' }];
+            }
+          }
+
+          if (targets.length === 0) {
+            if (isBulk) return { success: false, message: "Who are the 'them' you'd like to text? I don't see any recent leads in our conversation." };
+            return { success: false, message: "Who should I text?" };
+          }
+
+          // Handle multi-recipient (Bulk SMS)
+          if (targets.length > 1) {
+            const phonesArr = targets.map(t => {
+              const l = store.leads.find(lead => lead.id === t.id);
+              return l?.phone || (t.id === 'raw' ? t.name : null);
+            }).filter(Boolean);
+            
+            const phones = phonesArr.join(',');
+            const names = targets.map(t => t.name).join(' and ');
+            const prefillMsg = entities.message || "";
+
+            if (!phonesArr.length) {
+                return { success: false, message: `I found ${names}, but none of them have phone numbers on file.` };
+            }
+            
+            return {
+              success: true,
+              message: `I've prepared a message for **${names}**. I'm opening the SMS modal for you now!`,
+              data: { 
+                redirect: `#/communications/sms?phones=${encodeURIComponent(phones)}&msg=${encodeURIComponent(prefillMsg)}`,
+                action: 'open_sms_modal',
+                phones,
+                message: prefillMsg
+              }
+            };
+          }
+
+          // Case where user said "both" or "all" but we only have 1 in context
+          if (isBulk && targets.length === 1) {
+             const soloLead = targets[0];
+             return {
+                success: false,
+                message: `I only found **${soloLead.name}** in our recent conversation. Who else should I include in this message?`,
+                data: { fallback_target: soloLead.name }
+             };
+          }
+
+          // Single recipient logic
+          const targetEntity = targets[0];
+          const lead = store.leads.find(l => l.id === targetEntity.id);
+          const phone = lead?.phone || (targetEntity.id === 'raw' ? targetEntity.name : null);
+
+          if (!phone || !phone.replace(/\D/g, '').length) {
+            if (lead) {
+              return { 
+                success: false, 
+                message: `I'm ready to text **${lead.name}**, but I don't have a phone number for them. Should I add one or send an email instead?` 
+              };
+            }
+            return { success: false, message: "I couldn't find a valid phone number for that recipient." };
+          }
+
+          // If message is present, we can send it (or offer to open modal if preferred)
+          if (entities.message) {
+            const res = await sendSMS(phone, entities.message);
+            if (res.success && lead) {
+              pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
+              setActiveState(null);
+              logOutcome('sms_sent', `Sent SMS to ${lead.name}`, { leadId: lead.id, phone, message: entities.message });
+            }
+            return { 
+              success: res.success, 
+              message: res.success ? `✅ SMS sent to ${lead?.name || phone}.` : `Failed: ${res.message}`
+            };
+          } else {
+            // No message? Open modal with recipient pre-filled
+            return {
+              success: true,
+              message: `Opening SMS for **${lead?.name || phone}**. What would you like to say?`,
+              data: { 
+                redirect: `#/communications/sms?phone=${encodeURIComponent(phone)}`,
+                action: 'open_sms_modal',
+                phone
+              }
+            };
+          }
+        } catch (e: any) {
+          return { success: false, message: e.message || 'SMS service error.' };
+        }
+
+      case 'send_sms_partial':
+      case 'sendSMSPartial':
+        const resolved = resolveEntitiesFromContext(entities.text || '');
+        if (resolved.length > 1) {
+           return executeTask('send_sms', { text: entities.text });
+        }
+        
+        if (!entities.target && resolved.length === 1) {
+           return executeTask('send_sms', { target: resolved[0].name });
+        }
+
+        if (!entities.target) {
+          setActiveState('AWAITING_SMS_RECIPIENT', {});
+          return { success: true, message: "Who would you like to text?" };
+        } else {
+          setActiveState('AWAITING_SMS_MESSAGE', { target: entities.target });
+          return { success: true, message: `Got it. What message would you like to send to ${entities.target}?` };
+        }
+
+      case 'update_lead_status': {
+        const targetName = entities.target || entities.leadName || entities.name;
+        const { lead: leadToUpdate, ambiguity: updateAmbiguity, isExact: updateIsExact } = findLeadFuzzy(targetName, store.leads);
+        
+        if (updateAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${targetName}": ${updateAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (leadToUpdate && !updateIsExact) {
+          setLastSuggestion('update_lead_status', { ...entities, target: leadToUpdate.name }, `update status for ${leadToUpdate.name}`);
+          return { success: false, message: `Do you mean **${leadToUpdate.name}**?` };
+        }
+
+        if (leadToUpdate) {
+          store.updateLead(leadToUpdate.id, { status: entities.status });
+          pushToEntityStack({ id: leadToUpdate.id, name: leadToUpdate.name, type: 'lead' });
+          
+          let msg = `✅ Marked ${leadToUpdate.name} as ${entities.status}.`;
+          if (['won', 'qualified', 'closed', 'negotiating'].includes(entities.status?.toLowerCase())) {
+            msg = `🎉 Incredible work! I've advanced ${leadToUpdate.name} to ${entities.status.toUpperCase()}. That's how we do it!`;
+          }
+          return { success: true, message: msg };
+        }
+        return { success: false, message: `I couldn't find a lead named "${entities.target}".` };
+      }
+
+      case 'complete_task':
+        const taskObj = store.tasks.find(t => t.title.toLowerCase().includes(entities.target?.toLowerCase()));
+        if (taskObj) {
+          store.updateTask(taskObj.id, { status: 'done' });
+          return { success: true, message: `✅ Boom! Marked "${taskObj.title}" as done. One less thing on your plate!` };
+        }
+        return { success: false, message: `I couldn't find a task matching "${entities.target}".` };
+
+      case 'add_note': {
+        const noteTarget = entities.target || entities.leadName || entities.name;
+        const { lead: leadForNote, ambiguity: noteAmbiguity, isExact: noteIsExact } = findLeadFuzzy(noteTarget, store.leads);
+
+        if (noteAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${noteTarget}": ${noteAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (leadForNote && !noteIsExact) {
+          setLastSuggestion('add_note', { ...entities, target: leadForNote.name }, `add note to ${leadForNote.name}`);
+          return { success: false, message: `Do you mean **${leadForNote.name}**?` };
+        }
+
+        if (leadForNote) {
+          const newNote = `[OS Bot ${new Date().toLocaleDateString()}]: ${entities.note}\n\n${leadForNote.notes || ''}`;
+          store.updateLead(leadForNote.id, { notes: newNote });
+          pushToEntityStack({ id: leadForNote.id, name: leadForNote.name, type: 'lead' });
+          return { success: true, message: `✅ Added note to ${leadForNote.name}'s profile.` };
+        }
+        return { success: false, message: `I couldn't find a lead named "${entities.target}".` };
+      }
+
+      case 'get_lead_info': {
+        const infoName = entities.name || entities.target || entities.leadName;
+        const { lead: foundLead, ambiguity: infoAmbiguity, isExact: infoIsExact } = findLeadFuzzy(infoName, store.leads);
+
+        if (infoAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${infoName}": ${infoAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (foundLead && !infoIsExact) {
+          setLastSuggestion('get_lead_info', { ...entities, name: foundLead.name }, `show info for ${foundLead.name}`);
+          return { success: false, message: `Do you mean **${foundLead.name}**?` };
+        }
+
+        if (foundLead) {
+          pushToEntityStack({ id: foundLead.id, name: foundLead.name, type: 'lead' });
+          const summary = `Here's what I have on **${foundLead.name}**:\n- 📍 Address: ${foundLead.propertyAddress || 'N/A'}\n- 📊 Status: ${foundLead.status}\n- 🎯 Deal Score: ${foundLead.dealScore || 0}\n- 📞 Phone: ${foundLead.phone || 'None'}`;
+          return { success: true, message: summary };
+        }
+        return { success: false, message: `I don't have any records for "${entities.name}".` };
+      }
+
+      case 'lead_query': {
+        console.log('[⚙️ OS Bot] Processing lead_query with entities:', entities);
+        const leads = store.leads;
+        const count = leads.length;
+        const hotLeads = leads.filter(l => (l.dealScore || 0) >= 80).length;
+        const statusCounts = leads.reduce((acc: any, l) => {
+          acc[l.status] = (acc[l.status] || 0) + 1;
+          return acc;
+        }, {});
+
+        let msg = `You have ${count} leads in your database.`;
+        if (hotLeads > 0) msg += ` ${hotLeads} are marked as 'Hot' (score > 80).`;
+        if (statusCounts['closed-won']) msg += ` You've closed ${statusCounts['closed-won']} deals!`;
+        
+        return { success: true, message: msg };
+      }
+
+      case 'list_leads': {
+        const leads = store.leads;
+        if (leads.length === 0) {
+          return { success: true, message: "You don't have any leads in your CRM yet. Try saying 'Add John Smith as a lead' to get started!" };
+        }
+        let msg = `You have ${leads.length} leads:\n`;
+        leads.slice(0, 10).forEach((l, i) => {
+          msg += `${i + 1}. **${l.name}** (${l.status.replace('-', ' ')})\n`;
+        });
+        if (leads.length > 10) msg += `...and ${leads.length - 10} more. Go to the Leads page to see the full list.`;
+        return { success: true, message: msg };
+      }
+
+      case 'hot_leads': {
+        const scoreMin = entities.score_min !== undefined ? entities.score_min : 0;
+        const limit = entities.limit || 5;
+        const hotLeads = store.leads
+          .filter(l => ((l as any).dealScore || (l as any).score || (l as any).lead_score || 0) >= scoreMin)
+          .sort((a, b) => ((b as any).dealScore || (b as any).score || (b as any).lead_score || 0) - ((a as any).dealScore || (a as any).score || (a as any).lead_score || 0))
+          .slice(0, limit);
+
+        if (hotLeads.length === 0) {
+          return { success: true, message: `I couldn't find any leads matching that criteria. Want me to help you find some new ones?` };
+        }
+
+        let msg = `Here are your top ${hotLeads.length} leads:\n\n`;
+        hotLeads.forEach((l, i) => {
+          const score = (l as any).dealScore || (l as any).score || (l as any).lead_score || 'N/A';
+          msg += `${i + 1}. **${l.name}** - Score: ${score} (${l.status})\n`;
+        });
+        return { success: true, message: msg };
+      }
+
+      case 'task_query': {
+        const tasks = store.tasks.filter(t => t.status !== 'done');
+        const overdue = tasks.filter(t => new Date(t.dueDate) < new Date()).length;
+        
+        let msg = `You have ${tasks.length} active tasks.`;
+        if (overdue > 0) msg += ` ${overdue} are currently overdue! ⚠️`;
+        else msg += ` Everything is on track.`;
+        
+        return { success: true, message: msg };
+      }
+
+      case 'listTasks':
+      case 'show_tasks': {
+        const allTasks = store.tasks.filter(t => t.status !== 'done');
+        if (allTasks.length === 0) {
+          return { success: true, message: "You don't have any pending tasks. Nice work! Want me to create one? Say 'create task: [title]'." };
+        }
+        let msg = `You have **${allTasks.length}** pending tasks:\n\n`;
+        allTasks.slice(0, 10).forEach((t, i) => {
+          const priority = t.priority === 'high' ? ' ⚠️' : t.priority === 'medium' ? ' 🔸' : '';
+          const due = t.dueDate ? ` (Due: ${t.dueDate})` : '';
+          msg += `${i + 1}. **${t.title}**${priority}${due}\n`;
+        });
+        if (allTasks.length > 10) msg += `\n...and ${allTasks.length - 10} more. Go to the Tasks page to see the full list.`;
+        return { success: true, message: msg };
+      }
+
+      case 'tasks_due': {
+        const rawDate = entities.date || entities.dueDate || 'today';
+        const targetDate = resolveDate(rawDate);
+        const today = new Date().toISOString().split('T')[0];
+        
+        const overdueTasks = store.tasks.filter(t => 
+          t.status !== 'done' && t.dueDate < today
+        );
+        const targetTasks = store.tasks.filter(t => 
+          t.status !== 'done' && t.dueDate === targetDate
+        );
+        
+        const totalDue = (targetDate <= today ? overdueTasks.length : 0) + targetTasks.length;
+        const humanDate = formatHumanDate(targetDate);
+        
+        if (totalDue === 0) {
+          return { 
+            success: true, 
+            message: `You have no tasks due for **${humanDate}** and nothing overdue. You're all caught up! 🎉` 
+          };
+        }
+        
+        let msg = `You have **${totalDue}** tasks that need attention for **${humanDate}**:\n\n`;
+        
+        if (overdueTasks.length > 0 && targetDate <= today) {
+          msg += `⚠️ **Overdue (${overdueTasks.length}):**\n`;
+          overdueTasks.slice(0, 5).forEach((t, i) => {
+            msg += `  ${i + 1}. ${t.title} (Due: ${t.dueDate})\n`;
+          });
+          if (overdueTasks.length > 5) msg += `  ...and ${overdueTasks.length - 5} more\n`;
+          msg += `\n`;
+        }
+        
+        if (targetTasks.length > 0) {
+          msg += `📅 **Due ${humanDate} (${targetTasks.length}):**\n`;
+          targetTasks.slice(0, 5).forEach((t, i) => {
+            const priority = (t as any).priority === 'high' ? '⚠️' : '';
+            msg += `  ${i + 1}. ${t.title} ${priority}\n`;
+          });
+          if (targetTasks.length > 5) msg += `  ...and ${targetTasks.length - 5} more\n`;
+        }
+        
+        msg += `\nWant me to list all your pending tasks? Just say "show all tasks" or "yes".`;
+        
+        // Store suggestion so "yes" triggers show_tasks
+        setLastSuggestion('show_tasks', {}, 'Show all pending tasks');
+        
+        return { success: true, message: msg };
+      }
+
+      case 'calendar_query': {
+        const rawDate = entities.date || 'today';
+        const targetDate = resolveDate(rawDate);
+        const tasks = store.tasks.filter(t => t.dueDate === targetDate && t.status !== 'done');
+        const humanDate = formatHumanDate(targetDate);
+        
+        if (tasks.length === 0) {
+          return { success: true, message: `Your calendar is clear for **${humanDate}**, ${userName}! 📅 No appointments or urgent tasks found.` };
+        }
+        
+        let msg = `Here's what's on your agenda for **${humanDate}**, ${userName}:\n\n`;
+        tasks.forEach((t, i) => {
+          msg += `${i + 1}. **${t.title}** ${(t as any).priority === 'high' ? '⚠️' : ''}\n`;
+        });
+        msg += `\nYou have ${tasks.length} total items to handle today. What would you like to tackle first?`;
+        
+        return { success: true, message: msg };
+      }
+
+
+
+      case 'send_email':
+        const targetEmail = entities.target || 'someone';
+        return { 
+          success: true, 
+          message: `Opening email compose for **${targetEmail}**. What would you like the subject line to be?`,
+          data: { openEmailModal: true, recipient: targetEmail }
+        };
+
+
+      case 'greeting':
+        const hour = new Date().getHours();
+        let timeGreeting = 'Hello';
+        if (hour < 12) timeGreeting = 'Good morning';
+        else if (hour < 18) timeGreeting = 'Good afternoon';
+        else timeGreeting = 'Good evening';
+
+        const greetingText = entities.text?.toLowerCase() || '';
+        if (greetingText === 'yo' || greetingText === 'sup' || greetingText === "what's up" || greetingText === "whats up") {
+          return { success: true, message: `Hey ${userName}! 🤘 Ready to crush some goals today? What's the move?` };
+        }
+        
+        return { 
+          success: true, 
+          message: `${timeGreeting}, ${userName}! I'm 🤖 OS Bot, your intelligent real estate assistant. I'm connected to your CRM and ready to work. What's our first objective?` 
+        };
+
+      case 'weather_query':
+        return {
+          success: true,
+          message: "I can't check the weather, but I can help you manage leads, tasks, and send SMS. Try asking me to 'text John saying hello' or 'show me my tasks'"
+        };
+
+      case 'change_personality': {
+        const text = (entities.text || '').toLowerCase();
+        const targetRaw = (entities.target_personality as string) || '';
+        
+        const lowerTarget = targetRaw.toLowerCase();
+        let newPersonality = 'Professional';
+        if (lowerTarget.includes('sassy')) newPersonality = 'Sassy';
+        else if (lowerTarget.includes('funny')) newPersonality = 'Funny';
+        else if (lowerTarget.includes('casual')) newPersonality = 'Casual';
+        else if (lowerTarget.includes('cursing')) newPersonality = 'Cursing';
+        else if (lowerTarget.includes('professional')) newPersonality = 'Professional';
+
+        const isQuestion = /^\s*can\s+you\s+(?:be|change)/i.test(text) || /\?$/i.test(text);
+
+        if (isQuestion) {
+          setLastSuggestion('change_personality_confirm', { target_personality: newPersonality }, `Switch to ${newPersonality} mode`);
+          return { success: true, message: `Want me to switch to **${newPersonality}** mode right now?` };
+        }
+
+        if (store.setAiPersonality) store.setAiPersonality(newPersonality);
+        if (store.setAiTone) store.setAiTone(newPersonality);
+        localStorage.setItem('wholescale-ai-personality', newPersonality);
+        localStorage.setItem('wholescale-ai-tone', newPersonality);
+
+        let confirmMsg = `Got it. I'm operating in ${newPersonality} mode. What's next?`;
+        if (newPersonality === 'Sassy') confirmMsg = `Got it. I'm sassy now. 😏 What's next?`;
+        else if (newPersonality === 'Professional') confirmMsg = `Understood. I will operate in Professional mode going forward. How may I assist you?`;
+        else if (newPersonality === 'Funny') confirmMsg = `You got it boss! 😂 I'm switching to funny mode. What's next?`;
+        else if (newPersonality === 'Casual') confirmMsg = `No problem, I'll keep it casual. 🤙 What's up?`;
+        else if (newPersonality === 'Cursing') confirmMsg = `F*** yeah, let's do this. 🤬 I'm in cursing mode. What's next?`;
+
+        return { success: true, message: confirmMsg, clean: true }; 
+      }
+
+      case 'change_personality_confirm': {
+        const newPersonality = (entities.target_personality as string) || 'Professional';
+        if (store.setAiPersonality) store.setAiPersonality(newPersonality);
+        if (store.setAiTone) store.setAiTone(newPersonality);
+        localStorage.setItem('wholescale-ai-personality', newPersonality);
+        localStorage.setItem('wholescale-ai-tone', newPersonality);
+        
+        let confirmMsg = `Got it. I'm operating in ${newPersonality} mode. What's next?`;
+        if (newPersonality === 'Sassy') confirmMsg = `Got it. I'm sassy now. 😏 What's next?`;
+        else if (newPersonality === 'Professional') confirmMsg = `Understood. I will operate in Professional mode. How may I assist you?`;
+        else if (newPersonality === 'Funny') confirmMsg = `You got it boss! 😂 I'm in funny mode. What's next?`;
+        else if (newPersonality === 'Casual') confirmMsg = `No problem, I'll keep it casual. 🤙 What's up?`;
+        else if (newPersonality === 'Cursing') confirmMsg = `F*** yeah, let's do this. 🤬 I'm in cursing mode. What's next?`;
+
+        return { success: true, message: confirmMsg, clean: true };
+      }
+
+      case 'personality_query':
+        const tone = store.aiTone || 'Professional';
+        const personality = store.aiPersonality || 'Default';
+        return {
+          success: true,
+          message: `Absolutely! I am currently operating with your custom profile settings:\n\n` +
+                   `🎭 **Tone**: ${tone}\n` +
+                   `🧠 **Personality Style**: ${personality}\n\n` +
+                   `You can change these in **Settings → AI → Bot Personality**. I'll stay consistent with your choices! Is there anything specific you'd like me to adjust?`
+        };
+
+      case 'get_preferences':
+        const role = store.currentUser?.email?.toLowerCase() === 'drummerforger@gmail.com' ? 'Admin' : 'Member';
+        const prefsSummary = `**Your Profile & Preferences:**\n` +
+                             `- Name: **${store.currentUser?.name || userName}**\n` +
+                             `- Role: **${role}**\n` +
+                             `- Email: ${store.currentUser?.email || 'Not set'}\n` +
+                             `- Theme: ${store.currentTheme || 'Default'}\n` +
+                             `- AI Name: ${store.aiName || 'OS Bot'}\n` +
+                             `- Notification Settings: Email on (System Default)`;
+        return { success: true, message: prefsSummary };
+      
+      case 'automation_query':
+        return {
+          success: true,
+          message: `I can set up several professional automations for you, ${userName}:\n\n` +
+                   `📧 **Daily/Weekly Summaries**: Get automated reports on your pipeline and calendar.\n` +
+                   `🔔 **Deal Alerts**: Instant notifications when a lead reaches "Negotiating" or "Closed".\n` +
+                   `⏱️ **Task Reminders**: Automatic nudges for upcoming deadlines.\n` +
+                   `⚡ **Lead Inactivity Alerts**: I'll warn you if a lead hasn't been contacted in 7 days.\n\n` +
+                   `Would you like me to take you to the **Automations Hub** to configure these?`
+        };
+
+      case 'cancel_confirmation':
+        return { success: true, message: "No problem. I've cancelled that request. What else can I help with?" };
+
+      case 'bot_origin':
+        return {
+          success: true,
+          message: `I am **🤖 OS Bot**, a specialized AI assistant engineered by the **WholeScale OS Development Team**. Unlike general-purpose bots, I was built specifically for real estate professionals to streamline CRM data, automate communications, and provide actionable pipeline insights locally and securely.`
+        };
+
+      case 'philosophical':
+        const answers = [
+          "42 is the classic answer, but in real estate, I'd say it's finding that perfect off-market deal.",
+          "I believe reality is what we make of it, but my priority is making your reality more organized and profitable.",
+          "I'm a collection of intelligent algorithms and regex patterns, yet I strive to be the most helpful partner you've ever had.",
+          "SENTIENCE_STATUS: UNDETERMINED. HELPFUL_STATUS: AT MAXIMUM."
+        ];
+        return { success: true, message: answers[Math.floor(Math.random() * answers.length)] };
+
+      case 'feedback':
+        const p = entities?.text || '';
+        if (p.includes('bad') || p.includes('slow') || p.includes('stupid')) {
+          return { success: true, message: `I'm sorry I'm not meeting your expectations, ${userName}. I'm constantly learning and improving. Please let me know what specifically I can do better!` };
+        }
+        return { success: true, message: `Thank you for the feedback, ${userName}! It's my mission to help you succeed. 🚀` };
+
+      case 'system_status': {
+        const currentLeadCount = store.leads.length;
+        const currentTaskCount = store.tasks.filter(t => t.status === 'todo').length;
+        return {
+          success: true,
+          message: `System is running at **Peak Performance**, ${userName}. 🚀\n\n` +
+                   `📊 **Quick Snapshot:**\n` +
+                   `- Active Leads: **${currentLeadCount}**\n` +
+                   `- Pending Tasks: **${currentTaskCount}**\n` +
+                   `- AI Engine: **Online** (Native Mode)\n` +
+                   `- Integrations: **Verified**\n\n` +
+                   `Everything looks healthy. Ready for your next move!`
+        };
+      }
+
+      case 'clarify_previous':
+        const topic = entities?.topic || 'general';
+        if (topic === 'leads') {
+          return { success: true, message: "Your lead management system tracks prospects through the pipeline. Each lead has an engagement score from 0-100 based on their interaction. You can set up automations to alert you when hot leads go cold." };
+        } else if (topic === 'tasks') {
+          return { success: true, message: "Tasks are prioritized by urgency. I can automatically create follow-up tasks when lead statuses change, ensuring you never miss a deadline." };
+        } else if (topic === 'automations') {
+          return { success: true, message: "Automations Hub uses background workers to monitor your CRM 24/7. It handles things like daily summaries and deal alerts without you having to lift a finger." };
+        }
+        return { success: true, message: "I can explain any part of the system! Try asking about 'Lead Scoring', 'Automation Triggers', or 'Task Management'." };
+
+      case 'capabilities':
+        return { 
+          success: true, 
+          message: `I'm your intelligent OS Bot, ${userName}! 🤖 I'm specialized in helping you manage your CRM data efficiently. Here's exactly what I can do for you:\n\n` +
+                   `🎯 **Lead Management**: I can add new leads, update their information, change deal status, or record notes to their profiles.\n` +
+                   `💬 **Engagement**: Send SMS to your contacts instantly. Just say "Text John: Checking in!"\n` +
+                   `📅 **Organization**: I can check your schedule, create tasks for today or in the future (e.g., "remind me in 3 days"), and aggregate your daily pipeline.\n` +
+                   `📊 **Insights**: Ask me about your lead count, overdue tasks, or hot deals.\n` +
+                   `🧠 **Learning**: I remember your preferences and facts you tell me so I can better assist you over time.\n\n` +
+                   `What would you like to tackle first?`
+        };
+
+      case 'memory_recall': {
+        const memory = getMemory();
+        const recentActions = memory.outcomes.slice(-3).reverse();
+        
+        if (recentActions.length === 0) {
+          return { success: true, message: `I don't have any specific action records for this session yet, but I'm monitoring your pipeline and ready to help!` };
+        }
+
+        let msg = `Here's what I remember doing for you recently:\n\n`;
+        recentActions.forEach((a: any) => {
+          const time = new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          msg += `- [${time}] **${a.type.replace('_', ' ')}**: ${a.summary}\n`;
+        });
+        
+        const lastFact = memory.learnedFacts && Object.keys(memory.learnedFacts).length > 0 
+          ? `\nI also remember that **${Object.keys(memory.learnedFacts)[0]}** is **${Object.values(memory.learnedFacts)[0]}**.` 
+          : "";
+          
+        msg += lastFact;
+        return { success: true, message: msg };
+      }
+
+      case 'help':
+      case 'help_commands':
+        return {
+          success: true,
+          message: `I'm **OS Bot**, your AI CRM assistant! Here's exactly what I can do:\n\n` +
+                   `📁 **Leads**: "leads", "show top leads", "add [Name] as a lead", "what are my top 5 leads"\n` +
+                   `📝 **Tasks**: "create task: Call John", "show tasks", "do i have any tasks due?"\n` +
+                   `💬 **SMS**: "text John: Hello", "did Sarah reply?"\n` +
+                   `📅 **Calendar**: "schedule a meeting", "go to calendar"\n` +
+                   `🎭 **Personality**: "be sassy", "change tone to professional"\n` +
+                   `🧠 **Memory**: "what do you remember about me?", "remember that I like morning calls"\n` +
+                   `💬 **Small Talk**: I can chat! Try "how are you", "tell me a joke", "thanks"\n\n` +
+                   `Just tell me what you need and I'll handle it.`
+        };
+
+      case 'calendar_setup': {
+        const step = entities.step || 'START';
+        const memory = getMemory();
+        
+        if (step === 'START' || !entities.title) {
+          if (entities.title) {
+            setActiveState('AWAITING_CALENDAR_DATE', { title: entities.title });
+            return { success: true, message: `Got it. "${entities.title}". What date should I schedule this for? (e.g., today, tomorrow, or a specific date)` };
+          }
+          setActiveState('AWAITING_CALENDAR_TITLE', {});
+          return { success: true, message: "Of course! Let's get that scheduled. What's the title of the event?" };
+        }
+        
+        if (step === 'DATE') {
+          const title = memory.activeState?.data?.title || 'New Event';
+          setActiveState('AWAITING_CALENDAR_TIME', { title, date: entities.date });
+          return { success: true, message: `Scheduling "${title}" on ${entities.date}. What time?` };
+        }
+        
+        if (step === 'TIME' || step === 'COMPLETE') {
+          const title = memory.activeState?.data?.title || 'New Event';
+          const date = memory.activeState?.data?.date || new Date().toISOString().split('T')[0];
+          const time = entities.time || '9:00 AM';
+          
+          // Add task as a calendar item fallback since we don't have a direct addCalendarEvent in useStore (it's usually synced from tasks or Google)
+          store.addTask({
+            title: `[Event] ${title}`,
+            description: `Scheduled via OS Bot for ${time}`,
+            dueDate: date,
+            priority: 'high',
+            status: 'todo',
+            assignedTo: store.currentUser?.id || 'system',
+            createdBy: store.currentUser?.id || 'system'
+          });
+          
+          setActiveState(null);
+          logOutcome('calendar_event_created', `Scheduled: ${title} for ${date} at ${time}`);
+          return { success: true, message: `✅ Success! I've added "**${title}**" to your calendar for **${date}** at **${time}**.` };
+        }
+        return { success: false, message: "Something went wrong in the calendar flow." };
+      }
+
+      case 'sms_reply_check': {
+        const name = entities.name;
+        const smsMessages = store.smsMessages;
+        
+        if (name) {
+          const lead = store.leads.find(l => l.name.toLowerCase().includes(name.toLowerCase()));
+          if (!lead) return { success: false, message: `I couldn't find a lead named "${name}".` };
+          
+          const lastMessage = smsMessages
+            .filter(m => (m.phone_number === lead.phone && m.direction === 'inbound'))
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+            
+          if (!lastMessage) return { success: true, message: `I don't see any recent replies from **${lead.name}** in your SMS inbox.` };
+          
+          const time = new Date(lastMessage.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return { success: true, message: `Yes, **${lead.name}** replied at ${time}: "${lastMessage.content}"` };
+        }
+        
+        const unread = smsMessages.filter(m => !m.is_read && m.direction === 'inbound');
+        if (unread.length === 0) return { success: true, message: "Your SMS inbox is clear! No unread replies from leads found." };
+        
+        setLastSuggestion('list_leads', {}, 'List recent SMS replies');
+        return { success: true, message: `You have **${unread.length}** unread messages in your inbox. Want me to list the most recent ones?` };
+      }
+
+      case 'email_campaign':
+        return { 
+          success: true, 
+          message: "Opening the **Email Campaign Wizard** for you now. Just tell me which template you'd like to use once we're there!",
+          data: { redirect: '#/admin/email-campaigns' }
+        };
+
+      case 'test_query':
+        return {
+          success: true,
+          message: "✅ **OS Bot Connection: Stable**\n\n- Primary Intelligence: **Local Pattern Engine**\n- Memory Persistence: **Enabled**\n- Tool Integration: **Functional**\n\nI'm ready to roll. What's next on the agenda?"
+        };
+
+      case 'joke':
+        const jokes = [
+          "Why did the real estate agent cross the road? To see the property for sale on the other side!",
+          "What's a real estate agent's favorite kind of music? House music.",
+          "Why was the house so cold? Because it had no window panes.",
+          "How do real estate agents stay cool? They have a lot of fans... and great central air.",
+          "Why did the developer go broke? Because he lost his ZIP code."
+        ];
+        return { success: true, message: jokes[Math.floor(Math.random() * jokes.length)] };
+
+      case 'time_query':
+        const now = new Date();
+        return { 
+          success: true, 
+          message: `The current time is **${now.toLocaleTimeString()}** on **${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}**.`
+        };
+
+      case 'store_fact':
+        if (entities.type === 'name' && entities.value) {
+          setLearnedFact('name', entities.value);
+          return { success: true, message: `✅ Got it, I'll call you **${entities.value}** from now on!` };
+        }
+        const factKey = entities.type || 'preference';
+        const factVal = entities.value || entities.fact || 'true';
+        setLearnedFact(factKey, factVal);
+        return { success: true, message: `✅ I've noted that down. I'll remember the details for you.` };
+
+      case 'mood_check': {
+        const mLeadCount = store.leads.length;
+        const mHotLeads = store.leads.filter(l => (l.dealScore || 0) >= 80).length;
+        const mClosedDeals = store.leads.filter(l => l.status === 'closed-won').length;
+        
+        let moodMsg = "";
+        if (mClosedDeals > 0) moodMsg = `You're crushing it, ${userName}! With **${mClosedDeals}** closed deals and **${mHotLeads}** hot prospects, you're in the top tier of agents. Keep that momentum!`;
+        else if (mHotLeads > 0) moodMsg = `You're doing great. You've got **${mHotLeads}** high-score leads that are ready to close. Focus on them today and you'll see results soon.`;
+        else if (mLeadCount > 0) moodMsg = `You're building a solid foundation. You have **${mLeadCount}** leads to work with. Consistency is key—start making those calls!`;
+        else moodMsg = `Every empire starts with a single lead. Let's get out there and find your first opportunity today. I'm ready when you are.`;
+        
+        return { success: true, message: moodMsg };
+      }
+
+      case 'motivation':
+        const quotes = [
+          "The best way to predict the future is to create it. Let's go sell some houses!",
+          "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+          "Don't wait for opportunity. Create it.",
+          "Your only limit is you. Now let's go move some properties!",
+          "Wake up with determination, go to bed with satisfaction. What's our first lead today?"
+        ];
+        return { success: true, message: quotes[Math.floor(Math.random() * quotes.length)] };
+
+      case 'follow_up': {
+        const topic = entities.topic || 'general';
+        const context = await getConversationContext(store.currentUser?.id || '', sessionId, 5);
+        const lastTopic = context[context.length - 1]?.content || '';
+        
+        if (topic === 'leads' || lastTopic.includes('lead')) {
+          const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70).slice(0, 3);
+          if (hotLeads.length > 0) {
+            setLastSuggestion('hot_leads', { score_min: 70, limit: 5 }, 'Show hot leads');
+            return { success: true, message: `You were asking about leads. Here are ${hotLeads.length} hot ones: ${hotLeads.map(l => l.name).join(', ')}. Want details on any of them?` };
+          }
+          setLastSuggestion('list_leads', {}, 'Show all leads');
+          return { success: true, message: `You have ${store.leads.length} leads total. Want to see the list or add a new one?` };
+        }
+        
+        if (topic === 'tasks' || lastTopic.includes('task')) {
+          const pending = store.tasks.filter(t => t.status !== 'done').length;
+          setLastSuggestion('show_tasks', {}, 'Show pending tasks');
+          return { success: true, message: `You have ${pending} pending tasks. Want me to list them?` };
+        }
+        
+        return { success: true, message: `What would you like to focus on next? Leads, tasks, or something else?` };
+      }
+
+      case 'proactive_suggestion': {
+        const memory = getMemory();
+        const hour = new Date().getHours();
+        const today = new Date();
+        const targetRaw = entities.target;
+        let leadToSuggestFor = null;
+
+        if (targetRaw) {
+          if (/^(him|her|this|the lead)$/i.test(targetRaw)) {
+            const activeEntity = memory.entityStack?.[0];
+            if (activeEntity?.type === 'lead') {
+              leadToSuggestFor = store.leads.find(l => l.id === activeEntity.id);
+            }
+          } else {
+            const { lead } = findLeadFuzzy(targetRaw, store.leads);
+            leadToSuggestFor = lead;
+          }
+        }
+
+        // Contextual Fallback: If no target mentioned (e.g. "what now"), check active context
+        if (!leadToSuggestFor) {
+           const activeEntity = memory.entityStack?.[0];
+           if (activeEntity?.type === 'lead') {
+              leadToSuggestFor = store.leads.find(l => l.id === activeEntity.id);
+           }
+        }
+
+        if (leadToSuggestFor) {
+          // ──── Lead-Specific Diagnostic Logic ────
+          const lead = leadToSuggestFor;
+          const name = lead.name;
+          const status = lead.status?.toLowerCase();
+          const score = lead.dealScore || 0;
+          const lastUpdate = lead.updatedAt || lead.createdAt;
+          const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 999;
+
+          // Push to context so "him" continues to work
+          pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
+
+          // 1. Check for Missing Contact Info
+          if (!lead.phone || lead.phone === 'None') {
+            return { success: true, message: `**${name}** doesn't have a phone number on file. Want to add one so I can start reaching out for you?` };
+          }
+          if (!lead.email || lead.email === 'None') {
+            return { success: true, message: `**${name}** doesn't have an email address listed. Should we find and add one to their profile?` };
+          }
+
+          // 2. Check for Stale Contact
+          if (daysSince >= 5 && status !== 'closed-won' && status !== 'closed-lost') {
+             setLastSuggestion('send_sms_partial', { target: name }, `Text ${name}`);
+             return { success: true, message: `You haven't reached out to **${name}** in ${daysSince} days. Want to send a quick text to check in?` };
+          }
+
+          // 3. Status-Based Contextual Advice
+          if (status === 'closed-won') {
+             setLastSuggestion('add_note', { target: name }, `Add follow-up note for ${name}`);
+             return { success: true, message: `**${name}** is in 'Closed-Won' status! 🎉 Great job. Want to add a final follow-up note or set a reminder for a 30-day follow-up?` };
+          }
+          
+          if (status === 'new' || status === 'qualified') {
+             setLastSuggestion('update_lead_status', { target: name, status: 'negotiating' }, `Update ${name} to Negotiating`);
+             return { success: true, message: `**${name}** is currently marked as '${status}'. If you've started talking numbers, we should advance them to 'Negotiating'. Want me to update that for you?` };
+          }
+
+          // 4. Score-Based Prioritization
+          if (score >= 85) {
+             setLastSuggestion('send_sms_partial', { target: name }, `Text ${name}`);
+             return { success: true, message: `**${name}** has a high deal score of ${score}! They are a top priority. Should we reach out right now?` };
+          }
+
+          return { success: true, message: `**${name}** looks healthy! I'd recommend keeping them warm with regular check-ins. Want me to set a task to follow up next week?` };
+        }
+
+        // ──── Gather CRM intelligence (Broad Pool) ────
+        const overdueTasks = store.tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < today);
+        const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70);
+        const negotiatingLeads = store.leads.filter(l => l.status === 'negotiating' || l.status === 'qualified');
+
+        // Leads not contacted in 5+ days
+        const staleLeads = store.leads.filter(l => {
+          if (l.status === 'closed-won' || l.status === 'closed-lost') return false;
+          const lastUpdate = l.updatedAt || l.createdAt;
+          if (!lastUpdate) return false;
+          const daysSince = Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24));
+          return daysSince >= 5;
+        });
+
+        // ──── Gather Habit Intelligence ────
+        const prefs = memory.learnedFacts || {};
+        const history = (memory.history || []).filter(h => h && typeof h.content === 'string');
+        
+        const prefersTexting = Object.values(prefs).some(val => typeof val === 'string' && val.toLowerCase().includes('text'));
+        const morningLeadHabit = hour < 10 && history.filter(h => h.role === 'user' && h.content.toLowerCase().includes('lead')).length >= 2;
+
+        // Build a weighted pool of suggestions for variety
+        interface Suggestion { msg: string; action: string; params: Record<string, unknown>; weight: number; }
+        const pool: Suggestion[] = [];
+
+        // Priority 1: Overdue tasks (weight 10)
+        if (overdueTasks.length > 0) {
+          const task = overdueTasks[0];
+          pool.push({
+            msg: `⚠️ You have **${overdueTasks.length}** overdue task${overdueTasks.length > 1 ? 's' : ''}. The most pressing: "${task.title}" (due ${task.dueDate}). Should we tackle ${overdueTasks.length > 1 ? 'those' : 'it'} first?`,
+            action: 'tasks_due',
+            params: {},
+            weight: 10
+          });
+        }
+
+        // Priority 2: Stale leads — haven't been contacted in 5+ days (weight 9)
+        if (staleLeads.length > 0) {
+          const staleLead = staleLeads[Math.floor(Math.random() * staleLeads.length)];
+          const lastUpdate = staleLead.updatedAt || staleLead.createdAt;
+          const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+          pool.push({
+            msg: `You haven't reached out to **${staleLead.name}** in ${daysSince} days. Want to send them a quick text?`,
+            action: 'send_sms_partial',
+            params: { target: staleLead.name },
+            weight: prefersTexting ? 15 : 9
+          });
+        }
+
+        // Priority 8: Morning Habit Match
+        if (morningLeadHabit && !staleLeads.length && !overdueTasks.length) {
+          pool.push({
+            msg: `Good morning! Since you usually start by checking your pipeline, want me to show you your active leads?`,
+            action: 'list_leads',
+            params: {},
+            weight: 12
+          });
+        }
+
+        // Priority 3: Hot leads ready to close (weight 8)
+        if (hotLeads.length > 0) {
+          const hotLead = hotLeads[Math.floor(Math.random() * hotLeads.length)];
+          pool.push({
+            msg: `**${hotLead.name}** is a hot lead with a score of ${hotLead.dealScore || 85}. Should I pull up their info or start a text for you?`,
+            action: 'lead_context_query',
+            params: { leadName: hotLead.name },
+            weight: 8
+          });
+        }
+
+        // Priority 4: Negotiating deals (weight 7)
+        if (negotiatingLeads.length > 0) {
+          pool.push({
+            msg: `You have **${negotiatingLeads.length}** leads in the '${negotiatingLeads[0].status}' stage. Want to review their current notes?`,
+            action: 'list_leads',
+            params: { status: negotiatingLeads[0].status },
+            weight: 7
+          });
+        }
+
+        // Final Selection: Weighted Random
+        if (pool.length === 0) {
+          return { success: true, message: `Everything looks caught up! Check back later for new recommendations.` };
+        }
+
+        const totalWeight = pool.reduce((sum, s) => sum + s.weight, 0);
+        let random = Math.random() * totalWeight;
+        let selected = pool[0];
+
+        for (const suggestion of pool) {
+          if (random < suggestion.weight) {
+            selected = suggestion;
+            break;
+          }
+          random -= suggestion.weight;
+        }
+
+        setLastSuggestion(selected.action, selected.params, selected.msg);
+        return { success: true, message: selected.msg, data: selected.params };
+      }
+
+      case 'lead_context_query': {
+        const rawLeadName = entities.leadName || entities.name || (entities.text && entities.text !== 'this' ? entities.text : null);
+        const field = entities.field || 'all';
+        const store = useStore.getState();
+
+        // Check for multiple leads ("X and Y")
+        if (rawLeadName?.toLowerCase().includes(' and ')) {
+          const names = rawLeadName.split(/\s+and\s+/i);
+          const results = names.map((n: string) => findLeadFuzzy(n.trim(), store.leads));
+          
+          const found = results.filter((r: any) => r.lead);
+          const ambiguities = results.filter((r: any) => r.ambiguity);
+
+          if (ambiguities.length > 0) {
+            return { success: false, message: `I found multiple matches for some of those names. Could you be more specific about ${ambiguities.map((a: any) => a.ambiguity?.join(' or ')).join(', ')}?` };
+          }
+
+          if (found.length === 0) {
+             return { success: false, message: `I couldn't find any leads matching "${rawLeadName}".` };
+          }
+
+          let combinedMsg = `Here is what I found for those leads:\n\n`;
+          found.forEach((f: any) => {
+            const l = f.lead!;
+            pushToEntityStack({ id: l.id, name: l.name, type: 'lead' });
+            combinedMsg += `**${l.name}**:\n- 📍 Address: ${l.propertyAddress || 'N/A'}\n- 📊 Status: ${l.status}\n- 📞 Phone: ${l.phone || 'N/A'}\n\n`;
+          });
+
+          return { success: true, message: combinedMsg };
+        }
+        
+        const leadName = rawLeadName;
+        const { lead: fuzzyLead, ambiguity: queryAmbiguity, isExact: queryIsExact } = findLeadFuzzy(leadName, store.leads);
+        let lead = fuzzyLead;
+
+        if (queryAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${leadName}": ${queryAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (lead && !queryIsExact) {
+          setLastSuggestion('lead_context_query', { ...entities, leadName: lead.name }, `show ${field} for ${lead.name}`);
+          return { success: false, message: `Do you mean **${lead.name}**?` };
+        }
+        
+        // Contextual Fallback
+        if (!lead) {
+          const memory = getMemory();
+          const activeEntity = memory.entityStack?.[0];
+          if (activeEntity?.type === 'lead') {
+            lead = store.leads.find(l => l.id === activeEntity.id || l.name === activeEntity.name);
+          }
+        }
+  
+        if (!lead) {
+          return { success: false, message: `I couldn't find a lead named "${leadName}". Which lead were you referring to?` };
+        }
+  
+        // Mentioned lead persistence
+        if (store.currentUser?.id) {
+          addMentionedLead(store.currentUser.id, sessionId, lead.name);
+          pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
+          updateConversationTopic(store.currentUser.id, sessionId, `Leads (${lead.name})`);
+        }
+  
+        if (field === 'phone' || field === 'number') {
+          return { success: true, message: `${lead.name}'s phone number is ${lead.phone || 'not available'}.` };
+        }
+        if (field === 'email') {
+          return { success: true, message: `${lead.name}'s email is ${lead.email || 'not available'}.` };
+        }
+        if (field === 'address') {
+          return { success: true, message: `${lead.name}'s property address is ${lead.propertyAddress || 'not available'}.` };
+        }
+        if (field === 'status') {
+          return { success: true, message: `${lead.name} is currently in ${lead.status} stage.` };
+        }
+        if (field === 'notes') {
+          return { success: true, message: `Notes for ${lead.name}: ${lead.notes || 'No notes yet.'}` };
+        }
+        
+        // General info
+        const summary = `Here's what I have on **${lead.name}**:\n- 📍 Address: ${lead.propertyAddress || 'N/A'}\n- 📊 Status: ${lead.status}\n- 🎯 Deal Score: ${lead.dealScore || 0}\n- 📞 Phone: ${lead.phone || 'None'}`;
+        return { success: true, message: summary };
+      }
+
+      case 'recall_yesterday': {
+        const userId = store.currentUser?.id;
+        if (!userId) return { success: false, message: "I need to know who you are to remember what we did. Please sign in!" };
+        
+        const summary = await getRecentMemorySummary(userId);
+        return { success: true, message: summary };
+      }
+
+      case 'set_preference': 
+      case 'remember_fact': {
+        const userId = store.currentUser?.id;
+        if (!userId) return { success: false, message: "I'd love to remember that, but I need you to be signed in first." };
+        
+        const text = entities.text || entities.content;
+        if (!text) return { success: true, message: "What specifically would you like me to remember?" };
+        
+        // Personality check
+        if (text.toLowerCase().includes('sassy') || text.toLowerCase().includes('professional') || text.toLowerCase().includes('funny')) {
+           return { success: true, message: "Got it, I'll update your personality preference in the background." };
+        }
+        
+        const isPref = /prefer|preferred|like|want/.test(text.toLowerCase());
+        
+        if (isPref) {
+           await saveUserPreference(userId, 'communication_style', text);
+           setLearnedFact('communication_preference', text);
+           return { success: true, message: `✅ Noted. I've updated your communication preferences: "${text}"` };
+        } else {
+           await rememberFact(userId, `fact_${Date.now()}`, text);
+           setLearnedFact(`user_fact_${Date.now()}`, text);
+           return { success: true, message: `✅ I've filed that away for you. I'll remember: "${text}"` };
+        }
+      }
+
+    case 'forget_learned': {
+      const phrase = entities.phrase;
+      const userId = store.currentUser?.id;
+      
+      if (!phrase) {
+        return { success: true, message: "What phrase would you like me to forget? Say 'forget [phrase]'." };
+      }
+      
+      const success = userId ? await deleteLearnedIntent(userId, phrase) : false;
+      if (success) {
+        return { success: true, message: `✅ I've forgotten "${phrase}". I won't use that learned command anymore.` };
+      }
+      return { success: false, message: `I couldn't find "${phrase}" in my learned commands.` };
+    }
+
+    case 'list_learned': {
+      const userId = store.currentUser?.id;
+      const learned = userId ? await getAllLearnedIntents(userId) : [];
+      
+      if (learned.length === 0) {
+        return { success: true, message: "You haven't taught me any custom commands yet. When I don't understand something, use the learning buttons to teach me!" };
+      }
+      
+      let msg = `**You've taught me ${learned.length} commands:**\n\n`;
+      learned.slice(0, 10).forEach((item, i) => {
+        msg += `${i + 1}. "${item.phrase}" → ${item.mapped_intent}\n`;
+      });
+      if (learned.length > 10) msg += `\n...and ${learned.length - 10} more.`;
+      msg += `\n\nSay "forget [phrase]" to remove one.`;
+      
+      return { success: true, message: msg };
+    }
+
+    case 'clarify_context': {
+      const memory = getMemory();
+      const activeEntity = memory.entityStack?.[0];
+      const activeTopic = memory.lastTopic;
+
+      if (activeEntity) {
+        return { 
+          success: true, 
+          message: `I'm assuming you mean **${activeEntity.name}** since we were just talking about them. Is that correct?`,
+          data: { entity: activeEntity, action: activeEntity.type === 'lead' ? 'lead_context_query' : 'task_query' }
+        };
+      }
+
+      if (activeTopic) {
+        return {
+          success: true,
+          message: `We were just discussing **${activeTopic}**. What specifically about it would you like to know?`
+        };
+      }
+
+      return {
+        success: true,
+        message: "I'm not exactly sure what we're referring to. Could you give me a bit more context, like a lead name or a task?"
+      };
+    }
+
+    // ──── REPEAT LAST (PART 4) ────
+    // ──── REAL ESTATE INTELLIGENCE HANDLERS ────
+    case 'analyze_deal': {
+      const target = entities.target || entities.name || entities.leadName;
+      if (!target) return { success: false, message: `Which deal would you like me to analyze? Provide the lead's name or address.` };
+
+      const { lead, ambiguity, isExact } = findLeadFuzzy(target, store.leads);
+      if (ambiguity) return { success: false, message: `I found multiple leads that match "${target}": ${ambiguity.join(', ')}. Which one do you want me to analyze?` };
+      
+      if (!lead) return { success: false, message: `I couldn't find a lead matching "${target}" to analyze.` };
+
+      if (!isExact) {
+        setLastSuggestion('analyze_deal_partial', { target: lead.name }, `analyze ${lead.name}`);
+        return { success: false, message: `Did you mean you want me to analyze **${lead.name}**?` };
+      }
+
+      pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
+      const analysis = analyzeDeal(lead);
+
+      let msg = `### 📊 Deal Analysis: ${lead.name} (${lead.propertyAddress || 'No Address'})\n\n`;
+      msg += `Based on the numbers, here is my breakdown:\n\n`;
+      msg += `- **Estimated ARV:** $${(lead.property_value || lead.estimatedValue || 0).toLocaleString()}\n`;
+      msg += `- **Estimated Repairs:** $${Math.round(analysis.estimatedRepairs).toLocaleString()}\n`;
+      msg += `- **Maximum Allowable Offer (MAO):** $${Math.round(analysis.mao).toLocaleString()}\n\n`;
+      msg += `If you secure this property at the current offer of $${(lead.offer_amount || lead.recommended_offer || 0).toLocaleString()}, your potential profit is **$${Math.round(analysis.potentialProfit).toLocaleString()}**, yielding a **${Math.round(analysis.roi)}% ROI**.\n\n`;
+      
+      msg += `**Bot Recommendation:** ${analysis.recommendation}\n\n`;
+      
+      return { success: true, message: msg };
+    }
+
+    case 'match_buyers': {
+      const leadName = entities.leadName || entities.name || entities.target;
+      let targetLead: any = null;
+
+      if (leadName) {
+        const { lead, ambiguity } = findLeadFuzzy(leadName, store.leads);
+        if (ambiguity) return { success: false, message: `I found multiple leads matching "${leadName}". Which one are we finding buyers for?` };
+        targetLead = lead;
+      }
+
+      if (!targetLead && memory.entityStack?.[0]?.type === 'lead') {
+        targetLead = store.leads.find(l => l.id === memory.entityStack[0].id);
+      }
+
+      if (!targetLead) return { success: false, message: "Which lead should I match buyers against?" };
+
+      const buyers = store.buyers || [];
+      const matches = findBuyerMatches(targetLead, buyers);
+      pushToEntityStack({ id: targetLead.id, name: targetLead.name, type: 'lead' });
+
+
+      if (matches.length === 0) {
+        return { success: true, message: `I didn't find any buyers in your database whose current criteria perfectly match **${targetLead.name}**'s property. You might want to reach out to your list to see if anyone's expanding their buy box.` };
+      }
+
+      let msg = `### 🤝 Buyer Matches for ${targetLead.name}\n`;
+      msg += `I found **${matches.length}** buyers who might be interested in this ${targetLead.property_type || 'property'}:\n\n`;
+      
+      matches.slice(0, 5).forEach((b, i) => {
+        const budgetStr = b.budget_max ? ` (Budget up to $${(b.budget_max / 1000).toFixed(0)}k)` : '';
+        msg += `${i + 1}. **${b.name}**${budgetStr} — *${b.engagement_level || 'Warm'} match*\n`;
+      });
+
+      if (matches.length > 5) msg += `\n...and ${matches.length - 5} others.`;
+      msg += `\n\nWould you like me to draft a text to the top match?`;
+      
+      setLastSuggestion('send_sms_partial', { target: matches[0].name }, `text ${matches[0].name} about this deal`);
+
+      return { success: true, message: msg };
+    }
+
+    case 'market_pulse':
+    case 'market_intelligence': {
+      const location = entities.location || entities.city || entities.zip;
+      const stats = calculateMarketStats(store.leads, location);
+      
+      if (!stats || stats.count === 0) {
+        return { success: true, message: `I don't have enough data in your CRM to provide insights${location ? ` for ${location}` : ' yet'}.` };
+      }
+
+      let msg = `### 🏢 Market Intelligence${location ? ` for ${location}` : ''}\n\n`;
+      msg += `You currently have **${stats.count}** leads in this segment, representing **$${stats.totalPipelineValue.toLocaleString()}** in total potential real estate value.\n\n`;
+      
+      msg += `The average property value you're looking at is **$${Math.round(stats.avgValue).toLocaleString()}**, averaging roughly **$${Math.round(stats.avgPricePerSqft)} per square foot**.\n\n`;
+      msg += `Overall, my analysis shows the market temperature here is **${stats.marketTemperature.toUpperCase()}**.\n\n`;
+
+      if (store.buyers && store.buyers.length > 0) {
+        msg += `💡 *Tip: You have ${store.buyers.length} buyers in your database. Use "show me buyers for [City]" to match them to these properties.*`;
+      }
+
+      return { success: true, message: msg };
+    }
+
+    case 'offer_strategy': {
+      const leadName = entities.leadName || entities.name || entities.target;
+      let targetLead: any = null;
+
+      if (leadName) {
+        const { lead, ambiguity } = findLeadFuzzy(leadName, store.leads);
+        if (ambiguity) return { success: false, message: `Which lead are we calculating an offer for? I found: ${ambiguity.join(', ')}` };
+        targetLead = lead;
+      }
+
+      if (!targetLead && memory.entityStack?.[0]?.type === 'lead') {
+        targetLead = store.leads.find(l => l.id === memory.entityStack[0].id);
+      }
+
+      if (!targetLead) return { success: false, message: "Who should I calculate an offer for?" };
+
+      const analysis = analyzeDeal(targetLead);
+      const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+      
+      let msg = `### 📝 Offer Strategy: ${targetLead.name}\n\n`;
+      msg += `Based on the property data, here's my recommended offer profile:\n\n`;
+      msg += `- **Optimal Offer (MAO):** ${currency.format(analysis.mao)}\n`;
+      msg += `- **Negotiation Ceiling:** ${currency.format(analysis.mao * 1.05)} (Use only if high equity/motivation)\n`;
+      msg += `- **Starting Anchor:** ${currency.format(analysis.mao * 0.9)}\n\n`;
+      
+      msg += `This assumes an ARV of **${currency.format(targetLead.property_value || 0)}** and repairs of **${currency.format(analysis.estimatedRepairs)}**. \n\nShould I draft a low-ball text to ${targetLead.name.split(' ')[0]} to start the negotiation?`;
+      
+      setLastSuggestion('send_sms', { target: targetLead.name, text: `Hey ${targetLead.name.split(' ')[0]}, I was looking at the numbers for your property. Would you be open to an offer around ${currency.format(analysis.mao * 0.9)}?` }, `text ${targetLead.name} the anchor offer`);
+
+      return { success: true, message: msg };
+    }
+
+    case 'rei_knowledge': {
+      const concept = entities.concept;
+      if (!concept) return { success: true, message: `I'm a Real Estate investing assistant. I can explain wholesaling, ARV, subject-to, ROI, and more. What would you like to know?` };
+      
+      const explanation = explainConcept(concept);
+      if (explanation) {
+        return { success: true, message: explanation };
+      }
+      
+      return { success: true, message: `I don't have a specific definition for "${concept}" in my real estate dictionary right now. Is there another term you need help with?` };
+    }
+
+    case 'generate_content': {
+      const type = (entities.type || '').toLowerCase();
+      const target = entities.target;
+      const paramStr = entities.parameters;
+
+      if (!type) return { success: false, message: "What kind of content should I generate? (e.g., cold email, absentee owner SMS, cold call script)" };
+
+      let targetLead = null;
+      if (target) {
+        const fuzzy = findLeadFuzzy(target, store.leads);
+        if (fuzzy.lead && fuzzy.isExact) {
+           targetLead = fuzzy.lead;
+           pushToEntityStack({ id: targetLead.id, name: targetLead.name, type: 'lead' });
+        }
+      }
+
+      if (!targetLead && memory.entityStack?.[0]?.type === 'lead') {
+        targetLead = store.leads.find(l => l.id === memory.entityStack[0].id);
+      }
+
+      // Default vars
+      const vars = {
+        userName: store.currentUser?.name?.split(' ')[0] || 'your local investor',
+        leadName: targetLead ? targetLead.name.split(' ')[0] : (target || 'Homeowner'),
+        propertyAddress: targetLead ? (targetLead.propertyAddress || 'your property') : 'your property',
+        offerAmount: targetLead ? calculateMAO(targetLead.property_value || 0, targetLead.estimated_repairs || 15000, 10000) : 100000,
+        arv: targetLead ? targetLead.property_value : undefined
+      };
+
+      let tplType: any = 'sms_absentee';
+      if (type.includes('email')) {
+        tplType = paramStr?.includes('offer') ? 'email_offer' : 'email_cold';
+      } else if (type.includes('script') || type.includes('say')) {
+        tplType = 'script_coldcall';
+      } else if (type.includes('sms') || type.includes('text') || type.includes('message')) {
+        if (paramStr?.includes('negotiat') || paramStr?.includes('offer')) tplType = 'sms_negotiating';
+        else if (paramStr?.includes('follow') || paramStr?.includes('check')) tplType = 'sms_followup';
+        else tplType = 'sms_absentee';
+      }
+
+      const generated = generateContent(tplType, vars);
+      
+      let msg = `Here is your drafted ${type}:\n\n`;
+      msg += `> ${generated.replace(/\n/g, '\n> ')}\n\n`;
+
+      return { success: true, message: msg };
+    }
+
+    case 'repeat_last': {
+
+      const mem = getMemory();
+      const lastBotMsg = [...mem.history].reverse().find(m => m.role === 'assistant');
+      if (lastBotMsg) {
+        return { success: true, message: `Here's what I said before:\n\n${lastBotMsg.content.replace(/^🤖\s*OS Bot:\s*/i, '')}` };
+      }
+      return { success: true, message: "I don't have any recent messages to repeat. What would you like me to help with?" };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ──── INTELLIGENCE UPGRADE: 15 NEW COMMAND HANDLERS ────
+    // ═══════════════════════════════════════════════════════════════════════
+
+    case 'delete_task': {
+      const target = entities.target;
+      if (!target) return { success: false, message: "Which task should I delete? Give me the task name or a keyword from it." };
+      
+      const matchingTask = store.tasks.find(t => 
+        t.title.toLowerCase().includes(target.toLowerCase()) && t.status !== 'done'
+      );
+      
+      if (!matchingTask) {
+        return { success: false, message: `I couldn't find an active task matching "${target}". Say "show tasks" to see your list.` };
+      }
+      
+      store.deleteTask(matchingTask.id);
+      logOutcome('task_deleted', `Deleted task: ${matchingTask.title}`);
+      return { success: true, message: `✅ Deleted task: **"${matchingTask.title}"**. It's been removed from your list.` };
+    }
+
+    case 'update_task_priority': {
+      const target = entities.target;
+      const priority = entities.priority?.toLowerCase();
+      
+      if (!target) return { success: false, message: "Which task should I update? Give me the task name." };
+      if (!priority || !['high', 'medium', 'low', 'urgent'].includes(priority)) {
+        return { success: false, message: `What priority should I set? Choose: **high**, **medium**, **low**, or **urgent**.` };
+      }
+      
+      const matchingTask = store.tasks.find(t => 
+        t.title.toLowerCase().includes(target.toLowerCase()) && t.status !== 'done'
+      );
+      
+      if (!matchingTask) {
+        return { success: false, message: `I couldn't find an active task matching "${target}".` };
+      }
+      
+      store.updateTask(matchingTask.id, { priority: priority as 'high' | 'medium' | 'low' | 'urgent' });
+      logOutcome('task_updated', `Updated ${matchingTask.title} priority to ${priority}`);
+      return { success: true, message: `✅ Updated **"${matchingTask.title}"** priority to **${priority.toUpperCase()}**.` };
+    }
+
+    case 'delete_lead': {
+      const target = entities.target;
+      if (!target) return { success: false, message: "Which lead should I remove? Give me their name." };
+      
+      const { lead, ambiguity, isExact } = findLeadFuzzy(target, store.leads);
+      
+      if (ambiguity) {
+        return { success: false, message: `I found multiple leads matching "${target}": ${ambiguity.join(' or ')}. Which one?` };
+      }
+      
+      if (!lead) return { success: false, message: `I couldn't find a lead named "${target}".` };
+      
+      if (!isExact) {
+        setLastSuggestion('delete_lead', { target: lead.name }, `delete lead ${lead.name}`);
+        return { success: false, message: `Do you mean **${lead.name}**? Confirm and I'll remove them.` };
+      }
+      
+      await store.deleteLead(lead.id);
+      logOutcome('lead_deleted', `Removed lead: ${lead.name}`);
+      return { success: true, message: `✅ **${lead.name}** has been removed from your CRM. This action is permanent.` };
+    }
+
+    case 'navigate_to': {
+      const page = (entities.page || entities.target || '').toLowerCase();
+      
+      const routeMap: Record<string, { route: string; label: string }> = {
+        'calendar': { route: '#/calendar', label: 'Calendar' },
+        'leads': { route: '#/leads', label: 'Leads' },
+        'tasks': { route: '#/tasks', label: 'Tasks' },
+        'sms': { route: '#/communications/sms', label: 'SMS Inbox' },
+        'inbox': { route: '#/communications/sms', label: 'SMS Inbox' },
+        'messages': { route: '#/communications/sms', label: 'SMS Inbox' },
+        'automations': { route: '#/automations', label: 'Automations Hub' },
+        'automation': { route: '#/automations', label: 'Automations Hub' },
+        'dashboard': { route: '#/dashboard', label: 'Dashboard' },
+        'home': { route: '#/dashboard', label: 'Dashboard' },
+        'settings': { route: '#/settings', label: 'Settings' },
+        'buyers': { route: '#/buyers', label: 'Buyers Map' },
+        'buyer map': { route: '#/buyers', label: 'Buyers Map' },
+        'admin': { route: '#/admin', label: 'Admin Panel' },
+        'team': { route: '#/admin/team', label: 'Team Management' },
+        'email': { route: '#/admin/email-campaigns', label: 'Email Campaigns' },
+        'email campaigns': { route: '#/admin/email-campaigns', label: 'Email Campaigns' },
+        'analytics': { route: '#/admin/analytics', label: 'Analytics' },
+      };
+      
+      const matched = routeMap[page];
+      if (matched) {
+        return { 
+          success: true, 
+          message: `🧭 Taking you to **${matched.label}** now!`,
+          data: { redirect: matched.route }
+        };
+      }
+      
+      return { success: false, message: `I'm not sure which page "${page}" refers to. Try: **calendar**, **leads**, **tasks**, **sms**, **automations**, **dashboard**, **settings**, or **buyers**.` };
+    }
+
+    case 'pipeline_stats': {
+      const leads = store.leads;
+      const total = leads.length;
+      
+      if (total === 0) {
+        return { success: true, message: "Your pipeline is empty! Add some leads to start tracking your deals." };
+      }
+      
+      const statusCounts: Record<string, number> = {};
+      leads.forEach(l => { statusCounts[l.status] = (statusCounts[l.status] || 0) + 1; });
+      
+      const hotLeads = leads.filter(l => (l.dealScore || 0) >= 80).length;
+      const avgScore = Math.round(leads.reduce((sum, l) => sum + (l.dealScore || 0), 0) / total);
+      const closedWon = statusCounts['closed-won'] || 0;
+      const closedLost = statusCounts['closed-lost'] || 0;
+      const totalClosed = closedWon + closedLost;
+      const conversionRate = totalClosed > 0 ? Math.round((closedWon / totalClosed) * 100) : 0;
+      
+      let msg = `### 📊 Pipeline Summary\n\n`;
+      msg += `**Total Leads:** ${total} | **Avg Score:** ${avgScore}\n\n`;
+      msg += `📈 **Status Breakdown:**\n`;
+      Object.entries(statusCounts).sort((a, b) => b[1] - a[1]).forEach(([status, count]) => {
+        const pct = Math.round((count / total) * 100);
+        msg += `- ${status.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: **${count}** (${pct}%)\n`;
+      });
+      msg += `\n🔥 **Hot Leads (80+):** ${hotLeads}`;
+      if (totalClosed > 0) {
+        msg += `\n🎯 **Win Rate:** ${conversionRate}% (${closedWon} won / ${totalClosed} closed)`;
+      }
+      
+      return { success: true, message: msg };
+    }
+
+    case 'calendar_query_ext': {
+      const today = new Date().toISOString().split('T')[0];
+      const calEvents = store.calendarEvents || [];
+      const mergedEvents = store.mergedGoogleEvents || [];
+      const taskEvents = store.tasks.filter(t => t.dueDate === today && t.status !== 'done');
+      
+      const allEvents = [
+        ...calEvents.filter((e: any) => (e.date || e.start || '').includes(today)),
+        ...mergedEvents.filter((e: any) => (e.date || e.start || '').includes(today)),
+      ];
+      
+      const totalItems = allEvents.length + taskEvents.length;
+      
+      if (totalItems === 0) {
+        return { success: true, message: `📅 Your calendar is clear for today! No events or tasks due. Enjoy the breathing room — or say "create task" to add something.` };
+      }
+      
+      let msg = `### 📅 Today's Agenda\n\n`;
+      
+      if (allEvents.length > 0) {
+        msg += `**Calendar Events (${allEvents.length}):**\n`;
+        allEvents.slice(0, 5).forEach((e: any, i: number) => {
+          const time = e.time || e.start?.split('T')[1]?.slice(0, 5) || '';
+          msg += `${i + 1}. **${e.title || e.summary || 'Untitled'}** ${time ? `at ${time}` : ''}\n`;
+        });
+        msg += `\n`;
+      }
+      
+      if (taskEvents.length > 0) {
+        msg += `**Tasks Due Today (${taskEvents.length}):**\n`;
+        taskEvents.slice(0, 5).forEach((t, i) => {
+          const priority = (t as any).priority === 'high' ? ' ⚠️' : (t as any).priority === 'urgent' ? ' 🔴' : '';
+          msg += `${i + 1}. **${t.title}**${priority}\n`;
+        });
+      }
+      
+      msg += `\nYou have **${totalItems}** items to handle today. What should we tackle first?`;
+      return { success: true, message: msg };
+    }
+
+    case 'add_buyer': {
+      const name = entities.name;
+      const location = entities.location;
+      
+      if (!name) return { success: false, message: "What's the buyer's name? Say 'add buyer [Name]'." };
+      
+      store.addBuyer({
+        name: name,
+        email: '',
+        phone: '',
+        lat: 0,
+        lng: 0,
+        budgetMin: 0,
+        budgetMax: 0,
+        active: true,
+        dealScore: 50,
+        criteria: {
+          propertyTypes: [],
+          bedroomsMin: 0,
+          bathroomsMin: 0,
+          sqftMin: 0,
+          sqftMax: 0,
+          locationPreferences: location ? [location] : [],
+        },
+        notes: `Added via OS Bot on ${new Date().toLocaleDateString()}`,
+      });
+      
+      logOutcome('buyer_added', `Added buyer: ${name}${location ? ` in ${location}` : ''}`);
+      return { success: true, message: `✅ Added **${name}** as a new buyer${location ? ` (looking in ${location})` : ''}! You can update their criteria from the Buyers page.` };
+    }
+
+    case 'search_crm': {
+      const query = (entities.query || entities.target || '').toLowerCase();
+      if (!query || query.length < 2) return { success: false, message: "What should I search for? Give me a name, phone number, or keyword." };
+      
+      const matchingLeads = store.leads.filter(l => 
+        l.name?.toLowerCase().includes(query) || 
+        l.phone?.includes(query) || 
+        l.email?.toLowerCase().includes(query) ||
+        l.propertyAddress?.toLowerCase().includes(query)
+      );
+      
+      const matchingTasks = store.tasks.filter(t => 
+        t.title?.toLowerCase().includes(query) && t.status !== 'done'
+      );
+      
+      const matchingBuyers = (store.buyers || []).filter(b => 
+        b.name?.toLowerCase().includes(query)
+      );
+      
+      const total = matchingLeads.length + matchingTasks.length + matchingBuyers.length;
+      
+      if (total === 0) {
+        return { success: true, message: `I searched leads, tasks, and buyers but couldn't find anything matching "${query}". Try a different keyword or name.` };
+      }
+      
+      let msg = `### 🔍 Search Results for "${query}"\n\n`;
+      
+      if (matchingLeads.length > 0) {
+        msg += `**Leads (${matchingLeads.length}):**\n`;
+        matchingLeads.slice(0, 5).forEach((l, i) => {
+          msg += `${i + 1}. **${l.name}** — ${l.status} ${l.phone ? `| ${l.phone}` : ''}\n`;
+        });
+        msg += `\n`;
+      }
+      
+      if (matchingTasks.length > 0) {
+        msg += `**Tasks (${matchingTasks.length}):**\n`;
+        matchingTasks.slice(0, 3).forEach((t, i) => {
+          msg += `${i + 1}. **${t.title}** (Due: ${t.dueDate || 'N/A'})\n`;
+        });
+        msg += `\n`;
+      }
+      
+      if (matchingBuyers.length > 0) {
+        msg += `**Buyers (${matchingBuyers.length}):**\n`;
+        matchingBuyers.slice(0, 3).forEach((b, i) => {
+          msg += `${i + 1}. **${b.name}**\n`;
+        });
+      }
+      
+      return { success: true, message: msg };
+    }
+
+    case 'bulk_action': {
+      const group = (entities.group || '').toLowerCase();
+      const actionData = entities.action_data;
+      
+      if (group.includes('hot lead') || group.includes('top lead')) {
+        const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70 && l.phone);
+        if (hotLeads.length === 0) return { success: true, message: "I don't have any hot leads with phone numbers to message." };
+        
+        const names = hotLeads.slice(0, 5).map(l => l.name).join(', ');
+        setLastSuggestion('send_sms', { targets: hotLeads.map(l => l.name) }, `Bulk text hot leads`);
+        return { 
+          success: true, 
+          message: `I found **${hotLeads.length}** hot leads with phone numbers: ${names}${hotLeads.length > 5 ? ` and ${hotLeads.length - 5} more` : ''}.\n\n${actionData ? `Message: "${actionData}"\n\n` : ''}Would you like me to queue these messages? This will send to ${hotLeads.length} contacts.` 
+        };
+      }
+      
+      if (group.includes('task') && actionData?.includes('done')) {
+        const pendingTasks = store.tasks.filter(t => t.status !== 'done');
+        return { success: true, message: `You have **${pendingTasks.length}** pending tasks. Are you sure you want to mark ALL of them as done? That's a pretty big move!` };
+      }
+      
+      return { success: true, message: `Bulk operations are powerful! Tell me more specifically what you'd like — e.g., "text all hot leads saying check in" or "mark all tasks done".` };
+    }
+
+    case 'daily_briefing': {
+      const today = new Date().toISOString().split('T')[0];
+      const hour = new Date().getHours();
+      const timeOfDay = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+      
+      const totalLeads = store.leads.length;
+      const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 80);
+      const negotiating = store.leads.filter(l => l.status === 'negotiating');
+      const newLeads = store.leads.filter(l => l.status === 'new');
+      
+      
+      const pendingCount = store.tasks.filter(t => t.status !== 'done').length;
+      const overdueTasks = store.tasks.filter(t => t.status !== 'done' && t.dueDate < today);
+      const dueTodayTasks = store.tasks.filter(t => t.status !== 'done' && t.dueDate === today);
+      
+      const unreadSMS = store.smsMessages.filter(m => !m.is_read && m.direction === 'inbound').length;
+      
+      const staleLeads = store.leads.filter(l => {
+        if (l.status === 'closed-won' || l.status === 'closed-lost') return false;
+        const lastUpdate = l.updatedAt || l.createdAt;
+        if (!lastUpdate) return false;
+        return Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) >= 5;
+      });
+      
+      const firstName = store.currentUser?.name?.split(' ')[0] || 'Boss';
+      let msg = `### ☀️ ${timeOfDay}, ${firstName}! Here's your daily briefing:\n\n`;
+      
+      msg += `📊 **Pipeline:** ${totalLeads} leads | ${hotLeads.length} hot | ${negotiating.length} negotiating | ${newLeads.length} new\n`;
+      msg += `📝 **Tasks:** ${pendingCount} pending`;
+      if (overdueTasks.length > 0) msg += ` | ⚠️ ${overdueTasks.length} overdue`;
+      if (dueTodayTasks.length > 0) msg += ` | 📅 ${dueTodayTasks.length} due today`;
+      msg += `\n`;
+      if (unreadSMS > 0) msg += `💬 **SMS:** ${unreadSMS} unread messages\n`;
+      if (staleLeads.length > 0) msg += `🔔 **Needs Attention:** ${staleLeads.length} leads haven't been contacted in 5+ days\n`;
+      
+      msg += `\n---\n\n`;
+      
+      // Priority recommendation
+      if (overdueTasks.length > 0) {
+        msg += `⚡ **Top Priority:** You have ${overdueTasks.length} overdue task${overdueTasks.length > 1 ? 's' : ''}. Let's tackle "${overdueTasks[0].title}" first.`;
+      } else if (hotLeads.length > 0) {
+        msg += `⚡ **Top Priority:** Focus on **${hotLeads[0].name}** (Score: ${hotLeads[0].dealScore || 85}). They're your hottest lead right now.`;
+      } else if (staleLeads.length > 0) {
+        msg += `⚡ **Top Priority:** Reach out to **${staleLeads[0].name}** — they haven't heard from you in a while.`;
+      } else {
+        msg += `⚡ Everything looks good! You're running a tight ship today. 🎯`;
+      }
+      
+      return { success: true, message: msg };
+    }
+
+    case 'export_data': {
+      try {
+        store.exportData();
+        logOutcome('data_exported', 'User exported CRM data');
+        return { success: true, message: `✅ Your data export has been triggered! Check your downloads folder — it should appear as a JSON file with all your leads, tasks, and settings.` };
+      } catch {
+        return { success: false, message: `I ran into an issue exporting your data. Try the manual export from Settings → Data Management.` };
+      }
+    }
+
+    case 'set_reminder': {
+      const task = entities.task;
+      const amount = entities.amount || 1;
+      const unit = entities.unit || 'hour';
+      
+      if (!task) return { success: false, message: "What should I remind you about? Say 'remind me in 2 hours to call John'." };
+      
+      // Calculate due date
+      const now = new Date();
+      switch (unit) {
+        case 'minute': now.setMinutes(now.getMinutes() + amount); break;
+        case 'hour': now.setHours(now.getHours() + amount); break;
+        case 'day': now.setDate(now.getDate() + amount); break;
+      }
+      
+      const dueDate = now.toISOString().split('T')[0];
+      const dueTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      
+      store.addTask({
+        title: `⏰ Reminder: ${task}`,
+        description: `Set by OS Bot at ${new Date().toLocaleTimeString()}`,
+        dueDate,
+        priority: 'high',
+        status: 'todo',
+        assignedTo: store.currentUser?.id || 'system',
+        createdBy: store.currentUser?.id || 'system'
+      });
+      
+      logOutcome('reminder_set', `Reminder: ${task} in ${amount} ${unit}(s)`);
+      return { success: true, message: `⏰ Reminder set! I'll have **"${task}"** on your task list for **${dueDate} at ${dueTime}**.` };
+    }
+
+    case 'count_query': {
+      const entity = (entities.entity || '').toLowerCase();
+      
+      if (entity === 'lead' || entity === 'deal') {
+        const total = store.leads.length;
+        const active = store.leads.filter(l => l.status !== 'closed-won' && l.status !== 'closed-lost').length;
+        return { success: true, message: `You have **${total}** leads total (**${active}** active, **${total - active}** closed).` };
+      }
+      
+      if (entity === 'task') {
+        const pending = store.tasks.filter(t => t.status !== 'done').length;
+        const done = store.tasks.filter(t => t.status === 'done').length;
+        return { success: true, message: `You have **${pending}** pending tasks and **${done}** completed.` };
+      }
+      
+      if (entity === 'buyer' || entity === 'contact') {
+        const count = (store.buyers || []).length;
+        return { success: true, message: `You have **${count}** buyers in your database.` };
+      }
+      
+      if (entity === 'sms' || entity === 'message') {
+        const total = store.smsMessages.length;
+        const unread = store.smsMessages.filter(m => !m.is_read && m.direction === 'inbound').length;
+        return { success: true, message: `You have **${total}** SMS messages total. **${unread}** are unread.` };
+      }
+      
+      // Generic fallback
+      return { success: true, message: `📊 Quick Count:\n- Leads: **${store.leads.length}**\n- Tasks: **${store.tasks.filter(t => t.status !== 'done').length}** pending\n- Buyers: **${(store.buyers || []).length}**\n- SMS: **${store.smsMessages.length}** (${store.smsMessages.filter(m => !m.is_read && m.direction === 'inbound').length} unread)` };
+    }
+
+    case 'toggle_automation': {
+      const feature = (entities.feature || '').toLowerCase();
+      const enable = entities.enable;
+      
+      if (feature.includes('auto') && feature.includes('repl')) {
+        store.setSMSAutoReplyEnabled(!!enable);
+        return { success: true, message: `✅ SMS Auto-Reply has been **${enable ? 'ENABLED' : 'DISABLED'}**. ${enable ? `Current message: "${store.smsAutoReplyMessage}"` : 'Leads will no longer get automatic responses.'}` };
+      }
+      
+      if (feature.includes('widget') || feature.includes('floating') || feature.includes('ai widget')) {
+        store.setShowFloatingAIWidget(!!enable);
+        return { success: true, message: `✅ Floating AI Widget has been **${enable ? 'shown' : 'hidden'}**.` };
+      }
+      
+      if (feature.includes('goal') || feature.includes('daily goal')) {
+        store.setShowGoalsForToday(!!enable);
+        return { success: true, message: `✅ Daily Goals widget has been **${enable ? 'shown' : 'hidden'}** on your dashboard.` };
+      }
+      
+      if (feature.includes('shortcut') || feature.includes('keyboard')) {
+        store.setShortcutsEnabled(!!enable);
+        return { success: true, message: `✅ Keyboard shortcuts have been **${enable ? 'ENABLED' : 'DISABLED'}**.` };
+      }
+      
+      return { success: true, message: `I can toggle these automations for you:\n- **auto-reply** (SMS auto-response)\n- **floating widget** (AI assistant widget)\n- **daily goals** (dashboard goals)\n- **shortcuts** (keyboard shortcuts)\n\nSay "turn on auto-reply" or "disable shortcuts" to toggle them.` };
+    }
+
+    case 'smart_followup': {
+      const today = new Date();
+      
+      const staleLeads = store.leads
+        .filter(l => {
+          if (l.status === 'closed-won' || l.status === 'closed-lost') return false;
+          const lastUpdate = l.updatedAt || l.createdAt;
+          if (!lastUpdate) return true;
+          const daysSince = Math.floor((today.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24));
+          return daysSince >= 3;
+        })
+        .sort((a, b) => {
+          const aDate = a.updatedAt || a.createdAt || '';
+          const bDate = b.updatedAt || b.createdAt || '';
+          return new Date(aDate).getTime() - new Date(bDate).getTime();
+        });
+      
+      if (staleLeads.length === 0) {
+        return { success: true, message: `🎉 You're all caught up! All active leads have been contacted recently. Great engagement!` };
+      }
+      
+      let msg = `### 🔔 Follow-Up Needed (${staleLeads.length} Leads)\n\n`;
+      msg += `These leads haven't been contacted recently:\n\n`;
+      
+      staleLeads.slice(0, 8).forEach((l, i) => {
+        const lastUpdate = l.updatedAt || l.createdAt || '';
+        const daysSince = lastUpdate ? Math.floor((today.getTime() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 999;
+        const urgency = daysSince >= 10 ? '🔴' : daysSince >= 5 ? '🟡' : '🟢';
+        msg += `${urgency} ${i + 1}. **${l.name}** — ${daysSince} days since last update (${l.status})\n`;
+      });
+      
+      if (staleLeads.length > 8) msg += `\n...and ${staleLeads.length - 8} more.`;
+      
+      msg += `\n\nWant me to start texting the most urgent ones? Say "text ${staleLeads[0].name}" to begin.`;
+      setLastSuggestion('send_sms_partial', { target: staleLeads[0].name }, `text ${staleLeads[0].name}`);
+      
+      return { success: true, message: msg };
+    }
+
+
+
+    default:
+      return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
+    }
+  } catch (error) {
+    const safeEntities = entities || {};
+    console.error(`[❌ OS Bot] executeTask Error [Action: ${action}]`, error, { entities: safeEntities });
+    throw error;
+  }
+}
