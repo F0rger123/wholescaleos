@@ -66,7 +66,8 @@ export type IntentName =
   | 'proactive_suggestion'
   | 'lead_context_query'
   | 'forget_learned'
-  | 'list_learned';
+  | 'list_learned'
+  | 'repeat_last';
 
 export interface Intent {
   name: IntentName;
@@ -95,6 +96,15 @@ export const intents: Intent[] = [
       'whats next', 'what should i focus on', 'give me a task'
     ],
     action: 'proactive_suggestion',
+    template: '{response}'
+  },
+  {
+    name: 'repeat_last',
+    patterns: [
+      'repeat that', 'say that again', 'what did you say', 'repeat',
+      'say again', 'come again'
+    ],
+    action: 'repeat_last',
     template: '{response}'
   },
   {
@@ -158,7 +168,7 @@ export const intents: Intent[] = [
   },
   {
     name: 'personality_query',
-    patterns: ['personality', 'how you talk', 'be more', 'change your personality', 'be sassy', 'be professional'],
+    patterns: ['personality', 'how you talk', 'be more', 'change your personality', 'be sassy', 'be professional', 'what personality', 'what tone', 'current tone', 'current personality'],
     action: 'redirect_to_settings',
     template: "Redirecting to personality settings..."
   },

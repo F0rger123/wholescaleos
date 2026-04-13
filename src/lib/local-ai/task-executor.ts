@@ -124,7 +124,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
       
       // Confusion / Repeat 
-      if (/^(huh|what|hmm|umm|um|uh|pardon|excuse me|come again|say what|what did you say|say that again|repeat that|i dont get it|i don't get it|wut|wat|hm)$/i.test(text)) {
+      if (/^(huh|what|hmm|umm|um|uh|pardon|excuse me|say what|i dont get it|i don't get it|wut|wat|hm)$/i.test(text)) {
         const responses = [
           "No worries! Try 'help' to see what I can do, or just tell me what you need.",
           "All good — I'm here to help. Try saying 'leads', 'tasks', or 'help'.",
@@ -827,54 +827,152 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'proactive_suggestion': {
       const hour = new Date().getHours();
-      const pendingTasks = store.tasks.filter(t => t.status !== 'done' && t.priority === 'high').length;
-      const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 80).length;
-      const overdueTasks = store.tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < new Date()).length;
-      const todayTasks = store.tasks.filter(t => t.status !== 'done' && t.dueDate === new Date().toISOString().split('T')[0]).length;
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      const tomorrowStr = new Date(today.getTime() + 86400000).toISOString().split('T')[0];
+      
+      // ──── Gather CRM intelligence ────
+      const overdueTasks = store.tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < today);
+      const todayTasks = store.tasks.filter(t => t.status !== 'done' && t.dueDate === todayStr);
+      const tomorrowTasks = store.tasks.filter(t => t.status !== 'done' && t.dueDate === tomorrowStr);
+      const highPriorityTasks = store.tasks.filter(t => t.status !== 'done' && t.priority === 'high');
+      const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70);
+      const negotiatingLeads = store.leads.filter(l => l.status === 'negotiating' || l.status === 'qualified');
       const totalLeads = store.leads.length;
-      
-      let suggestion = '';
-      let suggestionAction = '';
-      let suggestionParams: Record<string, unknown> = {};
-      
-      if (overdueTasks > 0) {
-        suggestion = `You have ${overdueTasks} overdue task${overdueTasks > 1 ? 's' : ''} that need attention. Want me to pull them up?`;
-        suggestionAction = 'tasks_due';
-      } else if (hotLeads > 0) {
-        suggestion = `You've got ${hotLeads} hot lead${hotLeads > 1 ? 's' : ''} with scores above 80 — ready to close. Should I show them?`;
-        suggestionAction = 'hot_leads';
-        suggestionParams = { score_min: 80, limit: 5 };
-      } else if (pendingTasks > 0) {
-        suggestion = `There ${pendingTasks === 1 ? 'is' : 'are'} ${pendingTasks} high-priority task${pendingTasks > 1 ? 's' : ''} on your plate. Want to review them?`;
-        suggestionAction = 'show_tasks';
-      } else if (todayTasks > 0) {
-        suggestion = `You have ${todayTasks} task${todayTasks > 1 ? 's' : ''} due today. Want me to list them?`;
-        suggestionAction = 'tasks_due';
-      } else if (hour < 10) {
-        suggestion = totalLeads > 0 
-          ? `Good morning! You have ${totalLeads} leads in your pipeline. Want to check today's schedule or dive into your top prospects?`
-          : `Good morning! Your pipeline is empty — want me to help you add your first lead?`;
-        suggestionAction = totalLeads > 0 ? 'tasks_due' : 'help_commands';
-      } else if (hour > 17) {
-        suggestion = `End of day! Want me to show tomorrow's tasks or summarize today's activity?`;
-        suggestionAction = 'show_tasks';
-      } else {
-        const ideas = [
-          { msg: `How about following up with a lead via SMS? Just say 'text [name]: [message]'.`, action: 'help_commands' },
-          { msg: `Want to check your pipeline health? I can show you lead stats and task progress.`, action: 'mood_check' },
-          { msg: `Need to add a new lead? Just say 'add [name] as a lead' and I'll handle the rest.`, action: 'help_commands' },
-        ];
-        const pick = ideas[Math.floor(Math.random() * ideas.length)];
-        suggestion = pick.msg;
-        suggestionAction = pick.action;
+
+      // Leads not contacted in 5+ days
+      const staleLeads = store.leads.filter(l => {
+        if (l.status === 'closed-won' || l.status === 'closed-lost') return false;
+        const lastUpdate = l.updatedAt || l.createdAt;
+        if (!lastUpdate) return false;
+        const daysSince = Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24));
+        return daysSince >= 5;
+      });
+
+      // Build a weighted pool of suggestions for variety
+      interface Suggestion { msg: string; action: string; params: Record<string, unknown>; weight: number; }
+      const pool: Suggestion[] = [];
+
+      // Priority 1: Overdue tasks (weight 10)
+      if (overdueTasks.length > 0) {
+        const task = overdueTasks[0];
+        pool.push({
+          msg: `⚠️ You have **${overdueTasks.length}** overdue task${overdueTasks.length > 1 ? 's' : ''}. The most pressing: "${task.title}" (due ${task.dueDate}). Should we tackle ${overdueTasks.length > 1 ? 'those' : 'it'} first?`,
+          action: 'tasks_due',
+          params: {},
+          weight: 10
+        });
       }
-      
+
+      // Priority 2: Stale leads — haven't been contacted in 5+ days (weight 9)
+      if (staleLeads.length > 0) {
+        const staleLead = staleLeads[Math.floor(Math.random() * staleLeads.length)];
+        const lastUpdate = staleLead.updatedAt || staleLead.createdAt;
+        const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+        pool.push({
+          msg: `You haven't reached out to **${staleLead.name}** in ${daysSince} days. Want to send them a quick text?`,
+          action: 'send_sms_partial',
+          params: { target: staleLead.name },
+          weight: 9
+        });
+      }
+
+      // Priority 3: Hot leads ready to close (weight 8)
+      if (hotLeads.length > 0) {
+        const pick = hotLeads[Math.floor(Math.random() * hotLeads.length)];
+        pool.push({
+          msg: `🔥 **${pick.name}** is a hot lead with a score of ${pick.dealScore}. Should I pull up their info so you can make a move?`,
+          action: 'lead_context_query',
+          params: { leadName: pick.name },
+          weight: 8
+        });
+      }
+
+      // Priority 4: Tasks due tomorrow (weight 7)
+      if (tomorrowTasks.length > 0) {
+        const task = tomorrowTasks[0];
+        pool.push({
+          msg: `📅 You have a task due tomorrow: "**${task.title}**". Want to prep it now or review all of tomorrow's items?`,
+          action: 'show_tasks',
+          params: {},
+          weight: 7
+        });
+      }
+
+      // Priority 5: Leads in negotiation stage (weight 6)
+      if (negotiatingLeads.length > 0) {
+        pool.push({
+          msg: `You have **${negotiatingLeads.length}** lead${negotiatingLeads.length > 1 ? 's' : ''} in ${negotiatingLeads.length === 1 ? negotiatingLeads[0].status : 'negotiation/qualified'} stage. Want to review them and plan next steps?`,
+          action: 'list_leads',
+          params: {},
+          weight: 6
+        });
+      }
+
+      // Priority 6: Today's tasks (weight 6)
+      if (todayTasks.length > 0) {
+        pool.push({
+          msg: `You have **${todayTasks.length}** task${todayTasks.length > 1 ? 's' : ''} due today. Ready to check them off?`,
+          action: 'tasks_due',
+          params: {},
+          weight: 6
+        });
+      }
+
+      // Priority 7: High-priority tasks (weight 5)
+      if (highPriorityTasks.length > 0 && overdueTasks.length === 0) {
+        pool.push({
+          msg: `There ${highPriorityTasks.length === 1 ? 'is' : 'are'} **${highPriorityTasks.length}** high-priority task${highPriorityTasks.length > 1 ? 's' : ''} on your plate. Want to review them?`,
+          action: 'show_tasks',
+          params: {},
+          weight: 5
+        });
+      }
+
+      // Time-of-day awareness
+      if (pool.length === 0) {
+        if (hour < 10) {
+          pool.push({
+            msg: totalLeads > 0
+              ? `Good morning, ${userName}! You have ${totalLeads} leads in your pipeline. Want to check today's schedule or dive into your top prospects?`
+              : `Good morning, ${userName}! Your pipeline is empty — want me to help you add your first lead?`,
+            action: totalLeads > 0 ? 'tasks_due' : 'help_commands',
+            params: {},
+            weight: 3
+          });
+        } else if (hour > 17) {
+          pool.push({
+            msg: `End of day! Want me to show tomorrow's tasks or give you a quick pipeline summary?`,
+            action: 'show_tasks',
+            params: {},
+            weight: 3
+          });
+        } else {
+          const ideas: Suggestion[] = [
+            { msg: `How about following up with a lead via SMS? Just say 'text [name]: [message]'.`, action: 'help_commands', params: {}, weight: 2 },
+            { msg: `Want to check your pipeline health? I can show you lead stats and task progress.`, action: 'mood_check', params: {}, weight: 2 },
+            { msg: `Need to add a new lead? Just say 'add [name] as a lead' and I'll handle the rest.`, action: 'help_commands', params: {}, weight: 2 },
+            { msg: `Want me to show your top-scoring leads? I can identify who's closest to closing.`, action: 'hot_leads', params: { score_min: 70, limit: 5 }, weight: 2 },
+          ];
+          pool.push(ideas[Math.floor(Math.random() * ideas.length)]);
+        }
+      }
+
+      // Weighted random selection — higher weight = more likely to be picked
+      const totalWeight = pool.reduce((sum, s) => sum + s.weight, 0);
+      let rand = Math.random() * totalWeight;
+      let selected = pool[0];
+      for (const s of pool) {
+        rand -= s.weight;
+        if (rand <= 0) { selected = s; break; }
+      }
+
       // Store the suggestion so "yes" / "do that" can trigger it
-      if (suggestionAction) {
-        setLastSuggestion(suggestionAction, suggestionParams, suggestion);
+      if (selected.action) {
+        setLastSuggestion(selected.action, selected.params, selected.msg);
       }
-      
-      return { success: true, message: suggestion };
+
+      return { success: true, message: selected.msg };
     }
 
     case 'lead_context_query': {
@@ -949,6 +1047,16 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       msg += `\n\nSay "forget [phrase]" to remove one.`;
       
       return { success: true, message: msg };
+    }
+
+    // ──── REPEAT LAST (PART 4) ────
+    case 'repeat_last': {
+      const mem = getMemory();
+      const lastBotMsg = [...mem.history].reverse().find(m => m.role === 'assistant');
+      if (lastBotMsg) {
+        return { success: true, message: `Here's what I said before:\n\n${lastBotMsg.content.replace(/^🤖\s*OS Bot:\s*/i, '')}` };
+      }
+      return { success: true, message: "I don't have any recent messages to repeat. What would you like me to help with?" };
     }
 
     default:

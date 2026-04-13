@@ -167,10 +167,9 @@ function isSmallTalkPhrase(input: string): boolean {
     // Laughter
     'lol', 'haha', 'hehe', 'lmao', 'lmfao', 'rofl', 'nice one', 'good one',
     'funny', 'dead', 'bruh', 'bro', 'ong', 'fr', 'no cap',
-    // Confusion
+    // Confusion (NOTE: 'repeat that', 'say that again', 'what did you say', 'come again' removed — handled by repeat_last)
     'huh', 'what', 'hmm', 'umm', 'um', 'uh', 'pardon', 'excuse me',
-    'come again', 'say what', 'what did you say', 'say that again',
-    'repeat that', 'i dont get it', "i don't get it", 'wut', 'wat', 'hm',
+    'say what', 'i dont get it', "i don't get it", 'wut', 'wat', 'hm',
     // Status Check
     'how are you', 'how you doing', 'how goes it', 'whats up', "what's up",
     'whats new', 'how are things', 'sup', 'wassup', 'wsg',
@@ -420,6 +419,9 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     'show tasks': 'show_tasks',
     'list tasks': 'show_tasks',
     'pending tasks': 'show_tasks',
+    'takss': 'show_tasks',   // common typo
+    'taks': 'show_tasks',    // common typo
+    'tsks': 'show_tasks',    // common typo
     
     // Leads
     'leads': 'list_leads',
@@ -428,11 +430,15 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     'show leads': 'list_leads',
     'list leads': 'list_leads',
     'view leads': 'list_leads',
+    'leed': 'list_leads',    // common typo
+    'leeds': 'list_leads',   // common typo
+    'leadas': 'list_leads',  // common typo
 
     // Help
     'help': 'help_commands',
     'help me': 'help_commands',
     'commands': 'help_commands',
+    'hlp': 'help_commands',  // common typo
     
     // Hot/Top leads
     'hot leads': 'hot_leads',
@@ -501,6 +507,13 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^i'm bored$/i,
         /^im bored$/i,
         /^nothing to do$/i,
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'repeat_last',
+      patterns: [
+        /^(?:repeat that|say that again|what did you say|come again|repeat|say again|repeat what you said|repeat last|what was that)$/i,
       ],
       params: () => ({})
     },
@@ -588,7 +601,12 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       patterns: [
         /^(?:can you customize how you talk|change your personality|how you talk to me)$/i,
         /^(?:be more professional|be sassy|be funny|cursing mode|customize your tone)$/i,
-        /\b(?:personality|tone|style)\b/i
+        /^(?:what personality do you have|what personality are you|what is your personality|whats your personality)$/i,
+        /^(?:what tone do you have|what tone are you|what is your tone|whats your tone)$/i,
+        /^(?:what personality do you have right now|what tone do you have turned on)$/i,
+        /^(?:what mode are you in|current mode|current personality|current tone)$/i,
+        /\b(?:personality|tone|style)\b.*\b(?:setting|mode|right now|currently|turned on|have)\b/i,
+        /\b(?:what)\b.*\b(?:personality|tone)\b/i,
       ],
       params: () => ({})
     },
@@ -886,7 +904,8 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     for (const keyword of commandKeywords) {
       for (const word of inputWords) {
         // Skip short words and words that are already valid small-talk
-        if (word.length < 4) continue;
+        // Require 5+ chars to reduce false positives (was 4)
+        if (word.length < 5) continue;
         if (isSmallTalkPhrase(word)) continue;
         
         const distance = getLevenshteinDistance(word, keyword);

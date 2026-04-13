@@ -32,6 +32,7 @@ function pick<T>(arr: T[]): T {
  * - Small talk / greeting responses are NEVER personality-wrapped (they already have tone).
  * - Personality is applied exactly ONCE.
  * - Professional mode does NOT add emojis or casual filler.
+ * - Debug logs show which personality is being applied.
  */
 const applyPersonality = (
   msg: string,
@@ -41,12 +42,18 @@ const applyPersonality = (
 ): string => {
   const p = personality.toLowerCase();
 
+  // Debug: always log which personality is being applied
+  console.log(`[🎭 Personality] Intent: "${intentName}" | Personality: "${personality}" | Raw: "${p}"`);
+
   // Skip personality wrapping for intents that already have natural tone
   const skipPersonality = [
     'small_talk', 'greeting', 'joke', 'cancel_confirmation',
-    'typo_suggestion', 'test_query'
+    'typo_suggestion', 'test_query', 'repeat_last'
   ];
-  if (skipPersonality.includes(intentName)) return msg;
+  if (skipPersonality.includes(intentName)) {
+    console.log(`[🎭 Personality] Skipping — intent "${intentName}" has natural tone`);
+    return msg;
+  }
 
   // Strip any existing trailing suffixes before adding personality ones
   const base = stripTrailingSuffixes(msg);
@@ -59,6 +66,8 @@ const applyPersonality = (
       'Standing by for further requests.',
       'What else can I assist with?',
       'Shall I proceed with anything else?',
+      'At your service.',
+      'Anything else on the agenda?',
     ];
     return `${base} ${pick(endings)}`;
   }
@@ -70,6 +79,8 @@ const applyPersonality = (
       " Handled. What's the next power move?",
       " Done and done. Next? 🔥",
       " Boom. What else you got?",
+      " Slayed it. 💁‍♀️",
+      " No sweat, babe. Next?",
     ];
     return `${base}${pick(endings)}`;
   }
@@ -81,6 +92,8 @@ const applyPersonality = (
       " Virtual high-five! 🖐️",
       " You owe me a virtual coffee for that one. ☕",
       " And they said AI couldn't be helpful! 🤖",
+      " I'd take a bow but I'm made of code. 🎭",
+      " My circuits are tingling with pride!",
     ];
     return `${base}${pick(additions)}`;
   }
@@ -92,6 +105,8 @@ const applyPersonality = (
       " All good! What else?",
       " Sorted. Hit me with the next one.",
       " Done deal. What's the move?",
+      " Piece of cake. What else?",
+      " Got it handled! 🤙",
     ];
     return `${base}${pick(endings)}`;
   }
@@ -103,6 +118,8 @@ const applyPersonality = (
       " Done. No messing around.",
       " Knocked that out. What's next, boss?",
       " Boom. What else you need?",
+      " Damn right I got that done.",
+      " No BS, just results.",
     ];
     return `${base} ${pick(cursed)}`;
   }
@@ -124,10 +141,14 @@ export function generateResponse(
   userText: string,
   suggestedText?: string
 ): string {
+  // CRITICAL: Always read personality FRESH from the store, never cache it
   const store = useStore.getState();
   const _context = getAIContext();
   const aiName = store.aiName || 'OS Bot';
   const personality = store.aiPersonality || 'Default';
+
+  // Debug: log the personality being used for this response
+  console.log(`[🎭 Personality] generateResponse called | Store personality: "${personality}" | aiTone: "${store.aiTone}"`);
 
   // Branding prefix
   const prefix = `🤖 ${aiName}: `;
@@ -193,7 +214,15 @@ export function generateResponse(
 export function generateErrorResponse(error: string): string {
   const store = useStore.getState();
   const aiName = store.aiName || 'OS Bot';
-  return `🤖 ${aiName}: I ran into an issue: ${error}. Want to try a different command? I can help with leads, tasks, and messages.`;
+  const personality = store.aiPersonality || 'Default';
+  
+  console.log(`[🎭 Personality] Error response | Personality: "${personality}"`);
+  
+  const base = `I ran into an issue: ${error}. Want to try a different command?`;
+  if (personality.toLowerCase() === 'professional') {
+    return `🤖 ${aiName}: ${base} I can assist with leads, tasks, and messages.`;
+  }
+  return `🤖 ${aiName}: ${base} I can help with leads, tasks, and messages.`;
 }
 
 export function generateUnknownResponse(input: string, suggestion?: string): string {
