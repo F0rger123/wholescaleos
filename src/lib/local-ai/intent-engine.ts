@@ -575,27 +575,19 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'lead_context_query',
       patterns: [
+        /(?:what do you know about|what info do you have on|give me info on|give me what you know for|tell me about|info on|details on|get info for|show me details for)\s+(.+)$/i,
+        /^(.+?)\s+info$/i,
+        /^info\s+(.+)$/i,
         /^(?:whats|what is|what's) (?:his|her|their) (phone|email|address|status)$/i,
-        /^(?:show me|give me|tell me)\s+(?:the\s+)?(?:notes|info|details|what you know)\s+(?:on|for|about)\s+(.+)$/i,
-        /^(?:show me the notes for|notes on|when did i last contact|tell me about|info for|details on|give me info on|give me what you know for) (.+)$/i,
-        /^(?:what|whats|what's) (?:info|details) (?:do you have|you got) (?:on|about|for) (.+)$/i,
         /^lead details for (.+)$/i
       ],
-      params: (matches: string[], text: string) => {
-        const lower = text.toLowerCase();
-        // Check if this was a field-specific query (phone, email, etc.)
-        const fieldMatch = lower.match(/\b(phone|email|address|status|notes|contact)\b/i);
-        const field = fieldMatch ? fieldMatch[1] : 'all';
-        
-        // The name is typically the capture group, unless it matched the field-specific regex
-        let leadName = matches[1]?.trim();
-        if (['phone', 'email', 'address', 'status'].includes(leadName)) {
-           // If leadName is actually the field (from the first regex), then there is no leadName in the match
-           // we should rely on context.
-           leadName = 'this'; 
-        }
-
-        return { leadName, field };
+      params: (matches: string[]) => {
+        const leadName = matches[1]?.trim();
+        const field = leadName === 'phone' || leadName === 'email' || leadName === 'address' || leadName === 'status' ? leadName : 'all';
+        return { 
+          leadName: field !== 'all' ? 'this' : leadName, 
+          field 
+        };
       }
     },
     {

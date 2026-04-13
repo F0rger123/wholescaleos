@@ -116,7 +116,9 @@ export const intents: Intent[] = [
     patterns: [
       'whats his phone', 'whats her email', 'whats the address',
       'show me the notes', 'when did i last contact', 'whats the status of',
-      'tell me about this lead', 'lead details for'
+      'tell me about this lead', 'lead details for',
+      'what do you know about', 'give me info on', 'give me what you know for',
+      'info on', 'details on', 'get info for'
     ],
     action: 'lead_context_query',
     required_params: ['leadName'],
