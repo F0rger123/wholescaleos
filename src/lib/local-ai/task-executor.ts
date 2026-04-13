@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
-import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome, setLastSuggestion } from './memory-store';
+import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome, setLastSuggestion, getLastSuggestion, clearLastSuggestion } from './memory-store';
 import { 
   getConversationContext, 
   updateConversationTopic, 
@@ -17,6 +17,42 @@ export interface TaskResponse {
   message: string;
   data?: any;
   clean?: boolean;
+}
+
+/**
+ * Fuzzy lead name matching with fragments support and ambiguity detection.
+ */
+function findLeadFuzzy(inputName: string, leads: any[]): { lead: any | null, ambiguity: string[] | null, isExact: boolean } {
+  if (!inputName || inputName === 'this') return { lead: null, ambiguity: null, isExact: false };
+  const lowerInput = inputName.toLowerCase().trim();
+  
+  // 1. Exact match
+  const exactMatch = leads.find(l => l.name.toLowerCase() === lowerInput);
+  if (exactMatch) return { lead: exactMatch, ambiguity: null, isExact: true };
+
+  // 2. Simple inclusion
+  const includeMatches = leads.filter(l => l.name.toLowerCase().includes(lowerInput));
+  
+  // 3. Fragment matching (e.g., "Luke Knight" -> "Luke G Knight")
+  const fragments = lowerInput.split(/\s+/).filter(f => f.length > 1);
+  const fragmentMatches = leads.filter(l => {
+    const lowerName = l.name.toLowerCase();
+    return fragments.every(f => lowerName.includes(f));
+  });
+
+  // Combine and deduplicate matches
+  const allMatches = [...new Set([...includeMatches, ...fragmentMatches])];
+
+  if (allMatches.length === 1) {
+    // Check if it's "exact enough" (e.g. input is exactly the same as the found name)
+    const matchedLead = allMatches[0];
+    const isExact = matchedLead.name.toLowerCase() === lowerInput;
+    return { lead: matchedLead, ambiguity: null, isExact };
+  }
+  
+  if (allMatches.length > 1) return { lead: null, ambiguity: allMatches.map(l => l.name), isExact: false };
+
+  return { lead: null, ambiguity: null, isExact: false };
 }
 
 export async function executeTask(action: string, entities: any): Promise<TaskResponse> {
@@ -56,6 +92,26 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         const text = (entities.text || '').toLowerCase();
         const hour = new Date().getHours();
         
+        // Affirmation — handle pending suggestions
+        if (/^(yes|yeah|y|yep|yup|ya|yah|sure|do it|proceed|exactly|that's the one|yessir|correct|that's him|that's her|thats him|thats her)$/i.test(text)) {
+          const suggestion = getLastSuggestion();
+          if (suggestion) {
+            console.log('[⚙️ OS Bot] Executing pending suggestion:', suggestion);
+            clearLastSuggestion();
+            // Recursive call to execute the confirmed task
+            return await executeTask(suggestion.action, suggestion.params);
+          }
+        }
+
+        // Negation — handle pending suggestions
+        if (/^(no|nope|naw|neh|wrong|incorrect|not that one|not him|not her)$/i.test(text)) {
+          const suggestion = getLastSuggestion();
+          if (suggestion) {
+            clearLastSuggestion();
+            return { success: true, message: "My apologies! Which lead were you referring to then?" };
+          }
+        }
+
         // Acknowledgments — varied and natural
         if (/^(okay|ok|k|kk|okk|okayyy|okayy|okie|okey|oki|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine|right|noted|understood|roger|copy|yep|yup|ya|yah|ye|word|facts|true|fair|valid|aight|ight|ite|kewl|noice|dope)$/i.test(text)) {
           const shortCount = parseInt(localStorage.getItem('os_bot_short_ack_count') || '0') + 1;
@@ -340,8 +396,19 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           return { success: true, message: `Got it. What message would you like to send to ${entities.target}?` };
         }
 
-      case 'update_lead_status':
-        const leadToUpdate = store.leads.find(l => l.name.toLowerCase().includes(entities.target?.toLowerCase()));
+      case 'update_lead_status': {
+        const targetName = entities.target || entities.leadName || entities.name;
+        const { lead: leadToUpdate, ambiguity: updateAmbiguity, isExact: updateIsExact } = findLeadFuzzy(targetName, store.leads);
+        
+        if (updateAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${targetName}": ${updateAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (leadToUpdate && !updateIsExact) {
+          setLastSuggestion('update_lead_status', { ...entities, target: leadToUpdate.name }, `update status for ${leadToUpdate.name}`);
+          return { success: false, message: `Do you mean **${leadToUpdate.name}**?` };
+        }
+
         if (leadToUpdate) {
           store.updateLead(leadToUpdate.id, { status: entities.status });
           pushToEntityStack({ id: leadToUpdate.id, name: leadToUpdate.name, type: 'lead' });
@@ -353,6 +420,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           return { success: true, message: msg };
         }
         return { success: false, message: `I couldn't find a lead named "${entities.target}".` };
+      }
 
       case 'complete_task':
         const taskObj = store.tasks.find(t => t.title.toLowerCase().includes(entities.target?.toLowerCase()));
@@ -362,8 +430,19 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         }
         return { success: false, message: `I couldn't find a task matching "${entities.target}".` };
 
-      case 'add_note':
-        const leadForNote = store.leads.find(l => l.name.toLowerCase().includes(entities.target?.toLowerCase()));
+      case 'add_note': {
+        const noteTarget = entities.target || entities.leadName || entities.name;
+        const { lead: leadForNote, ambiguity: noteAmbiguity, isExact: noteIsExact } = findLeadFuzzy(noteTarget, store.leads);
+
+        if (noteAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${noteTarget}": ${noteAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (leadForNote && !noteIsExact) {
+          setLastSuggestion('add_note', { ...entities, target: leadForNote.name }, `add note to ${leadForNote.name}`);
+          return { success: false, message: `Do you mean **${leadForNote.name}**?` };
+        }
+
         if (leadForNote) {
           const newNote = `[OS Bot ${new Date().toLocaleDateString()}]: ${entities.note}\n\n${leadForNote.notes || ''}`;
           store.updateLead(leadForNote.id, { notes: newNote });
@@ -371,15 +450,28 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           return { success: true, message: `✅ Added note to ${leadForNote.name}'s profile.` };
         }
         return { success: false, message: `I couldn't find a lead named "${entities.target}".` };
+      }
 
-      case 'get_lead_info':
-        const foundLead = store.leads.find(l => l.name.toLowerCase().includes(entities.name?.toLowerCase()));
+      case 'get_lead_info': {
+        const infoName = entities.name || entities.target || entities.leadName;
+        const { lead: foundLead, ambiguity: infoAmbiguity, isExact: infoIsExact } = findLeadFuzzy(infoName, store.leads);
+
+        if (infoAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${infoName}": ${infoAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (foundLead && !infoIsExact) {
+          setLastSuggestion('get_lead_info', { ...entities, name: foundLead.name }, `show info for ${foundLead.name}`);
+          return { success: false, message: `Do you mean **${foundLead.name}**?` };
+        }
+
         if (foundLead) {
           pushToEntityStack({ id: foundLead.id, name: foundLead.name, type: 'lead' });
           const summary = `Here's what I have on **${foundLead.name}**:\n- 📍 Address: ${foundLead.propertyAddress || 'N/A'}\n- 📊 Status: ${foundLead.status}\n- 🎯 Deal Score: ${foundLead.dealScore || 0}\n- 📞 Phone: ${foundLead.phone || 'None'}`;
           return { success: true, message: summary };
         }
         return { success: false, message: `I don't have any records for "${entities.name}".` };
+      }
 
       case 'lead_query': {
         console.log('[⚙️ OS Bot] Processing lead_query with entities:', entities);
@@ -1014,7 +1106,17 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         const field = entities.field || 'all';
         const store = useStore.getState();
         
-        let lead = store.leads.find(l => l.name.toLowerCase().includes(leadName?.toLowerCase()));
+        const { lead: fuzzyLead, ambiguity: queryAmbiguity, isExact: queryIsExact } = findLeadFuzzy(leadName, store.leads);
+        let lead = fuzzyLead;
+
+        if (queryAmbiguity) {
+          return { success: false, message: `I found multiple leads matching "${leadName}": ${queryAmbiguity.join(' or ')}. Which one did you mean?` };
+        }
+
+        if (lead && !queryIsExact) {
+          setLastSuggestion('lead_context_query', { ...entities, leadName: lead.name }, `show ${field} for ${lead.name}`);
+          return { success: false, message: `Do you mean **${lead.name}**?` };
+        }
         
         // Contextual Fallback
         if (!lead) {

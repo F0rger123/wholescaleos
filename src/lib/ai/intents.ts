@@ -144,9 +144,10 @@ export const intents: Intent[] = [
     name: 'small_talk',
     patterns: [
       'okay', 'ok', 'k', 'got it', 'alr', 'alright', 'sure', 'bet', 'sounds good',
+      'yes', 'yeah', 'yup', 'yep', 'exactly', 'correct', 'thats the one',
       'cool', 'nice', 'great', 'awesome', 'perfect', 'good', 'fine',
       'thanks', 'thank you', 'thx', 'ty', 'appreciate it',
-      'stop', 'wait', 'hold up', 'hold on', 'pause', 'cancel', 'nevermind', 'nvm', 'nah', 'no thanks', 'no',
+      'stop', 'wait', 'hold up', 'hold on', 'pause', 'cancel', 'nevermind', 'nvm', 'nah', 'no thanks', 'no', 'nope',
       'bye', 'goodbye', 'see you', 'see ya', 'later', 'cya', 'peace', 'good night',
       'lol', 'haha', 'hehe', 'lmao', 'nice one', 'good one', 'funny',
       'huh', 'what', 'hmm', 'umm', 'pardon', 'excuse me', 'i dont get it',

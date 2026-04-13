@@ -65,8 +65,8 @@ export function normalizeInput(input: string): string {
     normalized = normalized.replace(regex, '');
   });
 
-  // Self-Correction: discard everything before "wait actually", "no wait", etc.
-  const correctionPattern = /^.*?\b(?:wait no|no wait|actually,?|wait,? actually|instead,? just|scratch that,?|—no |- no )\b\s*/i;
+  // Self-Correction: discard everything before "wait actually", "no wait", dashes, etc.
+  const correctionPattern = /^.*?(?:\b(?:wait no|no wait|actually|i mean|scratch that|wait actually|instead just)\b|[—]{1,2}|[-]{2,})\s*(?:no wait|wait no|actually|no)?\s*/i;
   if (correctionPattern.test(normalized)) {
     normalized = normalized.replace(correctionPattern, '');
   }
