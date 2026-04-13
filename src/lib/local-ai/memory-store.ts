@@ -191,6 +191,12 @@ function detectLearnedFacts(input: string) {
   if (phoneMatch && phoneMatch[1]) {
     setLearnedFact('phone', phoneMatch[1].trim());
   }
+
+  // General Preferences
+  const prefMatch = input.match(/i\s+(?:prefer|like\s+it\s+when|want\s+you\s+to|always)\s+(.+)/i);
+  if (prefMatch && prefMatch[1]) {
+    setLearnedFact(`preference_${Date.now()}`, prefMatch[1].trim());
+  }
 }
 
 export function trackSentiment(input: string) {
@@ -223,20 +229,30 @@ export function setTopic(topic: string) {
   }));
 }
 
-export function detectAndSetTopic(input: string) {
+export function detectAndSetTopic(input: string): { changed: boolean; oldTopic?: string; newTopic?: string } {
   const lower = input.toLowerCase();
+  const memory = getMemory();
+  const oldTopic = memory.lastTopic;
+  let newTopic = oldTopic;
   
   if (lower.includes('lead') || lower.includes('deal') || lower.includes('pipeline') || lower.includes('prospect')) {
-    setTopic('leads');
+    newTopic = 'leads';
   } else if (lower.includes('task') || lower.includes('todo') || lower.includes('reminder') || lower.includes('to do')) {
-    setTopic('tasks');
+    newTopic = 'tasks';
   } else if (lower.includes('calendar') || lower.includes('schedule') || lower.includes('appointment') || lower.includes('meeting')) {
-    setTopic('calendar');
+    newTopic = 'calendar';
   } else if (lower.includes('sms') || lower.includes('text') || lower.includes('message')) {
-    setTopic('sms');
+    newTopic = 'sms';
   } else if (lower.includes('automation') || lower.includes('workflow') || lower.includes('hub')) {
-    setTopic('automations');
+    newTopic = 'automations';
   }
+
+  if (newTopic !== oldTopic) {
+    if (newTopic) setTopic(newTopic);
+    return { changed: true, oldTopic, newTopic };
+  }
+
+  return { changed: false, oldTopic, newTopic };
 }
 
 export function pushToEntityStack(entity: Entity) {
@@ -244,7 +260,7 @@ export function pushToEntityStack(entity: Entity) {
   const updatedStack = [
     entity, 
     ...memory.entityStack.filter(e => e.id !== entity.id)
-  ].slice(0, 3);
+  ].slice(0, 10);
 
   localStorage.setItem(MEMORY_KEY, JSON.stringify({
     ...memory,

@@ -68,7 +68,10 @@ export type IntentName =
   | 'forget_learned'
   | 'list_learned'
   | 'repeat_last'
-  | 'change_personality';
+  | 'change_personality'
+  | 'remember_fact'
+  | 'recall_yesterday'
+  | 'clarify_context';
 
 export interface Intent {
   name: IntentName;
@@ -181,6 +184,24 @@ export const intents: Intent[] = [
       'change personality to'
     ],
     action: 'change_personality',
+    template: '{response}'
+  },
+  {
+    name: 'remember_fact',
+    patterns: ['remember that', 'keep in mind', 'make a note that', 'i prefer'],
+    action: 'remember_fact',
+    template: 'Got it. I will remember that.'
+  },
+  {
+    name: 'recall_yesterday',
+    patterns: ['what was i working on yesterday', 'what did we do yesterday', 'yesterday'],
+    action: 'recall_yesterday',
+    template: '{response}'
+  },
+  {
+    name: 'clarify_context',
+    patterns: ['that lead', 'him', 'her', 'them', 'the task', 'it'],
+    action: 'clarify_context',
     template: '{response}'
   },
   {

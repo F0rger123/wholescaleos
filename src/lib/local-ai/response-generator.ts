@@ -20,10 +20,17 @@ function stripTrailingSuffixes(msg: string): string {
 }
 
 /**
- * Picks a random item from an array for response variety.
+ * Picks a random item from an array ensuring we don't repeat the last choice for variety.
  */
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+function pick<T>(arr: T[], key: string = 'general'): T {
+  const lastPicked = localStorage.getItem(`os_bot_last_picked_${key}`);
+  const available = arr.filter(x => (x as unknown as string) !== lastPicked);
+  const pool = available.length > 0 ? available : arr;
+  const choice = pool[Math.floor(Math.random() * pool.length)];
+  if (typeof choice === 'string') {
+    localStorage.setItem(`os_bot_last_picked_${key}`, choice);
+  }
+  return choice;
 }
 
 /**
@@ -58,18 +65,31 @@ const applyPersonality = (
   // Strip any existing trailing suffixes before adding personality ones
   const base = stripTrailingSuffixes(msg);
 
+  // Sentiment Shift
+  const memory = getMemory();
+  const sentiment = memory.sentiment;
+  if (sentiment === 'frustrated') {
+    const empatheticEndings = [
+      ' Let me know if I can help clear things up.',
+      ' I know this can be frustrating. What specifically can I assist with?',
+      ' Take your time, I am here to help.',
+      ' Let\'s get this sorted out together.',
+    ];
+    return `${base}${pick(empatheticEndings, 'frustrated')}`;
+  }
+
   if (p === 'professional') {
     // Clean, no-emoji, business tone
     const endings = [
-      'Let me know if you need anything else.',
-      'Ready for your next instruction.',
-      'Standing by for further requests.',
-      'What else can I assist with?',
-      'Shall I proceed with anything else?',
-      'At your service.',
-      'Anything else on the agenda?',
+      ' Let me know if you need anything else.',
+      ' Ready for your next instruction.',
+      ' Standing by for further requests.',
+      ' What else can I assist with?',
+      ' Shall I proceed with anything else?',
+      ' At your service.',
+      ' Anything else on the agenda?',
     ];
-    return `${base} ${pick(endings)}`;
+    return `${base}${pick(endings, 'prof')}`;
   }
 
   if (p === 'sassy') {
@@ -82,7 +102,7 @@ const applyPersonality = (
       " Slayed it. 💁‍♀️",
       " No sweat, babe. Next?",
     ];
-    return `${base}${pick(endings)}`;
+    return `${base}${pick(endings, 'sassy')}`;
   }
 
   if (p === 'funny') {
@@ -95,7 +115,7 @@ const applyPersonality = (
       " I'd take a bow but I'm made of code. 🎭",
       " My circuits are tingling with pride!",
     ];
-    return `${base}${pick(additions)}`;
+    return `${base}${pick(additions, 'funny')}`;
   }
 
   if (p === 'casual') {
@@ -108,7 +128,7 @@ const applyPersonality = (
       " Piece of cake. What else?",
       " Got it handled! 🤙",
     ];
-    return `${base}${pick(endings)}`;
+    return `${base}${pick(endings, 'casual')}`;
   }
 
   if (p === 'cursing') {
@@ -121,7 +141,7 @@ const applyPersonality = (
       " Damn right I got that done.",
       " No BS, just results.",
     ];
-    return `${base} ${pick(cursed)}`;
+    return `${base} ${pick(cursed, 'cursing')}`;
   }
 
   // Default — add a light conversational ending
@@ -132,7 +152,7 @@ const applyPersonality = (
     ' Let me know if you need more.',
     '',
   ];
-  return `${base}${pick(defaultEndings)}`;
+  return `${base}${pick(defaultEndings, 'default')}`;
 };
 
 export function generateResponse(
@@ -143,18 +163,35 @@ export function generateResponse(
 ): string {
   // CRITICAL: Always read personality FRESH from the store, never cache it
   const store = useStore.getState();
-  const _context = getAIContext();
+  const context = getMemory();
   const aiName = store.aiName || 'OS Bot';
   const personality = store.aiPersonality || 'Default';
 
   // Debug: log the personality being used for this response
   console.log(`[🎭 Personality] generateResponse called | Store personality: "${personality}" | aiTone: "${store.aiTone}"`);
 
-  // Branding prefix
-  const prefix = `🤖 ${aiName}: `;
+  // Late Night Awareness
+  const hour = new Date().getHours();
+  let prefix = `🤖 ${aiName}: `;
+  if ((hour >= 22 || hour <= 4) && Math.random() > 0.7 && !result.clean) {
+    prefix = `🤖 ${aiName}: (Burning the midnight oil, I see. 🌙) `;
+  }
 
   // Normalize intent name
   const intentName = typeof intentOrName === 'string' ? intentOrName : intentOrName.name;
+
+  // Topic Transitions
+  if (memory.lastTopic && memory.activeTopic && memory.lastTopic !== memory.activeTopic) {
+    if (!result.clean && intentName !== 'greeting' && intentName !== 'small_talk') {
+      const transitions = [
+        `By the way, moving over to ${memory.activeTopic} now. `,
+        `Switching gears to ${memory.activeTopic}... `,
+        `Alright, let's look at ${memory.activeTopic}. `,
+        `Pivoting to ${memory.activeTopic}. `,
+      ];
+      prefix += pick(transitions, 'transition');
+    }
+  }
 
   // 0. Handle virtual intents
   if (intentName === 'ambiguous') {
@@ -229,9 +266,19 @@ export function generateUnknownResponse(input: string, suggestion?: string): str
   const store = useStore.getState();
   const aiName = store.aiName || 'OS Bot';
   const prefix = `🤖 ${aiName}: `;
+  const memory = getMemory();
 
   if (suggestion) {
     return `${prefix}I'm not exactly sure what you mean by "${input}". Did you mean **"${suggestion}"**?`;
+  }
+
+  if (memory.lastTopic) {
+    const contextualFallback = [
+      `I didn't quite catch that. Were you trying to check on your ${memory.lastTopic}?`,
+      `Hmm, I'm not understanding "${input}". We were just talking about ${memory.lastTopic} — want to go back to that?`,
+      `Not sure what that means. If you still want to manage your ${memory.lastTopic}, just let me know!`,
+    ];
+    return `${prefix}${pick(contextualFallback, 'unknown_context')}`;
   }
 
   const fallbacks = [
@@ -242,5 +289,5 @@ export function generateUnknownResponse(input: string, suggestion?: string): str
     `I'm still learning! For now, I handle leads, tasks, SMS, and calendar. Type 'help' to see the full command list.`,
   ];
 
-  return `${prefix}${pick(fallbacks)}`;
+  return `${prefix}${pick(fallbacks, 'unknown')}`;
 }

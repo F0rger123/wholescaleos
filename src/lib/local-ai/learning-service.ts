@@ -201,6 +201,34 @@ export async function getConversationContext(
   }
 }
 
+export async function getRecentMemorySummary(userId: string): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from('conversation_memory')
+      .select('messages')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(2);
+
+    if (!data || data.length === 0) return "We haven't worked on anything recently.";
+
+    const msgs = data.flatMap(d => {
+      let m = d.messages;
+      if (typeof m === 'string') m = JSON.parse(m);
+      return m || [];
+    });
+
+    if (msgs.length === 0) return "We haven't worked on anything recently.";
+
+    // Just pull the last 10 messages from those sessions
+    const recent = msgs.slice(-10);
+    const topics = recent.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(' | ');
+    return `Recently we were talking about: ${topics.substring(0, 100)}...`;
+  } catch(e) {
+    return "I ran into an issue finding yesterday's memory.";
+  }
+}
+
 export async function updateConversationTopic(
   userId: string,
   sessionId: string,

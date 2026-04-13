@@ -58,7 +58,13 @@ export function normalizeInput(input: string): string {
   trailingFillers.forEach(regex => {
     normalized = normalized.replace(regex, '');
   });
-  
+
+  // Self-Correction: discard everything before "wait actually", "no wait", etc.
+  const correctionPattern = /^.*?\b(?:wait no|no wait|actually,?|wait,? actually|instead,? just|scratch that,?|—no |- no )\b\s*/i;
+  if (correctionPattern.test(normalized)) {
+    normalized = normalized.replace(correctionPattern, '');
+  }
+
   return normalized.trim();
 }
 
@@ -623,6 +629,34 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       params: () => ({})
     },
     {
+      intent: 'remember_fact',
+      patterns: [
+        /^(?:remember\s+(?:that\s+)?)(.+)$/i,
+        /^(?:make\s+a\s+note\s+(?:that\s+)?)(.+)$/i,
+        /^(?:i\s+prefer\s+)(.+)$/i,
+        /^(?:keep\s+in\s+mind\s+(?:that\s+)?)(.+)$/i
+      ],
+      params: (matches: string[]) => ({ fact: matches[1] || matches[2] || matches[3] || matches[4] })
+    },
+    {
+      intent: 'recall_yesterday',
+      patterns: [
+        /^(?:what\s+was\s+i\s+working\s+on\s+yesterday|what\s+did\s+we\s+do\s+yesterday)$/i,
+        /^(?:what\s+happened\s+yesterday|recap\s+yesterday)$/i,
+        /^yesterday$/i
+      ],
+      params: () => ({})
+    },
+    {
+      intent: 'clarify_context',
+      patterns: [
+        /^(?:that\s+lead|the\s+lead|the\s+one\s+from|the\s+guy|the\s+girl)\.?\.?\.?$/i,
+        /^(?:him|her|them|it|the\s+task|the\s+contact)\.?\.?\.?$/i,
+        /^(?:what\s+about\s+(?:them|him|her|it|this|that))\??$/i
+      ],
+      params: () => ({})
+    },
+    {
       intent: 'hot_leads',
       patterns: [
         /^what are my (\d+) highest scored leads$/i,
@@ -796,7 +830,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
           if (intentObj) {
             const params = h.params(match as string[]) as Record<string, unknown>;
             
-            const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'the contact', 'the task'];
+            const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'that lead', 'this lead', 'the contact', 'the task'];
             if (typeof params.target === 'string' && activeEntity && pronouns.includes((params.target as string).toLowerCase())) {
               params.target = activeEntity.name;
             }

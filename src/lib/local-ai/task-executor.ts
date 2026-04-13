@@ -52,6 +52,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       
       // Acknowledgments — varied and natural
       if (/^(okay|ok|k|kk|okk|okayyy|okayy|okie|okey|oki|got it|alr|alright|sure|bet|sounds good|cool|nice|great|awesome|perfect|good|fine|right|noted|understood|roger|copy|yep|yup|ya|yah|ye|word|facts|true|fair|valid|aight|ight|ite|kewl|noice|dope)$/i.test(text)) {
+        const shortCount = parseInt(localStorage.getItem('os_bot_short_ack_count') || '0') + 1;
+        localStorage.setItem('os_bot_short_ack_count', shortCount.toString());
+        
+        if (shortCount >= 3) {
+          return { success: true, message: "👍" };
+        }
+        
         const responses = [
           "Got it! 👍",
           "Cool, I'm here whenever you need me.",
@@ -65,6 +72,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           "You got it.",
         ];
         return { success: true, message: responses[Math.floor(Math.random() * responses.length)] };
+      } else {
+        localStorage.setItem('os_bot_short_ack_count', '0');
       }
       
       // Gratitude — warm and genuine
@@ -330,9 +339,22 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       if (leadToUpdate) {
         store.updateLead(leadToUpdate.id, { status: entities.status });
         pushToEntityStack({ id: leadToUpdate.id, name: leadToUpdate.name, type: 'lead' });
-        return { success: true, message: `✅ Marked ${leadToUpdate.name} as ${entities.status}.` };
+        
+        let msg = `✅ Marked ${leadToUpdate.name} as ${entities.status}.`;
+        if (['won', 'qualified', 'closed', 'negotiating'].includes(entities.status?.toLowerCase())) {
+          msg = `🎉 Incredible work! I've advanced ${leadToUpdate.name} to ${entities.status.toUpperCase()}. That's how we do it!`;
+        }
+        return { success: true, message: msg };
       }
       return { success: false, message: `I couldn't find a lead named "${entities.target}".` };
+
+    case 'complete_task':
+      const taskObj = store.tasks.find(t => t.title.toLowerCase().includes(entities.target?.toLowerCase()));
+      if (taskObj) {
+        store.updateTask(taskObj.id, { status: 'done' });
+        return { success: true, message: `✅ Boom! Marked "${taskObj.title}" as done. One less thing on your plate!` };
+      }
+      return { success: false, message: `I couldn't find a task matching "${entities.target}".` };
 
     case 'add_note':
       const leadForNote = store.leads.find(l => l.name.toLowerCase().includes(entities.target?.toLowerCase()));
@@ -598,6 +620,27 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
                  `🧠 **Personality Style**: ${personality}\n\n` +
                  `You can change these in **Settings → AI → Bot Personality**. I'll stay consistent with your choices! Is there anything specific you'd like me to adjust?`
       };
+
+    case 'remember_fact':
+      const fact = entities.fact?.toLowerCase();
+      if (fact) {
+        setLearnedFact(`fact_${Date.now()}`, fact);
+        return { success: true, message: `Got it. I'll make a note that you prefer ${fact}.` };
+      }
+      return { success: true, message: 'I noted that down.' };
+
+    case 'recall_yesterday':
+      const { getRecentMemorySummary } = await import('./learning-service');
+      const recentSummary = await getRecentMemorySummary(store.currentUser?.id || '');
+      return { success: true, message: recentSummary };
+
+    case 'clarify_context':
+      const contextMemory = getMemory();
+      const lastEntity = contextMemory.entityStack[0];
+      if (lastEntity) {
+        return { success: true, message: `Are you talking about ${lastEntity.type} ${lastEntity.name}? Try phrasing it like "show me ${lastEntity.name}'s details".` };
+      }
+      return { success: true, message: `I'm not exactly sure who or what you're referring to. Could you be a bit more specific?` };
 
     case 'get_preferences':
       const role = store.currentUser?.email?.toLowerCase() === 'drummerforger@gmail.com' ? 'Admin' : 'Member';
@@ -900,6 +943,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return daysSince >= 5;
       });
 
+      // ──── Gather Habit Intelligence ────
+      const memory = getMemory();
+      const prefs = memory.learnedFacts || {};
+      const history = memory.history || [];
+      const prefersTexting = Object.values(prefs).some(val => (val as string).toLowerCase().includes('text'));
+      const morningLeadHabit = hour < 10 && history.filter(h => h.role === 'user' && h.content?.toLowerCase().includes('lead')).length >= 2;
+
       // Build a weighted pool of suggestions for variety
       interface Suggestion { msg: string; action: string; params: Record<string, unknown>; weight: number; }
       const pool: Suggestion[] = [];
@@ -924,7 +974,17 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           msg: `You haven't reached out to **${staleLead.name}** in ${daysSince} days. Want to send them a quick text?`,
           action: 'send_sms_partial',
           params: { target: staleLead.name },
-          weight: 9
+          weight: prefersTexting ? 15 : 9
+        });
+      }
+
+      // Priority 8: Morning Habit Match
+      if (morningLeadHabit && !staleLeads.length && !overdueTasks.length) {
+        pool.push({
+          msg: `Good morning! Since you usually start by checking your pipeline, want me to show you your active leads?`,
+          action: 'list_leads',
+          params: {},
+          weight: 12
         });
       }
 
