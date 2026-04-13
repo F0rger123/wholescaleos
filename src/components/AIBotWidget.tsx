@@ -64,6 +64,59 @@ interface ChatMessage {
   originalPhrase?: string;
 }
 
+const FormattedContent: React.FC<{ content: string }> = ({ content }) => {
+  if (!content) return null;
+
+  // Simple regex-based markdown parser for headings, bold, and bullet points
+  const lines = content.split('\n');
+  
+  return (
+    <div className="flex flex-col gap-1.5">
+      {lines.map((line, i) => {
+        // Headings: ### Title
+        if (line.startsWith('### ')) {
+          return (
+            <div key={i} className="text-[10px] font-black uppercase tracking-[0.1em] text-[var(--t-primary)] mt-3 mb-1 flex items-center gap-2">
+              <span className="w-1 h-3 bg-[var(--t-primary)] rounded-full" />
+              {line.replace('### ', '')}
+            </div>
+          );
+        }
+        
+        // Blockquotes/Insights: > "Quote"
+        if (line.trim().startsWith('>')) {
+          return (
+            <div key={i} className="pl-3 border-l-2 border-[var(--t-primary)]/30 italic text-[var(--t-text-muted)] my-2 bg-[var(--t-primary)]/5 py-1.5 rounded-r-lg text-[10px]">
+              {line.replace('>', '').trim()}
+            </div>
+          );
+        }
+
+        // Bullet points: - Item
+        if (line.trim().startsWith('- ')) {
+          return (
+            <div key={i} className="flex gap-2 pl-2 text-[11px] py-0.5">
+              <span className="text-[var(--t-primary)] font-bold text-[8px] mt-1">•</span>
+              <span className="flex-1">{line.trim().replace('- ', '')}</span>
+            </div>
+          );
+        }
+
+        // Bolding: **text**
+        const parts = line.split(/(\*\*.*?\*\*)/g);
+        const formattedLine = parts.map((part, j) => {
+          if (part.startsWith('**') && part.endsWith('**')) {
+            return <strong key={j} className="font-extrabold text-[var(--t-primary)]">{part.slice(2, -2)}</strong>;
+          }
+          return part;
+        });
+
+        return <div key={i} className="text-[11px] leading-relaxed min-h-[1em]">{formattedLine}</div>;
+      })}
+    </div>
+  );
+};
+
 export interface BotResponse {
   intent: string;
   response: string;
@@ -1230,14 +1283,18 @@ export function AIBotWidget() {
                         <div className="whitespace-pre-wrap">
                           {msg.id === typingMessageId ? (
                             <div className="flex flex-col gap-3">
-                              <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">{displayedText}</div>
+                              <div className="animate-in fade-in slide-in-from-bottom-1 duration-300">
+                                <FormattedContent content={displayedText} />
+                              </div>
                               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--t-primary)]/10 rounded-full w-fit border border-[var(--t-primary)]/20 shadow-sm">
                                 <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-duration:0.8s]" />
                                 <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.2s] [animation-duration:0.8s]" />
                                 <span className="w-1.5 h-1.5 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.4s] [animation-duration:0.8s]" />
                               </div>
                             </div>
-                          ) : msg.content}
+                          ) : (
+                            <FormattedContent content={msg.content} />
+                          )}
                         </div>
 
                         {msg.intent === 'disambiguation' && (msg.data as DisambiguationData)?.originalIntent && (

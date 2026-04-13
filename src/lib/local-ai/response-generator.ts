@@ -1,6 +1,6 @@
 import { useStore } from '../../store/useStore';
 import { Intent } from '../ai/intents';
-import { getMemory } from './memory-store';
+import { getMemory, getLearnedFact } from './memory-store';
 
 /**
  * Response Suffixes — these trailing phrases are stripped before personality
@@ -32,6 +32,14 @@ function pick<T>(arr: T[], key: string = 'general'): T {
   }
   return choice;
 }
+
+const defaultEndings = [
+  ' What\'s next?',
+  ' Ready for your next command.',
+  ' Anything else on your mind?',
+  ' What should we tackle next?',
+  ' I am here if you need more help.',
+];
 
 /**
  * Applies personality style to a response.
@@ -79,17 +87,30 @@ const applyPersonality = (
   }
 
   if (p === 'professional') {
-    // Clean, no-emoji, business tone
+    const openings = ['Assuredly.', 'Understood.', 'Confirmed.', 'Proceeding.'];
     const endings = [
       ' Let me know if you need anything else.',
-      ' Ready for your next instruction.',
       ' Standing by for further requests.',
       ' What else can I assist with?',
-      ' Shall I proceed with anything else?',
-      ' At your service.',
-      ' Anything else on the agenda?',
+      ' Shall I proceed with the next task?',
     ];
-    return `${base}${pick(endings, 'prof')}`;
+    return `${pick(openings, 'prof_open')} ${base}${pick(endings, 'prof')}`;
+  }
+
+  if (p === 'maven' || p === 'expert') {
+    const openings = [
+      "Let's look at the numbers.",
+      "Here's the strategic breakdown.",
+      "Analyzing this from a high-ROI perspective.",
+      "Focusing on the deal mechanics here."
+    ];
+    const endings = [
+      " This aligns with current market velocity. 📈",
+      " Strategic moves only. What's the next step?",
+      " This is how we scale. Ready for more?",
+      " Data-driven results. Let's keep dominating. 🏆"
+    ];
+    return `${pick(openings, 'maven_open')} ${base}${pick(endings, 'maven')}`;
   }
 
   if (p === 'sassy') {
@@ -99,8 +120,6 @@ const applyPersonality = (
       " Handled. What's the next power move?",
       " Done and done. Next? 🔥",
       " Boom. What else you got?",
-      " Slayed it. 💁‍♀️",
-      " No sweat, babe. Next?",
     ];
     return `${base}${pick(endings, 'sassy')}`;
   }
@@ -111,24 +130,18 @@ const applyPersonality = (
       " 😂 If only all problems were this easy.",
       " Virtual high-five! 🖐️",
       " You owe me a virtual coffee for that one. ☕",
-      " And they said AI couldn't be helpful! 🤖",
-      " I'd take a bow but I'm made of code. 🎭",
-      " My circuits are tingling with pride!",
     ];
     return `${base}${pick(additions, 'funny')}`;
   }
 
   if (p === 'casual') {
+    const openings = ["Gotcha.", "On it.", "Done deal.", "Sure thing."];
     const endings = [
       " No sweat! What's next? 👊",
       " Easy peasy. Got more for me?",
-      " All good! What else?",
       " Sorted. Hit me with the next one.",
-      " Done deal. What's the move?",
-      " Piece of cake. What else?",
-      " Got it handled! 🤙",
     ];
-    return `${base}${pick(endings, 'casual')}`;
+    return `${pick(openings, 'casual_open')} ${base}${pick(endings, 'casual')}`;
   }
 
   if (p === 'cursing') {

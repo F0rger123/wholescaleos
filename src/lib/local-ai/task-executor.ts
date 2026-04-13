@@ -25,6 +25,7 @@ import {
   saveUserPreference,
   rememberFact
 } from './learning-service';
+import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_SCRIPTS, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
 
 export interface TaskResponse {
   success: boolean;
@@ -1466,6 +1467,247 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `Here's what I said before:\n\n${lastBotMsg.content.replace(/^🤖\s*OS Bot:\s*/i, '')}` };
       }
       return { success: true, message: "I don't have any recent messages to repeat. What would you like me to help with?" };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // REAL ESTATE DOMAIN EXPERT CASES
+    // ═══════════════════════════════════════════════════════════════════════
+
+    case 'real_estate_knowledge': {
+      const conceptKey = (entities.concept || '').toLowerCase().trim();
+      const concept = REAL_ESTATE_CONCEPTS[conceptKey] || 
+                     Object.values(REAL_ESTATE_CONCEPTS).find(c => c.term.toLowerCase().includes(conceptKey));
+
+      if (concept) {
+        let msg = `### ${concept.term}\n\n${concept.definition}\n\n**Example:** ${concept.example}`;
+        if (concept.details) {
+          msg += `\n\n**Key Details:**\n- ${concept.details.join('\n- ')}`;
+        }
+        if (concept.benchmarks) {
+          msg += `\n\n**Industry Benchmarks:** ${concept.benchmarks}`;
+        }
+        
+        msg += `\n\nWant me to go deeper or calculate this for a specific property?`;
+        setActiveState('AWAITING_KNOWLEDGE_FOLLOWUP', { lastConcept: concept.term });
+        return { success: true, message: msg };
+      }
+
+      return { 
+        success: true, 
+        message: `I'm not familiar with the term "${conceptKey}" yet, but I'm constantly learning! Want me to explain concepts like **Cap Rate**, **BRRRR**, or the **70% Rule** instead?` 
+      };
+    }
+
+    case 'agent_script': {
+      const category = (entities.category || '').toLowerCase();
+      const script = REAL_ESTATE_SCRIPTS.find(s => s.category.includes(category) || s.title.toLowerCase().includes(category));
+
+      if (script) {
+        return {
+          success: true,
+          message: `### ${script.title}\n\n> "${script.script}"\n\n**Expert Tips:**\n- ${script.tips.join('\n- ')}\n\nWant me to suggest a follow-up script or a voicemail version?`
+        };
+      }
+
+      return {
+        success: true,
+        message: "I have scripts for **Expired Listings**, **FSBOs**, and **Objection Handling**. Which one would you like to see?"
+      };
+    }
+
+    case 'deal_calculator': {
+      const type = (entities.type || '').toLowerCase();
+      const raw = entities.raw || '';
+      
+      // Try to extract numbers from "raw" if type was ambiguous
+      const numbers = raw.match(/\d+(?:\.\d+)?k?/gi) || [];
+      const data: any = {};
+      
+      if (numbers.length >= 3) {
+        // Assume [Purchase, Repairs, ARV] for flip or [Purchase, Down, Rent] for rental
+        const vals = numbers.map((n: string) => {
+          let num = parseFloat(n.replace(/k/i, ''));
+          if (n.toLowerCase().endsWith('k')) num *= 1000;
+          return num;
+        });
+
+        if (type.includes('flip')) {
+          data.purchase = vals[0];
+          data.repairs = vals[1];
+          data.arv = vals[2];
+        } else {
+          data.purchase = vals[0];
+          data.rent = vals[1]; // simplified
+          data.downPayment = vals[2];
+        }
+      }
+
+      const result = calculateDeal(type.includes('flip') ? 'flip' : 'rental', data);
+      
+      if (result) {
+        if (result.type === 'flip') {
+          const flip = result as FlipResult;
+          const rule70Msg = flip.purchase <= flip.maxOffer70 
+            ? `✅ This meets the **70% rule** (Max Offer: $${flip.maxOffer70.toLocaleString()}).` 
+            : `⚠️ This exceeds the **70% rule** (Max Offer: $${flip.maxOffer70.toLocaleString()}). You're paying $${(flip.purchase - flip.maxOffer70).toLocaleString()} over the benchmark.`;
+
+          return {
+            success: true,
+            message: `### Flip Analysis Result\n- **Purchase:** $${flip.purchase.toLocaleString()}\n- **Repairs:** $${flip.repairs.toLocaleString()}\n- **ARV:** $${flip.arv.toLocaleString()}\n\n**Outcome:**\n- **Gross Profit:** $${flip.profit.toLocaleString()}\n- **ROI:** ${flip.roi.toFixed(1)}%\n\n${rule70Msg}\n\nWant me to factor in different repair costs or a higher ARV?`
+          };
+        } else if (result.type === 'rental') {
+          const rental = result as RentalResult;
+          return {
+            success: true,
+            message: `### Rental Analysis Result\n- **Purchase:** $${rental.purchase.toLocaleString()}\n- **Down Payment:** $${rental.downPayment.toLocaleString()}\n- **Monthly Rent:** $${rental.monthlyRent.toLocaleString()}\n\n**Projected Returns:**\n- **Monthly Cash Flow:** $${rental.cashFlow.toFixed(0)}\n- **Cash-on-Cash Return:** ${rental.coc.toFixed(1)}%\n- **Cap Rate:** ${rental.capRate.toFixed(1)}%\n\nThis looks like a **${rental.coc > 10 ? 'solid' : 'stable'}** cash-flowing property. Want me to explain how I got these numbers?`
+          };
+        }
+      }
+
+      return {
+        success: true,
+        message: "I can run a **Flip** or **Rental** analysis for you. Just give me the Purchase Price, Repairs/Rent, and ARV/Down Payment!"
+      };
+    }
+
+    case 'property_analysis': {
+      const target = entities.target;
+      let lead = null;
+      
+      if (target === 'this' || !target) {
+        const activeEntity = memory.entityStack?.[0];
+        if (activeEntity?.type === 'lead') {
+          lead = store.leads.find(l => l.id === activeEntity.id);
+        }
+      } else {
+        const { lead: found } = findLeadFuzzy(target, store.leads);
+        lead = found;
+      }
+
+      if (lead) {
+        const data = {
+          purchase: lead.offerAmount || lead.estimatedValue * 0.7,
+          repairs: 40000, // placeholder default
+          arv: lead.estimatedValue || 250000
+        };
+        const result = calculateDeal('flip', data) as FlipResult;
+        const tip = REAL_ESTATE_PRO_TIPS[Math.floor(Math.random() * REAL_ESTATE_PRO_TIPS.length)];
+        
+        return {
+          success: true,
+          message: `### Analyzing Property: ${lead.name}\n📍 ${lead.propertyAddress || 'No address on file'}\n\n**Quick Deal Recon:**\n- Est. Purchase: $${data.purchase.toLocaleString()}\n- Est. Repairs: $${data.repairs.toLocaleString()}\n- Projected ARV: $${data.arv.toLocaleString()}\n\n**Expert Reasoning:**\nBased on a ${result.roi.toFixed(1)}% ROI, this deal is **${result.roi > 20 ? '🔥 HIGH CONVICTION' : '⚖️ SELECTIVE'}**. The spread is $${result.profit.toLocaleString()} before holding costs. \n\n**💡 Strategist Tip:** ${tip}\n\nShould we draft a low-ball offer for this lead or do you want to run the numbers for a **Rental (BRRRR)** model instead?`,
+          data: { leadId: lead.id }
+        };
+      }
+
+      return { success: false, message: "I couldn't find a property or lead to analyze. Which one were you thinking of?" };
+    }
+
+    case 'financing_question': {
+      const topic = (entities.topic || '').toLowerCase();
+      const responses: Record<string, string> = {
+        'fha': "FHA loans are government-backed loans that allow for a down payment as low as **3.5%**. They're great for first-time buyers but require PMI (Private Mortgage Insurance) for the life of the loan in many cases.",
+        'va': "VA loans are a fantastic benefit for veterans and active-duty service members, offering **0% down payment** and no monthly PMI. They do have a one-time funding fee, however.",
+        'hard money': "Hard money is short-term, high-interest financing (often 10-12% + points) used by flippers. It's based on the **ARV** rather than your credit score, making it fast but expensive.",
+        'seller financing': "Seller financing is when the owner of the property acts as the bank. You pay them monthly instead of a traditional lender. It's a great way to close deals that wouldn't qualify for traditional bank loans."
+      };
+
+      const msg = responses[topic] || "I can explain **FHA**, **VA**, **Hard Money**, or **Seller Financing**. Also happy to talk about current interest rate trends!";
+      return { success: true, message: msg };
+    }
+
+    case 'legal_question': {
+      const topic = (entities.topic || '').toLowerCase();
+      if (topic.includes('contingency')) {
+        return { success: true, message: "Contingencies are 'escape hatches' in a contract. Common ones include **Inspection**, **Financing**, and **Appraisal**. If these aren't met, the buyer can walk away with their earnest money." };
+      }
+      if (topic.includes('disclosure')) {
+        return { success: true, message: "Disclosures are required documents where the seller lists known issues with the property (leaks, mold, lead paint). Most states require these by law before closing." };
+      }
+      return { 
+        success: true, 
+        message: "I can help with concepts like **Contingencies**, **Disclosures**, **Escrow**, and **Title Insurance**. Standard disclaimer: I'm an AI, not an attorney!" 
+      };
+    }
+
+    case 'market_analysis': {
+      const location = entities.location || 'your area';
+      const indicator = REAL_ESTATE_PRO_TIPS[Math.floor(Math.random() * REAL_ESTATE_PRO_TIPS.length)];
+      return {
+        success: true,
+        message: `### Market Insights for ${location}\n\nCurrently, I'm seeing a trend toward **low inventory** and **steady demand**. Comps are holding steady, but Days on Market (DOM) is starting to creep up.\n\n**💡 Expert Insight:** ${indicator}\n\nWant me to pull specific CRM data to verify these trends for your active leads?`
+      };
+    }
+
+    case 'real_estate_strategy':
+    case 'investment_strategy': {
+      const strategyInput = (entities.strategy || entities.topic || '').toLowerCase();
+      let selected = null;
+
+      if (strategyInput.includes('wholesale')) selected = REAL_ESTATE_STRATEGIES['wholesaling'];
+      else if (strategyInput.includes('brrrr')) selected = REAL_ESTATE_STRATEGIES['brrrr'];
+      else if (strategyInput.includes('flip')) selected = REAL_ESTATE_STRATEGIES['flipping'];
+
+      if (selected) {
+        return {
+          success: true,
+          message: `### ${selected.title}\n\n${selected.steps.map((s, i) => `${i + 1}. ${s}`).join('\n')}\n\n**🎯 Pro Tip:** ${selected.proTip}\n\nShall we look for leads in your CRM that fit this specific model?`
+        };
+      }
+
+      return {
+        success: true,
+        message: "What's the goal? I can break down high-level strategies for **Wholesaling**, **Flipping**, or the **BRRRR Method**. Which one aligns with your current capital position?"
+      };
+    }
+
+    case 'business_advice': {
+      const tips = [
+        "**Scaling Tip:** Hire a virtual assistant for your cold calling as soon as you hit 2 deals a month. Your time is better spent on closing.",
+        "**Marketing Tip:** High-quality direct mail still converts better than cheap SMS blasts for high-equity seniors.",
+        "**Cash Buyers:** Go to the county records and find people who bought properties for CASH in the last 90 days. Those are your real buyers, not just people on a Facebook list."
+      ];
+      const advice = tips[Math.floor(Math.random() * tips.length)];
+      return {
+        success: true,
+        message: `### Scaling Your Real Estate Business\n\n${advice}\n\nI can also help you analyze your **pipeline conversion rates** or set up **automated follow-ups** to ensure no deals slip through the cracks. What's your biggest bottleneck right now?`
+      };
+    }
+
+    case 'explain_logic': {
+      const memory = getMemory();
+      // Check if we just did a calculation
+      const lastAction = memory.history?.[memory.history.length - 1];
+      
+      if (lastAction?.role === 'assistant' && lastAction.content.includes('Result')) {
+        if (lastAction.content.includes('Flip')) {
+          return {
+            success: true,
+            message: `**Flip Calculation Breakdown:**\n\n1. **Gross Profit:** ARV - (Purchase + Repairs). This represents the spread before closing/holding costs.\n2. **ROI (Return on Investment):** (Profit / Total Investment) * 100. It shows how hard your capital is working.\n3. **70% Rule:** (ARV * 0.7) - Repairs. This is a classic benchmark to ensure you have enough equity buffer for profit and risk.`
+          };
+        } else if (lastAction.content.includes('Rental')) {
+          return {
+            success: true,
+            message: `**Rental Calculation Breakdown:**\n\n1. **Cash Flow:** Monthly Rent - (Mortgage + Expenses). We assume expenses (taxes, insurance, vacancy) are ~25-30% of rent for this quick estimate.\n2. **Cap Rate:** (Annual Net Operating Income / Purchase Price) * 100. This measures the property's natural yield regardless of financing.\n3. **Cash-on-Cash Return (CoC):** (Annual Cash Flow / Cash Invested) * 100. This is your actual 'yield' on the money you pulled out of your pocket.`
+          };
+        }
+      }
+
+      // If they just asked a knowledge question
+      const state = getMemory(); 
+      if (state.activeTopic === 'AWAITING_KNOWLEDGE_FOLLOWUP' && state.activeState?.data?.lastConcept) {
+        const lastConcept = state.activeState.data.lastConcept;
+        const concept = REAL_ESTATE_CONCEPTS[lastConcept.toLowerCase()];
+        return {
+          success: true,
+          message: `Specifically regarding **${lastConcept}**, the "why" usually comes down to risk management. For example, ${concept?.definition.split('.')[0]}. Would you like a real-world scenario of how I use this to evaluate leads?`
+        };
+      }
+
+      return {
+        success: true,
+        message: "I can explain the logic behind any calculation or real estate concept. What specifically would you like me to break down for you?"
+      };
     }
 
     default:

@@ -71,7 +71,19 @@ export type IntentName =
   | 'change_personality'
   | 'remember_fact'
   | 'recall_yesterday'
-  | 'clarify_context';
+  | 'clarify_context'
+  | 'real_estate_knowledge'
+  | 'property_analysis'
+  | 'deal_calculator'
+  | 'financing_question'
+  | 'agent_script'
+  | 'investment_strategy'
+  | 'legal_question'
+  | 'market_analysis'
+  | 'explain_logic'
+  | 'real_estate_strategy'
+  | 'business_advice'
+  | 'get_lead_info';
 
 export interface Intent {
   name: IntentName;
@@ -554,5 +566,71 @@ export const intents: Intent[] = [
     patterns: ['encourage me', 'need motivation', 'give me a quote', 'tough day'],
     action: 'motivation',
     template: "{response}"
+  },
+  {
+    name: 'real_estate_knowledge',
+    patterns: ['what is a', 'explain', 'definition of', 'what does', 'mean in real estate'],
+    action: 'real_estate_knowledge',
+    template: '{response}'
+  },
+  {
+    name: 'property_analysis',
+    patterns: ['analyze', 'look at this deal', 'is this a good deal', 'property numbers'],
+    action: 'property_analysis',
+    template: '{response}'
+  },
+  {
+    name: 'deal_calculator',
+    patterns: ['calculate', 'numbers for', 'math for', 'run a flip', 'run a rental'],
+    action: 'deal_calculator',
+    template: '{response}'
+  },
+  {
+    name: 'financing_question',
+    patterns: ['loan', 'mortgage', 'interest rate', 'down payment', 'fha', 'va loan'],
+    action: 'financing_question',
+    template: '{response}'
+  },
+  {
+    name: 'agent_script',
+    patterns: ['script', 'what do i say', 'cold call', 'objection handler'],
+    action: 'agent_script',
+    template: '{response}'
+  },
+  {
+    name: 'investment_strategy',
+    patterns: ['strategy', 'wholesaling', 'flipping', 'house hack', 'investing'],
+    action: 'investment_strategy',
+    template: '{response}'
+  },
+  {
+    name: 'legal_question',
+    patterns: ['contract', 'legal', 'disclosure', 'contingency', 'inspection'],
+    action: 'legal_question',
+    template: '{response}'
+  },
+  {
+    name: 'market_analysis',
+    patterns: ['market', 'neighborhood', 'trends', 'comps', 'valuation'],
+    action: 'market_analysis',
+    template: '{response}'
+  },
+  {
+    name: 'explain_logic',
+    patterns: ['how did you get that', 'explain the math', 'show me the breakdown', 'why', 'how'],
+    action: 'explain_logic',
+    template: '{response}'
+  },
+  {
+    name: 'real_estate_strategy',
+    patterns: ['give me a strategy for', 'how do i invest in', 'should i flip this', 'brrrr method', 'wholesaling strategy', 'provide a plan for'],
+    action: 'real_estate_strategy',
+    template: '{response}'
+  },
+  {
+    name: 'business_advice',
+    patterns: ['how do i scale', 'business advice', 'marketing tips', 'how to find cash buyers', 'growing my business'],
+    action: 'business_advice',
+    template: '{response}'
   }
 ];
