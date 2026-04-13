@@ -3,6 +3,8 @@ import { spellCheck, getLevenshteinDistance } from './spell-checker';
 import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact, getLastSuggestion, clearLastSuggestion } from './memory-store';
 import { getLearnedIntent, getAllLearnedIntents } from './learning-service';
 import { useStore } from '../../store/useStore';
+import { expandSynonyms } from './utils/synonym-mapper';
+import { resolveDate } from './utils/date-resolver';
 
 // Debug mode — toggle to true to see detailed intent matching logs
 const DEBUG_MODE = true;
@@ -50,8 +52,9 @@ export function normalizeInput(input: string): string {
   
   let normalized = input.toLowerCase().trim();
   
-  // Strip common conversational filler at start
-  normalized = normalized.replace(/^(?:bot|ai|assistant|os bot|hey|yo|please|can you|could you|i want to|i need to|tell me|show me)\s+/i, '');
+  // Strip only very generic conversational filler at start
+  const greetingFillers = /^(?:bot|ai|assistant|os bot|hey|yo|please|can you|could you)\s+/i;
+  normalized = normalized.replace(greetingFillers, '');
   
   // Only apply leading filler stripping if the input has multiple words
   const wordCount = normalized.split(/\s+/).length;
@@ -70,6 +73,9 @@ export function normalizeInput(input: string): string {
   if (correctionPattern.test(normalized)) {
     normalized = normalized.replace(correctionPattern, '');
   }
+
+  // Stage 0.5: Expand synonyms (deals -> leads, etc.)
+  normalized = expandSynonyms(normalized);
 
   return normalized.trim();
 }
@@ -419,11 +425,37 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   const normalizedOrig = checked.toLowerCase().trim();
   const normalized = normalizeInput(normalizedOrig);
   const activeEntity = resolveEntityFromContext(normalized);
+  const wordCount = normalized.split(/\s+/).length;
 
   debugLog('NORMALIZE', `Spell-checked: "${checked}" | Normalized: "${normalized}" | Active Entity: ${activeEntity?.name || 'none'}`);
 
   // ═══════════════════════════════════════════════════════════════════════
-  // STAGE 3: EXACT KEYWORD MATCHING
+  // STAGE 1.5: ACTIVE STATE / SLOT FILLING
+  // If the user previously started an intent but didn't finish, and 
+  // the current input is just an entity (like a name or email), bridge them.
+  // ═══════════════════════════════════════════════════════════════════════
+  const activeState = memory.activeState;
+  
+  if (activeState && wordCount <= 3) {
+    // If we're waiting for a lead name (e.g. for SMS or Info)
+    if (activeState.type === 'awaiting_lead_name' || activeState.type === 'send_sms_partial') {
+      const intentObj = intents.find(i => i.name === 'lead_context_query' || i.name === 'send_sms');
+      if (intentObj) {
+        debugLog('MATCHED', `Contextual bridge: Bridging "${input}" to active state ${activeState.type}`);
+        return {
+          intent: intentObj,
+          params: { ...activeState.data, name: input, leadName: input, target: input },
+          confidence: 100,
+          originalText: input,
+          needsAgentLoop: false,
+          matchedBy: 'active_state_bridge'
+        };
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 2: EXACT KEYWORD MATCHING
   // Map standalone words/phrases to their intent definitions.
   // ═══════════════════════════════════════════════════════════════════════
   const exactKeywordMap: Record<string, string> = {
@@ -544,11 +576,27 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'lead_context_query',
       patterns: [
         /^(?:whats|what is|what's) (?:his|her|their) (phone|email|address|status)$/i,
-        /^(?:show me the notes for|notes on|when did i last contact|tell me about) (.+)$/i,
-        /^(?:what|whats|what's) info (?:do you have|you got) (?:on|about) (.+)$/i,
+        /^(?:show me|give me|tell me)\s+(?:the\s+)?(?:notes|info|details|what you know)\s+(?:on|for|about)\s+(.+)$/i,
+        /^(?:show me the notes for|notes on|when did i last contact|tell me about|info for|details on|give me info on|give me what you know for) (.+)$/i,
+        /^(?:what|whats|what's) (?:info|details) (?:do you have|you got) (?:on|about|for) (.+)$/i,
         /^lead details for (.+)$/i
       ],
-      params: (matches: string[]) => ({ leadName: matches[1]?.trim() || matches[2]?.trim(), field: matches[1] })
+      params: (matches: string[], text: string) => {
+        const lower = text.toLowerCase();
+        // Check if this was a field-specific query (phone, email, etc.)
+        const fieldMatch = lower.match(/\b(phone|email|address|status|notes|contact)\b/i);
+        const field = fieldMatch ? fieldMatch[1] : 'all';
+        
+        // The name is typically the capture group, unless it matched the field-specific regex
+        let leadName = matches[1]?.trim();
+        if (['phone', 'email', 'address', 'status'].includes(leadName)) {
+           // If leadName is actually the field (from the first regex), then there is no leadName in the match
+           // we should rely on context.
+           leadName = 'this'; 
+        }
+
+        return { leadName, field };
+      }
     },
     {
       intent: 'greeting',
@@ -838,7 +886,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         if (match) {
           const intentObj = intents.find(i => i.name === h.intent);
           if (intentObj) {
-            const params = h.params(match as string[]) as Record<string, unknown>;
+            const params = h.params(match as string[], testInput) as Record<string, unknown>;
             
             const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'that lead', 'this lead', 'the contact', 'the task'];
             if (typeof params.target === 'string' && activeEntity && pronouns.includes((params.target as string).toLowerCase())) {
@@ -846,6 +894,9 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
             }
             if (typeof params.name === 'string' && activeEntity && pronouns.includes((params.name as string).toLowerCase())) {
               params.name = activeEntity.name;
+            }
+            if (typeof params.leadName === 'string' && activeEntity && pronouns.includes((params.leadName as string).toLowerCase())) {
+              params.leadName = activeEntity.name;
             }
 
             debugLog('MATCHED', `Regex handler: "${testInput}" matched ${h.intent}`, { pattern: pattern.toString(), params });
@@ -913,8 +964,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // STAGE 6: FUZZY SCORE-BASED MATCHING
   // Only for longer inputs (3+ words) to avoid false positives on short phrases
   // ═══════════════════════════════════════════════════════════════════════
-  const wordCount = normalized.split(/\s+/).length;
-  
   if (wordCount >= 3) {
     const scores = intents
       .filter(i => i.name !== 'small_talk' && i.name !== 'greeting') // Don't fuzzy-match small talk
@@ -934,7 +983,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         params: {},
         confidence: bestMatchResult.score,
         originalText: input,
-        needsAgentLoop,
+        needsAgentLoop: detectMultiStep(input),
         matchedBy: 'fuzzy_score'
       };
     }

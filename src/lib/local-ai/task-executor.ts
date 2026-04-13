@@ -11,8 +11,11 @@ import {
   getLastSuggestion, 
   clearLastSuggestion,
   resolveEntitiesFromContext,
-  Entity
+  Entity,
+  setActiveState
 } from './memory-store';
+import { resolveDate, formatHumanDate } from './utils/date-resolver';
+import { expandSynonyms } from './utils/synonym-mapper';
 import { 
   getConversationContext, 
   updateConversationTopic, 
@@ -36,7 +39,8 @@ export interface TaskResponse {
  */
 function findLeadFuzzy(inputName: string, leads: any[]): { lead: any | null, ambiguity: string[] | null, isExact: boolean } {
   if (!inputName || inputName === 'this') return { lead: null, ambiguity: null, isExact: false };
-  const lowerInput = inputName.toLowerCase().trim();
+  const expandedInput = expandSynonyms(inputName);
+  const lowerInput = expandedInput.toLowerCase().trim();
   
   // 1. Exact match
   const exactMatch = leads.find(l => l.name.toLowerCase() === lowerInput);
@@ -347,19 +351,31 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       case 'add_task':
         try {
+          const rawDate = entities.dueDate || entities.date || 'today';
+          const resolvedDate = resolveDate(rawDate);
+          
+          // Contextual Intelligence: If no lead is mentioned but one is in context, link it!
+          let leadId = entities.leadId;
+          if (!leadId && memory.entityStack?.[0]?.type === 'lead') {
+             leadId = memory.entityStack[0].id;
+             console.log(`[🧠 OS Bot] Contextual Linking: Associating task with ${memory.entityStack[0].name}`);
+          }
+
           const task = {
             title: entities.title || 'New Task',
             description: entities.notes || '',
             assignedTo: store.currentUser?.id || 'system',
-            dueDate: entities.dueDate || new Date().toISOString().split('T')[0],
-            priority: 'medium' as const,
+            dueDate: resolvedDate,
+            priority: (entities.priority || 'medium') as any,
             status: 'todo' as const,
             createdBy: store.currentUser?.id || 'system',
-            leadId: undefined
+            leadId: leadId
           };
           store.addTask(task);
-          logOutcome('task_created', `Added task: ${entities.title}`, { ...entities });
-          return { success: true, message: `✅ Task "${entities.title}" added.` };
+          logOutcome('task_created', `Added task: ${entities.title}`, { ...entities, dueDate: resolvedDate });
+          
+          const humanDate = formatHumanDate(resolvedDate);
+          return { success: true, message: `✅ Task "${entities.title}" added for ${humanDate}.` };
         } catch (e) {
           return { success: false, message: 'Task creation error.' };
         }
@@ -391,17 +407,25 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
             }
           }
 
-          if (targets.length === 0) return { success: false, message: "Who should I text?" };
+          if (targets.length === 0) {
+            if (isBulk) return { success: false, message: "Who are the 'them' you'd like to text? I don't see any recent leads in our conversation." };
+            return { success: false, message: "Who should I text?" };
+          }
 
           // Handle multi-recipient (Bulk SMS)
           if (targets.length > 1) {
-            const phones = targets.map(t => {
+            const phonesArr = targets.map(t => {
               const l = store.leads.find(lead => lead.id === t.id);
               return l?.phone || (t.id === 'raw' ? t.name : null);
-            }).filter(Boolean).join(',');
+            }).filter(Boolean);
             
+            const phones = phonesArr.join(',');
             const names = targets.map(t => t.name).join(' and ');
             const prefillMsg = entities.message || "";
+
+            if (!phonesArr.length) {
+                return { success: false, message: `I found ${names}, but none of them have phone numbers on file.` };
+            }
             
             return {
               success: true,
@@ -413,6 +437,16 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
                 message: prefillMsg
               }
             };
+          }
+
+          // Case where user said "both" or "all" but we only have 1 in context
+          if (isBulk && targets.length === 1) {
+             const soloLead = targets[0];
+             return {
+                success: false,
+                message: `I only found **${soloLead.name}** in our recent conversation. Who else should I include in this message?`,
+                data: { fallback_target: soloLead.name }
+             };
           }
 
           // Single recipient logic
@@ -632,26 +666,30 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       case 'tasks_due': {
+        const rawDate = entities.date || entities.dueDate || 'today';
+        const targetDate = resolveDate(rawDate);
         const today = new Date().toISOString().split('T')[0];
+        
         const overdueTasks = store.tasks.filter(t => 
           t.status !== 'done' && t.dueDate < today
         );
-        const todayTasks = store.tasks.filter(t => 
-          t.status !== 'done' && t.dueDate === today
+        const targetTasks = store.tasks.filter(t => 
+          t.status !== 'done' && t.dueDate === targetDate
         );
         
-        const totalDue = overdueTasks.length + todayTasks.length;
+        const totalDue = (targetDate <= today ? overdueTasks.length : 0) + targetTasks.length;
+        const humanDate = formatHumanDate(targetDate);
         
         if (totalDue === 0) {
           return { 
             success: true, 
-            message: `You have no tasks due today and nothing overdue. You're all caught up! 🎉` 
+            message: `You have no tasks due for **${humanDate}** and nothing overdue. You're all caught up! 🎉` 
           };
         }
         
-        let msg = `You have **${totalDue}** tasks that need attention:\n\n`;
+        let msg = `You have **${totalDue}** tasks that need attention for **${humanDate}**:\n\n`;
         
-        if (overdueTasks.length > 0) {
+        if (overdueTasks.length > 0 && targetDate <= today) {
           msg += `⚠️ **Overdue (${overdueTasks.length}):**\n`;
           overdueTasks.slice(0, 5).forEach((t, i) => {
             msg += `  ${i + 1}. ${t.title} (Due: ${t.dueDate})\n`;
@@ -660,13 +698,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           msg += `\n`;
         }
         
-        if (todayTasks.length > 0) {
-          msg += `📅 **Due Today (${todayTasks.length}):**\n`;
-          todayTasks.slice(0, 5).forEach((t, i) => {
-            const priority = t.priority === 'high' ? '⚠️' : '';
+        if (targetTasks.length > 0) {
+          msg += `📅 **Due ${humanDate} (${targetTasks.length}):**\n`;
+          targetTasks.slice(0, 5).forEach((t, i) => {
+            const priority = (t as any).priority === 'high' ? '⚠️' : '';
             msg += `  ${i + 1}. ${t.title} ${priority}\n`;
           });
-          if (todayTasks.length > 5) msg += `  ...and ${todayTasks.length - 5} more\n`;
+          if (targetTasks.length > 5) msg += `  ...and ${targetTasks.length - 5} more\n`;
         }
         
         msg += `\nWant me to list all your pending tasks? Just say "show all tasks" or "yes".`;
@@ -678,16 +716,18 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       case 'calendar_query': {
-        const today = new Date().toISOString().split('T')[0];
-        const tasks = store.tasks.filter(t => t.dueDate === today && t.status !== 'done');
+        const rawDate = entities.date || 'today';
+        const targetDate = resolveDate(rawDate);
+        const tasks = store.tasks.filter(t => t.dueDate === targetDate && t.status !== 'done');
+        const humanDate = formatHumanDate(targetDate);
         
         if (tasks.length === 0) {
-          return { success: true, message: `Your calendar is clear for today, ${userName}! 📅 No appointments or urgent tasks found. Want me to help you find some new leads?` };
+          return { success: true, message: `Your calendar is clear for **${humanDate}**, ${userName}! 📅 No appointments or urgent tasks found.` };
         }
         
-        let msg = `Here's what's on your agenda for today, ${userName}:\n\n`;
+        let msg = `Here's what's on your agenda for **${humanDate}**, ${userName}:\n\n`;
         tasks.forEach((t, i) => {
-          msg += `${i + 1}. **${t.title}** ${t.priority === 'high' ? '⚠️' : ''}\n`;
+          msg += `${i + 1}. **${t.title}** ${(t as any).priority === 'high' ? '⚠️' : ''}\n`;
         });
         msg += `\nYou have ${tasks.length} total items to handle today. What would you like to tackle first?`;
         
@@ -1174,10 +1214,37 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       case 'lead_context_query': {
-        const leadName = entities.leadName || entities.name || (entities.text && entities.text !== 'this' ? entities.text : null);
+        const rawLeadName = entities.leadName || entities.name || (entities.text && entities.text !== 'this' ? entities.text : null);
         const field = entities.field || 'all';
         const store = useStore.getState();
+
+        // Check for multiple leads ("X and Y")
+        if (rawLeadName?.toLowerCase().includes(' and ')) {
+          const names = rawLeadName.split(/\s+and\s+/i);
+          const results = names.map((n: string) => findLeadFuzzy(n.trim(), store.leads));
+          
+          const found = results.filter((r: any) => r.lead);
+          const ambiguities = results.filter((r: any) => r.ambiguity);
+
+          if (ambiguities.length > 0) {
+            return { success: false, message: `I found multiple matches for some of those names. Could you be more specific about ${ambiguities.map((a: any) => a.ambiguity?.join(' or ')).join(', ')}?` };
+          }
+
+          if (found.length === 0) {
+             return { success: false, message: `I couldn't find any leads matching "${rawLeadName}".` };
+          }
+
+          let combinedMsg = `Here is what I found for those leads:\n\n`;
+          found.forEach((f: any) => {
+            const l = f.lead!;
+            pushToEntityStack({ id: l.id, name: l.name, type: 'lead' });
+            combinedMsg += `**${l.name}**:\n- 📍 Address: ${l.propertyAddress || 'N/A'}\n- 📊 Status: ${l.status}\n- 📞 Phone: ${l.phone || 'N/A'}\n\n`;
+          });
+
+          return { success: true, message: combinedMsg };
+        }
         
+        const leadName = rawLeadName;
         const { lead: fuzzyLead, ambiguity: queryAmbiguity, isExact: queryIsExact } = findLeadFuzzy(leadName, store.leads);
         let lead = fuzzyLead;
 
@@ -1210,30 +1277,25 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           updateConversationTopic(store.currentUser.id, sessionId, `Leads (${lead.name})`);
         }
   
-        if (field === 'phone' || entities.text?.includes('phone')) {
+        if (field === 'phone' || field === 'number') {
           return { success: true, message: `${lead.name}'s phone number is ${lead.phone || 'not available'}.` };
         }
-        if (field === 'email' || entities.text?.includes('email')) {
+        if (field === 'email') {
           return { success: true, message: `${lead.name}'s email is ${lead.email || 'not available'}.` };
         }
-        if (field === 'address' || entities.text?.includes('address')) {
+        if (field === 'address') {
           return { success: true, message: `${lead.name}'s property address is ${lead.propertyAddress || 'not available'}.` };
         }
-        if (entities.text?.includes('status')) {
+        if (field === 'status') {
           return { success: true, message: `${lead.name} is currently in ${lead.status} stage.` };
         }
-        if (entities.text?.includes('notes')) {
+        if (field === 'notes') {
           return { success: true, message: `Notes for ${lead.name}: ${lead.notes || 'No notes yet.'}` };
         }
-        if (entities.text?.includes('last contact')) {
-          return { success: true, message: `I don't have a last contact date for ${lead.name} yet. Want to send a message now?` };
-        }
         
-        const score = lead.dealScore || (lead as unknown as Record<string, unknown>).score || (lead as unknown as Record<string, unknown>).lead_score || 'N/A';
-        return { 
-          success: true, 
-          message: `**${lead.name}**\n📞 ${lead.phone || 'No phone'}\n📧 ${lead.email || 'No email'}\n📍 ${lead.propertyAddress || 'No address'}\n📊 Status: ${lead.status}\n🎯 Score: ${score}\n📝 Notes: ${lead.notes || 'None'}` 
-        };
+        // General info
+        const summary = `Here's what I have on **${lead.name}**:\n- 📍 Address: ${lead.propertyAddress || 'N/A'}\n- 📊 Status: ${lead.status}\n- 🎯 Deal Score: ${lead.dealScore || 0}\n- 📞 Phone: ${lead.phone || 'None'}`;
+        return { success: true, message: summary };
       }
 
       case 'recall_yesterday': {
