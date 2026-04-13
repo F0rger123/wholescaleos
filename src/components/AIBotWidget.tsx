@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Bot, X, Send, 
   User, Key, Mic, Volume2, VolumeX,
-  Layout as LayoutIcon, Loader2
+  Layout as LayoutIcon, Loader2,
+  MessageSquare, CheckCircle2, FileText
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
@@ -1287,11 +1288,56 @@ export function AIBotWidget() {
             )}
           </div>
 
-          {/* Input Area */}
           <form onSubmit={handleSubmit} className={`p-3 border-t flex flex-col gap-2 ${position.y < 200 ? 'order-2 border-t-0' : ''}`}
             style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}
           >
-            {/* Removed premium limit display */}
+            {/* Quick Actions */}
+            <div className="flex gap-2 px-1 pb-1 overflow-x-auto scrollbar-none animate-in fade-in slide-in-from-bottom-1">
+              {(() => {
+                const memory = getMemory();
+                const activeLead = memory.entityStack.find(e => e.type === 'lead');
+                if (!activeLead) return null;
+
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrompt(`text ${activeLead.name}`);
+                        // Small delay to ensure prompt state is updated if needed, 
+                        // though in React we should probably call a handler directly.
+                        // For now, let's just trigger submit.
+                        setTimeout(() => handleSubmit(), 10);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-primary-dim)] border border-[var(--t-primary)]/20 text-[var(--t-primary)] text-[10px] font-bold hover:scale-105 transition-all shadow-sm shrink-0"
+                    >
+                      <MessageSquare size={12} /> SMS {activeLead.name.split(' ')[0]}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrompt(`add task for ${activeLead.name}`);
+                        setTimeout(() => handleSubmit(), 10);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text)] text-[10px] font-bold hover:scale-105 transition-all shadow-sm shrink-0"
+                    >
+                      <CheckCircle2 size={12} /> Task
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPrompt(`add note for ${activeLead.name}`);
+                        setTimeout(() => handleSubmit(), 10);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--t-surface)] border border-[var(--t-border)] text-[var(--t-text)] text-[10px] font-bold hover:scale-105 transition-all shadow-sm shrink-0"
+                    >
+                      <FileText size={12} /> Note
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+
             <div className="flex gap-2 w-full relative">
               <div className="relative flex-1">
               <input

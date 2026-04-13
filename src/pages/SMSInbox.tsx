@@ -51,10 +51,12 @@ interface Conversation {
 export default function SMSInbox() {
   const [searchParams] = useSearchParams();
   const phoneParam = searchParams.get('phone');
+  const phonesParam = searchParams.get('phones');
+  const msgParam = searchParams.get('msg');
 
   const [messages, setMessages] = useState<SMSMessage[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(phonesParam || phoneParam || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -69,8 +71,8 @@ export default function SMSInbox() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [syncingContacts, setSyncingContacts] = useState(false);
-  const [showCompose, setShowCompose] = useState(false);
-  const [newNumber, setNewNumber] = useState('');
+  const [showCompose, setShowCompose] = useState(!!phonesParam || !!phoneParam);
+  const [newNumber, setNewNumber] = useState(phonesParam || phoneParam || '');
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -147,6 +149,13 @@ export default function SMSInbox() {
       updateLead(lead.id, { carrier });
     }
   };
+  
+  // Handle pre-fill message if provided in URL
+  useEffect(() => {
+    if (msgParam) {
+      setReplyText(msgParam);
+    }
+  }, [msgParam]);
 
   const handleAutoDetect = async (phone: string) => {
     console.log(`[SMS] Starting auto-detection for ${phone}...`);
@@ -449,6 +458,21 @@ export default function SMSInbox() {
     if (!replyText.trim() || !selectedPhone || sending) return;
 
     const textToSend = replyText.trim();
+    
+    // Support multiple recipients (comma-separated list)
+    if (selectedPhone.includes(',')) {
+      const phones = selectedPhone.split(',').map(p => p.trim()).filter(Boolean);
+      setReplyText('');
+      
+      // Send to each recipient
+      phones.forEach(phone => {
+        const raw = phone.replace(/\D/g, '');
+        const carrier = carrierMap[raw] || 'Auto-Detect (Universal Blast)';
+        executeSend(raw, textToSend, carrier);
+      });
+      return;
+    }
+
     const rawPhone = selectedPhone.replace(/\D/g, '');
     const knownCarrier = carrierMap[rawPhone];
 

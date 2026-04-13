@@ -253,14 +253,14 @@ export const intents: Intent[] = [
   },
   {
     name: "send_sms",
-    patterns: ["send text to", "send sms to", "text", "message", "send a message to", "sms", "tell", "shoot a text to"],
+    patterns: ["send text to", "send sms to", "text", "message", "send a message to", "sms", "tell", "shoot a text to", "text both", "text all of them", "message them", "blast all"],
     action: "sendSMS",
     required_params: ["target", "message"],
     template: "✅ SMS sent to {target}"
   },
   {
     name: "send_sms_partial",
-    patterns: ["send text", "send sms", "text someone", "send a message", "write a text", "can you text for me"],
+    patterns: ["send text", "send sms", "text someone", "send a message", "write a text", "can you text for me", "text them", "text those", "message both", "text everyone"],
     action: "sendSMSPartial",
     template: "Who would you like to text?"
   },

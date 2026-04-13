@@ -366,6 +366,32 @@ export function resolveEntityFromContext(input: string): Entity | null {
   return null;
 }
 
+/**
+ * Resolves one or more entities from the context based on plural or singular pronouns.
+ */
+export function resolveEntitiesFromContext(input: string): Entity[] {
+  const memory = getMemory();
+  const lower = input.toLowerCase();
+  
+  const pluralKeywords = ['both', 'them', 'all', 'those', 'these', 'everyone'];
+  const hasPlural = pluralKeywords.some(p => lower.includes(` ${p} `) || lower.endsWith(` ${p}`) || lower === p);
+  
+  if (hasPlural) {
+    // Lead context takes priority for plural SMS/bulk actions
+    const leadEntries = memory.entityStack.filter(e => e.type === 'lead' || e.type === 'contact');
+    
+    if (lower.includes('both')) {
+      return leadEntries.slice(0, 2);
+    }
+    
+    // Default to last 5 for "all" or "them"
+    return leadEntries.slice(0, 5);
+  }
+  
+  const single = resolveEntityFromContext(input);
+  return single ? [single] : [];
+}
+
 export function syncUserProfile(profile: any) {
   if (!profile) return;
   const memory = getMemory();

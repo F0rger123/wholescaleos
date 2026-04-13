@@ -1,6 +1,18 @@
 import { useStore } from '../../store/useStore';
 import { sendSMS } from '../sms-service';
-import { trackLead, setActiveState, getMemory, pushToEntityStack, setLearnedFact, logOutcome, setLastSuggestion, getLastSuggestion, clearLastSuggestion } from './memory-store';
+import { 
+  trackLead, 
+  setActiveState, 
+  getMemory, 
+  pushToEntityStack, 
+  setLearnedFact, 
+  logOutcome, 
+  setLastSuggestion, 
+  getLastSuggestion, 
+  clearLastSuggestion,
+  resolveEntitiesFromContext,
+  Entity
+} from './memory-store';
 import { 
   getConversationContext, 
   updateConversationTopic, 
@@ -354,40 +366,109 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       case 'send_sms':
         try {
-          let target = entities.target;
-          const memory = getMemory();
+          const text = entities.text || '';
+          let targets: Entity[] = [];
           
-          if (!target && memory.activeState?.type === 'AWAITING_SMS_MESSAGE') {
-            target = memory.activeState.data?.target;
+          // Determine if we are referring to multiple leads ("both", "them", "all")
+          const isBulk = ['both', 'them', 'all', 'those', 'these'].some(p => text.toLowerCase().includes(p));
+          
+          if (isBulk || !entities.target) {
+            targets = resolveEntitiesFromContext(text);
+          } else if (entities.target) {
+            const { lead, ambiguity, isExact } = findLeadFuzzy(entities.target, store.leads);
+            if (ambiguity) {
+              return { success: false, message: `I found multiple leads matching "${entities.target}": ${ambiguity.join(' or ')}. Which one did you mean?` };
+            }
+            if (lead) {
+              if (!isExact) {
+                setLastSuggestion('send_sms', { ...entities, target: lead.name }, `text ${lead.name}`);
+                return { success: false, message: `Do you mean **${lead.name}**?` };
+              }
+              targets = [{ id: lead.id, name: lead.name, type: 'lead' }];
+            } else {
+              // Fallback to raw input (maybe a phone number)
+              targets = [{ id: 'raw', name: entities.target, type: 'lead' }];
+            }
           }
 
-          if (!target) return { success: false, message: "Who should I text?" };
-          
-          const lead = store.leads.find(l => l.name.toLowerCase().includes(target.toLowerCase()));
-          const phone = lead?.phone || target;
-          
-          if (!phone.replace(/\D/g, '').length && !lead) {
-              return { success: false, message: `I found ${target}, but they don't have a phone number.` };
+          if (targets.length === 0) return { success: false, message: "Who should I text?" };
+
+          // Handle multi-recipient (Bulk SMS)
+          if (targets.length > 1) {
+            const phones = targets.map(t => {
+              const l = store.leads.find(lead => lead.id === t.id);
+              return l?.phone || (t.id === 'raw' ? t.name : null);
+            }).filter(Boolean).join(',');
+            
+            const names = targets.map(t => t.name).join(' and ');
+            const prefillMsg = entities.message || "";
+            
+            return {
+              success: true,
+              message: `I've prepared a message for **${names}**. I'm opening the SMS modal for you now!`,
+              data: { 
+                redirect: `#/communications/sms?phones=${encodeURIComponent(phones)}&msg=${encodeURIComponent(prefillMsg)}`,
+                action: 'open_sms_modal',
+                phones,
+                message: prefillMsg
+              }
+            };
           }
 
-          const res = await sendSMS(phone, entities.message);
-          if (res.success && lead) {
+          // Single recipient logic
+          const targetEntity = targets[0];
+          const lead = store.leads.find(l => l.id === targetEntity.id);
+          const phone = lead?.phone || (targetEntity.id === 'raw' ? targetEntity.name : null);
+
+          if (!phone || !phone.replace(/\D/g, '').length) {
+            if (lead) {
+              return { 
+                success: false, 
+                message: `I'm ready to text **${lead.name}**, but I don't have a phone number for them. Should I add one or send an email instead?` 
+              };
+            }
+            return { success: false, message: "I couldn't find a valid phone number for that recipient." };
+          }
+
+          // If message is present, we can send it (or offer to open modal if preferred)
+          if (entities.message) {
+            const res = await sendSMS(phone, entities.message);
+            if (res.success && lead) {
               pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
               setActiveState(null);
               logOutcome('sms_sent', `Sent SMS to ${lead.name}`, { leadId: lead.id, phone, message: entities.message });
-          } else if (res.success) {
-              logOutcome('sms_sent', `Sent SMS to ${phone}`, { phone, message: entities.message });
+            }
+            return { 
+              success: res.success, 
+              message: res.success ? `✅ SMS sent to ${lead?.name || phone}.` : `Failed: ${res.message}`
+            };
+          } else {
+            // No message? Open modal with recipient pre-filled
+            return {
+              success: true,
+              message: `Opening SMS for **${lead?.name || phone}**. What would you like to say?`,
+              data: { 
+                redirect: `#/communications/sms?phone=${encodeURIComponent(phone)}`,
+                action: 'open_sms_modal',
+                phone
+              }
+            };
           }
-
-          return { 
-            success: res.success, 
-            message: res.success ? `✅ SMS sent to ${lead?.name || target}.` : `Failed: ${res.message}`
-          };
         } catch (e: any) {
           return { success: false, message: e.message || 'SMS service error.' };
         }
 
+      case 'send_sms_partial':
       case 'sendSMSPartial':
+        const resolved = resolveEntitiesFromContext(entities.text || '');
+        if (resolved.length > 1) {
+           return executeTask('send_sms', { text: entities.text });
+        }
+        
+        if (!entities.target && resolved.length === 1) {
+           return executeTask('send_sms', { target: resolved[0].name });
+        }
+
         if (!entities.target) {
           setActiveState('AWAITING_SMS_RECIPIENT', {});
           return { success: true, message: "Who would you like to text?" };
@@ -623,15 +704,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           data: { openEmailModal: true, recipient: targetEmail }
         };
 
-      case 'send_sms_partial': {
-        const targetSMS = entities.target;
-        if (targetSMS) {
-          setActiveState('AWAITING_SMS_MESSAGE', { target: targetSMS });
-          return { success: true, message: `Got it. Sending a text to **${targetSMS}**. What should the message say?` };
-        }
-        setActiveState('AWAITING_SMS_RECIPIENT', {});
-        return { success: true, message: "Who would you like to text? You can give me a name or a phone number." };
-      }
 
       case 'greeting':
         const hour = new Date().getHours();
