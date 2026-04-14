@@ -21,19 +21,36 @@ export class NLUEngine {
     { regex: /^(show|list|get) (my )?leads/i, intent: 'crm_action', params: { action: 'filter_leads' } },
     { regex: /^(show|list|get) (my )?tasks/i, intent: 'task_action', params: { action: 'list_tasks' } },
     { regex: /^(go to|navigate to|open) (.*)/i, intent: 'system_action', params: { action: 'navigate' } },
-    { regex: /^(any suggestions|what should i do|check pipeline)/i, intent: 'proactive_trigger' }
+    { regex: /^(any suggestions|what should i do|check pipeline|proactive)/i, intent: 'proactive_trigger' },
+    { regex: /^(top leads|hot leads|best leads)/i, intent: 'crm_action', params: { action: 'filter_leads', minScore: 80 } }
   ];
 
   /**
    * Main entry point for NLU resolution.
    */
   async resolve(text: string, apiKey: string): Promise<ParsedIntent> {
+    console.log('[NLU] Processing:', text);
+    
     // 1. Check Fast Path (Low latency)
     const fastMatch = this.checkFastPath(text);
-    if (fastMatch) return fastMatch;
+    if (fastMatch) {
+      console.log('[NLU] Fast Path Match:', fastMatch.intent);
+      return fastMatch;
+    }
 
     // 2. Fallback to Gemini Semantic Extraction
-    return this.resolveSemantic(text, apiKey);
+    console.log('[NLU] Falling back to Semantic Extraction');
+    const semanticMatch = await this.resolveSemantic(text, apiKey);
+    console.log('[NLU] Semantic Match:', semanticMatch.intent, semanticMatch.entities);
+    return semanticMatch;
+  }
+
+  /**
+   * Static wrapper for easy access.
+   */
+  static async process(text: string, apiKey: string): Promise<ParsedIntent> {
+    const engine = new NLUEngine();
+    return engine.resolve(text, apiKey);
   }
 
   private checkFastPath(text: string): ParsedIntent | null {
@@ -64,6 +81,7 @@ export class NLUEngine {
     - comms_action: { "action": "send_sms|draft_sms", "target": "...", "message": "...", "carrier": "..." }
     - task_action: { "action": "create_task|list_tasks", "title": "...", "dueDate": "...", "priority": "..." }
     - system_action: { "action": "navigate|help|small_talk|memory_recall", "path": "leads|tasks|calendar|dashboard|settings", "text": "..." }
+    - real_estate_action: { "action": "calculate_deal|analyze_property|get_knowledge|strategy_advice|script_generation", "topic": "...", "type": "flip|rental", "address": "...", "strategy": "wholesaling|brrrr|sub2" }
     - proactive_trigger: Analysis and suggestions for the pipeline.
     - unknown: Use if the intent is missing or unintelligible.
 

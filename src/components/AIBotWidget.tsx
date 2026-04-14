@@ -26,15 +26,10 @@ import { voiceService } from '../lib/voice-service';
 import { usageTracker, UsageData } from '../lib/usage-tracking';
 import { UsageLimitModal } from './UsageLimitModal';
 import { 
-  recognizeIntent, 
   executeTask, 
-  splitMultiIntent, 
-  generateResponse, 
-  generateUnknownResponse, 
-  generateErrorResponse,
-  mergeResponses 
+  generateResponse,
+  generateErrorResponse
 } from '../lib/local-ai';
-import { callAgentLoop } from '../lib/agent/agent-client';
 import { 
   saveMessage, 
   getMemory, 
@@ -46,10 +41,9 @@ import { saveLearnedIntent } from '../lib/local-ai/learning-service';
 import { intents } from '../lib/ai/intents';
 import { 
   saveConversationTurn, 
-  getConversationContext, 
-  updateConversationTopic,
   generateSessionId,
-  getUserPreferences
+  getUserPreferences,
+  getConversationContext
 } from '../lib/local-ai/learning-service';
 
 interface ChatMessage {
@@ -120,7 +114,8 @@ const FormattedContent: React.FC<{ content: string }> = ({ content }) => {
 export interface BotResponse {
   intent: string;
   response: string;
-  data?: unknown;
+  data?: any;
+  nextIntent?: { name: string; params: any };
   systemLog?: string;
 }
 
@@ -306,8 +301,8 @@ export function AIBotWidget() {
         await fetchUsage();
         
         // Sync user profile and load history from Supabase
-        syncUserProfile(currentUser);
-        await loadHistory(currentUser.id);
+        syncUserProfile(currentUser.id);
+        await loadHistory(currentUser.id, sessionId);
         
         // Load combined history from memory store after sync
         const memory = getMemory();
@@ -490,7 +485,7 @@ export function AIBotWidget() {
     
     // Check for "it" or "that" referring to previous topic
     if (input.toLowerCase().match(/^(it|that|this|those|these)$/)) {
-      const lastMessages = context.filter(m => m.role === 'assistant').slice(-1);
+      const lastMessages = context.filter((m: any) => m.role === 'assistant').slice(-1);
       if (lastMessages.length > 0) {
         return `You were asking about ${lastMessages[0].content.substring(0, 100)}... Can you be more specific?`;
       }
@@ -527,7 +522,7 @@ export function AIBotWidget() {
     };
     
     // Save to locally persistent and Supabase memory
-    saveMessage('user', userText);
+    if (currentUser?.id) saveMessage(currentUser.id, sessionId, 'user', userText);
     
     if (sessionId && currentUser?.id) {
       await saveConversationTurn(currentUser.id, sessionId, 'user', userText);
@@ -605,257 +600,16 @@ export function AIBotWidget() {
         return;
       }
 
-      // ── LOCAL RULE-BASED MATCHING (OS BOT 2.0) ───────────────────────────
-      const isLocalModel = aiModel === 'os-bot';
-      const segments = isLocalModel ? splitMultiIntent(userText) : [userText];
-
-      if (isLocalModel) {
-        // Multi-Intent Processing
-        const multiResults: { intent: any; result: any; segment: string }[] = [];
-        for (const segment of segments) {
-          try {
-            const matched = await recognizeIntent(segment);
-            if (matched && matched.confidence >= 80) {
-              const res = await executeTask(matched.intent.action, { ...matched.params, sessionId });
-              if (res.success) {
-                multiResults.push({ intent: matched.intent, result: res, segment });
-              }
-            }
-          } catch (error) {
-            console.error('Intent recognition failed for segment:', error);
-          }
-        }
-
-        if (multiResults.length > 0) {
-          const personality = useStore.getState().aiPersonality || 'Default';
-          const aiName = useStore.getState().aiName || 'OS Bot';
-          const mergedResponse = mergeResponses(multiResults, personality, aiName);
-          
-          const aiMsg: ChatMessage = {
-            id: Date.now().toString(),
-            role: 'ai',
-            content: mergedResponse.replace(/^🤖\s*[^:]+:\s*/, ''),
-            timestamp: new Date().toISOString(),
-            systemLog: `🤖 ${aiName}`
-          };
-          setMessages(prev => [...prev, aiMsg]);
-          setTypingMessageId(aiMsg.id);
-          
-          if (sessionId && currentUser?.id) {
-            await saveConversationTurn(currentUser.id, sessionId, 'assistant', aiMsg.content);
-          }
-          setLoading(false);
-          return;
-        }
-      }
-
-      let matched = null;
-      try {
-        matched = await recognizeIntent(userText);
-        
-        // Topic detection
-        if (matched && sessionId && currentUser?.id) {
-          if (matched.intent.name.includes('lead')) {
-            await updateConversationTopic(currentUser.id, sessionId, 'leads');
-          } else if (matched.intent.name.includes('task')) {
-            await updateConversationTopic(currentUser.id, sessionId, 'tasks');
-          } else if (matched.intent.name.includes('sms')) {
-            await updateConversationTopic(currentUser.id, sessionId, 'sms');
-          }
-        }
-      } catch (error) {
-        console.error('Intent recognition failed:', error);
-        // Fall back to unknown response handling below
-      }
-
-      if (matched || isLocalModel) {
-        // Increment usage for OS Bot
-        await usageTracker.incrementUsage();
-        await fetchUsage();
-
-        // ── AGENT LOOP BRIDGE (Week 3) ──────────────────────────────────
-        if (matched?.needsAgentLoop && currentUser?.id) {
-          const aiMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'ai',
-            content: "I'm analyzing your request and preparing a multi-step plan... 🔄",
-            timestamp: new Date().toISOString(),
-            systemLog: "🤖 Agent Loop"
-          };
-          setMessages(prev => [...prev, aiMsg]);
-          setTypingMessageId(aiMsg.id);
-
-          try {
-            const memory = getMemory();
-            const agentResponse = await callAgentLoop(currentUser.id, userText, memory.sessionId);
-            
-            if (agentResponse.handled && agentResponse.toolCalls) {
-              const plans = agentResponse.reasoning || "Confirmed. I'll handle that for you.";
-              const planId = (Date.now() + 2).toString();
-              
-              setMessages(prev => [...prev, {
-                id: planId,
-                role: 'ai',
-                content: plans,
-                timestamp: new Date().toISOString(),
-                systemLog: "🤖 Agent Reasoning"
-              }]);
-              setTypingMessageId(planId);
-
-              // Execute tool chain sequentially
-              for (const call of agentResponse.toolCalls) {
-                const stepMsg = `Executing: ${call.toolName.replace(/_/g, ' ')}...`;
-                const stepId = (Date.now() + Math.random()).toString();
-                setMessages(prev => [...prev, {
-                   id: stepId,
-                   role: 'ai',
-                   content: stepMsg,
-                   timestamp: new Date().toISOString(),
-                   systemLog: "🤖 Agent Action"
-                }]);
-                
-                try {
-                  const result = await executeTask(call.toolName, { ...call.params, sessionId });
-                  setMessages(prev => prev.map(m => 
-                    m.id === stepId ? { ...m, content: `${result.message} ✅` } : m
-                  ));
-                } catch (toolErr: any) {
-                  setMessages(prev => prev.map(m => 
-                    m.id === stepId ? { ...m, content: `Failed to execute ${call.toolName}: ${toolErr.message} ❌` } : m
-                  ));
-                }
-              }
-              
-              setLoading(false);
-              return;
-            } else {
-              // Agent loop returned but didn't handle or failed. 
-              // We log it and let the local logic below take over using the 'matched' variable.
-              console.warn('Agent Loop did not handle request or returned error. Falling back to local.', agentResponse.error);
-            }
-          } catch (err) {
-            console.error('Agent Loop fatal failure, falling back to local:', err);
-          }
-        }
-
-        // Handle Confidence Disambiguation
-        if (matched && matched.confidence > 40 && matched.confidence < 80) {
-          const aiMsg: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            role: 'ai',
-            content: `I think you might want to ${matched.intent.name.replace(/_/g, ' ')}. Is that right?`,
-            timestamp: new Date().toISOString(),
-            intent: 'disambiguation',
-            data: { originalIntent: matched },
-            systemLog: "🤖 OS Bot"
-          };
-          setMessages(prev => [...prev, aiMsg]);
-          setTypingMessageId(aiMsg.id);
-          setLoading(false);
-          return;
-        }
-
-        if (matched && matched.confidence >= 80) {
-          const res = await executeTask(matched.intent.action, { ...matched.params, sessionId });
-          if (res.success) {
-            const aiMsg: ChatMessage = {
-              id: (Date.now() + 1).toString(),
-              role: 'ai',
-              content: generateResponse(matched.intent, res, userText),
-              timestamp: new Date().toISOString(),
-              intent: matched.intent.name,
-              data: res.data,
-              systemLog: "🤖 OS Bot"
-            };
-
-            if (matched.intent.name === 'typo_suggestion') {
-              setMessages(prev => [
-                ...prev, 
-                aiMsg,
-                { id: (Date.now() + 100).toString(), role: 'ai', type: 'learning-buttons', content: '', originalPhrase: userText, timestamp: new Date().toISOString() }
-              ]);
-            } else {
-              setMessages(prev => [...prev, aiMsg]);
-            }
-
-            if (sessionId && currentUser?.id) {
-              await saveConversationTurn(currentUser.id, sessionId, 'assistant', aiMsg.content);
-            }
-            setTypingMessageId(aiMsg.id);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // If explicitly set to OS Bot but no intent matched, or intent failed
-        if (isLocalModel) {
-          const response = generateUnknownResponse(userText);
-          setMessages(prev => [
-            ...prev, 
-            { 
-              id: (Date.now() + 1).toString(), 
-              role: 'ai', 
-              content: response, 
-              timestamp: new Date().toISOString()
-            },
-            { 
-              id: (Date.now() + 100).toString(), 
-              role: 'ai', 
-              type: 'learning-buttons',
-              content: '',
-              originalPhrase: userText,
-              timestamp: new Date().toISOString()
-            }
-          ]);
-          if (sessionId && currentUser?.id) {
-            await saveConversationTurn(currentUser.id, sessionId, 'assistant', response);
-          }
-          setTypingMessageId((Date.now() + 1).toString());
-          setLoading(false);
-          return;
-        }
-      }
-
-      if (matched && matched.intent.name === 'typo_suggestion') {
-        setPendingTypoSuggestion({
-          suggestedText: matched.params.suggestedText as string,
-          keyword: matched.params.keyword as string
-        });
-      }
-
-      // ── Normal AI processing (Only if NOT Local Model) ──────────────────
-      if (isLocalModel) {
-        const response = generateUnknownResponse(userText);
-        setMessages(prev => [...prev, 
-          { 
-            id: (Date.now() + 1).toString(), 
-            role: 'ai', 
-            content: response, 
-            timestamp: new Date().toISOString(),
-            systemLog: "🤖 OS Bot"
-          },
-          { 
-            id: (Date.now() + 2).toString(), 
-            role: 'ai', 
-            content: '', 
-            type: 'learning-buttons', 
-            originalPhrase: userText,
-            timestamp: new Date().toISOString()
-          }
-        ]);
-        if (sessionId && currentUser?.id) {
-          await saveConversationTurn(currentUser.id, sessionId, 'assistant', response);
-        }
-        setTypingMessageId((Date.now() + 1).toString());
-        setLoading(false);
-        return;
-      }
-
+      // ── MODULAR NLU PIPELINE (v11.0) ───────────────────────────────────
+      console.log('[OS BOT] Processing via Unified Pipeline:', userText);
+      
       const response = await processPrompt(userText, { 
         page: location.pathname,
-        currentTime: new Date().toISOString()
+        currentTime: new Date().toISOString(),
+        sessionId
       }, aiModel);
 
+      /* The unified processPrompt now handles all cases including local AI */
       if (response.intent === 'rate_limit') {
         setShowRateLimitModal(true);
         const finalId = (Date.now() + 1).toString();
@@ -867,7 +621,7 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString(),
           systemLog: "🤖 OS Bot"
         }]);
-        saveMessage('assistant', content, 'rate_limit');
+        saveMessage(currentUser?.id || 'system', sessionId, 'assistant', content);
         setTypingMessageId(finalId);
         setLoading(false);
         return;
@@ -891,7 +645,7 @@ export function AIBotWidget() {
           timestamp: new Date().toISOString(),
           systemLog: "🤖 OS Bot"
         }]);
-        saveMessage('assistant', content, 'redirect_setup');
+        saveMessage(currentUser?.id || 'system', sessionId, 'assistant', content);
         setTypingMessageId(finalId);
         setTimeout(() => navigate('/settings/ai'), 1500);
 
@@ -913,7 +667,7 @@ export function AIBotWidget() {
             timestamp: new Date().toISOString(),
             systemLog: response.systemLog || "🤖 OS Bot"
           }]);
-          saveMessage('assistant', response.response, 'confirm_action');
+          saveMessage(currentUser?.id || 'system', sessionId, 'assistant', response.response);
           setTypingMessageId(finalId);
         } else {
           // Missing info — start SMS session to collect it conversationally
@@ -926,7 +680,7 @@ export function AIBotWidget() {
             intent: 'ask_question',
             systemLog: response.systemLog || "🤖 OS Bot"
           }]);
-          saveMessage('assistant', response.response, 'ask_question');
+          saveMessage(currentUser?.id || 'system', sessionId, 'assistant', response.response);
           setTypingMessageId(finalId);
         }
 
@@ -945,7 +699,7 @@ export function AIBotWidget() {
           data: response.data,
           systemLog: "🤖 OS Bot"
         }]);
-        saveMessage('assistant', response.response, 'ask_save_contact');
+        if (currentUser?.id) saveMessage(currentUser.id, sessionId, 'assistant', response.response);
         setTypingMessageId(finalId);
       } else {
         const aiMsg: ChatMessage = {
@@ -961,9 +715,19 @@ export function AIBotWidget() {
         if (sessionId && currentUser?.id) {
           await saveConversationTurn(currentUser.id, sessionId, 'assistant', response.response);
         }
-        saveMessage('assistant', response.response, response.intent);
+        if (currentUser?.id) saveMessage(currentUser.id, sessionId, 'assistant', response.response);
         setTypingMessageId(aiMsg.id);
         speak(response.response);
+
+        // ── INTENT CHAINING (v11.0) ──────────────────────────────────────
+        // If the handler returned a nextIntent (e.g. from a "Yes" confirmation)
+        // we execute it immediately to maintain the flow.
+        if (response.nextIntent) {
+          console.log('[OS BOT] Chaining next intent:', response.nextIntent.name);
+          setTimeout(() => {
+            handleExecuteAction(response.nextIntent!.name, response.nextIntent!.params);
+          }, 1000); // 1s delay for better UX
+        }
 
         if (response.intent === 'navigate' && response.data?.path) {
           navigate(response.data.path);
@@ -986,7 +750,7 @@ export function AIBotWidget() {
         timestamp: new Date().toISOString(),
         systemLog: "🤖 OS Bot"
       }]);
-      saveMessage('assistant', errorMsg);
+      if (currentUser?.id) saveMessage(currentUser.id, sessionId, 'assistant', errorMsg);
     } finally {
       setLoading(false);
     }
@@ -1045,11 +809,17 @@ export function AIBotWidget() {
           try {
             result = await sendSMSViaAI(target.toString(), message, data?.targetCarrier);
           } catch (smsErr: any) {
-            result = { success: false, message: smsErr?.message || 'SMS send failed. Check Google connection in Settings.' };
+        result = { success: false, message: smsErr?.message || 'SMS send failed. Check Google connection in Settings.' };
           } finally {
             setLoading(false);
           }
         }
+      } else if (['crm_action', 'comms_action', 'task_action', 'real_estate_action', 'system_action'].includes(intent)) {
+        // Modular Handler Flow (v11.0)
+        setLoading(true);
+        const taskResponse = await (await import('../lib/local-ai/task-executor')).executeTask(intent, data);
+        result = { success: taskResponse.success, message: taskResponse.message };
+        setLoading(false);
       } else if (intent === 'confirm_action') {
         const underlyingIntent = data?.intent;
         if (underlyingIntent && underlyingIntent !== 'confirm_action') {

@@ -18,6 +18,14 @@ export class RealEstateHandler extends BaseHandler {
         return this.handleAnalysis(params);
       case 'get_knowledge':
         return this.handleKnowledge(params);
+      case 'strategy_advice':
+        return this.handleStrategyAdvice(params);
+      case 'script_generation':
+        return this.handleScriptGeneration(params);
+      case 'marketing_advice':
+        return this.handleMarketingTips(params);
+      case 'market_trends':
+        return this.handleMarketIndicators();
       case 'cap_rate':
         return this.handleCapRate(params);
       case 'sub2':
@@ -48,10 +56,72 @@ export class RealEstateHandler extends BaseHandler {
   }
 
   private handleKnowledge(params: any): TaskResponse {
-    const concept = REAL_ESTATE_CONCEPTS[params.topic?.toLowerCase()];
-    if (!concept) return this.wrapError(`I'm still learning about "${params.topic}". Want to try "Cap Rate" or "BRRRR"?`);
+    const topic = params.topic?.toLowerCase() || params.text?.toLowerCase();
+    const concept = REAL_ESTATE_CONCEPTS[topic];
     
-    return this.wrapSuccess(`### ${concept.term}\n\n${concept.definition}\n\n**Example:** ${concept.example}`);
+    if (!concept) {
+      // Try fuzzy match
+      const key = Object.keys(REAL_ESTATE_CONCEPTS).find(k => topic?.includes(k) || k.includes(topic || ''));
+      if (key) return this.handleKnowledge({ topic: key });
+      return this.wrapError(`I'm still learning about "${topic}". Want to try "Cap Rate" or "BRRRR"?`);
+    }
+    
+    let msg = `### ${concept.term}\n\n${concept.definition}\n\n**Example:** ${concept.example}`;
+    if (concept.details) msg += `\n\n**Details:**\n${concept.details.map(d => `- ${d}`).join('\n')}`;
+    if (concept.benchmarks) msg += `\n\n**Benchmarks:** ${concept.benchmarks}`;
+    
+    return this.wrapSuccess(msg);
+  }
+
+  private handleStrategyAdvice(params: any): TaskResponse {
+    const importData = require('../real-estate-knowledge');
+    const strategies = importData.REAL_ESTATE_STRATEGIES;
+    const strategyName = params.strategy?.toLowerCase() || params.topic?.toLowerCase();
+    const strategy = strategies[strategyName];
+
+    if (!strategy) {
+      const keys = Object.keys(strategies);
+      return this.wrapSuccess(`I can help with several strategies: ${keys.join(', ')}. Which one should we look at?`, { options: keys });
+    }
+
+    const msg = `### ${strategy.title}\n\n**Steps:**\n${strategy.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}\n\n**🚀 Pro Tip:** ${strategy.proTip}`;
+    return this.wrapSuccess(msg);
+  }
+
+  private handleScriptGeneration(params: any): TaskResponse {
+    const importData = require('../real-estate-knowledge');
+    const scripts = importData.REAL_ESTATE_SCRIPTS;
+    const category = params.topic?.toLowerCase() || params.category?.toLowerCase() || 'cold call';
+    
+    const script = scripts.find((s: any) => s.category === category) || scripts[0];
+
+    const msg = `### ${script.title}\n\n> "${script.script}"\n\n**Top Tips:**\n${script.tips.map((t: string) => `- ${t}`).join('\n')}`;
+    return this.wrapSuccess(msg);
+  }
+
+  private handleMarketingTips(params: any): TaskResponse {
+    const importData = require('../real-estate-knowledge');
+    const tips = importData.REAL_ESTATE_MARKETING_TIPS;
+    const category = params.category?.toLowerCase() || 'general';
+    
+    const match = tips.find((t: any) => t.category.includes(category)) || tips[Math.floor(Math.random() * tips.length)];
+
+    const msg = `### Marketing Hack: ${match.title}\n\n${match.tip}\n\n*Targeting: ${match.category}*`;
+    return this.wrapSuccess(msg);
+  }
+
+  private handleMarketIndicators(): TaskResponse {
+    const importData = require('../real-estate-knowledge');
+    const indicators = importData.MARKET_INDICATORS;
+    
+    const msg = `### Key Market Indicators\n\n` + indicators.map((ind: any) => {
+      let text = `**${ind.name}:** ${ind.description || ind.impact}\n`;
+      if (ind.good) text += `- Positive: ${ind.good}\n`;
+      if (ind.warning) text += `- Warning: ${ind.warning}\n`;
+      return text;
+    }).join('\n');
+
+    return this.wrapSuccess(msg);
   }
 
   private handleCapRate(params: any): TaskResponse {

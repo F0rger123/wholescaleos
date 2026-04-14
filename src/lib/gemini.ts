@@ -17,6 +17,7 @@ export interface BotResponse {
   intent: string;
   response: string;
   data?: any;
+  nextIntent?: { name: string; params: any };
   systemLog?: string;
 }
 
@@ -399,6 +400,7 @@ export async function processWithLocalAI(prompt: string): Promise<BotResponse | 
           intent: nluResult.intent,
           response: responseText + suggestionMsg,
           data: { ...resolvedEntities, ...executionResult.data, proactive: proactiveSuggestion.data },
+          nextIntent: executionResult.nextIntent,
           systemLog: '🤖 OS Bot (Proactive)'
         };
       }
@@ -407,6 +409,7 @@ export async function processWithLocalAI(prompt: string): Promise<BotResponse | 
         intent: nluResult.intent,
         response: responseText,
         data: { ...resolvedEntities, ...executionResult.data },
+        nextIntent: executionResult.nextIntent,
         systemLog: '🤖 OS Bot'
       };
     }

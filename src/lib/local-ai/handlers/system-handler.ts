@@ -6,6 +6,7 @@ import { getRecentMemorySummary } from '../learning-service';
 
 /**
  * Handles all system-level AI actions: Small talk, navigation, help, and memory.
+ * - system_action: { "action": "navigate|help|small_talk|memory_recall|time_query", "path": "leads|tasks|calendar|dashboard|settings", "text": "..." }
  */
 export class SystemHandler extends BaseHandler {
   intent = 'system_action'; // Handles manifold system intents
@@ -22,6 +23,8 @@ export class SystemHandler extends BaseHandler {
         return this.handleHelp();
       case 'memory_recall':
         return this.handleMemoryRecall();
+      case 'time_query':
+        return this.handleTimeQuery();
       default:
         // Default to small talk if action is ambiguous
         return this.handleSmallTalk(text || params.prompt || '');
@@ -98,5 +101,12 @@ export class SystemHandler extends BaseHandler {
     const factList = Object.entries(facts).map(([k, v]) => `- **${k}:** ${v}`).join('\n');
 
     return this.wrapSuccess(`### What I Know\n\n**Activity:** ${summary}\n\n**Facts:**\n${factList || 'None yet.'}`);
+  }
+
+  private handleTimeQuery(): TaskResponse {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    return this.wrapSuccess(`The current time is **${timeStr}** on **${dateStr}**.`);
   }
 }
