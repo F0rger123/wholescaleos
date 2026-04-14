@@ -26,7 +26,7 @@ import {
   saveUserPreference,
   rememberFact
 } from './learning-service';
-import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, REAL_ESTATE_MARKETING_TIPS, calculateDeal, FlipResult, RentalResult, Sub2Result } from './real-estate-knowledge';
+import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, REAL_ESTATE_MARKETING_TIPS, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
 
 export interface TaskResponse {
   success: boolean;
