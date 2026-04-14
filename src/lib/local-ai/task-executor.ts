@@ -1400,9 +1400,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         const userId = store.currentUser?.id;
         if (!userId) return { success: false, message: "I'd love to remember that, but I need you to be signed in first." };
         
-        const text = entities.text || entities.content;
+        const text = entities.text || entities.content || entities.fact;
         if (!text) return { success: true, message: "What specifically would you like me to remember?" };
         
+        // Contextual Check: Is there a lead mentioned?
+        const activeEntity = memory.entityStack?.[0];
+        const contextSuffix = activeEntity?.type === 'lead' ? ` for **${activeEntity.name}**` : '';
+
         // Personality check
         if (text.toLowerCase().includes('sassy') || text.toLowerCase().includes('professional') || text.toLowerCase().includes('funny')) {
            return { success: true, message: "Got it, I'll update your personality preference in the background." };
@@ -1413,11 +1417,12 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         if (isPref) {
            await saveUserPreference(userId, 'communication_style', text);
            setLearnedFact('communication_preference', text);
-           return { success: true, message: `✅ Noted. I've updated your communication preferences: "${text}"` };
+           return { success: true, message: `✅ Noted${contextSuffix}. I've updated your communication preferences: "${text}"` };
         } else {
-           await rememberFact(userId, `fact_${Date.now()}`, text);
-           setLearnedFact(`user_fact_${Date.now()}`, text);
-           return { success: true, message: `✅ I've filed that away for you. I'll remember: "${text}"` };
+           const factId = `fact_${Date.now()}`;
+           await rememberFact(userId, factId, activeEntity?.type === 'lead' ? `${activeEntity.name}: ${text}` : text);
+           setLearnedFact(factId, text);
+           return { success: true, message: `✅ I've filed that away${contextSuffix}. I'll remember: "${text}"` };
         }
       }
 
@@ -1491,7 +1496,94 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // REAL ESTATE DOMAIN EXPERT CASES
+    // REAL ESTATE DOMAIN EXPERT CASES (PHASE 2 UPGRADES)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    case 'subject_to_analysis': {
+      const { address, purchase: pRaw, loanBalance: bRaw, rent: rRaw, entryCost: eRaw } = entities;
+      
+      const parse = (val: any) => {
+        if (!val) return 0;
+        let n = parseFloat(String(val).replace(/[\$,]/g, '').replace(/k/i, ''));
+        if (String(val).toLowerCase().endsWith('k')) n *= 1000;
+        return n;
+      };
+
+      const data = {
+        purchase: parse(pRaw),
+        loanBalance: parse(bRaw),
+        monthlyRent: parse(rRaw),
+        entryCost: parse(eRaw)
+      };
+
+      const result = calculateDeal('sub2', data) as any;
+
+      if (!result) return { success: false, message: "I couldn't process those numbers. Make sure you include Purchase, Loan Balance, Rent, and Entry Cost." };
+
+      return {
+        success: true,
+        message: `### 🏠 Subject-To Analysis: ${address || 'Direct Inquiry'}\n\n` +
+                 `**Financial Breakdown:**\n` +
+                 `- **Purchase Price:** $${data.purchase.toLocaleString()}\n` +
+                 `- **Loan Balance to Assume:** $${data.loanBalance.toLocaleString()}\n` +
+                 `- **Total Entry Cost (Cash to Close):** $${data.entryCost.toLocaleString()}\n` +
+                 `- **Total Monthly Rent:** $${data.monthlyRent.toLocaleString()}\n\n` +
+                 `**Performance Metrics:**\n` +
+                 `- **Monthly Cash Flow:** $${result.cashFlow.toLocaleString()}\n` +
+                 `- **Cash-on-Cash Return (CoC):** ${result.coc.toFixed(1)}%\n` +
+                 `- **Debt Coverage Ratio:** ${result.dcr || 'N/A'}\n\n` +
+                 `> [!TIP]\n` +
+                 `> Subject-To deals are won on terms, not just price. Ensure the existing mortgage interest rate is low enough to support the cash flow spread.`
+      };
+    }
+
+    case 'cap_rate_calculation': {
+      const parse = (val: any) => {
+        if (!val) return 0;
+        let n = parseFloat(String(val).replace(/[\$,]/g, '').replace(/k/i, ''));
+        if (String(val).toLowerCase().endsWith('k')) n *= 1000;
+        return n;
+      };
+
+      const purchase = parse(entities.purchase);
+      const noi = parse(entities.noi);
+
+      if (purchase === 0 || noi === 0) {
+        return { success: false, message: "I need both the Purchase Price and the NOI to calculate the Cap Rate. (e.g., 'Cap rate for $400k property with $30k NOI')" };
+      }
+
+      const capRate = (noi / purchase) * 100;
+      
+      return {
+        success: true,
+        message: `### 📊 Cap Rate Calculation\n\n` +
+                 `- **Purchase Price:** $${purchase.toLocaleString()}\n` +
+                 `- **Net Operating Income (NOI):** $${noi.toLocaleString()}\n\n` +
+                 `📐 **Formula:** (NOI / Purchase Price) * 100\n` +
+                 `✅ **Result:** **${capRate.toFixed(2)}%**\n\n` +
+                 `**What this means:**\n` +
+                 `The Cap Rate (Capitalization Rate) represents the natural yield of the property in one year if it were purchased strictly for cash. In most markets, a 7-8% cap rate is considered healthy for residential multi-family.`
+      };
+    }
+
+    case 'worst_leads': {
+      const limit = entities.limit || 5;
+      const worstLeads = [...store.leads]
+        .sort((a, b) => (a.dealScore || 0) - (b.dealScore || 0))
+        .slice(0, limit);
+
+      if (worstLeads.length === 0) return { success: true, message: "Your pipeline is currently empty. No 'worst' leads to report!" };
+
+      let msg = `### 📉 Bottom of the Barrel (Worst ${worstLeads.length} Leads)\n` +
+                `These leads have the lowest engagement scores in your CRM. You might want to move them to a long-term drip or archive them.\n\n`;
+      
+      worstLeads.forEach((l, i) => {
+        msg += `${i + 1}. **${l.name}** (Score: ${l.dealScore || 0})\n   - Status: ${l.status}\n   - Last Action: ${l.updatedAt ? new Date(l.updatedAt).toLocaleDateString() : 'N/A'}\n`;
+      });
+
+      return { success: true, message: msg };
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
 
     case 'real_estate_knowledge': {

@@ -97,8 +97,8 @@ export function resolveEntityFromContext(type: string): Entity | null {
 
 export function resolveEntitiesFromContext(text: string): Entity[] {
   const memory = getMemory();
-  // Simple check for "this", "it", "them" or matching lead name in text
-  if (/this|it|that/i.test(text)) {
+  // Simple check for "this", "it", "them", "him", "her" or matching lead name in text
+  if (/this|it|that|him|her/i.test(text)) {
     const last = memory.entityStack[0];
     return last ? [last] : [];
   }

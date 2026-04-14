@@ -653,6 +653,53 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // ═══════════════════════════════════════════════════════════════════════
   const handlers = [
     {
+      intent: 'subject_to_analysis',
+      patterns: [
+        /(?:analyze|calculate|run|calc)(?:\s+property\s+at|\s+address)?\s+(.*)\s+as\s+(?:subject-to|sub-2|sub2|creative)\s+deal\.?\s+purchase\s+\$?([\d,.]+[kK]?),\s+loan\s+(?:balance|amt|amount)?\s+\$?([\d,.]+[kK]?),\s+rent\s+\$?([\d,.]+[kK]?),\s+entry\s+(?:cost|amt|mt)?\s+\$?([\d,.]+[kK]?)/i,
+        /sub-2 analysis for (.*):\s*purchase\s+\$?([\d,.]+[kK]?),?\s+balance\s+\$?([\d,.]+[kK]?),?\s+rent\s+\$?([\d,.]+[kK]?),?\s+entry\s+\$?([\d,.]+[kK]?)/i,
+        /subject-to:?\s+(.*)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)/i
+      ],
+      params: (matches: string[]) => ({
+        address: matches[1]?.trim(),
+        purchase: matches[2]?.trim(),
+        loanBalance: matches[3]?.trim(),
+        rent: matches[4]?.trim(),
+        entryCost: matches[5]?.trim()
+      })
+    },
+    {
+      intent: 'cap_rate_calculation',
+      patterns: [
+        /cap rate on a \$?([\d,.]+[kK]?) property with \$?([\d,.]+[kK]?) noi/i,
+        /calculate cap rate:? \$?([\d,.]+[kK]?) purchase, \$?([\d,.]+[kK]?) noi/i,
+        /cap rate for \$?([\d,.]+[kK]?) price and \$?([\d,.]+[kK]?) income/i
+      ],
+      params: (matches: string[]) => ({
+        purchase: matches[1]?.trim(),
+        noi: matches[2]?.trim()
+      })
+    },
+    {
+      intent: 'property_analysis',
+      patterns: [
+        /^(?:analyze|look at|is this a good deal)\??$/i,
+        /^(?:analyze|is this a good deal|is it a good deal)\s+(?:the property for|the property of|the property for lead|lead|deal|property|for)?\s+(.*)$/i,
+        /^(?:analyze)\s+(.*)$/i,
+        /^\s*is\s+(.*)'s\s+house\s+a\s+good\s+deal\b/i
+      ],
+      params: (matches: string[]) => ({ target: matches[1]?.trim() })
+    },
+    {
+      intent: 'worst_leads',
+      patterns: [
+        /worst (\d+) leads/i,
+        /bottom (\d+) leads/i,
+        /show (?:my |)worst leads/i,
+        /lowest scoring leads/i
+      ],
+      params: (matches: string[]) => ({ limit: parseInt(matches[1]) || 5 })
+    },
+    {
       intent: 'real_estate_strategy',
       patterns: [
         /^(?:give me a strategy for|how do i invest in|provide a plan for)\s+(.*)$/i,
