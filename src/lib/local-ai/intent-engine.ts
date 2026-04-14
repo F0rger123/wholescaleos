@@ -50,6 +50,12 @@ export function normalizeInput(input: string): string {
   if (!input || typeof input !== 'string') return '';
   
   let normalized = input.toLowerCase().trim();
+
+  // Strip leading/trailing quotation marks (for forgiving input)
+  normalized = normalized.replace(/^["']+|["']+$/g, '').trim();
+
+  // Handle missing space after starting quote if it was mistakenly stripped or present
+  // e.g. "Analyze -> Analyze
   
   // Strip only very generic conversational filler at start
   const greetingFillers = /^(?:bot|ai|assistant|os bot|hey|yo|please|can you|could you)\s+/i;
@@ -520,11 +526,20 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
     },
     {
+      intent: 'marketing_tips',
+      patterns: [
+        /^(?:give me )?(?:some )?marketing (?:tips|advice|ideas|strategies)/i,
+        /^(?:how do i find|finding) (?:cash buyers|motivated sellers)$/i,
+        /\bmarketing (?:tips|strategy|ideas)\b/i
+      ],
+      params: (matches: string[]) => ({ category: matches[1]?.trim() })
+    },
+    {
       intent: 'business_advice',
       patterns: [
         /^(?:how do i scale|growing my business|business advice)$/i,
-        /^(?:marketing tips|how to find cash buyers|how to get more deals)$/i,
-        /\b(?:scale|marketing|cash buyers)\b/i
+        /^(?:how to get more deals)$/i,
+        /\b(?:scale|business advice)\b/i
       ],
       params: () => ({})
     },
@@ -541,7 +556,8 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'investment_strategy',
       patterns: [
         /^(?:tell me about|how do i|explain)\s+(wholesaling|flipping|brrrr|house hacking|1031 exchange)/i,
-        /^(?:investment strategies|ways to invest)$/i
+        /^(?:investment strategies|ways to invest)$/i,
+        /^(flipping|wholesaling|brrrr|rental|fix and flip)$/i
       ],
       params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
     },
@@ -566,11 +582,11 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'agent_script',
       patterns: [
-        /^(?:give me a|show me a|need a)\s+(.*)\s+script$/i,
+        /^(?:give me a |show me a |need a |script for )?(expired listing|cold call|objection|buyer|seller|follow-up)(?: script)?$/i,
         /^(?:what do i say to|how do i handle)\s+(.*)$/i,
         /^(?:cold call|expired|fsbo|objection)\s+script$/i
       ],
-      params: (matches: string[]) => ({ category: matches[1]?.trim() })
+      params: (matches: string[]) => ({ category: matches[1]?.trim() || matches[2]?.trim() })
     },
     {
       intent: 'financing_question',

@@ -25,7 +25,7 @@ import {
   saveUserPreference,
   rememberFact
 } from './learning-service';
-import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_SCRIPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
+import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_SCRIPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, REAL_ESTATE_MARKETING_TIPS, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
 
 export interface TaskResponse {
   success: boolean;
@@ -1500,18 +1500,22 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'agent_script': {
       const category = (entities.category || '').toLowerCase();
-      const script = REAL_ESTATE_SCRIPTS.find(s => s.category.includes(category) || s.title.toLowerCase().includes(category));
+      const script = REAL_ESTATE_SCRIPTS.find(s => 
+        s.category.includes(category) || 
+        category.includes(s.category) || 
+        s.title.toLowerCase().includes(category)
+      );
 
       if (script) {
         return {
           success: true,
-          message: `### ${script.title}\n\n> "${script.script}"\n\n**Expert Tips:**\n- ${script.tips.join('\n- ')}\n\nWant me to suggest a follow-up script or a voicemail version?`
+          message: `### ${script.title}\n\n> "${script.script}"\n\n**Expert Tips:**\n- ${script.tips.join('\n- ')}\n\nWant me to suggest a follow-up script or a variation?`
         };
       }
 
       return {
         success: true,
-        message: "I have scripts for **Expired Listings**, **FSBOs**, and **Objection Handling**. Which one would you like to see?"
+        message: "I have scripts for **Expired Listings**, **FSBOs**, **Cold Calling**, **Objection Handling**, and **Buyer/Seller Consultations**. Which one do you need?"
       };
     }
 
@@ -1652,6 +1656,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       if (strategyInput.includes('wholesale')) selected = REAL_ESTATE_STRATEGIES['wholesaling'];
       else if (strategyInput.includes('brrrr')) selected = REAL_ESTATE_STRATEGIES['brrrr'];
       else if (strategyInput.includes('flip')) selected = REAL_ESTATE_STRATEGIES['flipping'];
+      else if (strategyInput.includes('rental')) selected = REAL_ESTATE_STRATEGIES['rental'];
 
       if (selected) {
         return {
@@ -1666,10 +1671,29 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       };
     }
 
+    case 'marketing_tips': {
+      const category = (entities.category || '').toLowerCase();
+      const tip = category 
+        ? REAL_ESTATE_MARKETING_TIPS.find(t => t.category.includes(category) || category.includes(t.category))
+        : REAL_ESTATE_MARKETING_TIPS[Math.floor(Math.random() * REAL_ESTATE_MARKETING_TIPS.length)];
+
+      if (tip) {
+        return {
+          success: true,
+          message: `### ${tip.title}\n\n${tip.tip}\n\nWant another tip for **Direct Mail**, **SEO**, or **Social Media**?`
+        };
+      }
+
+      return {
+        success: true,
+        message: "I can give you expert marketing tips for **Direct Mail**, **SEO**, **Cold Calling**, and **Referral Partners**. What are you focusing on right now?"
+      };
+    }
+
     case 'business_advice': {
       const tips = [
         "**Scaling Tip:** Hire a virtual assistant for your cold calling as soon as you hit 2 deals a month. Your time is better spent on closing.",
-        "**Marketing Tip:** High-quality direct mail still converts better than cheap SMS blasts for high-equity seniors.",
+        "**Automation:** Set up an auto-responder for your Zillow leads. 50% of deals go to the first person who responds.",
         "**Cash Buyers:** Go to the county records and find people who bought properties for CASH in the last 90 days. Those are your real buyers, not just people on a Facebook list."
       ];
       const advice = tips[Math.floor(Math.random() * tips.length)];

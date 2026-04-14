@@ -628,8 +628,14 @@ export const intents: Intent[] = [
     template: '{response}'
   },
   {
+    name: 'marketing_tips',
+    patterns: ['marketing tips', 'marketing advice', 'real estate marketing', 'how to get more leads', 'marketing strategy'],
+    action: 'marketing_tips',
+    template: '{response}'
+  },
+  {
     name: 'business_advice',
-    patterns: ['how do i scale', 'business advice', 'marketing tips', 'how to find cash buyers', 'growing my business'],
+    patterns: ['how do i scale', 'business advice', 'how to find cash buyers', 'growing my business', 'scaling real estate'],
     action: 'business_advice',
     template: '{response}'
   }

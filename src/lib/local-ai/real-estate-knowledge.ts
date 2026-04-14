@@ -207,6 +207,46 @@ export const REAL_ESTATE_SCRIPTS: ScriptTemplate[] = [
     title: 'Objection: "I have an agent"',
     script: "That's great! Having representation is smart. Is that a formal listing agreement or just someone you've talked to? The reason I ask is that my strategy for this specific area has been getting homes sold for 3-5% above the average right now. If your agent hasn't mentioned [Market Trend], would you be open to a second opinion?",
     tips: ['Be respectful but curious', 'Highlight your local expertise', 'Don\'t badmouth the other agent']
+  },
+  {
+    category: 'buyer',
+    title: 'Buyer Consultation Hook',
+    script: "It's a tricky market, but there are actually 'hidden' properties not on the MLS right now. If I could show you a way to find homes before other buyers even know they're for sale, would you want to sit down for 15 minutes today to look at the list?",
+    tips: ['Focus on exclusive access', 'Low-pressure call to action', 'Highlight off-market expertise']
+  },
+  {
+    category: 'seller',
+    title: 'Seller Lead Follow-up',
+    script: "Hi [Name], I was just reviewing the market activity for [Neighborhood] and noticed two properties like yours just went under contract in less than 48 hours. The buyer demand is peaking right now. Have you considered whether this might be the right window to maximize your equity?",
+    tips: ['Use recent data/urgency', 'Focus on equity maximization', 'Ask for a low-stakes valuation']
+  }
+];
+
+export const REAL_ESTATE_MARKETING_TIPS = [
+  {
+    category: 'social media',
+    title: 'Instagram/FB "Pattern Interrupt"',
+    tip: "Instead of 'Just Listed' posts, post a 'Problem Solved' story. Show a photo of a messy house and then the 'Sold' sign. Explain HOW you solved the seller's specific headache (e.g., 'Closed in 10 days with a tenant inside')."
+  },
+  {
+    category: 'direct mail',
+    title: 'The "Lumpy Mail" Strategy',
+    tip: "Send a standard envelope but include something small like a single key or a fake 'Notice of Interest'. It gets the envelope opened 80% more than a standard postcard. Use handwritten-style fonts for better response."
+  },
+  {
+    category: 'cold calling',
+    title: 'The 3-Touch System',
+    tip: "Call, text, then email within 4 hours. The sequence is: Initial Call (no message) -> Text ('Just tried calling about 123 Main St, have a quick question') -> Email (Property value analysis). Speed to lead is everything."
+  },
+  {
+    category: 'seo',
+    title: 'Hyper-Local Niche Pages',
+    tip: "Don't rank for 'Realtor in Miami'. Rank for '[Neighborhood Name] homes with pools' or 'How to sell a house with a tax lien in [City]'. Niche content converts at 4x the rate of generic real estate SEO."
+  },
+  {
+    category: 'referrals',
+    title: 'The "Partner-First" Method',
+    tip: "Go to local Probate Attorneys or Divorce Lawyers. Don't ask for leads. Ask: 'What's the biggest headache you have when a client needs to liquidate a property fast?' Solve their problem first, and they will become a lead machine for you."
   }
 ];
 
