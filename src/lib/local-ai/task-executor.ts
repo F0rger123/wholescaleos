@@ -1885,7 +1885,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       
       // Contextual follow-up check
       const memory = getMemory();
-      if (!category && memory.activeState?.name === 'AWAITING_MARKETING_CHOICE') {
+      if (!category && memory.activeState?.type === 'AWAITING_MARKETING_CHOICE') {
          // If they just typed "SEO", intent-engine would catch it, 
          // but if they typed something ambiguous, we default to random or ask again.
       }
