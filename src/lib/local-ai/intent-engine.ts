@@ -440,43 +440,55 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // ═══════════════════════════════════════════════════════════════════════
   const activeState = memory.activeState;
   
+  // Real Estate Expert Follow-up bridging (AWAITING_MARKETING_CHOICE / AWAITING_STRATEGY_CHOICE)
   if (activeState && wordCount <= 3) {
-    // Stage 1.5a: Real Estate Follow-up bridging
-    if (activeState.topic === 'AWAITING_KNOWLEDGE_FOLLOWUP') {
-      const options = activeState.data?.options || [];
-      const match = options.find((opt: string) => 
-        normalized.includes(opt.toLowerCase()) || opt.toLowerCase().includes(normalized)
-      );
-      
-      if (match) {
-        const parentIntentName = activeState.data?.parentIntent || 'investment_strategy';
-        const intentObj = intents.find(i => i.name === parentIntentName);
+    const choice = normalized.toLowerCase();
+    
+    if (activeState.type === 'AWAITING_MARKETING_CHOICE') {
+      if (['seo', 'social media', 'direct mail', 'mail', 'search engine optimization'].includes(choice)) {
+        const intentObj = intents.find(i => i.name === 'marketing_tips');
         if (intentObj) {
-          debugLog('MATCHED', `Contextual follow-up match: ${match}`);
+          debugLog('MATCHED', `Contextual marketing choice match: ${choice}`);
           return {
             intent: intentObj,
-            params: { strategy: match, category: match, topic: match },
+            params: { category: choice },
             confidence: 100,
             needsAgentLoop,
-            matchedBy: 'contextual_knowledge_followup'
+            matchedBy: 'contextual_marketing_choice'
           };
         }
       }
     }
 
-    // Stage 1.5b: Common CRM follow-up bridging (Lead names for SMS/Info)
-    if (activeState.type === 'awaiting_lead_name' || activeState.type === 'send_sms_partial') {
-      const intentObj = intents.find(i => i.name === 'lead_context_query' || i.name === 'send_sms');
-      if (intentObj) {
-        debugLog('MATCHED', `Contextual bridge: Bridging "${input}" to active state ${activeState.type}`);
-        return {
-          intent: intentObj,
-          params: { ...activeState.data, name: input, leadName: input, target: input },
-          confidence: 100,
-          originalText: input,
-          needsAgentLoop: false,
-          matchedBy: 'active_state_bridge'
-        };
+    if (activeState.type === 'AWAITING_STRATEGY_CHOICE') {
+      if (['wholesaling', 'flipping', 'brrrr', 'brrrr method', 'rental', 'fix and flip'].includes(choice)) {
+        const intentObj = intents.find(i => i.name === 'investment_strategy');
+        if (intentObj) {
+          debugLog('MATCHED', `Contextual strategy choice match: ${choice}`);
+          return {
+            intent: intentObj,
+            params: { strategy: choice },
+            confidence: 100,
+            needsAgentLoop,
+            matchedBy: 'contextual_strategy_choice'
+          };
+        }
+      }
+    }
+
+    if (activeState.type === 'AWAITING_SCRIPT_CHOICE') {
+      if (['expired listing', 'fsbo', 'cold call', 'objection', 'buyer consultation', 'seller follow-up', 'cold calling', 'buyer', 'seller'].includes(choice)) {
+        const intentObj = intents.find(i => i.name === 'agent_script');
+        if (intentObj) {
+          debugLog('MATCHED', `Contextual script choice match: ${choice}`);
+          return {
+            intent: intentObj,
+            params: { category: choice },
+            confidence: 100,
+            needsAgentLoop,
+            matchedBy: 'contextual_script_choice'
+          };
+        }
       }
     }
   }
@@ -544,7 +556,10 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^(?:give me a strategy for|how do i invest in|provide a plan for)\s+(.*)$/i,
         /^(wholesaling|flipping|brrrr|house hacking)\s+strategy$/i,
         /^(?:how to|should i)\s+(wholesaling|flipping|brrrr|house hacking|investing|flip this|wholesale this)$/i,
-        /\b(?:the )?brrrr(?: method)?\b/i
+        /\b(?:the )?brrrr(?: method)?\b/i,
+        /^give me a strategy$/i,
+        /^strategy$/i,
+        /^(wholesaling|flipping|brrrr|brrrr method|rental|fix and flip)$/i
       ],
       params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
     },
@@ -554,7 +569,9 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^(?:give me )?(?:some )?marketing (?:tips|advice|ideas|strategies)/i,
         /^(?:how do i find|finding) (?:cash buyers|motivated sellers)$/i,
         /^(?:seo|search engine optimization|social media|social|direct mail|mail)$/i,
-        /\bmarketing (?:tips|strategy|ideas)\b/i
+        /\bmarketing (?:tips|strategy|ideas)\b/i,
+        /^(seo|social media|direct mail|mail|search engine optimization)$/i,
+        /^tips for (seo|social media|direct mail)$/i
       ],
       params: (matches: string[]) => ({ category: matches[1]?.trim() })
     },
@@ -606,11 +623,11 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'agent_script',
       patterns: [
-        /^(?:give me a |show me a |need a |script for )?(expired listing|cold call|cold calling|objection|buyer consultation|seller objection|buyer|seller|follow-up|fsbo)(?: script)?$/i,
-        /^(?:what do i say to|how do i handle)\s+(.*)$/i,
-        /^(?:cold call|expired|fsbo|objection)\s+script$/i
+        /^(?:give me a )?script for (cold calling|cold call|expired listing|buyer consultation|seller objection|follow up)/i,
+        /^(?:give me a )?(cold calling|expired listing|buyer) script/i,
+        /^script for (.*)/i
       ],
-      params: (matches: string[]) => ({ category: matches[1]?.trim() || matches[2]?.trim() })
+      params: (matches: string[]) => ({ category: matches[1]?.trim() })
     },
     {
       intent: 'financing_question',

@@ -1499,12 +1499,24 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     case 'agent_script': {
-      const category = (entities.category || '').toLowerCase();
-      const script = REAL_ESTATE_SCRIPTS.find(s => 
-        s.category.includes(category) || 
-        category.includes(s.category) || 
-        s.title.toLowerCase().includes(category)
-      );
+      const scriptType = (entities.category || '').toLowerCase();
+      
+      const coldCallingScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('cold'));
+      const expiredListingScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('expired'));
+      const buyerConsultationScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('buyer'));
+      const sellerObjectionScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('objection'));
+
+      let script = null;
+
+      if (scriptType.includes('cold') || scriptType.includes('calling')) {
+        script = coldCallingScript;
+      } else if (scriptType.includes('expired')) {
+        script = expiredListingScript;
+      } else if (scriptType.includes('buyer')) {
+        script = buyerConsultationScript;
+      } else if (scriptType.includes('seller') || scriptType.includes('objection')) {
+        script = sellerObjectionScript;
+      }
 
       if (script) {
         return {
@@ -1514,7 +1526,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       setActiveState({ 
-        topic: 'AWAITING_KNOWLEDGE_FOLLOWUP', 
+        type: 'AWAITING_SCRIPT_CHOICE', 
         data: { 
           parentIntent: 'agent_script', 
           options: ['Expired Listing', 'FSBO', 'Cold Call', 'Objection', 'Buyer Consultation', 'Seller Follow-up'] 
@@ -1674,8 +1686,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       setActiveState({ 
-        topic: 'AWAITING_KNOWLEDGE_FOLLOWUP', 
-        data: { parentIntent: 'investment_strategy', options: ['Wholesaling', 'Flipping', 'BRRRR', 'Fix and Flip'] } 
+        type: 'AWAITING_STRATEGY_CHOICE', 
+        data: { options: ['wholesaling', 'flipping', 'brrrr', 'fix and flip'] } 
       });
 
       return {
@@ -1698,8 +1710,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       setActiveState({ 
-        topic: 'AWAITING_KNOWLEDGE_FOLLOWUP', 
-        data: { parentIntent: 'marketing_tips', options: ['Direct Mail', 'SEO', 'Social Media', 'Referrals'] } 
+        type: 'AWAITING_MARKETING_CHOICE', 
+        data: { options: ['direct mail', 'seo', 'social media'] } 
       });
 
       return {
