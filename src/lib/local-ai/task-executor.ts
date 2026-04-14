@@ -1499,40 +1499,44 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     case 'agent_script': {
-      const scriptType = (entities.category || '').toLowerCase();
+      const scriptType = (entities.scriptType || '').toLowerCase();
       
-      const coldCallingScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('cold'));
-      const expiredListingScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('expired'));
-      const buyerConsultationScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('buyer'));
-      const sellerObjectionScript = REAL_ESTATE_SCRIPTS.find(s => s.category.includes('objection'));
-
-      let script = null;
-
-      if (scriptType.includes('cold') || scriptType.includes('calling')) {
-        script = coldCallingScript;
-      } else if (scriptType.includes('expired')) {
-        script = expiredListingScript;
-      } else if (scriptType.includes('buyer')) {
-        script = buyerConsultationScript;
-      } else if (scriptType.includes('seller') || scriptType.includes('objection')) {
-        script = sellerObjectionScript;
-      }
-
-      if (script) {
-        return {
-          success: true,
-          message: `### ${script.title}\n\n> "${script.script}"\n\n**Expert Tips:**\n- ${script.tips.join('\n- ')}\n\nWant me to suggest a follow-up script or a variation?`
+      // Cold calling scripts
+      if (scriptType.includes('cold') || scriptType.includes('calling') || scriptType.includes('pre-foreclosure')) {
+        return { 
+          success: true, 
+          message: `### Cold Calling Script (Pre-Foreclosure)\n\n> "Hi, this is [Agent] with WholeScale Realty. I'm calling because I noticed the property at [Address] is in pre-foreclosure. I specialize in helping homeowners in this exact situation find solutions before the bank steps in. Would you be open to a 2-minute conversation about your options?"\n\n**Key Tips:**\n- Be empathetic, not predatory\n- Mention you're an investor or can help them sell quickly\n- Have cash buyer info ready` 
         };
       }
-
-      setActiveState('AWAITING_SCRIPT_CHOICE', { 
-        parentIntent: 'agent_script', 
-        options: ['Expired Listing', 'FSBO', 'Cold Call', 'Objection', 'Buyer Consultation', 'Seller Follow-up'] 
-      });
-
-      return {
-        success: true,
-        message: "I have scripts for **Expired Listings**, **FSBOs**, **Cold Calling**, **Objection Handling**, and **Buyer/Seller Consultations**. Which one do you need?"
+      
+      // Expired listing scripts
+      if (scriptType.includes('expired') || scriptType.includes('listing')) {
+        return { 
+          success: true, 
+          message: `### Expired Listing Script\n\n> "Hi [Name], this is [Agent] with WholeScale Realty. I saw your home recently came off the market and wanted to reach out personally. I know this can be frustrating. I previewed your home and noticed a few things that might have held it back. Would you be open to a quick conversation about what happened?"\n\n**Expert Tips:**\n- Listen more than you talk\n- Ask what feedback they received\n- Have comps ready` 
+        };
+      }
+      
+      // Buyer consultation scripts
+      if (scriptType.includes('buyer')) {
+        return { 
+          success: true, 
+          message: `### Buyer Consultation Script\n\n> "Thanks for meeting with me today, [Name]. My goal is to understand exactly what you're looking for so I can help you find the perfect home. Can you tell me about your ideal home—what's most important to you?"\n\n**Key Questions:**\n- What's your timeline?\n- Have you spoken with a lender?\n- What didn't you like about homes you've seen?\n- What's your must-have vs nice-to-have list?"` 
+        };
+      }
+      
+      // Seller objection scripts
+      if (scriptType.includes('seller') || scriptType.includes('objection')) {
+        return { 
+          success: true, 
+          message: `### Seller Objection Handler: "Your Commission is Too High"\n\n> "I completely understand wanting to maximize your net proceeds. Let me show you what I do to earn that commission: professional photography ($300), targeted Facebook ads ($200/month), open houses, and negotiation expertise. On average, my listings sell for 3-5% more than FSBOs. Would you rather save 1% on commission or gain 5% on your sale price?"\n\n**Key Point:** Shift conversation from cost to value.` 
+        };
+      }
+      
+      // Default script
+      return { 
+        success: true, 
+        message: `### What type of script do you need?\n\nI have scripts for:\n- **Cold calling** (pre-foreclosure, expired listings)\n- **Buyer consultation**\n- **Seller objections**\n- **Expired listings**\n- **Follow-up calls**\n\nJust say "Script for [type]".` 
       };
     }
 

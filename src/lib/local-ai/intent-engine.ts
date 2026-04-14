@@ -594,6 +594,14 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       params: (matches: string[]) => ({ target: matches[1]?.trim() })
     },
     {
+      intent: 'agent_script',
+      patterns: [
+        /(?:give me a |get me a |)(?:script|scripts) for (.*)/i,
+        /(.*) script/i
+      ],
+      params: (matches: string[]) => ({ scriptType: matches[1]?.trim().toLowerCase() || 'general' })
+    },
+    {
       intent: 'investment_strategy',
       patterns: [
         /^(?:tell me about|how do i|explain)\s+(wholesaling|flipping|brrrr|house hacking|1031 exchange)/i,
@@ -619,15 +627,6 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^(?:calculate|run numbers|math for)\s+(.*)$/i
       ],
       params: (matches: string[]) => ({ type: matches[1]?.trim(), raw: matches[2]?.trim() })
-    },
-    {
-      intent: 'agent_script',
-      patterns: [
-        /^(?:give me a )?script for (cold calling|cold call|expired listing|buyer consultation|seller objection|follow up)/i,
-        /^(?:give me a )?(cold calling|expired listing|buyer) script/i,
-        /^script for (.*)/i
-      ],
-      params: (matches: string[]) => ({ category: matches[1]?.trim() })
     },
     {
       intent: 'financing_question',
