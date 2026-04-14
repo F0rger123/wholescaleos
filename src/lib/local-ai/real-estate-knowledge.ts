@@ -9,6 +9,8 @@ export interface RealEstateConcept {
   example: string;
   details?: string[];
   benchmarks?: string;
+  strategy?: string;
+  whyMatters?: string;
 }
 
 export interface ScriptTemplate {

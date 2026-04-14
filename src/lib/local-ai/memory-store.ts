@@ -97,20 +97,62 @@ export function resolveEntityFromContext(type: string): Entity | null {
 
 export function resolveEntitiesFromContext(text: string): Entity[] {
   const memory = getMemory();
-  // Simple check for "this", "it", "them", "him", "her" or matching lead name in text
-  if (/this|it|that|him|her/i.test(text)) {
+  const lower = text.toLowerCase();
+  
+  // Specific entity type references
+  if (/the lead|that lead|this lead|him|her/i.test(lower)) {
+    const lead = memory.entityStack.find(e => e.type === 'lead');
+    return lead ? [lead] : [];
+  }
+  
+  if (/the task|that task|this task/i.test(lower)) {
+    const task = memory.entityStack.find(e => e.type === 'task');
+    return task ? [task] : [];
+  }
+  
+  // Generic pronouns
+  if (/\bit|this|that\b/i.test(lower)) {
     const last = memory.entityStack[0];
     return last ? [last] : [];
   }
-  if (/them|both|all/i.test(text)) {
-    return memory.entityStack.slice(0, 3);
+  
+  // Plural references
+  if (/them|both|all|those|these/i.test(lower)) {
+    // Return unique entities in the stack, prioritizing the most recent
+    const seen = new Set();
+    return memory.entityStack.filter(e => {
+      const duplicate = seen.has(e.id);
+      seen.add(e.id);
+      return !duplicate;
+    }).slice(0, 5);
   }
+  
   return [];
+}
+
+/**
+ * Checks if a name is ambiguous and returns options if so.
+ */
+export function resolveAmbiguity(input: string, leads: any[]): { resolved: any | null, options: any[] | null } {
+  const lower = input.toLowerCase().trim();
+  const matches = leads.filter(l => l.name.toLowerCase().includes(lower));
+  
+  if (matches.length === 1) return { resolved: matches[0], options: null };
+  if (matches.length > 1) return { resolved: null, options: matches };
+  
+  return { resolved: null, options: null };
 }
 
 export function getLearnedFact(key: string): string | null {
   const memory = getMemory();
   return memory.learnedFacts[key.toLowerCase()] || null;
+}
+
+export function deleteLearnedFact(key: string) {
+  const memory = getMemory();
+  const newFacts = { ...memory.learnedFacts };
+  delete newFacts[key.toLowerCase()];
+  saveMemory({ ...memory, learnedFacts: newFacts });
 }
 
 export function setLearnedFact(key: string, value: string) {

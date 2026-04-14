@@ -35,13 +35,13 @@ export function normalizeInput(input: string): string {
   // Only strip leading filler phrases (multi-word prefixes)
   const leadingFillers = [
     /^(?:can you|please|could you|would you|hey os bot|os bot|bot|assistant|can you please|could you please)\s+/i,
-    /^(?:i want to|i need to|i'd like to|let's|tell me|show me|can you tell me|do you know)\s+/i,
-    /^(?:give me)\s+/i,
+    /^(?:i want to|i need to|i'd like to|let's|tell me|show me|can you tell me|do you know|can you find|find me|search for)\s+/i,
+    /^(?:give me|get me|look up|check on)\s+/i,
   ];
 
   // Only strip trailing filler phrases (multi-word suffixes)
   const trailingFillers = [
-    /\s+(?:please|for me|thank you|buddy|friend)\s*$/i,
+    /\s+(?:please|for me|thank you|buddy|friend|now|asap|quick)\s*$/i,
     /\?$/, // remove question mark at the end
     /[\[\]\(\)\{\}\\]/g, // strip common typo characters like [ or ]
     /^[ \t]+|[ \t]+$/g // trim whitespace
@@ -55,16 +55,13 @@ export function normalizeInput(input: string): string {
   // Strip leading/trailing quotation marks (for forgiving input)
   normalized = normalized.replace(/^["']+|["']+$/g, '').trim();
 
-  // Handle missing space after starting quote if it was mistakenly stripped or present
-  // e.g. "Analyze -> Analyze
-  
   // Strip only very generic conversational filler at start
-  const greetingFillers = /^(?:bot|ai|assistant|os bot|hey|yo|please|can you|could you)\s+/i;
+  const greetingFillers = /^(?:bot|ai|assistant|os bot|hey|yo|hi|hello|please|can you|could you)\s+/i;
   normalized = normalized.replace(greetingFillers, '');
   
   // Only apply leading filler stripping if the input has multiple words
   const wordCount = normalized.split(/\s+/).length;
-  if (wordCount > 2) {
+  if (wordCount > 1) {
     leadingFillers.forEach(regex => {
       normalized = normalized.replace(regex, '');
     });
@@ -75,7 +72,7 @@ export function normalizeInput(input: string): string {
   });
 
   // Self-Correction: discard everything before "wait actually", "no wait", dashes, etc.
-  const correctionPattern = /^.*?(?:\b(?:wait no|no wait|actually|i mean|scratch that|wait actually|instead just)\b|[—]{1,2}|[-]{2,})\s*(?:no wait|wait no|actually|no)?\s*/i;
+  const correctionPattern = /^.*?(?:\b(?:wait no|no wait|actually|i mean|scratch that|wait actually|instead just|no i meant|my bad i meant)\b|[—]{1,2}|[-]{2,})\s*(?:no wait|wait no|actually|no|i meant)?\s*/i;
   if (correctionPattern.test(normalized)) {
     normalized = normalized.replace(correctionPattern, '');
   }

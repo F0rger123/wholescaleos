@@ -2,10 +2,16 @@ import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '
 import type { Lead } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { sendSMS } from './sms-service';
-import { recognizeIntent } from './local-ai/intent-engine';
 import { executeTask } from './local-ai/task-executor';
 import { generateResponse } from './local-ai/response-generator';
-import { saveMessage, setActiveState } from './local-ai/memory-store';
+import { saveMessage, getMemory } from './local-ai/memory-store';
+
+// New Modular Architecture Imports
+import { NLUEngine } from './local-ai/engine/nlu-engine';
+import { ContextManager } from './local-ai/engine/context-manager';
+import { ProactiveAdvisor } from './local-ai/engine/proactive-advisor';
+
+const nlu = new NLUEngine();
 
 export interface BotResponse {
   intent: string;
@@ -359,70 +365,58 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
 
 /**
  * OS Bot Processing Fallback
- * Tries to handle the prompt locally before falling back to external APIs.
+ * Tries to handle the prompt locally/semantically before falling back to external raw text APIs.
  */
 export async function processWithLocalAI(prompt: string): Promise<BotResponse | null> {
+  const store = useStore.getState();
+  const apiKey = localStorage.getItem('user_gemini_api_key') || '';
+
   try {
-    const localResult = await recognizeIntent(prompt);
+    // 1. Resolve Intent & Entities using NLU Engine
+    const nluResult = await nlu.resolve(prompt, apiKey);
     
-    if (localResult) {
-      const isAmbiguous = localResult.isAmbiguous;
-      const isConfirming = localResult.isConfirming;
+    if (nluResult && nluResult.confidence > 0.4) {
+      // 2. Contextual Entity Resolution (him, her, it, that)
+      const resolvedEntities = ContextManager.resolveEntities(prompt, nluResult.entities);
       
-      // 1. HANDLE CONFIRMATION (YES)
-      if (isConfirming) {
-        const executionResult = await executeTask(localResult.intent.name, localResult.params);
-        const responseText = generateResponse(localResult.intent.name, executionResult, prompt);
-        setActiveState(null); // Clear confirmation state
-        saveMessage('assistant', responseText);
+      // 3. Track Mentioned Entities
+      ContextManager.trackMentions(store.currentUser?.id || 'system', getMemory().sessionId, resolvedEntities);
+
+      // 4. Execute Task via Modular Handler
+      const executionResult = await executeTask(nluResult.intent, resolvedEntities);
+      
+      // 5. Generate Prose Response (Personality Aware)
+      const responseText = generateResponse(nluResult.intent, executionResult, prompt, "");
+      
+      saveMessage(store.currentUser?.id || 'system', getMemory().sessionId, 'assistant', responseText);
+      
+      // 6. Proactive Analysis (Human-like assistant behavior)
+      const proactiveSuggestion = ProactiveAdvisor.analyze();
+      if (proactiveSuggestion && Math.random() > 0.7) {
+        // We'll append the suggestion to the response if it looks natural
+        const suggestionMsg = `\n\nAlso, a quick note: ${proactiveSuggestion.message}`;
         return {
-          intent: localResult.intent.name,
-          response: responseText,
-          data: { ...localResult.params, ...executionResult.data },
-          systemLog: '🤖 OS Bot'
+          intent: nluResult.intent,
+          response: responseText + suggestionMsg,
+          data: { ...resolvedEntities, ...executionResult.data, proactive: proactiveSuggestion.data },
+          systemLog: '🤖 OS Bot (Proactive)'
         };
       }
 
-      // 2. HANDLE AMBIGUITY ("Did you mean?")
-      if (isAmbiguous) {
-        console.log(`[🤖 OS Bot] Ambiguous prompt detected. Setting AWAITING_CONFIRMATION state.`);
-        setActiveState('AWAITING_INTENT_CONFIRMATION', { 
-          intent: localResult.intent, 
-          params: localResult.params 
-        });
-        
-        const response = generateResponse('ambiguous', localResult, prompt);
-        saveMessage('assistant', response);
-        return {
-          intent: 'ambiguous',
-          response: response,
-          data: { originalText: prompt, suggestedIntent: localResult.intent.name },
-          systemLog: '🤖 OS Bot'
-        };
-      }
-
-      // 3. REGULAR EXECUTION (High Confidence)
-      if (localResult.confidence >= 0.75 || (localStorage.getItem('user_ai_provider') === 'local')) {
-        const executionResult = await executeTask(localResult.intent.name, localResult.params);
-        const responseText = generateResponse(localResult.intent.name, executionResult as any, prompt);
-        
-        saveMessage('assistant', responseText);
-        
-        return {
-          intent: localResult.intent.name,
-          response: responseText,
-          data: { ...localResult.params, ...executionResult.data },
-          systemLog: '🤖 OS Bot'
-        };
-      }
+      return {
+        intent: nluResult.intent,
+        response: responseText,
+        data: { ...resolvedEntities, ...executionResult.data },
+        systemLog: '🤖 OS Bot'
+      };
     }
     return null;
   } catch (error) {
-    console.error('[💩 OS Bot] Local AI pipeline crash:', error);
+    console.error('[🤖 OS Bot] Intelligence Pipeline Exception:', error);
     return {
       intent: 'error',
-      response: "I encountered a technical glitch. Try phrasing that differently?",
-      systemLog: '🤖 OS Bot (Recovery)'
+      response: "I encountered a technical glitch in my reasoning engine. Try phrasing that differently?",
+      systemLog: '🤖 OS Bot (System Recovery)'
     };
   }
 }
@@ -436,7 +430,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   const userId = store.currentUser?.id;
   
   // Save user message to local memory
-  saveMessage('user', prompt);
+  saveMessage(userId || 'system', getMemory().sessionId, 'user', prompt);
 
   // ── OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
@@ -449,7 +443,7 @@ export async function processPrompt(prompt: string, context: Record<string, any>
       
       // If Local AI return null but we are IN Local Mode, it means it's unknown locally
       const fallbackMsg = "I didn't understand that. Try 'help' to see what I can do.";
-      saveMessage('assistant', fallbackMsg);
+      saveMessage(userId || 'system', getMemory().sessionId, 'assistant', fallbackMsg);
       return {
         intent: 'unknown',
         response: fallbackMsg,
@@ -543,21 +537,21 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
   // 1.5 - Intercept Local Provider
   if (provider === 'local' || provider === (null as any)) {
-    const localResult = await recognizeIntent(prompt);
+    const localResult = await nlu.resolve(prompt, apiKey);
     let executionResult;
     
     if (localResult && localResult.confidence > 0.4) {
-      executionResult = await executeTask(localResult.intent.name, localResult.params);
+      executionResult = await executeTask(localResult.intent, localResult.entities);
     }
 
-    const responseText = generateResponse(localResult ? localResult.intent.name : 'unknown', executionResult, prompt);
+    const responseText = generateResponse(localResult ? localResult.intent : 'unknown', executionResult, prompt, "");
     
-    saveMessage('assistant', responseText);
+    saveMessage(store.currentUser?.id || 'system', getMemory().sessionId, 'assistant', responseText);
     
     return {
-      intent: localResult ? localResult.intent.name : 'unknown',
+      intent: localResult ? localResult.intent : 'unknown',
       response: responseText,
-      data: localResult ? { ...localResult.params, ...executionResult?.data } : (executionResult?.data || null),
+      data: localResult ? { ...localResult.entities, ...executionResult?.data } : (executionResult?.data || null),
       systemLog: '🤖 OS Bot'
     };
   }
@@ -826,16 +820,16 @@ Time: ${context.currentTime || new Date().toISOString()}`;
       }
 
       // If OS Bot is low confidence, try a generic local response instead of an error
-      const lowConfidenceLocal = await recognizeIntent(prompt);
+      const lowConfidenceLocal = await nlu.resolve(prompt, apiKey);
       
-      if (lowConfidenceLocal) {
-        const executionResult = await executeTask(lowConfidenceLocal.intent.name, lowConfidenceLocal.params);
-        const responseText = generateResponse(lowConfidenceLocal.intent.name, executionResult, prompt);
+      if (lowConfidenceLocal && lowConfidenceLocal.confidence > 0.1) {
+        const executionResult = await executeTask(lowConfidenceLocal.intent, lowConfidenceLocal.entities);
+        const responseText = generateResponse(lowConfidenceLocal.intent, executionResult, prompt, "");
         
         return {
-          intent: lowConfidenceLocal.intent.name,
+          intent: lowConfidenceLocal.intent,
           response: responseText,
-          data: lowConfidenceLocal.params,
+          data: { ...lowConfidenceLocal.entities, ...executionResult.data },
           systemLog: `🤖 OS Bot`
         };
       }

@@ -6,6 +6,7 @@ import {
   getMemory, 
   pushToEntityStack, 
   setLearnedFact, 
+  deleteLearnedFact,
   logOutcome, 
   setLastSuggestion, 
   getLastSuggestion, 
@@ -27,6 +28,16 @@ import {
   rememberFact
 } from './learning-service';
 import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, REAL_ESTATE_MARKETING_TIPS, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
+import * as crmIntel from './crm-intelligence';
+import { wrapResponse } from './personality-engine';
+
+// New Modular Architecture Imports
+import { BaseHandler } from './handlers/base-handler';
+import { CRMHandler } from './handlers/crm-handler';
+import { CommunicationHandler } from './handlers/communication-handler';
+import { TaskHandler } from './handlers/task-handler';
+
+// Handlers used in the registry below
 
 export interface TaskResponse {
   success: boolean;
@@ -36,6 +47,15 @@ export interface TaskResponse {
   reasoning?: string[]; // Chain of Thought traces
   nextIntent?: { name: string; params: any }; // Proactive task chaining
 }
+
+/**
+ * Registry of modular AI handlers.
+ */
+const HANDLERS: Record<string, BaseHandler> = {
+  'crm_action': new CRMHandler(),
+  'comms_action': new CommunicationHandler(),
+  'task_action': new TaskHandler()
+};
 
 /**
  * Fuzzy lead name matching with fragments support and ambiguity detection.
@@ -74,12 +94,29 @@ function findLeadFuzzy(inputName: string, leads: any[]): { lead: any | null, amb
   return { lead: null, ambiguity: null, isExact: false };
 }
 
-export async function executeTask(action: string, entities: any): Promise<TaskResponse> {
+async function executeTaskInternal(action: string, entities: any): Promise<TaskResponse> {
   const store = useStore.getState();
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
   const memory = getMemory();
 
-  // Shared numeric parser for financial analysis
+  // 1. Delegate to Modular Handlers if available
+  if (HANDLERS[action]) {
+    try {
+      const handlerResult = await HANDLERS[action].execute(entities);
+      return {
+        ...handlerResult,
+        reasoning: [
+          `Delegated execution to ${HANDLERS[action].constructor.name}.`,
+          ...(handlerResult.reasoning || [])
+        ]
+      };
+    } catch (e) {
+      console.error(`[Modular Handler Error] ${action}:`, e);
+      return { success: false, message: `The ${action} handler encountered an error.` };
+    }
+  }
+
+  // 2. Shared numeric parser for financial analysis
   const parse = (val: any) => {
     if (!val) return 0;
     const str = String(val).toLowerCase();
@@ -88,29 +125,10 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     let n = parseFloat(numMatch[0]);
     if (str.includes('k')) n *= 1000;
     if (str.includes('m')) n *= 1000000;
-    const DEBUG_MODE = (window as any).DEBUG_AI || true;
-    if (DEBUG_MODE) console.log(`DEBUG: Parsed "${val}" -> ${n}`);
     return n;
   };
 
-  // NEW: Handle Partial Intents (Conversational Slot Filling)
-  if (entities?.isPartial) {
-    const missing = entities.missingParams[0];
-    const prompts: Record<string, string> = {
-      'leadName': "I'm ready to analyze that. Which lead were you thinking of?",
-      'strategy': "Got it. Which strategy should we look at: Wholesaling, Flipping, or BRRRR?",
-      'target': "I can handle that. Who's the person you're referring to?",
-      'message': "What would you like the message to say?",
-      'title': "Sure thing. What's the name of this task?"
-    };
-
-    return {
-      success: true,
-      message: prompts[missing] || `I'm almost there. Could you give me the ${missing}?`,
-      reasoning: [`Detected partial intent for "${action}".`, `Missing required parameter: ${missing}`]
-    };
-  }
-
+  // 3. Handle System/Utility Actions (Small Talk, Navigation, etc.)
   try {
     switch (action) {
       case 'navigate':
@@ -616,9 +634,131 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         if (foundLead) {
           pushToEntityStack({ id: foundLead.id, name: foundLead.name, type: 'lead' });
           const summary = `Here's what I have on **${foundLead.name}**:\n- 📍 Address: ${foundLead.propertyAddress || 'N/A'}\n- 📊 Status: ${foundLead.status}\n- 🎯 Deal Score: ${foundLead.dealScore || 0}\n- 📞 Phone: ${foundLead.phone || 'None'}`;
+          
+          // Enhanced: Add logic explanation if they asked "why" or "how"
+          if (entities.explain) {
+            const reasons = crmIntel.explainDealScore(foundLead);
+            return { success: true, message: `${summary}\n\n**Score Breakdown:**\n- ${reasons.join('\n- ')}` };
+          }
+          
           return { success: true, message: summary };
         }
         return { success: false, message: `I don't have any records for "${entities.name}".` };
+      }
+
+      case 'lead_comparison': {
+        const targets = entities.targets || [];
+        if (targets.length < 2) {
+           const contextLeads = resolveEntitiesFromContext('lead');
+           if (contextLeads.length >= 2) {
+             targets.push(contextLeads[0].name, contextLeads[1].name);
+           } else if (contextLeads.length === 1 && entities.target) {
+             targets.push(contextLeads[0].name, entities.target);
+           }
+        }
+
+        if (targets.length < 2) {
+          return { success: false, message: "I need two leads to compare. Try 'Compare John and Jane'." };
+        }
+
+        const leadA = store.leads.find(l => l.name.toLowerCase().includes(targets[0].toLowerCase()));
+        const leadB = store.leads.find(l => l.name.toLowerCase().includes(targets[1].toLowerCase()));
+
+        if (!leadA || !leadB) {
+          return { success: false, message: `I couldn't find one or both of those leads: ${targets.join(', ')}.` };
+        }
+
+        const comparison = crmIntel.compareLeads(leadA, leadB);
+        let msg = `### Comparison: ${leadA.name} vs ${leadB.name}\n\n`;
+        comparison.metrics.forEach(m => {
+          const icon = m.better === 'A' ? '⬅️' : m.better === 'B' ? '➡️' : '➖';
+          msg += `**${m.name}:** ${m.leadA} ${icon} ${m.leadB}\n`;
+        });
+        msg += `\n**Verdict:** ${comparison.reasoning[0]}`;
+        
+        return { success: true, message: msg };
+      }
+
+      case 'analytics_conversion':
+      case 'get_analytics': {
+        const stats = crmIntel.getCRMAnalytics(store.leads);
+        const msg = `### Pipeline Analytics\n\n` +
+          `- **Conversion Rate:** ${stats.conversionRate.toFixed(1)}%\n` +
+          `- **Total Leads:** ${stats.totalLeads}\n` +
+          `- **Closed Deals:** ${stats.closedDeals}\n` +
+          `- **Top Source:** ${stats.topSource.name} (${stats.topSource.count} leads)\n` +
+          `- **Active Pipeline Value:** $${stats.pipelineValue.toLocaleString()}`;
+        
+        return { success: true, message: msg };
+      }
+
+      case 'memory_recall': {
+        const prefs = await getRecentMemorySummary(store.currentUser?.id || 'system');
+        const facts = getMemory().learnedFacts || {};
+        const factList = Object.entries(facts).map(([k, v]) => `- **${k}:** ${v}`).join('\n');
+        
+        let msg = `### What I Know About You\n\n` +
+          `**Recent Activity:** ${prefs}\n\n` +
+          `**Learned Facts:**\n${factList || 'No specific facts remembered yet.'}\n\n` +
+          `You can tell me "Remember I prefer X" or "My timezone is EST" to help me assist you better.`;
+        
+        return { success: true, message: msg };
+      }
+
+      case 'forget_learned': {
+        const phrase = entities.phrase;
+        if (!phrase) return { success: false, message: "What should I forget? You can say 'Forget what I taught you about X'." };
+        
+        const ok = await deleteLearnedIntent(store.currentUser?.id || 'system', phrase);
+        if (ok) {
+          return { success: true, message: `✅ Noted. I've removed everything I learned about "${phrase}" from my memory.` };
+        }
+        
+        // Try learned facts too
+        const facts = getMemory().learnedFacts;
+        if (facts[phrase.toLowerCase()]) {
+          deleteLearnedFact(phrase);
+          return { success: true, message: `✅ Okay, I've forgotten that fact about "${phrase}".` };
+        }
+        
+        return { success: false, message: `I couldn't find any specific learned info for "${phrase}".` };
+      }
+
+      case 'proactive_suggestion': {
+        const leads = store.leads;
+        const tasks = store.tasks;
+        
+        // 1. Check for overdue tasks
+        const overdue = tasks.filter(t => t.status !== 'done' && t.dueDate && new Date(t.dueDate) < new Date());
+        if (overdue.length > 0) {
+          const t = overdue[0];
+          return {
+            success: true,
+            message: `You have **${overdue.length} overdue tasks**. I recommend starting with **"${t.title}"** which was due on ${formatHumanDate(t.dueDate)}. Want me to show you the full list?`
+          };
+        }
+
+        // 2. Check for "hot" leads that haven't been contacted
+        const untouchedHot = leads
+          .filter(l => l.status !== 'closed-won' && l.status !== 'closed-lost')
+          .sort((a, b) => (b.dealScore || 0) - (a.dealScore || 0))
+          .find(l => !l.lastContact || (Date.now() - new Date(l.lastContact).getTime()) > 3 * 24 * 60 * 60 * 1000);
+        
+        if (untouchedHot) {
+          pushToEntityStack({ id: untouchedHot.id, name: untouchedHot.name, type: 'lead' });
+          return {
+            success: true,
+            message: `**${untouchedHot.name}** has a high deal score (${untouchedHot.dealScore}) but hasn't been contacted in 3+ days. You should reach out today. Want me to draft a text for you?`
+          };
+        }
+
+        // 3. General suggestion
+        const tips = REAL_ESTATE_PRO_TIPS;
+        const tip = tips[Math.floor(Math.random() * tips.length)];
+        return {
+          success: true,
+          message: `Your pipeline looks stable! Here's an expert insight for today: **${tip}**\n\nIs there a specific lead or property we should analyze next?`
+        };
       }
 
       case 'lead_query': {
@@ -948,55 +1088,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
                    `What would you like to tackle first?`
         };
 
-      case 'memory_recall': {
-        const memory = getMemory();
-        const target = (entities.target || '').toLowerCase().trim();
-        const recentActions = (memory.outcomes || []).slice(-3).reverse();
-        
-        // Lead-specific memory search
-        if (target && target !== 'me') {
-          const leadMatch = findLeadFuzzy(target, store.leads);
-          const searchName = leadMatch.lead?.name || target;
-          
-          const relevantFacts = memory.learnedFacts ? Object.entries(memory.learnedFacts)
-            .filter(([key, val]) => {
-              const lowerKey = key.toLowerCase();
-              const lowerVal = String(val).toLowerCase();
-              return lowerKey.includes(target) || lowerVal.includes(target) || (leadMatch.lead && (lowerKey.includes(leadMatch.lead.name.toLowerCase()) || lowerVal.includes(leadMatch.lead.name.toLowerCase())));
-            })
-            .map(([_, val]) => val) : [];
-
-          if (relevantFacts.length > 0) {
-            return {
-              success: true,
-              message: `### 🧠 Memory for **${searchName}**\n\n` +
-                       relevantFacts.map(f => `• ${f}`).join('\n')
-            };
-          }
-
-          return {
-            success: true,
-            message: `I don't have any specific facts on file for **${searchName}** yet. Just tell me something like "Remember that ${searchName} prefers texting" and I'll file it away!`
-          };
-        }
-
-        if (recentActions.length === 0 && (!memory.learnedFacts || Object.keys(memory.learnedFacts).length === 0)) {
-          return { success: true, message: `I don't have any specific action records or learned facts for this session yet, but I'm monitoring your pipeline and ready to help!` };
-        }
-
-        let msg = `Here's what I remember doing for you recently:\n\n`;
-        recentActions.forEach((a: any) => {
-          const time = new Date(a.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          msg += `- [${time}] **${a.type.replace('_', ' ')}**: ${a.summary}\n`;
-        });
-        
-        const facts = memory.learnedFacts ? Object.values(memory.learnedFacts).slice(0, 3) : [];
-        if (facts.length > 0) {
-          msg += `\n**Key Facts Learned:**\n` + facts.map(f => `• ${f}`).join('\n');
-        }
-          
-        return { success: true, message: msg };
-      }
 
       case 'help':
       case 'help_commands':
@@ -1168,179 +1259,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         return { success: true, message: `What would you like to focus on next? Leads, tasks, or something else?` };
       }
 
-      case 'proactive_suggestion': {
-        const memory = getMemory();
-        const hour = new Date().getHours();
-        const today = new Date();
-        const targetRaw = entities.target;
-        let leadToSuggestFor = null;
-
-        if (targetRaw) {
-          if (/^(him|her|this|the lead)$/i.test(targetRaw)) {
-            const activeEntity = memory.entityStack?.[0];
-            if (activeEntity?.type === 'lead') {
-              leadToSuggestFor = store.leads.find(l => l.id === activeEntity.id);
-            }
-          } else {
-            const { lead } = findLeadFuzzy(targetRaw, store.leads);
-            leadToSuggestFor = lead;
-          }
-        }
-
-        // Contextual Fallback: If no target mentioned (e.g. "what now"), check active context
-        if (!leadToSuggestFor) {
-           const activeEntity = memory.entityStack?.[0];
-           if (activeEntity?.type === 'lead') {
-              leadToSuggestFor = store.leads.find(l => l.id === activeEntity.id);
-           }
-        }
-
-        if (leadToSuggestFor) {
-          // ──── Lead-Specific Diagnostic Logic ────
-          const lead = leadToSuggestFor;
-          const name = lead.name;
-          const status = lead.status?.toLowerCase();
-          const score = lead.dealScore || 0;
-          const lastUpdate = lead.updatedAt || lead.createdAt;
-          const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 999;
-
-          // Push to context so "him" continues to work
-          pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
-
-          // 1. Check for Missing Contact Info
-          if (!lead.phone || lead.phone === 'None') {
-            return { success: true, message: `**${name}** doesn't have a phone number on file. Want to add one so I can start reaching out for you?` };
-          }
-          if (!lead.email || lead.email === 'None') {
-            return { success: true, message: `**${name}** doesn't have an email address listed. Should we find and add one to their profile?` };
-          }
-
-          // 2. Check for Stale Contact
-          if (daysSince >= 5 && status !== 'closed-won' && status !== 'closed-lost') {
-             setLastSuggestion('send_sms_partial', { target: name }, `Text ${name}`);
-             return { success: true, message: `You haven't reached out to **${name}** in ${daysSince} days. Want to send a quick text to check in?` };
-          }
-
-          // 3. Status-Based Contextual Advice
-          if (status === 'closed-won') {
-             setLastSuggestion('add_note', { target: name }, `Add follow-up note for ${name}`);
-             return { success: true, message: `**${name}** is in 'Closed-Won' status! 🎉 Great job. Want to add a final follow-up note or set a reminder for a 30-day follow-up?` };
-          }
-          
-          if (status === 'new' || status === 'qualified') {
-             setLastSuggestion('update_lead_status', { target: name, status: 'negotiating' }, `Update ${name} to Negotiating`);
-             return { success: true, message: `**${name}** is currently marked as '${status}'. If you've started talking numbers, we should advance them to 'Negotiating'. Want me to update that for you?` };
-          }
-
-          // 4. Score-Based Prioritization
-          if (score >= 85) {
-             setLastSuggestion('send_sms_partial', { target: name }, `Text ${name}`);
-             return { success: true, message: `**${name}** has a high deal score of ${score}! They are a top priority. Should we reach out right now?` };
-          }
-
-          return { success: true, message: `**${name}** looks healthy! I'd recommend keeping them warm with regular check-ins. Want me to set a task to follow up next week?` };
-        }
-
-        // ──── Gather CRM intelligence (Broad Pool) ────
-        const overdueTasks = store.tasks.filter(t => t.status !== 'done' && new Date(t.dueDate) < today);
-        const hotLeads = store.leads.filter(l => (l.dealScore || 0) >= 70);
-        const negotiatingLeads = store.leads.filter(l => l.status === 'negotiating' || l.status === 'qualified');
-
-        // Leads not contacted in 5+ days
-        const staleLeads = store.leads.filter(l => {
-          if (l.status === 'closed-won' || l.status === 'closed-lost') return false;
-          const lastUpdate = l.updatedAt || l.createdAt;
-          if (!lastUpdate) return false;
-          const daysSince = Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24));
-          return daysSince >= 5;
-        });
-
-        // ──── Gather Habit Intelligence ────
-        const prefs = memory.learnedFacts || {};
-        const history = (memory.history || []).filter(h => h && typeof h.content === 'string');
-        
-        const prefersTexting = Object.values(prefs).some(val => typeof val === 'string' && val.toLowerCase().includes('text'));
-        const morningLeadHabit = hour < 10 && history.filter(h => h.role === 'user' && h.content.toLowerCase().includes('lead')).length >= 2;
-
-        // Build a weighted pool of suggestions for variety
-        interface Suggestion { msg: string; action: string; params: Record<string, unknown>; weight: number; }
-        const pool: Suggestion[] = [];
-
-        // Priority 1: Overdue tasks (weight 10)
-        if (overdueTasks.length > 0) {
-          const task = overdueTasks[0];
-          pool.push({
-            msg: `⚠️ You have **${overdueTasks.length}** overdue task${overdueTasks.length > 1 ? 's' : ''}. The most pressing: "${task.title}" (due ${task.dueDate}). Should we tackle ${overdueTasks.length > 1 ? 'those' : 'it'} first?`,
-            action: 'tasks_due',
-            params: {},
-            weight: 10
-          });
-        }
-
-        // Priority 2: Stale leads — haven't been contacted in 5+ days (weight 9)
-        if (staleLeads.length > 0) {
-          const staleLead = staleLeads[Math.floor(Math.random() * staleLeads.length)];
-          const lastUpdate = staleLead.updatedAt || staleLead.createdAt;
-          const daysSince = lastUpdate ? Math.floor((Date.now() - new Date(lastUpdate).getTime()) / (1000 * 60 * 60 * 24)) : 0;
-          pool.push({
-            msg: `You haven't reached out to **${staleLead.name}** in ${daysSince} days. Want to send them a quick text?`,
-            action: 'send_sms_partial',
-            params: { target: staleLead.name },
-            weight: prefersTexting ? 15 : 9
-          });
-        }
-
-        // Priority 8: Morning Habit Match
-        if (morningLeadHabit && !staleLeads.length && !overdueTasks.length) {
-          pool.push({
-            msg: `Good morning! Since you usually start by checking your pipeline, want me to show you your active leads?`,
-            action: 'list_leads',
-            params: {},
-            weight: 12
-          });
-        }
-
-        // Priority 3: Hot leads ready to close (weight 8)
-        if (hotLeads.length > 0) {
-          const hotLead = hotLeads[Math.floor(Math.random() * hotLeads.length)];
-          pool.push({
-            msg: `**${hotLead.name}** is a hot lead with a score of ${hotLead.dealScore || 85}. Should I pull up their info or start a text for you?`,
-            action: 'lead_context_query',
-            params: { leadName: hotLead.name },
-            weight: 8
-          });
-        }
-
-        // Priority 4: Negotiating deals (weight 7)
-        if (negotiatingLeads.length > 0) {
-          pool.push({
-            msg: `You have **${negotiatingLeads.length}** leads in the '${negotiatingLeads[0].status}' stage. Want to review their current notes?`,
-            action: 'list_leads',
-            params: { status: negotiatingLeads[0].status },
-            weight: 7
-          });
-        }
-
-        // Final Selection: Weighted Random
-        if (pool.length === 0) {
-          return { success: true, message: `Everything looks caught up! Check back later for new recommendations.` };
-        }
-
-        const totalWeight = pool.reduce((sum, s) => sum + s.weight, 0);
-        let random = Math.random() * totalWeight;
-        let selected = pool[0];
-
-        for (const suggestion of pool) {
-          if (random < suggestion.weight) {
-            selected = suggestion;
-            break;
-          }
-          random -= suggestion.weight;
-        }
-
-        setLastSuggestion(selected.action, selected.params, selected.msg);
-        return { success: true, message: selected.msg, data: selected.params };
-      }
 
       case 'lead_context_query': {
         const rawLeadName = entities.leadName || entities.name || (entities.text && entities.text !== 'this' ? entities.text : null);
@@ -1481,20 +1399,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         }
       }
 
-    case 'forget_learned': {
-      const phrase = entities.phrase;
-      const userId = store.currentUser?.id;
-      
-      if (!phrase) {
-        return { success: true, message: "What phrase would you like me to forget? Say 'forget [phrase]'." };
-      }
-      
-      const success = userId ? await deleteLearnedIntent(userId, phrase) : false;
-      if (success) {
-        return { success: true, message: `✅ I've forgotten "${phrase}". I won't use that learned command anymore.` };
-      }
-      return { success: false, message: `I couldn't find "${phrase}" in my learned commands.` };
-    }
 
     case 'list_learned': {
       const userId = store.currentUser?.id;
@@ -1926,46 +1830,75 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'explain_logic': {
       const memory = getMemory();
-      // Check if we just did a calculation
+      const paramDetail = entities.detail || entities.topic;
+      
+      // 1. Try to explain a specific RE concept if provided
+      if (paramDetail && REAL_ESTATE_CONCEPTS[paramDetail.toLowerCase()]) {
+        const concept = REAL_ESTATE_CONCEPTS[paramDetail.toLowerCase()];
+        return {
+          success: true,
+          message: `### ${paramDetail.toUpperCase()}\n\n**Definition:** ${concept.definition}\n\n**Strategy:** ${concept.strategy || '_No specific strategy provided for this concept yet._'}\n\n**Why it matters:** ${concept.whyMatters || '_This is a core real estate metric used for deal evaluation._'}`
+        };
+      }
+
+      // 2. Check if we just did a calculation
       const lastAction = memory.history?.[memory.history.length - 1];
       
       if (lastAction?.role === 'assistant' && lastAction.content.includes('Result')) {
-        if (lastAction.content.includes('Flip')) {
-          return {
-            success: true,
-            message: `**Flip Calculation Breakdown:**\n\n1. **Gross Profit:** ARV - (Purchase + Repairs). This represents the spread before closing/holding costs.\n2. **ROI (Return on Investment):** (Profit / Total Investment) * 100. It shows how hard your capital is working.\n3. **70% Rule:** (ARV * 0.7) - Repairs. This is a classic benchmark to ensure you have enough equity buffer for profit and risk.`
-          };
-        } else if (lastAction.content.includes('Rental')) {
-          return {
-            success: true,
-            message: `**Rental Calculation Breakdown:**\n\n1. **Cash Flow:** Monthly Rent - (Mortgage + Expenses). We assume expenses (taxes, insurance, vacancy) are ~25-30% of rent for this quick estimate.\n2. **Cap Rate:** (Annual Net Operating Income / Purchase Price) * 100. This measures the property's natural yield regardless of financing.\n3. **Cash-on-Cash Return (CoC):** (Annual Cash Flow / Cash Invested) * 100. This is your actual 'yield' on the money you pulled out of your pocket.`
-          };
-        }
-      }
-
-      // If they just asked a knowledge question
-      const state = getMemory(); 
-      if (state.activeTopic === 'AWAITING_KNOWLEDGE_FOLLOWUP' && state.activeState?.data?.lastConcept) {
-        const lastConcept = state.activeState.data.lastConcept;
-        const concept = REAL_ESTATE_CONCEPTS[lastConcept.toLowerCase()];
-        return {
-          success: true,
-          message: `Specifically regarding **${lastConcept}**, the "why" usually comes down to risk management. For example, ${concept?.definition.split('.')[0]}. Would you like a real-world scenario of how I use this to evaluate leads?`
-        };
+          if (lastAction.content.includes('Flip')) {
+            return {
+              success: true,
+              message: `**Flip Calculation Breakdown:**\n\n1. **Gross Profit:** ARV - (Purchase + Repairs). This represents the spread before closing/holding costs.\n2. **ROI (Return on Investment):** (Profit / Total Investment) * 100.\n3. **70% Rule:** (ARV * 0.7) - Repairs. This is a classic benchmark to ensure you have enough equity buffer.`
+            };
+          } else if (lastAction.content.includes('Rental')) {
+            return {
+              success: true,
+              message: `**Rental Calculation Breakdown:**\n\n1. **Cash Flow:** Monthly Rent - (Mortgage + Expenses).\n2. **Cap Rate:** (Annual Net Operating Income / Purchase Price) * 100.\n3. **Cash-on-Cash Return (CoC):** (Annual Cash Flow / Cash Invested) * 100.`
+            };
+          }
       }
 
       return {
         success: true,
-        message: "I can explain the logic behind any calculation or real estate concept. What specifically would you like me to break down for you?"
+        message: "I can explain our **deal scoring**, **ROI math**, or concepts like **Subject-To** and **Cap Rates**. What would you like to dive into?"
       };
     }
-
+    
     default:
-      return { success: false, message: `Action "${action}" triggered, but logic is still being connected.` };
+      return {
+        success: false,
+        message: `I recognized the intent "${action}" but don't have a handler for it yet. Want me to teach you how to add one?`
+      };
     }
   } catch (error) {
     const safeEntities = entities || {};
-    console.error(`[❌ OS Bot] executeTask Error [Action: ${action}]`, error, { entities: safeEntities });
+    console.error(`[❌ OS Bot] executeTaskInternal Error [Action: ${action}]`, error, { entities: safeEntities });
     throw error;
+  }
+}
+
+/**
+ * Main entry point for task execution.
+ * Wraps the internal logic with personality and error handling.
+ */
+export async function executeTask(action: string, entities: any): Promise<TaskResponse> {
+  try {
+    const result = await executeTaskInternal(action, entities);
+    
+    // Apply personality wrapping if not already "clean" or small talk
+    if (!result.clean && action !== 'small_talk' && action !== 'greeting') {
+      const type = result.success ? (result.data?.lastSuggestion ? 'confirm' : 'success') : 'error';
+      result.message = wrapResponse(result.message, type, action);
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`[❌ OS Bot] executeTask Error [Action: ${action}]`, error);
+    
+    // Wrap error in personality
+    return {
+      success: false,
+      message: wrapResponse(`I encountered a problem: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', action)
+    };
   }
 }

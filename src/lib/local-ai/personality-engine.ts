@@ -44,6 +44,24 @@ export function wrapResponse(content: string, responseType: 'success' | 'confirm
       error: 'System error. Intervention required.',
       ask: 'Missing data. Provide input.'
     },
+    sassy: {
+      success: `There. Done. Don't say I never did anything for you, ${agentName}.`,
+      confirm: `I guess I can do that. If you're sure...`,
+      error: `Ugh, even I can't fix that mess.`,
+      ask: `I'm not a mind reader. Give me more info.`
+    },
+    funny: {
+      success: `Boop! It's done! I'm basically a magician now.`,
+      confirm: `I've got a brilliant plan! Check this out:`,
+      error: `Whelp, that's awkward. My circuits are crossed.`,
+      ask: `Help me out here! I'm missing a piece of the puzzle.`
+    },
+    cursing: {
+      success: `Finished that shit for you. Anything else?`,
+      confirm: `Ready to go. Don't fuck it up.`,
+      error: `Goddammit, something broke. Check the logs.`,
+      ask: `I need more fucking info before I can do that.`
+    },
     concise: {
       success: 'Done.',
       confirm: 'Confirm:',
@@ -52,8 +70,8 @@ export function wrapResponse(content: string, responseType: 'success' | 'confirm
     }
   };
 
-  const p = prefixes[tone] || prefixes.professional;
-  const prefix = p[responseType];
+  const p = prefixes[tone as keyof typeof prefixes] || prefixes.professional;
+  const prefix = p[responseType as keyof typeof p];
   
   return `${prefix}\n\n${content}`;
 }
