@@ -1525,12 +1525,9 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         };
       }
 
-      setActiveState({ 
-        type: 'AWAITING_SCRIPT_CHOICE', 
-        data: { 
-          parentIntent: 'agent_script', 
-          options: ['Expired Listing', 'FSBO', 'Cold Call', 'Objection', 'Buyer Consultation', 'Seller Follow-up'] 
-        } 
+      setActiveState('AWAITING_SCRIPT_CHOICE', { 
+        parentIntent: 'agent_script', 
+        options: ['Expired Listing', 'FSBO', 'Cold Call', 'Objection', 'Buyer Consultation', 'Seller Follow-up'] 
       });
 
       return {
@@ -1685,9 +1682,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         };
       }
 
-      setActiveState({ 
-        type: 'AWAITING_STRATEGY_CHOICE', 
-        data: { options: ['wholesaling', 'flipping', 'brrrr', 'fix and flip'] } 
+      setActiveState('AWAITING_STRATEGY_CHOICE', { 
+        options: ['wholesaling', 'flipping', 'brrrr', 'fix and flip'] 
       });
 
       return {
@@ -1709,9 +1705,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         };
       }
 
-      setActiveState({ 
-        type: 'AWAITING_MARKETING_CHOICE', 
-        data: { options: ['direct mail', 'seo', 'social media'] } 
+      setActiveState('AWAITING_MARKETING_CHOICE', { 
+        options: ['direct mail', 'seo', 'social media'] 
       });
 
       return {
