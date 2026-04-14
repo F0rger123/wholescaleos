@@ -83,6 +83,7 @@ export type IntentName =
   | 'explain_logic'
   | 'real_estate_strategy'
   | 'business_advice'
+  | 'marketing_tips'
   | 'get_lead_info';
 
 export interface Intent {
