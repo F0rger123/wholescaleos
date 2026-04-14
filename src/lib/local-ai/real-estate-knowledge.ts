@@ -219,6 +219,12 @@ export const REAL_ESTATE_SCRIPTS: ScriptTemplate[] = [
     title: 'Seller Lead Follow-up',
     script: "Hi [Name], I was just reviewing the market activity for [Neighborhood] and noticed two properties like yours just went under contract in less than 48 hours. The buyer demand is peaking right now. Have you considered whether this might be the right window to maximize your equity?",
     tips: ['Use recent data/urgency', 'Focus on equity maximization', 'Ask for a low-stakes valuation']
+  },
+  {
+    category: 'cold call',
+    title: 'Cold Calling Script (Introduction)',
+    script: "Hi [Name], I'm [Your Name], an investor looking specifically for properties in [Neighborhood]. I'm not a big company—I'm just looking to pick up one more project this month. I know this is out of the blue, but have you ever considered an all-cash offer for your place at 123 Main St? No repairs, no commissions.",
+    tips: ['Be transparent about being an investor', 'Focus on the "all-cash/no repairs" benefit', 'Keep the intro under 10 seconds']
   }
 ];
 

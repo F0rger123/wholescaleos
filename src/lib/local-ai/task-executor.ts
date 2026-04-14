@@ -1513,6 +1513,14 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         };
       }
 
+      setActiveState({ 
+        topic: 'AWAITING_KNOWLEDGE_FOLLOWUP', 
+        data: { 
+          parentIntent: 'agent_script', 
+          options: ['Expired Listing', 'FSBO', 'Cold Call', 'Objection', 'Buyer Consultation', 'Seller Follow-up'] 
+        } 
+      });
+
       return {
         success: true,
         message: "I have scripts for **Expired Listings**, **FSBOs**, **Cold Calling**, **Objection Handling**, and **Buyer/Seller Consultations**. Which one do you need?"
@@ -1665,6 +1673,11 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         };
       }
 
+      setActiveState({ 
+        topic: 'AWAITING_KNOWLEDGE_FOLLOWUP', 
+        data: { parentIntent: 'investment_strategy', options: ['Wholesaling', 'Flipping', 'BRRRR', 'Fix and Flip'] } 
+      });
+
       return {
         success: true,
         message: "What's the goal? I can break down high-level strategies for **Wholesaling**, **Flipping**, or the **BRRRR Method**. Which one aligns with your current capital position?"
@@ -1683,6 +1696,11 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           message: `### ${tip.title}\n\n${tip.tip}\n\nWant another tip for **Direct Mail**, **SEO**, or **Social Media**?`
         };
       }
+
+      setActiveState({ 
+        topic: 'AWAITING_KNOWLEDGE_FOLLOWUP', 
+        data: { parentIntent: 'marketing_tips', options: ['Direct Mail', 'SEO', 'Social Media', 'Referrals'] } 
+      });
 
       return {
         success: true,

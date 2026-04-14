@@ -441,7 +441,30 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   const activeState = memory.activeState;
   
   if (activeState && wordCount <= 3) {
-    // If we're waiting for a lead name (e.g. for SMS or Info)
+    // Stage 1.5a: Real Estate Follow-up bridging
+    if (activeState.topic === 'AWAITING_KNOWLEDGE_FOLLOWUP') {
+      const options = activeState.data?.options || [];
+      const match = options.find((opt: string) => 
+        normalized.includes(opt.toLowerCase()) || opt.toLowerCase().includes(normalized)
+      );
+      
+      if (match) {
+        const parentIntentName = activeState.data?.parentIntent || 'investment_strategy';
+        const intentObj = intents.find(i => i.name === parentIntentName);
+        if (intentObj) {
+          debugLog('MATCHED', `Contextual follow-up match: ${match}`);
+          return {
+            intent: intentObj,
+            params: { strategy: match, category: match, topic: match },
+            confidence: 100,
+            needsAgentLoop,
+            matchedBy: 'contextual_knowledge_followup'
+          };
+        }
+      }
+    }
+
+    // Stage 1.5b: Common CRM follow-up bridging (Lead names for SMS/Info)
     if (activeState.type === 'awaiting_lead_name' || activeState.type === 'send_sms_partial') {
       const intentObj = intents.find(i => i.name === 'lead_context_query' || i.name === 'send_sms');
       if (intentObj) {
@@ -521,7 +544,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
         /^(?:give me a strategy for|how do i invest in|provide a plan for)\s+(.*)$/i,
         /^(wholesaling|flipping|brrrr|house hacking)\s+strategy$/i,
         /^(?:how to|should i)\s+(wholesaling|flipping|brrrr|house hacking|investing|flip this|wholesale this)$/i,
-        /\bbrrrr method\b/i
+        /\b(?:the )?brrrr(?: method)?\b/i
       ],
       params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
     },
@@ -530,6 +553,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       patterns: [
         /^(?:give me )?(?:some )?marketing (?:tips|advice|ideas|strategies)/i,
         /^(?:how do i find|finding) (?:cash buyers|motivated sellers)$/i,
+        /^(?:seo|search engine optimization|social media|social|direct mail|mail)$/i,
         /\bmarketing (?:tips|strategy|ideas)\b/i
       ],
       params: (matches: string[]) => ({ category: matches[1]?.trim() })
@@ -557,7 +581,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       patterns: [
         /^(?:tell me about|how do i|explain)\s+(wholesaling|flipping|brrrr|house hacking|1031 exchange)/i,
         /^(?:investment strategies|ways to invest)$/i,
-        /^(flipping|wholesaling|brrrr|rental|fix and flip)$/i
+        /^(flipping|wholesaling|brrrr|rental|fix and flip|brrrr method|the brrrr)$/i
       ],
       params: (matches: string[]) => ({ strategy: matches[1]?.trim() })
     },
@@ -582,7 +606,7 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'agent_script',
       patterns: [
-        /^(?:give me a |show me a |need a |script for )?(expired listing|cold call|objection|buyer|seller|follow-up)(?: script)?$/i,
+        /^(?:give me a |show me a |need a |script for )?(expired listing|cold call|cold calling|objection|buyer consultation|seller objection|buyer|seller|follow-up|fsbo)(?: script)?$/i,
         /^(?:what do i say to|how do i handle)\s+(.*)$/i,
         /^(?:cold call|expired|fsbo|objection)\s+script$/i
       ],
