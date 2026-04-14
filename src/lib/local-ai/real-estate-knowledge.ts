@@ -213,6 +213,17 @@ export interface RentalResult {
   monthlyMortgage: number;
 }
 
+export interface Sub2Result {
+  type: 'sub2';
+  purchase: number;
+  loanBalance: number;
+  entryCost: number;
+  cashFlow: number;
+  coc: number;
+  monthlyPITI: number;
+  rent: number;
+}
+
 export const REAL_ESTATE_SCRIPTS: ScriptTemplate[] = [
   {
     category: 'expired',
@@ -316,7 +327,7 @@ export const REAL_ESTATE_MARKETING_TIPS = [
   }
 ];
 
-export function calculateDeal(type: 'flip' | 'rental', data: any): FlipResult | RentalResult | null {
+export function calculateDeal(type: 'flip' | 'rental' | 'sub2', data: any): FlipResult | RentalResult | Sub2Result | null {
   if (type === 'flip') {
     const arv = Number(data.arv || 0);
     const purchase = Number(data.purchase || 0);

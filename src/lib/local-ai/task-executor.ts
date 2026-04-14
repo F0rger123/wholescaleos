@@ -12,7 +12,6 @@ import {
   clearLastSuggestion,
   resolveEntitiesFromContext,
   getLeadStrategistBrief,
-  detectSentiment,
   Entity
 } from './memory-store';
 import { resolveDate, formatHumanDate } from './utils/date-resolver';
@@ -27,7 +26,7 @@ import {
   saveUserPreference,
   rememberFact
 } from './learning-service';
-import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, REAL_ESTATE_MARKETING_TIPS, calculateDeal, FlipResult, RentalResult } from './real-estate-knowledge';
+import { REAL_ESTATE_CONCEPTS, REAL_ESTATE_PRO_TIPS, REAL_ESTATE_STRATEGIES, REAL_ESTATE_MARKETING_TIPS, calculateDeal, FlipResult, RentalResult, Sub2Result } from './real-estate-knowledge';
 
 export interface TaskResponse {
   success: boolean;
@@ -79,7 +78,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
   const store = useStore.getState();
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
   const memory = getMemory();
-  const safeEntities = entities || {};
 
   // NEW: Handle Partial Intents (Conversational Slot Filling)
   if (entities?.isPartial) {

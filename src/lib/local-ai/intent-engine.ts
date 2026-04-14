@@ -1,7 +1,7 @@
 import { Intent, intents } from '../ai/intents';
 import { spellCheck, getLevenshteinDistance } from './spell-checker';
 import { resolveEntitiesFromContext, resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact, getLastSuggestion, clearLastSuggestion } from './memory-store';
-import { getLearnedIntent, getAllLearnedIntents } from './learning-service';
+import { getLearnedIntent } from './learning-service';
 import { useStore } from '../../store/useStore';
 import { expandSynonyms } from './utils/synonym-mapper';
 
