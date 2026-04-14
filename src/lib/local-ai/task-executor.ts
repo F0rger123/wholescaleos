@@ -79,6 +79,20 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
   const memory = getMemory();
 
+  // Shared numeric parser for financial analysis
+  const parse = (val: any) => {
+    if (!val) return 0;
+    const str = String(val).toLowerCase();
+    const numMatch = str.match(/[\d.]+/);
+    if (!numMatch) return 0;
+    let n = parseFloat(numMatch[0]);
+    if (str.includes('k')) n *= 1000;
+    if (str.includes('m')) n *= 1000000;
+    const DEBUG_MODE = (window as any).DEBUG_AI || true;
+    if (DEBUG_MODE) console.log(`DEBUG: Parsed "${val}" -> ${n}`);
+    return n;
+  };
+
   // NEW: Handle Partial Intents (Conversational Slot Filling)
   if (entities?.isPartial) {
     const missing = entities.missingParams[0];
@@ -1435,6 +1449,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         
         // Try to identify a lead name mentioned in the text
         const mentionedLead = store.leads.find(l => lowerText.includes(l.name.toLowerCase()));
+        
+        // If a NEW lead is mentioned, use IT and do NOT append the previous context lead
         if (mentionedLead) {
           activeEntity = { id: mentionedLead.id, name: mentionedLead.name, type: 'lead' };
         }
@@ -1454,6 +1470,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
            return { success: true, message: `✅ Noted${contextSuffix}. I've updated your communication preferences: "${text}"` };
         } else {
            const factId = `fact_${Date.now()}`;
+           // If we identified a specific lead (either via mention or context), ensure the fact is clear
            const cleanFact = activeEntity?.type === 'lead' && !text.includes(activeEntity.name) 
              ? `${activeEntity.name} ${text.replace(/^that\s+/i, '')}`
              : text;
@@ -1539,15 +1556,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
     case 'subject_to_analysis': {
       const { address, purchase: pRaw, loanBalance: bRaw, rent: rRaw, entryCost: eRaw } = entities;
-      
-      const parse = (val: any) => {
-        if (!val) return 0;
-        // Strip everything but digits, dots, and 'k'
-        const clean = String(val).replace(/[^\d.kK]/g, '');
-        let n = parseFloat(clean.replace(/k/i, ''));
-        if (clean.toLowerCase().includes('k')) n *= 1000;
-        return isNaN(n) ? 0 : n;
-      };
 
       const data = {
         purchase: parse(pRaw),
@@ -1578,13 +1586,6 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     case 'cap_rate_calculation': {
-      const parse = (val: any) => {
-        if (!val) return 0;
-        const clean = String(val).replace(/[^\d.kK]/g, '');
-        let n = parseFloat(clean.replace(/k/i, ''));
-        if (clean.toLowerCase().includes('k')) n *= 1000;
-        return isNaN(n) ? 0 : n;
-      };
 
       const purchase = parse(entities.purchase);
       const noi = parse(entities.noi);
