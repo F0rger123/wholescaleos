@@ -11,6 +11,8 @@ import {
   getLastSuggestion, 
   clearLastSuggestion,
   resolveEntitiesFromContext,
+  getLeadStrategistBrief,
+  detectSentiment,
   Entity
 } from './memory-store';
 import { resolveDate, formatHumanDate } from './utils/date-resolver';
@@ -32,6 +34,8 @@ export interface TaskResponse {
   message: string;
   data?: any;
   clean?: boolean;
+  reasoning?: string[]; // Chain of Thought traces
+  nextIntent?: { name: string; params: any }; // Proactive task chaining
 }
 
 /**
@@ -76,7 +80,24 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
   const userName = store.currentUser?.name?.split(' ')[0] || 'Agent';
   const memory = getMemory();
   const safeEntities = entities || {};
-  const sessionId = safeEntities.sessionId || memory.sessionId || 'default-session';
+
+  // NEW: Handle Partial Intents (Conversational Slot Filling)
+  if (entities?.isPartial) {
+    const missing = entities.missingParams[0];
+    const prompts: Record<string, string> = {
+      'leadName': "I'm ready to analyze that. Which lead were you thinking of?",
+      'strategy': "Got it. Which strategy should we look at: Wholesaling, Flipping, or BRRRR?",
+      'target': "I can handle that. Who's the person you're referring to?",
+      'message': "What would you like the message to say?",
+      'title': "Sure thing. What's the name of this task?"
+    };
+
+    return {
+      success: true,
+      message: prompts[missing] || `I'm almost there. Could you give me the ${missing}?`,
+      reasoning: [`Detected partial intent for "${action}".`, `Missing required parameter: ${missing}`]
+    };
+  }
 
   try {
     switch (action) {
@@ -917,7 +938,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       case 'memory_recall': {
         const memory = getMemory();
-        const recentActions = memory.outcomes.slice(-3).reverse();
+        const recentActions = (memory.outcomes || []).slice(-3).reverse();
         
         if (recentActions.length === 0) {
           return { success: true, message: `I don't have any specific action records for this session yet, but I'm monitoring your pipeline and ready to help!` };
@@ -1085,7 +1106,7 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       case 'follow_up': {
         const topic = entities.topic || 'general';
-        const context = await getConversationContext(store.currentUser?.id || '', sessionId, 5);
+        const context = await getConversationContext(store.currentUser?.id || '', memory.sessionId, 5);
         const lastTopic = context[context.length - 1]?.content || '';
         
         if (topic === 'leads' || lastTopic.includes('lead')) {
@@ -1340,9 +1361,9 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
   
         // Mentioned lead persistence
         if (store.currentUser?.id) {
-          addMentionedLead(store.currentUser.id, sessionId, lead.name);
+          addMentionedLead(store.currentUser.id, memory.sessionId, lead.name);
           pushToEntityStack({ id: lead.id, name: lead.name, type: 'lead' });
-          updateConversationTopic(store.currentUser.id, sessionId, `Leads (${lead.name})`);
+          updateConversationTopic(store.currentUser.id, memory.sessionId, `Leads (${lead.name})`);
         }
   
         if (field === 'phone' || field === 'number') {
@@ -1615,18 +1636,39 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       }
 
       if (lead) {
+        trackLead(lead.id, lead.name);
+        const strategistBrief = getLeadStrategistBrief(lead.id);
+        
         const data = {
           purchase: lead.offerAmount || lead.estimatedValue * 0.7,
-          repairs: 40000, // placeholder default
+          repairs: 45000, 
           arv: lead.estimatedValue || 250000
         };
         const result = calculateDeal('flip', data) as FlipResult;
         const tip = REAL_ESTATE_PRO_TIPS[Math.floor(Math.random() * REAL_ESTATE_PRO_TIPS.length)];
         
+        let message = `${strategistBrief}\n\n### 🏗️ Property Analysis: ${lead.name}\n📍 ${lead.propertyAddress || 'No address on file'}\n\n`;
+        message += `**Deal Score:** ${result.roi > 20 ? '🔥 Strong Buy' : '⚖️ Average'}\n`;
+        message += `- Projected ROI: **${result.roi.toFixed(1)}%**\n`;
+        message += `- Est. Profit: **$${result.profit.toLocaleString()}**\n\n`;
+        
+        if (result.roi < 15) {
+          message += `> [!NOTE]\n> Traditional flipping yields are tight here. I recommend looking at a **Subject-To** or **Seller Finance** play to preserve capital.\n\n`;
+        }
+        
+        message += `**💡 Pro-Tip:** ${tip}\n\n`;
+        message += `Should we proceed with a **Wholesale Assignment** or evaluate a **BRRRR** rental strategy?`;
+
         return {
           success: true,
-          message: `### Analyzing Property: ${lead.name}\n📍 ${lead.propertyAddress || 'No address on file'}\n\n**Quick Deal Recon:**\n- Est. Purchase: $${data.purchase.toLocaleString()}\n- Est. Repairs: $${data.repairs.toLocaleString()}\n- Projected ARV: $${data.arv.toLocaleString()}\n\n**Expert Reasoning:**\nBased on a ${result.roi.toFixed(1)}% ROI, this deal is **${result.roi > 20 ? '🔥 HIGH CONVICTION' : '⚖️ SELECTIVE'}**. The spread is $${result.profit.toLocaleString()} before holding costs. \n\n**💡 Strategist Tip:** ${tip}\n\nShould we draft a low-ball offer for this lead or do you want to run the numbers for a **Rental (BRRRR)** model instead?`,
-          data: { leadId: lead.id }
+          message,
+          data: { leadId: lead.id },
+          reasoning: [
+            `Retrieved deep history for ${lead.name} from memory stack.`,
+            `Analyzed flip margins ($${result.profit.toLocaleString()}) vs holding costs.`,
+            result.roi < 15 ? `ROI below 15% threshold; triggered creative finance recommendation.` : `ROI at ${result.roi.toFixed(1)}%; identified as high-conviction opportunity.`
+          ],
+          nextIntent: { name: 'investment_strategy', params: { leadName: lead.name } }
         };
       }
 

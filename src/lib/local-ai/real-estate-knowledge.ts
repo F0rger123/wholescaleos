@@ -113,6 +113,36 @@ export const REAL_ESTATE_CONCEPTS: Record<string, RealEstateConcept> = {
       'CDOM (Cumulative Days on Market) tracks across multiple listings.',
       'Market average DOM helps gauge buyer demand.'
     ]
+  },
+  'subject-to': {
+    term: 'Subject-To ("Sub2")',
+    definition: 'Buying a property "subject to" the existing financing. The buyer takes over the payments but the original loan stays in the seller\'s name.',
+    example: 'Seller has a 3% interest rate loan. You pay them $10k for their equity and take over their $1,200/mo payment. You get a low-interest loan without qualifying at a bank.',
+    details: [
+      'Perfect for low-equity sellers with low interest rates.',
+      'Requires a "Due on Sale" clause disclosure.',
+      'Entry cost = Arrears + Equity Payment + Closing Costs.'
+    ]
+  },
+  'seller finance': {
+    term: 'Seller Financing / Owner Carryback',
+    definition: 'The seller acts as the bank and provides a loan to the buyer for all or part of the purchase price.',
+    example: 'You buy a $300k house. You give the seller $30k down. They carry a note for $270k at 5% interest for 10 years.',
+    details: [
+      'Can be structured with a "balloon payment" or fully amortized.',
+      'Great for buyers who can\'t get traditional bank financing.',
+      'Negotiable terms (No credit check, no appraisal required).'
+    ]
+  },
+  'novation': {
+    term: 'Novation Agreement',
+    definition: 'A strategy where an investor finds a buyer at a higher price and replaces their contract with the seller for the new buyer, keeping the spread.',
+    example: 'You contract a house for $200k. You find a retail buyer for $250k. You "novate" the contract, the retail buyer buys from the seller, and you keep $50k minus costs.',
+    details: [
+      'Allows you to sell to retail buyers (FHA/VA) while wholesaling.',
+      'Requires the seller\'s cooperation to fix minor repairs.',
+      'Higher profit potential than standard wholesaling.'
+    ]
   }
 };
 
@@ -225,6 +255,36 @@ export const REAL_ESTATE_SCRIPTS: ScriptTemplate[] = [
     title: 'Cold Calling Script (Introduction)',
     script: "Hi [Name], I'm [Your Name], an investor looking specifically for properties in [Neighborhood]. I'm not a big company—I'm just looking to pick up one more project this month. I know this is out of the blue, but have you ever considered an all-cash offer for your place at 123 Main St? No repairs, no commissions.",
     tips: ['Be transparent about being an investor', 'Focus on the "all-cash/no repairs" benefit', 'Keep the intro under 10 seconds']
+  },
+  {
+    category: 'negotiation',
+    title: 'Objection: "Your offer is too low"',
+    script: "I completely understand. If I were in your shoes, I'd want the highest number possible too. The reason my number is at [Amount] is because I'm taking on all the risk of the repairs ($[Repairs]), the carrying costs, and the fact that I'm paying you cash in [Time]. If you list with an agent, you'll pay 6% in commission and likely wait 3-6 months. Which is more important to you right now—the absolute highest price or the certainty of a clean, fast exit?",
+    tips: ['Validate their feeling', 'Itemize the value of convenience', 'Pivot to their core motivation']
+  },
+  {
+    category: 'negotiation',
+    title: 'Objection: "I\'ll think about it"',
+    script: "That makes sense. It's a big decision. Usually when people say they need to think about it, it's either the price or the timeline. Which one of those is weighing on you the most? Or is there something about the process we haven't covered yet?",
+    tips: ['Identify the "Real" objection', 'Don\'t push, just clarify', 'Offer to follow up with a specific data point']
+  }
+];
+
+export const MARKET_INDICATORS = [
+  {
+    name: 'Absorption Rate',
+    good: '> 20% (Seller\'s Market)',
+    warning: '< 12% (Buyer\'s Market)',
+    description: 'How fast inventory is moving.'
+  },
+  {
+    name: 'Fed Funds Rate',
+    impact: 'Directly affects mortgage rates and buyer purchasing power. High rates compress cap rates.',
+    strategy: 'Focus on Creative Finance (Sub2) when traditional rates are high.'
+  },
+  {
+    name: 'Inventory Levels',
+    impact: 'Low inventory = High prices. High inventory = Negotiation leverage for investors.'
   }
 ];
 
@@ -311,7 +371,30 @@ export function calculateDeal(type: 'flip' | 'rental', data: any): FlipResult | 
       coc,
       capRate,
       monthlyMortgage
-    };
+    } as RentalResult;
+  }
+
+  // New: Creative Finance (Subject-To) Analysis
+  if (type as any === 'sub2') {
+    const purchase = Number(data.purchase || 0);
+    const loanBalance = Number(data.loanBalance || purchase * 0.8);
+    const monthlyPITI = Number(data.monthlyPITI || 0);
+    const rent = Number(data.rent || 0);
+    const entryCost = Number(data.entryCost || 0);
+    
+    const cashFlow = rent - monthlyPITI - (rent * 0.15); // subtracting 15% for vacancy/maint
+    const coc = (cashFlow * 12 / (entryCost || 1)) * 100;
+
+    return {
+      type: 'sub2' as any,
+      purchase,
+      loanBalance,
+      entryCost,
+      cashFlow,
+      coc,
+      monthlyPITI,
+      rent
+    } as any;
   }
 
   return null;

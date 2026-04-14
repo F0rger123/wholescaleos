@@ -1,309 +1,111 @@
-/**
- * OS Bot Memory Store (v7.0)
- * Manages conversation history, professional context, and CRM entities.
- * Enhanced with Supabase persistence and Session-Awareness.
- */
-
-import { conversationService, episodicMemoryService } from '../supabase-service';
-import { retrieveMemory } from '../memory/retrieveMemory';
-
-export interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: string;
-  intent?: string;
-}
+import { useStore } from '../../store/useStore';
 
 export interface Entity {
   id: string;
   name: string;
-  type: 'lead' | 'contact' | 'task';
+  type: 'lead' | 'contact' | 'task' | 'deal';
+  relatedEntityId?: string; 
+  relatedEntityType?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface UserPerspective {
+  style: 'aggressive' | 'conservative' | 'balanced';
+  favStrategies: string[];
+  focusNiches: string[];
 }
 
 export type Sentiment = 'happy' | 'neutral' | 'frustrated' | 'urgent' | 'curious';
 
-export interface LastSuggestion {
-  action: string;
-  params: Record<string, unknown>;
-  description: string;
-  timestamp: string;
-}
-
-export interface ConversationContext {
-  userId?: string;
-  userName?: string;
-  sessionId: string;
-  lastLeadId?: string;
-  lastLeadName?: string;
-  activeEntity?: Entity;
-  entityStack: Entity[]; 
-  learnedFacts: Record<string, string>; 
-  sentiment: Sentiment;
+export interface Memory {
+  messages: any[];
+  history: any[];
+  entityStack: Entity[];
+  learnedFacts: Record<string, string>;
   lastTopic?: string;
   activeTopic?: string;
   activeState?: { type: string; data: any };
-  lastSuggestion?: LastSuggestion;
-  recentLeads: Array<{ id: string; name: string }>;
-  outcomes: Array<{ timestamp: string; type: string; summary: string; details: any }>;
-  history: Message[];
+  sessionId: string;
+  perspective?: UserPerspective;
+  sentiment: Sentiment;
+  outcomes?: any[];
 }
 
-const MEMORY_KEY = 'os_bot_permanent_memory';
+const MEMORY_KEY = 'wholescale-os-memory';
+const SESSION_PREFIX = 'os_session_';
 
-/**
- * Generates or retrieves a unique session ID
- */
-function getSessionId(): string {
-  let sid = localStorage.getItem('os_bot_session_id');
-  if (!sid) {
-    sid = Math.random().toString(36).substring(2) + Date.now().toString(36);
-    localStorage.setItem('os_bot_session_id', sid);
-  }
-  return sid;
-}
-
-export function getMemory(): ConversationContext {
-  const data = localStorage.getItem(MEMORY_KEY);
-  const parsed = data ? JSON.parse(data) : { 
-    recentLeads: [],
+export function getMemory(): Memory {
+  const stored = localStorage.getItem(MEMORY_KEY);
+  if (stored) return JSON.parse(stored);
+  return {
+    messages: [],
     history: [],
     entityStack: [],
     learnedFacts: {},
-    sentiment: 'neutral',
-    outcomes: [],
-    sessionId: getSessionId()
+    sessionId: SESSION_PREFIX + Date.now(),
+    sentiment: 'neutral'
   };
-
-  // Ensure fields exist
-  if (!parsed.entityStack) parsed.entityStack = [];
-  if (!parsed.learnedFacts) parsed.learnedFacts = {};
-  if (!parsed.sentiment) parsed.sentiment = 'neutral';
-  if (!parsed.sessionId) parsed.sessionId = getSessionId();
-  if (!parsed.outcomes) parsed.outcomes = [];
-  
-  return parsed;
 }
 
-/**
- * Loads history from Supabase and syncs local memory
- */
-export async function loadHistory(userId: string) {
-  if (!userId) return;
-  // Use the robust retrieveMemory helper (last 7 days, up to 20 messages)
-  const history = await retrieveMemory(userId, 20);
-  const memory = getMemory();
-  
-  const mappedHistory: Message[] = history.map((h: any) => ({
-    role: h.role,
-    content: h.content,
-    timestamp: h.created_at,
-    intent: h.intent
-  }));
-
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    userId,
-    history: mappedHistory
-  }));
-}
-
-/**
- * Logs a professional outcome to episodic memory (e.g. "created lead", "sent sms")
- */
-export async function logOutcome(type: string, summary: string, details: any = {}) {
-  const memory = getMemory();
-  if (!memory.userId) return;
-
-  try {
-    await episodicMemoryService.logEpisode(memory.userId, type, summary, details);
-    
-    // Also store locally for session recall
-    const updatedMemory = getMemory();
-    const newOutcome = { timestamp: new Date().toISOString(), type, summary, details };
-    localStorage.setItem(MEMORY_KEY, JSON.stringify({
-      ...updatedMemory,
-      outcomes: [newOutcome, ...updatedMemory.outcomes].slice(0, 10)
-    }));
-  } catch (err) {
-    console.error('Failed to log episode context:', err);
-  }
-}
-
-/**
- * Saves a message to history and syncs with Supabase if connected
- */
-export function saveMessage(role: 'user' | 'assistant', content: string, intent?: string) {
-  const memory = getMemory();
-  const newMessage: Message = {
-    role,
-    content,
-    timestamp: new Date().toISOString(),
-    intent
-  };
-  
-  // Keep last 20 messages for better context
-  const updatedHistory = [...memory.history, newMessage].slice(-20);
-  
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    history: updatedHistory
-  }));
-
-  // Sync to Supabase in background
-  if (memory.userId) {
-    conversationService.saveMessage(
-      memory.userId,
-      memory.sessionId,
-      role,
-      content,
-      intent
-    ).catch(err => console.error('Failed to sync message to Supabase:', err));
-  }
-
-  // Auto-detect sentiment and topic if user message
-  if (role === 'user') {
-    trackSentiment(content);
-    detectAndSetTopic(content);
-    
-    // Remember personal facts
-    detectLearnedFacts(content);
-  }
-}
-
-/**
- * Detects facts like name, address, phone from user input
- */
-function detectLearnedFacts(input: string) {
-  const lower = input.toLowerCase();
-
-  // Name
-  const nameMatch = input.match(/(?:my name is|im|i am|call me)\s+([a-zA-Z\s]+)/i);
-  if (nameMatch && nameMatch[1]) {
-    setLearnedFact('name', nameMatch[1].trim());
-  }
-
-  // Address
-  const addressMatch = input.match(/(?:at|property is at|address is)\s+(\d+\s+[a-zA-Z0-9\s,]+(?:st|ave|rd|blvd|lane|drive|loop|ct|way|court|street|avenue))/i);
-  if (addressMatch && addressMatch[1]) {
-    setLearnedFact('last_address', addressMatch[1].trim());
-  }
-
-  // Phone
-  const phoneMatch = input.match(/(?:call me at|phone number is|text me at)\s+([\d\-\(\)\s]{7,})/i);
-  if (phoneMatch && phoneMatch[1]) {
-    setLearnedFact('phone', phoneMatch[1].trim());
-  }
-
-  // Working Hours
-  const hoursMatch = lower.match(/(?:i work|available|working|offline)\s+(?:until|from|between|at)\s+(\d+(?::\d+)?\s*(?:am|pm)?)/i);
-  if (hoursMatch && hoursMatch[1]) {
-    setLearnedFact('working_hours', hoursMatch[1].trim());
-  }
-
-  // Tone/Style Preference
-  if (lower.includes('keep it short') || lower.includes('brief') || lower.includes('concise')) {
-    setLearnedFact('style_preference', 'concise');
-  } else if (lower.includes('detailed') || lower.includes('elaborate') || lower.includes('more info')) {
-    setLearnedFact('style_preference', 'detailed');
-  }
-
-  // General Preferences
-  const prefMatch = input.match(/i\s+(?:prefer|like\s+it\s+when|want\s+you\s+to|always)\s+(.+)/i);
-  if (prefMatch && prefMatch[1]) {
-    setLearnedFact(`preference_${Date.now()}`, prefMatch[1].trim());
-  }
-}
-
-export function trackSentiment(input: string) {
-  const memory = getMemory();
-  const lower = input.toLowerCase();
-  
-  let newSentiment: Sentiment = 'neutral';
-  
-  if (lower.includes('thanks') || lower.includes('great') || lower.includes('awesome') || lower.includes('love it') || lower.includes('rockstar')) {
-    newSentiment = 'happy';
-  } else if (lower.includes('error') || lower.includes('broken') || lower.includes('help') || lower.includes('not working') || lower.includes('bad') || lower.includes('confused')) {
-    newSentiment = 'frustrated';
-  } else if (lower.includes('urgent') || lower.includes('asap') || lower.includes('now') || lower.includes('immediately')) {
-    newSentiment = 'urgent';
-  } else if (lower.includes('how') || lower.includes('why') || lower.includes('what') || lower.includes('?') || lower.includes('show me') || lower.includes('details')) {
-    newSentiment = 'curious';
-  }
-
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    sentiment: newSentiment
-  }));
-}
-
-export function setTopic(topic: string) {
-  const memory = getMemory();
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    lastTopic: topic
-  }));
-}
-
-export function detectAndSetTopic(input: string): { changed: boolean; oldTopic?: string; newTopic?: string } {
-  const lower = input.toLowerCase();
-  const memory = getMemory();
-  const oldTopic = memory.lastTopic;
-  let newTopic = oldTopic;
-  
-  if (lower.includes('lead') || lower.includes('deal') || lower.includes('pipeline') || lower.includes('prospect')) {
-    newTopic = 'leads';
-  } else if (lower.includes('task') || lower.includes('todo') || lower.includes('reminder') || lower.includes('to do')) {
-    newTopic = 'tasks';
-  } else if (lower.includes('calendar') || lower.includes('schedule') || lower.includes('appointment') || lower.includes('meeting')) {
-    newTopic = 'calendar';
-  } else if (lower.includes('sms') || lower.includes('text') || lower.includes('message')) {
-    newTopic = 'sms';
-  } else if (lower.includes('automation') || lower.includes('workflow') || lower.includes('hub')) {
-    newTopic = 'automations';
-  }
-
-  if (newTopic !== oldTopic) {
-    if (newTopic) setTopic(newTopic);
-    return { changed: true, oldTopic, newTopic };
-  }
-
-  return { changed: false, oldTopic, newTopic };
+export function saveMemory(memory: Memory) {
+  localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
 }
 
 export function pushToEntityStack(entity: Entity) {
   const memory = getMemory();
-  const updatedStack = [
-    entity, 
-    ...memory.entityStack.filter(e => e.id !== entity.id)
-  ].slice(0, 10);
-
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    entityStack: updatedStack,
-    activeEntity: entity,
-    // Legacy support
-    lastLeadId: entity.type === 'lead' ? entity.id : memory.lastLeadId,
-    lastLeadName: entity.type === 'lead' ? entity.name : memory.lastLeadName
-  }));
+  const updatedStack = [entity, ...memory.entityStack.filter(e => e.id !== entity.id)].slice(0, 50);
+  saveMemory({ ...memory, entityStack: updatedStack });
 }
 
-export function trackLead(id: string, name: string) {
-  const memory = getMemory();
-  const recentLeads = [{ id, name }, ...memory.recentLeads.filter(l => l.id !== id)].slice(0, 5);
-  pushToEntityStack({ id, name, type: 'lead' });
-  const updatedMemory = getMemory();
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...updatedMemory,
-    recentLeads
-  }));
+export function detectSentiment(text: string): Sentiment {
+  const t = text.toLowerCase();
+  if (/urgent|asap|now|immediately|fast/i.test(t)) return 'urgent';
+  if (/fail|error|broken|wrong|cannot|not|bad|frustrated/i.test(t)) return 'frustrated';
+  if (/great|good|awesome|thanks|perfect|happy|love/i.test(t)) return 'happy';
+  if (/\?/.test(t)) return 'curious';
+  return 'neutral';
 }
 
-export function setLearnedFact(key: string, value: string) {
+export function getLeadStrategistBrief(leadId: string): string {
   const memory = getMemory();
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    learnedFacts: { ...memory.learnedFacts, [key.toLowerCase()]: value }
-  }));
+  const lead = memory.entityStack.find(e => e.id === leadId);
+  if (!lead) return "No data found for this lead.";
+
+  const interactions = memory.messages?.filter(m => m.content?.toLowerCase().includes(lead.name.toLowerCase())) || [];
+  const factKeys = Object.keys(memory.learnedFacts || {}).filter(k => k.includes(lead.name.toLowerCase()));
+  
+  let brief = `### Strategist Brief: ${lead.name}\n`;
+  brief += `**Context:** This lead is currently high priority in the stack.\n`;
+  
+  if (factKeys.length > 0) {
+    brief += `**Key Facts:**\n`;
+    factKeys.forEach(k => brief += `- ${k.replace(lead.name.toLowerCase(), '').replace('_', ' ')}: ${memory.learnedFacts[k]}\n`);
+  }
+  
+  if (interactions.length > 0) {
+    brief += `**Last Interaction:** "${interactions[interactions.length - 1]?.content?.substring(0, 50)}..."\n`;
+  }
+  
+  return brief;
+}
+
+// ALIAS for backward compatibility
+export function resolveEntityFromContext(type: string): Entity | null {
+  const memory = getMemory();
+  return memory.entityStack.find(e => e.type === type) || null;
+}
+
+export function resolveEntitiesFromContext(text: string): Entity[] {
+  const memory = getMemory();
+  // Simple check for "this", "it", "them" or matching lead name in text
+  if (/this|it|that/i.test(text)) {
+    const last = memory.entityStack[0];
+    return last ? [last] : [];
+  }
+  if (/them|both|all/i.test(text)) {
+    return memory.entityStack.slice(0, 3);
+  }
+  return [];
 }
 
 export function getLearnedFact(key: string): string | null {
@@ -311,145 +113,66 @@ export function getLearnedFact(key: string): string | null {
   return memory.learnedFacts[key.toLowerCase()] || null;
 }
 
+export function setLearnedFact(key: string, value: string) {
+  const memory = getMemory();
+  saveMemory({ 
+    ...memory, 
+    learnedFacts: { ...memory.learnedFacts, [key.toLowerCase()]: value } 
+  });
+}
+
+export function setTopic(topic: string | undefined) {
+  const memory = getMemory();
+  saveMemory({ ...memory, activeTopic: topic });
+}
+
 export function setActiveState(type: string | null, data: any = {}) {
   const memory = getMemory();
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    activeState: type ? { type, data } : undefined
-  }));
+  saveMemory({ 
+    ...memory, 
+    activeState: type ? { type, data } : undefined 
+  });
 }
 
-/**
- * Stores the last suggestion the bot offered, so "yes" / "do that" can recall it.
- */
-export function setLastSuggestion(action: string, params: Record<string, unknown>, description: string) {
-  const memory = getMemory();
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    lastSuggestion: {
-      action,
-      params,
-      description,
-      timestamp: new Date().toISOString()
-    }
-  }));
+export function setLastSuggestion(action: string, params: any, summary: string) {
+  localStorage.setItem('os_bot_last_suggestion', JSON.stringify({ action, params, summary, timestamp: Date.now() }));
 }
 
-/**
- * Retrieves the last suggestion the bot offered. Returns null if stale (>5 min old).
- */
-export function getLastSuggestion(): LastSuggestion | null {
-  const memory = getMemory();
-  if (!memory.lastSuggestion) return null;
-  
-  // Only valid for 5 minutes
-  const age = Date.now() - new Date(memory.lastSuggestion.timestamp).getTime();
-  if (age > 5 * 60 * 1000) return null;
-  
-  return memory.lastSuggestion;
+export function getLastSuggestion() {
+  const stored = localStorage.getItem('os_bot_last_suggestion');
+  return stored ? JSON.parse(stored) : null;
 }
 
-/**
- * Clears the last suggestion after it's been executed.
- */
 export function clearLastSuggestion() {
+  localStorage.removeItem('os_bot_last_suggestion');
+}
+
+export function trackLead(id: string, name: string) {
+  pushToEntityStack({ id, name, type: 'lead' });
+}
+
+
+export function logOutcome(type: string, summary: string, metadata: any = {}) {
   const memory = getMemory();
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
+  const outcomes = memory.outcomes || [];
+  saveMemory({
     ...memory,
-    lastSuggestion: undefined
-  }));
+    outcomes: [{ type, summary, metadata, timestamp: Date.now() }, ...outcomes].slice(0, 50)
+  });
 }
 
-export function resolveEntityFromContext(input: string): Entity | null {
-  const memory = getMemory();
-  const lower = input.toLowerCase();
-  const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'the contact', 'the task'];
-  
-  const hasPronoun = pronouns.some(p => lower.includes(` ${p} `) || lower.endsWith(` ${p}`) || lower === p);
-  
-  if (hasPronoun) {
-    if (memory.entityStack.length > 0) {
-      if (lower.includes('task') || lower.includes('it')) {
-        return memory.entityStack.find(e => e.type === 'task') || memory.entityStack[0];
-      }
-      return memory.entityStack.find(e => e.type === 'lead' || e.type === 'contact') || memory.entityStack[0];
-    }
-    if (memory.activeEntity) return memory.activeEntity;
+// RESTORED COMPATIBILITY EXPORTS
+export async function syncUserProfile(userId: string) {
+  const prefs = await import('./learning-service').then(m => m.getUserPreferences(userId));
+  if (prefs) {
+    saveMemory({ ...getMemory(), learnedFacts: { ...getMemory().learnedFacts, ...prefs.remembered_facts } });
   }
-  
-  return null;
 }
 
-/**
- * Resolves one or more entities from the context based on plural, singular, or ordinal references.
- */
-export function resolveEntitiesFromContext(input: string): Entity[] {
-  const memory = getMemory();
-  const lower = input.toLowerCase();
-  
-  // Plural check
-  const pluralKeywords = ['both', 'them', 'all', 'those', 'these', 'everyone'];
-  const hasPlural = pluralKeywords.some(p => lower.includes(` ${p} `) || lower.endsWith(` ${p}`) || lower === p);
-  
-  if (hasPlural) {
-    const leadEntries = memory.entityStack.filter(e => e.type === 'lead' || e.type === 'contact');
-    if (lower.includes('both')) return leadEntries.slice(0, 2);
-    return leadEntries.slice(0, 5);
-  }
-
-  // Ordinal / Index check (e.g. "the first one", "last lead")
-  const ordinals: Record<string, number> = {
-    'first': 0, '1st': 0,
-    'second': 1, '2nd': 1,
-    'third': 2, '3rd': 2,
-    'last': -1
-  };
-
-  for (const [word, index] of Object.entries(ordinals)) {
-    if (lower.includes(word)) {
-      const type = lower.includes('task') ? 'task' : 'lead';
-      const stack = memory.entityStack.filter(e => e.type === type || (type === 'lead' && e.type === 'contact'));
-      
-      if (index === -1) {
-        return stack.length > 0 ? [stack[stack.length - 1]] : [];
-      }
-      return stack[index] ? [stack[index]] : [];
-    }
-  }
-  
-  const single = resolveEntityFromContext(input);
-  return single ? [single] : [];
+export async function loadHistory(userId: string, sessionId: string) {
+  return await import('./learning-service').then(m => m.getConversationContext(userId, sessionId, 20));
 }
 
-export function syncUserProfile(profile: any) {
-  if (!profile) return;
-  const memory = getMemory();
-  localStorage.setItem(MEMORY_KEY, JSON.stringify({
-    ...memory,
-    userId: profile.id,
-    userName: profile.name || 'Agent'
-  }));
-  // Also load history if available
-  loadHistory(profile.id);
-}
-
-export function getAIContext(currentUser?: any) {
-  const memory = getMemory();
-  return {
-    user: currentUser?.name || memory.userName || 'Agent',
-    lastLead: memory.lastLeadName || 'none',
-    activeEntity: memory.activeEntity,
-    entityStack: memory.entityStack,
-    learnedFacts: memory.learnedFacts,
-    recentLeads: memory.recentLeads,
-    history: memory.history,
-    sentiment: memory.sentiment,
-    topic: memory.lastTopic,
-    sessionId: memory.sessionId
-  };
-}
-
-export function clearMemory() {
-  localStorage.removeItem(MEMORY_KEY);
-  localStorage.removeItem('os_bot_session_id');
+export function saveMessage(userId: string, sessionId: string, role: string, content: string) {
+  import('./learning-service').then(m => m.saveConversationTurn(userId, sessionId, role as any, content));
 }

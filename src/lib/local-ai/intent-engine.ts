@@ -1,6 +1,6 @@
 import { Intent, intents } from '../ai/intents';
 import { spellCheck, getLevenshteinDistance } from './spell-checker';
-import { resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact, getLastSuggestion, clearLastSuggestion } from './memory-store';
+import { resolveEntitiesFromContext, resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact, getLastSuggestion, clearLastSuggestion } from './memory-store';
 import { getLearnedIntent, getAllLearnedIntents } from './learning-service';
 import { useStore } from '../../store/useStore';
 import { expandSynonyms } from './utils/synonym-mapper';
@@ -10,7 +10,7 @@ const DEBUG_MODE = true;
 
 function debugLog(stage: string, message: string, data?: unknown) {
   if (!DEBUG_MODE) return;
-  console.log(`[🐛 OS Bot Debug][${stage}] ${message}`, data ?? '');
+  console.log(`[🚀 OS Strategist Debug][${stage}] ${message}`, data ?? '');
 }
 
 export interface ParsedIntent {
@@ -22,7 +22,8 @@ export interface ParsedIntent {
   isConfirming?: boolean;
   suggestion?: string;
   needsAgentLoop: boolean;
-  matchedBy?: string; // Debug: which stage matched this intent
+  matchedBy?: string; 
+  reasoning?: string; // Chain of Thought reasoning
 }
 
 /**
@@ -91,6 +92,107 @@ export function splitMultiIntent(input: string): string[] {
   const segments = input.split(/\s+(?:and also|and then|after that|as well as|then|and|plus|also)\s+/i);
   if (segments.length <= 1) return [input];
   return segments.map(s => s.trim()).filter(s => s.length > 2);
+}
+
+/**
+ * Evaluates an intent against normalized input and context.
+ * Returns a score from 0-100.
+ */
+function scoreIntent(intent: any, input: string, context: any): { score: number; params: any } {
+  let score = 0;
+  let detectedParams: any = {};
+  const normalized = input.toLowerCase().trim();
+
+  // 1. Regex Match (High Weight: 70-100)
+  if (intent.patterns) {
+    for (const pattern of intent.patterns) {
+      if (pattern instanceof RegExp) {
+        const match = normalized.match(pattern);
+        if (match) {
+          score = 100;
+          if (intent.params && typeof intent.params === 'function') {
+            detectedParams = intent.params(match);
+          } else if (intent.params) {
+            detectedParams = intent.params;
+          }
+          break;
+        }
+      } else if (typeof pattern === 'string') {
+        const lowerPattern = pattern.toLowerCase();
+        if (normalized === lowerPattern) {
+          score = 100;
+          detectedParams = intent.params || {};
+          break;
+        } else if (normalized.includes(lowerPattern)) {
+          score = Math.max(score, 70);
+          detectedParams = intent.params || {};
+        }
+      }
+    }
+  }
+
+  // 2. Contextual Boosting (Bonus: 10-20)
+  const activeState = context.activeState;
+  if (activeState) {
+    // Boost intent if it matches the active topic/state
+    if (activeState.type.toLowerCase().includes(intent.intent.toLowerCase())) {
+      score += 20;
+    }
+  }
+
+  // 3. Keyword Density (Medium Weight: 0-60)
+  if (score < 70) {
+    const keywords = intent.intent.split('_');
+    const matches = keywords.filter((kw: string) => normalized.includes(kw));
+    const keywordScore = (matches.length / keywords.length) * 60;
+    score = Math.max(score, keywordScore);
+  }
+
+  return { score: Math.min(score, 100), params: detectedParams };
+}
+
+/**
+ * Fallback semantic matching when regex fails.
+ */
+function fuzzyIntentMatch(input: string, allIntents: any[]): ParsedIntent | null {
+  const normalized = input.toLowerCase().trim();
+  const words = normalized.split(/\s+/);
+  
+  let bestMatch: any = null;
+  let highestScore = 0;
+
+  for (const intent of allIntents) {
+    const keywords = intent.name.split('_');
+    let hits = 0;
+    
+    keywords.forEach((kw: string) => {
+      if (normalized.includes(kw)) hits++;
+      // Check for fuzzy match on keywords
+      words.forEach(word => {
+        if (getLevenshteinDistance(word, kw) <= 1) hits += 0.5;
+      });
+    });
+
+    const score = (hits / keywords.length) * 40; // Max 40 for fuzzy
+    if (score > highestScore && score > 20) {
+      highestScore = score;
+      bestMatch = intent;
+    }
+  }
+
+  if (bestMatch) {
+    debugLog('FUZZY', `Matched by semantic density: ${bestMatch.name} (Score: ${highestScore})`);
+    return {
+      intent: bestMatch,
+      params: {},
+      confidence: Math.round(highestScore),
+      needsAgentLoop: false,
+      matchedBy: 'semantic_fallback',
+      reasoning: `No direct pattern matched, but query shares ${Math.round(highestScore)}% semantic overlap with ${bestMatch.name}.`
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -1032,167 +1134,131 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     },
   ];
 
-  // Test both the original lowered input AND the normalized version
-  const inputsToTest = [lowerOrig, normalized];
-  // Remove duplicates
-  const uniqueInputs = [...new Set(inputsToTest)];
+  // STAGE 2: Multi-Candidate Intent Scoring
+  let candidates: { intent: Intent; params: any; score: number; matchedBy: string }[] = [];
 
-  for (const h of handlers) {
-    for (const testInput of uniqueInputs) {
-      for (const pattern of h.patterns) {
-        const match = testInput.match(pattern);
-        if (match) {
-          const intentObj = intents.find(i => i.name === h.intent);
-          if (intentObj) {
-            const params = h.params(match as string[]) as Record<string, unknown>;
-            
-            const pronouns = ['him', 'her', 'them', 'it', 'his', 'hers', 'their', 'the lead', 'that lead', 'this lead', 'the contact', 'the task'];
-            if (typeof params.target === 'string' && activeEntity && pronouns.includes((params.target as string).toLowerCase())) {
-              params.target = activeEntity.name;
-            }
-            if (typeof params.name === 'string' && activeEntity && pronouns.includes((params.name as string).toLowerCase())) {
-              params.name = activeEntity.name;
-            }
-            if (typeof params.leadName === 'string' && activeEntity && pronouns.includes((params.leadName as string).toLowerCase())) {
-              params.leadName = activeEntity.name;
-            }
-
-            debugLog('MATCHED', `Regex handler: "${testInput}" matched ${h.intent}`, { pattern: pattern.toString(), params });
-            return { intent: intentObj, params, confidence: 100, needsAgentLoop, matchedBy: `regex_handler:${h.intent}` };
-          }
-        }
-      }
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // STAGE 5: LEARNED INTENTS (from Supabase)
-  // Check learned intents BEFORE fuzzy matching / typo suggestions
-  // ═══════════════════════════════════════════════════════════════════════
+  // Check learned intents (Supabase)
   const userId = useStore.getState().currentUser?.id;
-  
   if (userId) {
-    debugLog('LEARNED', 'Checking learned intents...');
-    
-    // Check exact learned intent first
     const learnedIntent = await getLearnedIntent(userId, normalized);
     if (learnedIntent) {
       const intentObj = intents.find(i => i.name === learnedIntent.mapped_intent);
       if (intentObj) {
-        debugLog('MATCHED', `Learned intent (exact): "${normalized}" → ${learnedIntent.mapped_intent}`);
-        return {
+        candidates.push({
           intent: intentObj,
           params: { ...learnedIntent.params },
-          confidence: learnedIntent.confidence,
-          originalText: input,
-          needsAgentLoop: detectMultiStep(input),
+          score: 100,
           matchedBy: 'learned_exact'
-        };
+        });
       }
     }
+  }
+
+  // Score all handlers
+  for (const h of handlers) {
+    const { score, params } = scoreIntent(h, normalized, memory);
+    if (score > 30) {
+      const intentObj = intents.find(i => i.name === h.intent);
+      if (intentObj) {
+        candidates.push({
+          intent: intentObj,
+          params,
+          score,
+          matchedBy: score === 100 ? 'regex_match' : 'pattern_overlap'
+        });
+      }
+    }
+  }
+
+  // STAGE 3: Semantic Density Fallback
+  if (candidates.length === 0 || candidates.every(c => c.score < 80)) {
+    const fuzzyMatch = fuzzyIntentMatch(normalized, intents);
+    if (fuzzyMatch) {
+      candidates.push({
+        intent: fuzzyMatch.intent,
+        params: fuzzyMatch.params,
+        score: fuzzyMatch.confidence,
+        matchedBy: 'semantic_fallback'
+      });
+    }
+  }
+
+  // STAGE 4: Final Candidate Selection
+  candidates.sort((a, b) => b.score - a.score);
+  const best = candidates[0];
+
+  if (best && best.score >= 30) {
+    debugLog('STRATEGIST', `Winning Intent: ${best.intent.name} (Score: ${best.score}, Method: ${best.matchedBy})`);
     
-    // Check all learned intents for similar phrases
-    const allLearned = await getAllLearnedIntents(userId);
-    if (!learnedIntent && allLearned.length > 0) {
-      const words = normalized.split(/\s+/);
-      for (const learned of allLearned) {
-        const learnedWords = learned.phrase.split(/\s+/);
-        const overlap = words.filter(w => learnedWords.includes(w)).length;
-        const similarity = overlap / Math.max(words.length, learnedWords.length);
-        
-        if (similarity >= 0.6) {
-          const intentObj = intents.find(i => i.name === learned.mapped_intent);
-          if (intentObj) {
-            debugLog('MATCHED', `Learned intent (similar ${Math.round(similarity*100)}%): "${normalized}" ≈ "${learned.phrase}"`);
-            return {
-              intent: intentObj,
-              params: { ...learned.params },
-              confidence: Math.floor((learned.confidence || 100) * similarity),
-              originalText: input,
-              needsAgentLoop: detectMultiStep(input),
-              matchedBy: 'learned_similar'
-            };
-          }
+    // NEW: Conversational Slot Filling & Subject Resolution
+    const updatedParams: any = { ...best.params };
+    const required = best.intent.required_params || [];
+    const missing: string[] = [];
+
+    // Resolve context for missing params before declaring them missing
+    for (const r of required) {
+      if (!updatedParams[r]) {
+        // Try to resolve from context stack
+        const resolved = resolveEntitiesFromContext(r)[0]; 
+        if (resolved) {
+          updatedParams[r] = resolved.name;
+          if (r === 'leadName') updatedParams.leadId = resolved.id;
+          debugLog('CONTEXT', `Auto-resolved missing ${r} to "${resolved.name}" from context.`);
+        } else {
+          missing.push(r);
         }
       }
     }
-  }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STAGE 6: FUZZY SCORE-BASED MATCHING
-  // Only for longer inputs (3+ words) to avoid false positives on short phrases
-  // ═══════════════════════════════════════════════════════════════════════
-  if (wordCount >= 3) {
-    const scores = intents
-      .filter(i => i.name !== 'small_talk' && i.name !== 'greeting') // Don't fuzzy-match small talk
-      .map(intent => ({
-        intent,
-        score: calculateIntentScore(normalized, intent)
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    const bestMatchResult = scores[0];
-    debugLog('FUZZY', `Best fuzzy match: ${bestMatchResult?.intent.name} (score: ${bestMatchResult?.score})`);
-    
-    if (bestMatchResult && bestMatchResult.score >= 75) {
-      debugLog('MATCHED', `Fuzzy match: "${normalized}" → ${bestMatchResult.intent.name} (score: ${bestMatchResult.score})`);
+    // If still missing required params, mark as partial
+    if (missing.length > 0) {
+      debugLog('PARTIAL', `Missing required params for ${best.intent.name}: ${missing.join(', ')}`);
       return {
-        intent: bestMatchResult.intent,
-        params: {},
-        confidence: bestMatchResult.score,
-        originalText: input,
-        needsAgentLoop: detectMultiStep(input),
-        matchedBy: 'fuzzy_score'
-      };
+        intent: best.intent,
+        params: updatedParams,
+        confidence: best.score,
+        isPartial: true,
+        missingParams: missing,
+        needsAgentLoop: false,
+        matchedBy: 'partial_match_slot_filling',
+        reasoning: `Matched "${best.intent.name}" but I'm missing the ${missing[0]}. I should ask for it.`
+      } as any;
     }
+
+    return {
+      intent: best.intent,
+      params: updatedParams,
+      confidence: best.score,
+      originalText: input,
+      needsAgentLoop,
+      matchedBy: best.matchedBy,
+      reasoning: best.score === 100 
+        ? `Direct strategist match for "${best.intent.name}".` 
+        : `Semantic overlap of ${best.score}% detected with "${best.intent.name}" intent.`
+    };
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STAGE 7: TYPO SUGGESTIONS (LAST RESORT)
-  // Only suggest typos for words that are very close (distance 1) to known
-  // command keywords, and only if the word is at least 4 chars long.
-  // ═══════════════════════════════════════════════════════════════════════
-  const commandKeywords = [
-    'lead', 'leads', 'task', 'tasks', 'sms', 'text', 'message', 'calendar',
-    'email', 'schedule', 'pipeline', 'automation', 'workflow', 'dashboard',
-    'settings', 'help', 'weather', 'motivation', 'quote', 'joke',
-  ];
-
+  // STAGE 5: Typo Suggestion
   const inputWords = normalized.split(/\s+/);
-  
-  // Only attempt typo correction if input has 1-3 words 
-  // (longer phrases should go to clarification, not typo suggestion)
   if (inputWords.length <= 3) {
-    for (const keyword of commandKeywords) {
+    const keywords = ['lead', 'task', 'sms', 'text', 'calendar', 'weather', 'motivation', 'help'];
+    for (const kw of keywords) {
       for (const word of inputWords) {
-        // Skip short words and words that are already valid small-talk
-        // Require 5+ chars to reduce false positives (was 4)
-        if (word.length < 5) continue;
-        if (isSmallTalkPhrase(word)) continue;
-        
-        const distance = getLevenshteinDistance(word, keyword);
-        // Only suggest if distance is exactly 1 (very close match)
-        if (distance === 1) {
-          const suggestedText = normalized.replace(word, keyword);
-          debugLog('MATCHED', `Typo suggestion: "${word}" → "${keyword}" (distance: ${distance})`);
+        if (word.length >= 4 && getLevenshteinDistance(word, kw) === 1) {
+          debugLog('TYPO', `Suggested: ${kw} for ${word}`);
           return {
-            intent: { name: 'typo_suggestion', action: 'small_talk', patterns: [], template: `I think you meant '${keyword}'?` },
-            params: { text: `I think you meant '${keyword}'?`, suggestedText, keyword },
+            intent: intents.find(i => i.name === 'typo_suggestion')!,
+            params: { suggestion: kw },
             confidence: 100,
-            suggestion: keyword,
-            needsAgentLoop,
-            matchedBy: 'typo_suggestion'
+            needsAgentLoop: false,
+            matchedBy: 'typo_detection'
           };
         }
       }
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // STAGE 8: GRACEFUL FALLBACK — ASK FOR CLARIFICATION
-  // Instead of "I didn't understand", ask the user what they meant.
-  // ═══════════════════════════════════════════════════════════════════════
-  debugLog('NO_MATCH', `No intent matched for: "${input}"`);
+  debugLog('NO_MATCH', `No intent reached threshold for: "${input}"`);
   return null;
   } catch (error) {
     console.error('[💩 OS Bot] Crash in recognizeIntent:', error);
