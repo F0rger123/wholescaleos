@@ -655,9 +655,9 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     {
       intent: 'subject_to_analysis',
       patterns: [
-        /(?:analyze|calculate|run|calc)(?:\s+property\s+at|\s+address)?\s+(.*)\s+as\s+(?:subject-to|sub-2|sub2|creative)\s+deal\.?\s+purchase\s+\$?([\d,.]+[kK]?),\s+loan\s+(?:balance|amt|amount)?\s+\$?([\d,.]+[kK]?),\s+rent\s+\$?([\d,.]+[kK]?),\s+entry\s+(?:cost|amt|mt)?\s+\$?([\d,.]+[kK]?)/i,
-        /sub-2 analysis for (.*):\s*purchase\s+\$?([\d,.]+[kK]?),?\s+balance\s+\$?([\d,.]+[kK]?),?\s+rent\s+\$?([\d,.]+[kK]?),?\s+entry\s+\$?([\d,.]+[kK]?)/i,
-        /subject-to:?\s+(.*)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)/i
+        /analyze property (?:at )?(.+) as (?:a )?subject[- ]?to deal\.?\s+(?:purchase|price|for)\s*\$?([\d,.]+[kK]?|\d+).*?(?:loan|balance)\s*\$?([\d,.]+[kK]?|\d+).*?rent\s*\$?([\d,.]+[kK]?|\d+).*?(?:entry|cost)\s*\$?([\d,.]+[kK]?|\d+)/i,
+        /subject-to:?\s+(.*)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)\s+\$?([\d,.]+[kK]?)/i,
+        /(?:analyze|calculate|run|calc)(?:\s+property\s+at|\s+address)?\s+(.*)\s+as\s+(?:subject-to|sub-2|sub2|creative)\s+deal\.?\s+purchase\s+\$?([\d,.]+[kK]?),?\s+loan\s+(?:balance|amt|amount)?\s+\$?([\d,.]+[kK]?),?\s+rent\s+\$?([\d,.]+[kK]?),?\s+entry\s+(?:cost|amt|mt)?\s+\$?([\d,.]+[kK]?)/i
       ],
       params: (matches: string[]) => ({
         address: matches[1]?.trim(),
@@ -671,13 +671,23 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       intent: 'cap_rate_calculation',
       patterns: [
         /cap rate on a \$?([\d,.]+[kK]?) property with \$?([\d,.]+[kK]?) noi/i,
-        /calculate cap rate:? \$?([\d,.]+[kK]?) purchase, \$?([\d,.]+[kK]?) noi/i,
+        /calculate cap rate:?\s*\$?([\d,.]+[kK]?|\d+).*?(?:purchase|price|for).*?\$?([\d,.]+[kK]?|\d+)\s*noi/i,
+        /calculate cap rate:?\s*\$?([\d,.]+[kK]?|\d+)\s*(?:purchase|price|for).*?\$?([\d,.]+[kK]?|\d+).*?noi/i,
         /cap rate for \$?([\d,.]+[kK]?) price and \$?([\d,.]+[kK]?) income/i
       ],
       params: (matches: string[]) => ({
         purchase: matches[1]?.trim(),
         noi: matches[2]?.trim()
       })
+    },
+    {
+      intent: 'real_estate_knowledge',
+      patterns: [
+        /(?:what is|what's) a good cap rate/i,
+        /what cap rate is good/i,
+        /common cap rates/i
+      ],
+      params: () => ({ concept: 'cap rate' })
     },
     {
       intent: 'property_analysis',
@@ -738,7 +748,17 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
       patterns: [
         /^(?:analyze|look at|is this a good deal)\??$/i,
         /^(?:analyze|is this a good deal|is it a good deal)\s+(?:the property for|the property of|the property for lead|lead|deal|property|for)?\s+(.*)$/i,
-        /^(?:analyze)\s+(.*)$/i
+        /^(?:analyze)\s+(.*)$/i,
+        /^\s*is\s+(.*)'s\s+house\s+a\s+good\s+deal\b/i
+      ],
+      params: (matches: string[]) => ({ target: matches[1]?.trim() })
+    },
+    {
+      intent: 'memory_recall',
+      patterns: [
+        /(?:what do you remember|what do you know) about (.*)/i,
+        /tell me about (.*)/i,
+        /who is (.*)/i
       ],
       params: (matches: string[]) => ({ target: matches[1]?.trim() })
     },

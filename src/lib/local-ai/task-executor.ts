@@ -936,10 +936,38 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
 
       case 'memory_recall': {
         const memory = getMemory();
+        const target = (entities.target || '').toLowerCase().trim();
         const recentActions = (memory.outcomes || []).slice(-3).reverse();
         
-        if (recentActions.length === 0) {
-          return { success: true, message: `I don't have any specific action records for this session yet, but I'm monitoring your pipeline and ready to help!` };
+        // Lead-specific memory search
+        if (target && target !== 'me') {
+          const leadMatch = findLeadFuzzy(target, store.leads);
+          const searchName = leadMatch.lead?.name || target;
+          
+          const relevantFacts = memory.learnedFacts ? Object.entries(memory.learnedFacts)
+            .filter(([key, val]) => {
+              const lowerKey = key.toLowerCase();
+              const lowerVal = String(val).toLowerCase();
+              return lowerKey.includes(target) || lowerVal.includes(target) || (leadMatch.lead && (lowerKey.includes(leadMatch.lead.name.toLowerCase()) || lowerVal.includes(leadMatch.lead.name.toLowerCase())));
+            })
+            .map(([_, val]) => val) : [];
+
+          if (relevantFacts.length > 0) {
+            return {
+              success: true,
+              message: `### 🧠 Memory for **${searchName}**\n\n` +
+                       relevantFacts.map(f => `• ${f}`).join('\n')
+            };
+          }
+
+          return {
+            success: true,
+            message: `I don't have any specific facts on file for **${searchName}** yet. Just tell me something like "Remember that ${searchName} prefers texting" and I'll file it away!`
+          };
+        }
+
+        if (recentActions.length === 0 && (!memory.learnedFacts || Object.keys(memory.learnedFacts).length === 0)) {
+          return { success: true, message: `I don't have any specific action records or learned facts for this session yet, but I'm monitoring your pipeline and ready to help!` };
         }
 
         let msg = `Here's what I remember doing for you recently:\n\n`;
@@ -948,11 +976,11 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
           msg += `- [${time}] **${a.type.replace('_', ' ')}**: ${a.summary}\n`;
         });
         
-        const lastFact = memory.learnedFacts && Object.keys(memory.learnedFacts).length > 0 
-          ? `\nI also remember that **${Object.keys(memory.learnedFacts)[0]}** is **${Object.values(memory.learnedFacts)[0]}**.` 
-          : "";
+        const facts = memory.learnedFacts ? Object.values(memory.learnedFacts).slice(0, 3) : [];
+        if (facts.length > 0) {
+          msg += `\n**Key Facts Learned:**\n` + facts.map(f => `• ${f}`).join('\n');
+        }
           
-        msg += lastFact;
         return { success: true, message: msg };
       }
 
@@ -1401,8 +1429,16 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
         const text = entities.text || entities.content || entities.fact;
         if (!text) return { success: true, message: "What specifically would you like me to remember?" };
         
-        // Contextual Check: Is there a lead mentioned?
-        const activeEntity = memory.entityStack?.[0];
+        // Name Extraction Check: Does the text mention a lead name?
+        let activeEntity = memory.entityStack?.[0];
+        const lowerText = text.toLowerCase();
+        
+        // Try to identify a lead name mentioned in the text
+        const mentionedLead = store.leads.find(l => lowerText.includes(l.name.toLowerCase()));
+        if (mentionedLead) {
+          activeEntity = { id: mentionedLead.id, name: mentionedLead.name, type: 'lead' };
+        }
+
         const contextSuffix = activeEntity?.type === 'lead' ? ` for **${activeEntity.name}**` : '';
 
         // Personality check
@@ -1418,9 +1454,13 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
            return { success: true, message: `✅ Noted${contextSuffix}. I've updated your communication preferences: "${text}"` };
         } else {
            const factId = `fact_${Date.now()}`;
-           await rememberFact(userId, factId, activeEntity?.type === 'lead' ? `${activeEntity.name}: ${text}` : text);
-           setLearnedFact(factId, text);
-           return { success: true, message: `✅ I've filed that away${contextSuffix}. I'll remember: "${text}"` };
+           const cleanFact = activeEntity?.type === 'lead' && !text.includes(activeEntity.name) 
+             ? `${activeEntity.name} ${text.replace(/^that\s+/i, '')}`
+             : text;
+             
+           await rememberFact(userId, factId, cleanFact);
+           setLearnedFact(factId, cleanFact);
+           return { success: true, message: `✅ I've filed that away${contextSuffix}. I'll remember: "${cleanFact}"` };
         }
       }
 
@@ -1502,9 +1542,11 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
       
       const parse = (val: any) => {
         if (!val) return 0;
-        let n = parseFloat(String(val).replace(/[\$,]/g, '').replace(/k/i, ''));
-        if (String(val).toLowerCase().endsWith('k')) n *= 1000;
-        return n;
+        // Strip everything but digits, dots, and 'k'
+        const clean = String(val).replace(/[^\d.kK]/g, '');
+        let n = parseFloat(clean.replace(/k/i, ''));
+        if (clean.toLowerCase().includes('k')) n *= 1000;
+        return isNaN(n) ? 0 : n;
       };
 
       const data = {
@@ -1538,36 +1580,44 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     case 'cap_rate_calculation': {
       const parse = (val: any) => {
         if (!val) return 0;
-        let n = parseFloat(String(val).replace(/[\$,]/g, '').replace(/k/i, ''));
-        if (String(val).toLowerCase().endsWith('k')) n *= 1000;
-        return n;
+        const clean = String(val).replace(/[^\d.kK]/g, '');
+        let n = parseFloat(clean.replace(/k/i, ''));
+        if (clean.toLowerCase().includes('k')) n *= 1000;
+        return isNaN(n) ? 0 : n;
       };
 
       const purchase = parse(entities.purchase);
       const noi = parse(entities.noi);
 
       if (purchase === 0 || noi === 0) {
-        return { success: false, message: "I need both the Purchase Price and the NOI to calculate the Cap Rate. (e.g., 'Cap rate for $400k property with $30k NOI')" };
+        return { success: false, message: "I need both the Purchase Price and the NOI to calculate the Cap Rate. (e.g., 'What's the cap rate on a $500k house with $45k NOI?')" };
       }
 
       const capRate = (noi / purchase) * 100;
+      let assessment = "fair";
+      if (capRate >= 8) assessment = "strong";
+      if (capRate >= 10) assessment = "excellent";
+      if (capRate < 6) assessment = "modest";
       
       return {
         success: true,
-        message: `### 📊 Cap Rate Calculation\n\n` +
+        message: `### 📊 Cap Rate Analysis\n\n` +
                  `- **Purchase Price:** $${purchase.toLocaleString()}\n` +
                  `- **Net Operating Income (NOI):** $${noi.toLocaleString()}\n\n` +
-                 `📐 **Formula:** (NOI / Purchase Price) * 100\n` +
                  `✅ **Result:** **${capRate.toFixed(2)}%**\n\n` +
-                 `**What this means:**\n` +
-                 `The Cap Rate (Capitalization Rate) represents the natural yield of the property in one year if it were purchased strictly for cash. In most markets, a 7-8% cap rate is considered healthy for residential multi-family.`
+                 `This is considered a **${assessment}** return for a standard residential deal. ` +
+                 (capRate > 9 ? "You have high cash flow potential here." : "This is a stable, lower-risk yield play.")
       };
     }
 
     case 'worst_leads': {
       const limit = entities.limit || 5;
       const worstLeads = [...store.leads]
-        .sort((a, b) => (a.dealScore || 0) - (b.dealScore || 0))
+        .sort((a, b) => {
+          const scoreA = (a as any).dealScore || (a as any).score || (a as any).lead_score || 0;
+          const scoreB = (b as any).dealScore || (b as any).score || (b as any).lead_score || 0;
+          return scoreA - scoreB;
+        })
         .slice(0, limit);
 
       if (worstLeads.length === 0) return { success: true, message: "Your pipeline is currently empty. No 'worst' leads to report!" };
@@ -1576,7 +1626,8 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
                 `These leads have the lowest engagement scores in your CRM. You might want to move them to a long-term drip or archive them.\n\n`;
       
       worstLeads.forEach((l, i) => {
-        msg += `${i + 1}. **${l.name}** (Score: ${l.dealScore || 0})\n   - Status: ${l.status}\n   - Last Action: ${l.updatedAt ? new Date(l.updatedAt).toLocaleDateString() : 'N/A'}\n`;
+        const score = (l as any).dealScore || (l as any).score || (l as any).lead_score || 0;
+        msg += `${i + 1}. **${l.name}** (Score: ${score})\n   - Status: ${l.status}\n   - Last Action: ${l.updatedAt ? new Date(l.updatedAt).toLocaleDateString() : 'N/A'}\n`;
       });
 
       return { success: true, message: msg };
@@ -1829,9 +1880,17 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     }
 
     case 'marketing_tips': {
-      const category = (entities.category || '').toLowerCase();
+      let category = (entities.category || '').toLowerCase();
+      
+      // Contextual follow-up check
+      const memory = getMemory();
+      if (!category && memory.activeState?.name === 'AWAITING_MARKETING_CHOICE') {
+         // If they just typed "SEO", intent-engine would catch it, 
+         // but if they typed something ambiguous, we default to random or ask again.
+      }
+
       const tip = category 
-        ? REAL_ESTATE_MARKETING_TIPS.find(t => t.category.includes(category) || category.includes(t.category))
+        ? REAL_ESTATE_MARKETING_TIPS.find(t => t.category.toLowerCase().includes(category) || category.includes(t.category.toLowerCase()))
         : REAL_ESTATE_MARKETING_TIPS[Math.floor(Math.random() * REAL_ESTATE_MARKETING_TIPS.length)];
 
       if (tip) {
