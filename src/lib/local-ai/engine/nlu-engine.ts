@@ -12,14 +12,16 @@ export interface ParsedIntent {
 /**
  * The Brain of OS Bot's NLU.
  * Combines high-precision Gemini extraction with a local regex "Fast Path".
+ * v11.0: Supports mid-sentence corrections, entity linking, and proactive triggers.
  */
 export class NLUEngine {
   private static FAST_PATH_PATTERNS = [
-    { regex: /^(hi|hello|hey|yo|good morning|good evening)/i, intent: 'greeting' },
-    { regex: /^(help|what can you do|commands)/i, intent: 'help' },
+    { regex: /^(hi|hello|hey|yo|greetings|good morning|good evening)/i, intent: 'system_action', params: { action: 'small_talk' } },
+    { regex: /^(help|what can you do|commands|capabilities|skills)/i, intent: 'system_action', params: { action: 'help' } },
     { regex: /^(show|list|get) (my )?leads/i, intent: 'crm_action', params: { action: 'filter_leads' } },
     { regex: /^(show|list|get) (my )?tasks/i, intent: 'task_action', params: { action: 'list_tasks' } },
-    { regex: /^(go to|navigate to) (.*)/i, intent: 'navigate' }
+    { regex: /^(go to|navigate to|open) (.*)/i, intent: 'system_action', params: { action: 'navigate' } },
+    { regex: /^(any suggestions|what should i do|check pipeline)/i, intent: 'proactive_trigger' }
   ];
 
   /**
@@ -53,23 +55,26 @@ export class NLUEngine {
     const memory = getMemory();
     const history = await getConversationContext(store.currentUser?.id || 'system', memory.sessionId);
 
-    const systemPrompt = `You are the NLU engine for WholeScale OS. Your job is to extract the user's intent and entities with high precision.
+    const systemPrompt = `You are the NLU engine for OS Bot, a high-performance real estate assistant.
+    Your job is to extract the user's intent and entities with extreme precision. 
     Return ONLY valid JSON.
     
     INTENTS:
-    - crm_action: { "action": "get_lead|create_lead|update_status|filter_leads", "name": "...", "status": "...", "leadId": "..." }
-    - comms_action: { "action": "send_sms|draft_sms", "target": "...", "message": "..." }
-    - task_action: { "action": "create_task|list_tasks", "title": "...", "date": "..." }
-    - navigate: { "path": "leads|tasks|calendar|dashboard|settings" }
-    - small_talk: { "text": "..." }
-    - unknown: If the prompt is totally unintelligible.
+    - crm_action: { "action": "get_lead|create_lead|update_status|filter_leads|compare_leads", "name": "...", "status": "...", "leadId": "...", "address": "...", "targets": ["name1", "name2"] }
+    - comms_action: { "action": "send_sms|draft_sms", "target": "...", "message": "...", "carrier": "..." }
+    - task_action: { "action": "create_task|list_tasks", "title": "...", "dueDate": "...", "priority": "..." }
+    - system_action: { "action": "navigate|help|small_talk|memory_recall", "path": "leads|tasks|calendar|dashboard|settings", "text": "..." }
+    - proactive_trigger: Analysis and suggestions for the pipeline.
+    - unknown: Use if the intent is missing or unintelligible.
 
-    Rules:
-    - If the user says "him", "her", or "that lead", identify it as a reference using context.
-    - If the user is correcting themselves ("no wait", "actually"), prioritize the correction.
-    - Return a "reasoning" field explaining your classification.
+    RULES:
+    1. CONTEXT: If user says "him", "the guy", "that property", resolve to the Lead Name or Address from history.
+    2. CORRECTIONS: User might change mind ("Schedule a call—actually, make it an SMS"). Identify action as 'send_sms' and treat the first part as noise.
+    3. BULK: "Text both" or "Message them" -> action 'send_sms', target 'both' or 'them'.
+    4. ADDRESSES: Extract property addresses clearly in the "address" field.
+    5. COMPARISON: "Compare [X] and [Y]" -> action 'compare_leads', targets: ["X", "Y"].
 
-    SCHEMA:
+    OUTPUT SCHEMA:
     {
       "intent": "string",
       "entities": "object",
@@ -82,12 +87,12 @@ export class NLUEngine {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nContext History: ${JSON.stringify(history)}\n\nUser Prompt: ${prompt}` }] }],
+          contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nContext History: ${JSON.stringify(history)}\n\nUser Input: ${prompt}` }] }],
           generationConfig: { temperature: 0.1, response_mime_type: "application/json" }
         })
       });
 
-      if (!res.ok) throw new Error("Gemini extraction failed.");
+      if (!res.ok) throw new Error("Gemini NLU extraction failed.");
       const data = await res.json();
       const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
       return JSON.parse(rawJson);

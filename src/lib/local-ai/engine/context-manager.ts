@@ -1,4 +1,4 @@
-import { getMemory } from '../memory-store';
+import { getMemory, trackLead, pushToEntityStack } from '../memory-store';
 import { addMentionedLead } from '../learning-service';
 
 /**
@@ -8,18 +8,27 @@ export class ContextManager {
   
   /**
    * Resolves implicit entities (Pronouns like "him", "it", "that lead").
+   * v11.0: Supports merged entity resolution for corrections.
    */
-  static resolveEntities(text: string, currentEntities: Record<string, any>): Record<string, any> {
+  static resolveEntities(text: string, currentEntities: Record<string, any>, previousTurn?: any): Record<string, any> {
     const memory = getMemory();
     const lower = text.toLowerCase();
-    const updated = { ...currentEntities };
+    const isCorrection = this.isCorrection(text);
+    
+    // If it's a correction, we merge with previous turn entities but let current ones override
+    let updated = isCorrection && previousTurn?.entities 
+      ? { ...previousTurn.entities, ...currentEntities } 
+      : { ...currentEntities };
 
     // 1. Resolve Lead References
-    if (/\b(him|her|his|hers|that lead|this lead)\b/i.test(lower)) {
+    if (/\b(him|her|his|hers|that lead|this lead|the guy|the owner|the seller)\b/i.test(lower)) {
       const lastLead = memory.entityStack.find(e => e.type === 'lead');
       if (lastLead) {
-        updated.leadId = lastLead.id;
-        if (!updated.name) updated.name = lastLead.name;
+        updated.leadId = updated.leadId || lastLead.id;
+        if (!updated.name && !updated.target && !updated.address) {
+           updated.name = lastLead.name;
+           updated.target = lastLead.name;
+        }
       }
     }
 
@@ -27,16 +36,20 @@ export class ContextManager {
     if (/\b(it|that task|this task)\b/i.test(lower)) {
       const lastTask = memory.entityStack.find(e => e.type === 'task');
       if (lastTask) {
-        updated.taskId = lastTask.id;
+        updated.taskId = updated.taskId || lastTask.id;
         if (!updated.title) updated.title = lastTask.name;
       }
     }
 
-    // 3. Temporal Resolution (Handled partly by NLUEngine, but augmented here)
+    // 3. Temporal Resolution
     if (lower.includes('yesterday')) {
       const date = new Date();
-      date.setDate(date.setDate(date.getDate() - 1));
-      updated.date = date.toISOString().split('T')[0];
+      date.setDate(date.getDate() - 1);
+      updated.dueDate = date.toISOString().split('T')[0];
+    } else if (lower.includes('tomorrow')) {
+      const date = new Date();
+      date.setDate(date.getDate() + 1);
+      updated.dueDate = date.toISOString().split('T')[0];
     }
 
     return updated;
@@ -46,8 +59,11 @@ export class ContextManager {
    * Tracks mentioned entities in the persistence layer.
    */
   static async trackMentions(userId: string, sessionId: string, entities: Record<string, any>) {
-    if (entities.name) {
-      await addMentionedLead(userId, sessionId, entities.name);
+    if (entities.name || entities.target) {
+      const name = entities.name || entities.target;
+      if (typeof name === 'string') {
+        await addMentionedLead(userId, sessionId, name);
+      }
     }
   }
 
@@ -55,8 +71,8 @@ export class ContextManager {
    * Detects if the user is correcting previous input.
    */
   static isCorrection(text: string): boolean {
-    const correctionKeywords = ['no wait', 'actually', 'instead', 'correction', 'i meant', 'no, '];
+    const correctionKeywords = ['no wait', 'actually', 'instead', 'correction', 'i meant', 'no, ', 'change it to', 'rather'];
     const lower = text.toLowerCase();
-    return correctionKeywords.some(k => lower.startsWith(k) || lower.includes(` ${k} `));
+    return correctionKeywords.some(k => lower.startsWith(k) || lower.includes(` ${k} `) || lower.includes(`${k},`));
   }
 }

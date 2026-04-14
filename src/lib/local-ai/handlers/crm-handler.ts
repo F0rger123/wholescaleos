@@ -14,26 +14,55 @@ export class CRMHandler extends BaseHandler {
 
     switch (action) {
       case 'get_lead':
-        return this.getLead(leadId || name);
+        return this.getLead(leadId || name || params.address);
       case 'update_status':
         return this.updateStatus(leadId, status);
       case 'create_lead':
         return this.createLead(params);
       case 'filter_leads':
         return this.filterLeads(params);
+      case 'compare_leads':
+        return this.compareLeads(params.targets || [name, params.secondLead]);
       default:
         return this.wrapError(`Unknown CRM action: ${action}`);
     }
   }
 
-  private async getLead(identifier: string): Promise<TaskResponse> {
-    const store = useStore.getState();
-    const lead = store.leads.find(l => l.id === identifier || l.name.toLowerCase().includes(identifier.toLowerCase()));
+  private async getLead(identifier: string | undefined): Promise<TaskResponse> {
+    if (!identifier) return this.wrapError("I need a name or address to look up the lead.");
     
-    if (!lead) return this.wrapError(`Couldn't find lead: ${identifier}`);
+    const store = useStore.getState();
+    const query = identifier.toLowerCase();
+    
+    // Support matching by ID, Name, or Property Address
+    const lead = store.leads.find(l => 
+      l.id === identifier || 
+      l.name.toLowerCase().includes(query) ||
+      (l.propertyAddress && l.propertyAddress.toLowerCase().includes(query))
+    );
+    
+    if (!lead) return this.wrapError(`Couldn't find record for: ${identifier}`);
     
     trackLead(lead.id, lead.name);
-    return this.wrapSuccess(`Found lead: ${lead.name}`, { lead });
+    return this.wrapSuccess(`Found lead: **${lead.name}** at ${lead.propertyAddress || 'No Address'}.`, { lead });
+  }
+
+  private async compareLeads(targets: string[]): Promise<TaskResponse> {
+    const store = useStore.getState();
+    const leads = targets.map(t => 
+      store.leads.find(l => l.name.toLowerCase().includes(t.toLowerCase()))
+    ).filter(Boolean);
+
+    if (leads.length < 2) return this.wrapError("I need at least two leads to compare. Try 'Compare Luke and Jane'.");
+
+    const [leadA, leadB] = leads;
+    const msg = `### Comparison: ${leadA?.name} vs ${leadB?.name}
+- **Score:** ${leadA?.dealScore || 0} vs ${leadB?.dealScore || 0}
+- **Status:** ${leadA?.status} vs ${leadB?.status}
+- **Value:** $${(leadA?.estimatedValue || 0).toLocaleString()} vs $${(leadB?.estimatedValue || 0).toLocaleString()}
+- **Address:** ${leadA?.propertyAddress || 'N/A'} vs ${leadB?.propertyAddress || 'N/A'}`;
+
+    return this.wrapSuccess(msg, { leads: [leadA, leadB] });
   }
 
   private async updateStatus(leadId: string, status: string): Promise<TaskResponse> {

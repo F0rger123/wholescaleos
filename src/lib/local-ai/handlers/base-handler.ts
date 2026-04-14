@@ -1,4 +1,4 @@
-import { TaskResponse } from '../task-executor';
+import { TaskResponse } from '../types';
 
 /**
  * Base class for all AI capability handlers.

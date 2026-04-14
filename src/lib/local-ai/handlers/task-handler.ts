@@ -24,7 +24,12 @@ export class TaskHandler extends BaseHandler {
 
   private async createTask(title: string, dueDate: string, priority: string, leadIdentifier: string): Promise<TaskResponse> {
     const store = useStore.getState();
-    const lead = store.leads.find(l => l.id === leadIdentifier || l.name.toLowerCase().includes(leadIdentifier.toLowerCase()));
+    const query = leadIdentifier?.toLowerCase();
+    const lead = query ? store.leads.find(l => 
+      l.id === leadIdentifier || 
+      l.name.toLowerCase().includes(query) ||
+      (l.propertyAddress && l.propertyAddress.toLowerCase().includes(query))
+    ) : null;
     
     if (lead) trackLead(lead.id, lead.name);
 
