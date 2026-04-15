@@ -1,6 +1,6 @@
 import { BaseHandler } from './base-handler';
 import { TaskResponse } from '../task-executor';
-import { useStore } from '../../../store/useStore';
+import { useStore, calculateDealScore } from '../../../store/useStore';
 import { trackLead } from '../memory-store';
 
 /**
@@ -33,22 +33,32 @@ export class CRMHandler extends BaseHandler {
   }
 
   private async getLead(identifier: string | undefined): Promise<TaskResponse> {
-    if (!identifier) return this.wrapError("I need a name or address to look up the lead.");
-    
-    const store = useStore.getState();
-    const query = identifier.toLowerCase();
-    
-    // Support matching by ID, Name, or Property Address
-    const lead = store.leads.find(l => 
-      l.id === identifier || 
-      l.name.toLowerCase().includes(query) ||
-      (l.propertyAddress && l.propertyAddress.toLowerCase().includes(query))
-    );
-    
-    if (!lead) return this.wrapError(`Couldn't find record for: ${identifier}`);
-    
-    trackLead(lead.id, lead.name);
-    return this.wrapSuccess(`Found lead: **${lead.name}** at ${lead.propertyAddress || 'No Address'}.`, { lead });
+    try {
+      console.log('[🤖 CRM HANDLER] Looking up lead:', identifier);
+      if (!identifier) return this.wrapError("I need a name or address to look up the lead.");
+      
+      const store = useStore.getState();
+      const query = identifier.toLowerCase().trim();
+      
+      // Support matching by ID, Name, or Property Address
+      const lead = store.leads.find(l => 
+        l.id === identifier || 
+        (l.name && l.name.toLowerCase().includes(query)) ||
+        (l.propertyAddress && l.propertyAddress.toLowerCase().includes(query))
+      );
+      
+      if (!lead) {
+        console.warn('[🤖 CRM HANDLER] Lead not found for query:', query);
+        return this.wrapError(`Couldn't find record for: ${identifier}`);
+      }
+      
+      console.log('[🤖 CRM HANDLER] Found lead:', lead.name);
+      trackLead(lead.id, lead.name);
+      return this.wrapSuccess(`Found lead: **${lead.name}** at ${lead.propertyAddress || 'No Address'}.`, { lead });
+    } catch (error) {
+      console.error('[🤖 CRM HANDLER] Crash in getLead:', error);
+      return this.wrapError(`Technical glitch while searching for "${identifier}". My team has been notified.`);
+    }
   }
 
   private async compareLeads(targets: string[]): Promise<TaskResponse> {
@@ -102,13 +112,36 @@ export class CRMHandler extends BaseHandler {
   }
 
   private async filterLeads(params: any): Promise<TaskResponse> {
-    const store = useStore.getState();
-    let leads = store.leads;
+    try {
+      console.log('[🤖 CRM HANDLER] Filtering leads with params:', params);
+      const store = useStore.getState();
+      let leads = [...store.leads];
 
-    if (params.status) leads = leads.filter(l => l.status === params.status);
-    if (params.minScore) leads = leads.filter(l => (l.dealScore || 0) >= params.minScore);
+      if (params.status) {
+        leads = leads.filter(l => l.status === params.status);
+      }
 
-    return this.wrapSuccess(`Found ${leads.length} matching leads.`, { count: leads.length, leads: leads.slice(0, 5) });
+      if (params.minScore) {
+        // Use pre-calculated dealScore if available, otherwise calculate on the fly
+        leads = leads.filter(l => {
+          const score = l.dealScore !== undefined && l.dealScore !== null ? l.dealScore : calculateDealScore(l);
+          return score >= params.minScore;
+        });
+      }
+
+      if (params.maxScore) {
+        leads = leads.filter(l => {
+          const score = l.dealScore !== undefined && l.dealScore !== null ? l.dealScore : calculateDealScore(l);
+          return score <= params.maxScore;
+        });
+      }
+
+      console.log(`[🤖 CRM HANDLER] Filter complete. Found ${leads.length} leads.`);
+      return this.wrapSuccess(`Found ${leads.length} matching leads.`, { count: leads.length, leads: leads.slice(0, 5) });
+    } catch (error) {
+      console.error('[🤖 CRM HANDLER] Crash in filterLeads:', error);
+      return this.wrapError("I encountered a problem while filtering your leads.");
+    }
   }
 
   private async updateLead(leadId: string, data: any): Promise<TaskResponse> {

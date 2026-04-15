@@ -480,6 +480,30 @@ export function generateClarificationQuestion(intent: string, missingEntities: s
   const actionKey = intent.split('_').slice(1).join('_');
   const actionQuestions = questions[actionKey] || questions['calculate_deal'];
 
-  const missing = missingEntities[0] || 'more details';
+  const missing = (missingEntities[0] || 'more details').replace('_', ' ');
   return pick(actionQuestions, 'clarify').replace('[missing]', missing);
+}
+
+/**
+ * Intelligent fuzzy-matched Command Suggestions
+ */
+export function fuzzySuggestCommands(input: string): string {
+  const commands = [
+    { trigger: 'lead', suggestion: "Show my hot leads", description: "view your top-scoring opportunities" },
+    { trigger: 'deal', suggestion: "Analyze property as flip", description: "run a quick deal analysis" },
+    { trigger: 'task', suggestion: "Show my tasks", description: "check what's on your to-do list" },
+    { trigger: 'calendar', suggestion: "What's on my schedule today", description: "view your appointments" },
+    { trigger: 'text', suggestion: "Send SMS to [Lead Name]", description: "outreach to a specific lead" },
+    { trigger: 'help', suggestion: "Capabilities", description: "see everything I can help with" },
+    { trigger: 'status', suggestion: "Mark [Lead] as Qualified", description: "update your pipeline" },
+  ];
+
+  const inputLower = input.toLowerCase();
+  const match = commands.find(c => inputLower.includes(c.trigger));
+
+  if (match) {
+    return `I'm not exactly sure about "${input}", but did you want to **${match.suggestion}**?\n\nI can help you ${match.description}.`;
+  }
+
+  return `I didn't quite catch that. Try asking for "hot leads", "my schedule", or "analyze a deal". You can also say "**help**" to see everything I can do.`;
 }

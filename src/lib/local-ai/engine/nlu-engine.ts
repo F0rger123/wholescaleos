@@ -27,11 +27,14 @@ export class NLUEngine {
 
     // Lead Management - Viewing
     { regex: /^(show|list|get|view|display|pull up) (my )?leads/i, intent: 'crm_action', params: { action: 'filter_leads' } },
+    { regex: /^show my current leads/i, intent: 'crm_action', params: { action: 'filter_leads' } },
     { regex: /^(show|list|get) (my )?hot leads/i, intent: 'crm_action', params: { action: 'filter_leads', minScore: 80 } },
     { regex: /^(show|list|get) (my )?cold leads/i, intent: 'crm_action', params: { action: 'filter_leads', maxScore: 40 } },
     { regex: /^(show|list|get) (my )?new leads/i, intent: 'crm_action', params: { action: 'filter_leads', status: 'new' } },
     { regex: /^(show|list|get) (my )?active leads/i, intent: 'crm_action', params: { action: 'filter_leads', status: 'active' } },
     { regex: /^(top leads|best leads|priority leads|most important leads)/i, intent: 'crm_action', params: { action: 'filter_leads', minScore: 80, limit: 5 } },
+    { regex: /^(tell me about|who is|show details for|lead info for) (.+)/i, intent: 'crm_action', params: { action: 'get_lead' } },
+    { regex: /^what's (.+)'s (phone|number|email|address|contact)/i, intent: 'crm_action', params: { action: 'get_lead' } },
     { regex: /^lead details? for (.+)/i, intent: 'crm_action', params: { action: 'get_lead' } },
     { regex: /^show me (.+)'s info|show info for (.+)/i, intent: 'crm_action', params: { action: 'get_lead' } },
 
@@ -48,6 +51,16 @@ export class NLUEngine {
     { regex: /^which is better (.+) or (.+)/i, intent: 'crm_action', params: { action: 'compare_leads' } },
     { regex: /^analyze (.+)'s deal/i, intent: 'crm_action', params: { action: 'analyze_lead' } },
     { regex: /^what's (.+)'s deal score/i, intent: 'crm_action', params: { action: 'get_lead_score' } },
+
+    // Task & Calendar Management
+    { regex: /^(show|list|get|view) (my )?tasks/i, intent: 'task_action', params: { action: 'list_tasks' } },
+    { regex: /^(what's on my schedule today|what are my meetings today|show my calendar today)/i, intent: 'task_action', params: { action: 'list_tasks', type: 'calendar' } },
+    { regex: /^(add|create|new) (a )?task/i, intent: 'task_action', params: { action: 'create_task' } },
+    { regex: /^(finish|complete|done) (the )?task/i, intent: 'task_action', params: { action: 'complete_task' } },
+
+    // Real Estate Analysis
+    { regex: /^analyze (.+) as (flip|rental|wholesale|brrrr)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
+    { regex: /^calculate (.+) as (flip|rental|wholesale|brrrr)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
 
     // Task Management
     { regex: /^(show|list|get|view|display) (my )?tasks/i, intent: 'task_action', params: { action: 'list_tasks' } },

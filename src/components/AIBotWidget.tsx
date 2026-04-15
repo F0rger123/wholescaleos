@@ -23,6 +23,7 @@ import {
   executeTask,
   generateResponse,
   generateErrorResponse,
+  fuzzySuggestCommands,
   TaskExecutor
 } from '../lib/local-ai';
 import { NLUEngine } from '../lib/local-ai/engine/nlu-engine';
@@ -600,6 +601,8 @@ export function AIBotWidget() {
       // ── MODULAR NLU PIPELINE (v11.0) ───────────────────────────────────
       console.log('[🤖 OS BOT] Execution Pipeline Start:', userText);
 
+      const store = useStore.getState();
+      const personality = store.aiPersonality || 'Default';
       let response: any;
 
       try {
@@ -618,18 +621,40 @@ export function AIBotWidget() {
           const executionResult = await TaskExecutor.execute(nluResult.intent, nluResult.entities);
           finalResponse = {
             intent: nluResult.intent,
-            response: executionResult.message,
+            response: generateResponse(nluResult.intent, executionResult, userText, personality),
             data: executionResult.data,
             systemLog: '🤖 OS Bot'
           };
         } else {
-          console.log('[🤖 OS BOT] Falling back to Gemini Logic for complex prompt');
-          finalResponse = await processPrompt(userText, {
-            page: location.pathname,
-            currentTime: new Date().toISOString(),
-            sessionId,
-            nluResult
-          }, aiModel);
+          console.log('[🤖 OS BOT] NLU confidence low or intent unknown. Attempting fuzzy suggestions or Gemini fallback.');
+          
+          const fuzzySuggestion = fuzzySuggestCommands(userText);
+          const isGenericFuzzy = fuzzySuggestion.includes("didn't quite catch that");
+          
+          if (!isGenericFuzzy) {
+             finalResponse = {
+               intent: 'unknown',
+               response: fuzzySuggestion,
+               systemLog: '🤖 OS Bot (Fuzzy Match)'
+             };
+          } else {
+             console.log('[🤖 OS BOT] No strong fuzzy match. Falling back to Gemini Logic.');
+             finalResponse = await processPrompt(userText, {
+               page: location.pathname,
+               currentTime: new Date().toISOString(),
+               sessionId,
+               nluResult
+             }, aiModel);
+             
+             // Combined logic: if Gemini result is empty or error-like, use our fuzzy suggestions
+             if (!finalResponse || !finalResponse.response || finalResponse.response.length < 5) {
+               finalResponse = {
+                 intent: 'unknown',
+                 response: fuzzySuggestion,
+                 systemLog: '🤖 OS Bot (Fallback)'
+               };
+             }
+          }
         }
 
         response = finalResponse;
