@@ -447,29 +447,9 @@ export default function AITest() {
     { label: "Team Status", prompt: "Who on the team is online right now?", icon: <User className="w-3 h-3"/> }
   ];
 
-  if (hasKey === false) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-140px)] max-w-2xl mx-auto text-center px-4">
-        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 border"
-          style={{ background: 'var(--t-primary-dim)', borderColor: 'var(--t-primary-dim)' }}
-        >
-          <Key size={32} style={{ color: 'var(--t-primary)' }} />
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-3">AI Assistant Locked</h2>
-        <p className="text-[var(--t-text-muted)] mb-8 leading-relaxed">
-          Configure your OS Cloud API key in settings to unlock these features.
-        </p>
-        <button
-          onClick={() => navigate('/settings/ai')}
-          className="text-white font-semibold px-8 py-3 rounded-xl transition-all flex items-center gap-2"
-          style={{ background: 'var(--t-primary)' }}
-        >
-          <Sparkles className="w-5 h-5" />
-          Setup OS Cloud Key
-        </button>
-      </div>
-    );
-  }
+  // ── LOCAL FALLBACK REMOVAL (v14.0) ───────────────────────────────────
+  // We no longer lock the screen. If hasKey is false, it means they 
+  // are using local AI by default or haven't setup cloud.
 
   if (hasKey === null) {
     return (

@@ -57,10 +57,10 @@ export const DeepSpaceLoader: React.FC = () => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
-            className="text-4xl font-black italic uppercase tracking-tighter"
+            className="text-4xl font-black italic uppercase tracking-tighter px-4"
             style={{ color: 'white' }}
           >
-            WholeScale <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">OS</span>
+            WholeScale <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 pr-1">OS</span>
           </motion.h2>
           <motion.div 
             initial={{ opacity: 0 }}

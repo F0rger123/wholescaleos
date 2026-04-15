@@ -125,7 +125,11 @@ export async function processPrompt(
     const responseText = await callExternalAPI(prompt, { ...context, modelId }, signal);
     
     if (!responseText) {
-      throw new Error("No response from hybrid router.");
+      return {
+        intent: 'failed',
+        response: 'failed',
+        systemLog: '🤖 Hybrid AI (No response)'
+      };
     }
 
     // Attempt to parse as JSON if it looks like one, otherwise return as text
@@ -160,6 +164,12 @@ export async function processPrompt(
 
 export function hasUserApiKey() {
   const store = useStore.getState();
+  
+  // If we're on local-only mode, we always have "permission" to use the bot
+  if (store.currentUser?.preferred_api_provider === 'local' || store.preferred_api_provider === 'local') {
+    return true;
+  }
+
   // Check profile keys in store or local fallback
   const profileKeys = store.currentUser?.user_api_keys;
   if (profileKeys && Object.keys(profileKeys).length > 0) return true;

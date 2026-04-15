@@ -175,7 +175,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+    <div className="max-w-3xl mx-auto space-y-6 pb-12 pt-16">
       {!hideHeader && (
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white mb-2">AI & Ecosystem Settings</h1>
@@ -273,7 +273,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           ) : (
             <>
               <Save className="w-5 h-5" />
-              Save Persona Settings
+              Save Settings
             </>
           )}
         </button>

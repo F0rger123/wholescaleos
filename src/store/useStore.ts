@@ -266,9 +266,15 @@ export interface UserProfile {
   totalEarnings?: number;
   availableEarnings?: number;
   referralCount?: number;
-  user_api_keys?: Record<string, string>;
+  user_api_keys?: Record<string, string | string[]>;
   preferred_api_provider?: string;
   api_fallback_enabled?: boolean;
+  smart_rotate_enabled?: boolean;
+  premium_credits?: number;
+  credits_remaining?: number;
+  credits_reset_at?: string;
+  total_credits_used_today?: number;
+  onboarding_ai_choice_seen?: boolean;
 }
 
 export interface Task {
@@ -1598,6 +1604,18 @@ interface AppState {
   setIsAutomationRunning: (v: boolean) => void;
   sendAutomationSms: (leadId: string, content: string) => Promise<void>;
   sendAutomationEmail: (leadId: string, subject: string, content: string) => Promise<void>;
+  preferred_api_provider: string;
+  setPreferredApiProvider: (v: string) => void;
+  api_fallback_enabled: boolean;
+  setApiFallbackEnabled: (v: boolean) => void;
+  smart_rotate_enabled: boolean;
+  setSmartRotateEnabled: (v: boolean) => void;
+  credits_remaining: number;
+  setCreditsRemaining: (v: number) => void;
+  credits_reset_at: string | null;
+  total_credits_used_today: number;
+  onboarding_ai_choice_seen: boolean;
+  setOnboardingAiChoiceSeen: (v: boolean) => void;
 }
 
 const calculateSmartLeadScore = (lead: any): number => {
@@ -1690,6 +1708,13 @@ export const useStore = create<AppState>((set, get) => ({
   aiPersonality: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-personality') : null) || 'Professional',
   aiCustomPrompt: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-custom-prompt') : null) || '',
   aiTone: (typeof window !== 'undefined' ? localStorage.getItem('wholescale-ai-tone') : null) || 'Professional',
+  preferred_api_provider: (typeof window !== 'undefined' ? (localStorage.getItem('wholescale-preferred-provider') || 'local') : 'local'),
+  api_fallback_enabled: (typeof window !== 'undefined' ? (localStorage.getItem('wholescale-api-fallback') !== 'false') : true),
+  smart_rotate_enabled: (typeof window !== 'undefined' ? (localStorage.getItem('wholescale-smart-rotate') === 'true') : false),
+  credits_remaining: 100,
+  credits_reset_at: null,
+  total_credits_used_today: 0,
+  onboarding_ai_choice_seen: (typeof window !== 'undefined' ? (localStorage.getItem('wholescale-ai-onboarding-seen') === 'true') : false),
   aiUsage: (() => {
     try {
       if (typeof window !== 'undefined') {
@@ -1825,6 +1850,9 @@ export const useStore = create<AppState>((set, get) => ({
           full_name: newUser.name,
           phone: newUser.phone,
           avatar_url: newUser.avatar,
+          preferred_api_provider: newUser.preferred_api_provider,
+          api_fallback_enabled: newUser.api_fallback_enabled,
+          user_api_keys: newUser.user_api_keys,
           settings: {
             ...currentSettings,
             bio: newUser.bio,
@@ -1916,6 +1944,8 @@ export const useStore = create<AppState>((set, get) => ({
           currentTheme: profile.settings?.current_theme || s.currentTheme,
           customColors: profile.settings?.custom_colors || s.customColors,
           milestones: profile.settings?.team_milestones || s.milestones,
+          preferred_api_provider: profile.preferred_api_provider || 'local',
+          api_fallback_enabled: profile.api_fallback_enabled ?? true,
           dataLoaded: true,
         }));
       }
@@ -2241,6 +2271,31 @@ export const useStore = create<AppState>((set, get) => ({
   },
   setDataLoaded: (loaded: boolean) => set({ dataLoaded: loaded }),
   setBulkData: (data: any) => set(data as Partial<AppState>),
+  setPreferredApiProvider: (v: string) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-preferred-provider', v);
+    }
+    set({ preferred_api_provider: v });
+  },
+  setApiFallbackEnabled: (v: boolean) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-api-fallback', v.toString());
+    }
+    set({ api_fallback_enabled: v });
+  },
+  setSmartRotateEnabled: (v: boolean) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-smart-rotate', v.toString());
+    }
+    set({ smart_rotate_enabled: v });
+  },
+  setCreditsRemaining: (v: number) => set({ credits_remaining: v }),
+  setOnboardingAiChoiceSeen: (v: boolean) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('wholescale-ai-onboarding-seen', v.toString());
+    }
+    set({ onboarding_ai_choice_seen: v });
+  },
   searchResults: { leads: [], tasks: [], sms: [] },
   performSearch: (query: string) => {
     const q = query.toLowerCase().trim();

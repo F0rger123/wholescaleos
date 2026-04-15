@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Bot, X, Send,
-  User, Key, Mic, Volume2, VolumeX,
+  User, Mic, Volume2, VolumeX,
   Layout as LayoutIcon, Loader2,
   MessageSquare, CheckCircle2, FileText, Shield, Zap
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
+import { AIOnboardingModal } from './modals/AIOnboardingModal';
 import {
   hasUserApiKey,
   processPrompt,
@@ -148,11 +149,13 @@ export function AIBotWidget() {
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const {
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiModel, isAiDocked, setAiDocked,
-    sidebarOpen, aiName
+    sidebarOpen, aiName,
+    credits_remaining, onboarding_ai_choice_seen, setOnboardingAiChoiceSeen
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -322,6 +325,11 @@ export function AIBotWidget() {
 
       const keyExists = await hasUserApiKey();
       setHasKey(keyExists);
+
+      // Show onboarding if no keys and haven't seen it yet
+      if (keyExists === false && !onboarding_ai_choice_seen) {
+        setShowOnboarding(true);
+      }
 
       if (isSupabaseConfigured) {
         // Fetch usage data
@@ -523,7 +531,13 @@ export function AIBotWidget() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!prompt.trim() || loading || !hasKey) return;
+    if (!prompt.trim() || loading) return;
+    
+    // If no keys and trying to use a cloud model, prompt for onboarding or setup
+    if (!hasKey && aiModel !== 'os-bot') {
+       setShowOnboarding(true);
+       return;
+    }
 
     // Check Usage Limits
     if (usage && usage.remaining <= 0) {
@@ -986,34 +1000,17 @@ export function AIBotWidget() {
     }
   };
 
+  const handleCloseOnboarding = () => {
+    setShowOnboarding(false);
+    setOnboardingAiChoiceSeen(true);
+  };
+
+  const handleConfigureCloud = () => {
+    handleCloseOnboarding();
+    navigate('/settings/ai');
+  };
+
   if (!showFloatingAIWidget) return null;
-
-  if (hasKey === false && isAiOpen) {
-    return (
-      <div
-        className="fixed z-[var(--z-popover)] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
-        style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
-      >
-        <div className="bg-[var(--t-surface)] border border-[var(--t-border)] rounded-2xl p-6 shadow-2xl max-w-sm text-center pointer-events-auto relative">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'var(--t-primary-dim)' }}
-          >
-            <Key className="w-6 h-6" style={{ color: 'var(--t-primary)' }} />
-          </div>
-          <h3 className="font-bold mb-2" style={{ color: 'var(--t-text)' }}>Setup Required</h3>
-          <p className="text-[var(--t-text-muted)] mb-4">Please configure your AI API key to use the floating assistant.</p>
-          <button
-            onClick={() => navigate('/settings/ai')}
-            className="text-xs px-4 py-2 rounded-lg text-white font-bold"
-            style={{ background: 'var(--t-primary)' }}
-          >
-            Configure Now
-          </button>
-
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -1071,9 +1068,9 @@ export function AIBotWidget() {
                   )}
                 </div>
                 {usage && (
-                  <span className={`text-[9px] font-bold mt-0.5 ${usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
+                  <span className={`text-[9px] font-bold mt-0.5 ${credits_remaining < 10 ? 'text-[var(--t-error)]' : (credits_remaining < 25 ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
                     }`}>
-                    🔋 {usage.remaining} left today
+                    🔥 {credits_remaining} credits today
                   </span>
                 )}
               </div>
@@ -1421,6 +1418,12 @@ export function AIBotWidget() {
         onClose={() => setShowUsageModal(false)}
         tier={usage?.tier || 'Free'}
         limit={usage?.limit || 10}
+      />
+
+      <AIOnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleCloseOnboarding}
+        onConfigureCloud={handleConfigureCloud}
       />
     </div>
   );

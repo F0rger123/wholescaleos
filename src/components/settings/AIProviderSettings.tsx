@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useStore } from '../../store/useStore';
-import { Bot, Key, Shield, Zap, ExternalLink, Moon, Sparkles, AlertCircle } from 'lucide-react';
+import { Bot, Key, Shield, Zap, ExternalLink, Moon, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { encryptKey, decryptKey } from '../../lib/ai/crypto';
 
 interface APIKeys {
-  gemini?: string;
-  openai?: string;
-  claude?: string;
-  minimax?: string;
-  [key: string]: string | undefined;
+  gemini?: string | string[];
+  openai?: string | string[];
+  claude?: string | string[];
+  minimax?: string | string[];
+  [key: string]: string | string[] | undefined;
 }
 
 export const AIProviderSettings: React.FC = () => {
@@ -18,6 +18,8 @@ export const AIProviderSettings: React.FC = () => {
   const [keys, setKeys] = useState<APIKeys>({});
   const [provider, setProvider] = useState<string>('local');
   const [fallbackEnabled, setFallbackEnabled] = useState(true);
+  const [smartRotateEnabled, setSmartRotateEnabled] = useState(false);
+  const [premiumCredits, setPremiumCredits] = useState<number>(0);
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
   const [_migrating, setMigrating] = useState(false);
   const [_loading, setLoading] = useState(false);
@@ -28,13 +30,20 @@ export const AIProviderSettings: React.FC = () => {
       const decryptedKeys: APIKeys = {};
       const encryptedKeys = currentUser.user_api_keys || {};
       
-      Object.entries(encryptedKeys).forEach(([provider, key]) => {
-        decryptedKeys[provider as keyof APIKeys] = decryptKey(key as string, currentUser.id);
+      
+      Object.entries(encryptedKeys).forEach(([provider, keyData]) => {
+        if (Array.isArray(keyData)) {
+          decryptedKeys[provider] = keyData.map(k => decryptKey(k, currentUser.id));
+        } else {
+          decryptedKeys[provider] = decryptKey(keyData as string, currentUser.id);
+        }
       });
       
       setKeys(decryptedKeys);
       setProvider(currentUser.preferred_api_provider || 'local');
       setFallbackEnabled(currentUser.api_fallback_enabled ?? true);
+      setSmartRotateEnabled(currentUser.smart_rotate_enabled ?? false);
+      setPremiumCredits(currentUser.credits_remaining ?? 0);
       
       // Trigger migration check once on load
       checkLegacyMigration();
@@ -58,7 +67,7 @@ export const AIProviderSettings: React.FC = () => {
         const newKeys = { ...keys, gemini: legacyKey };
         
         // Save using current logic (which will encrypt)
-        await saveSettings(newKeys);
+        await saveSettings({ newKeys });
         localStorage.setItem('ai_keys_migrated', 'true');
         toast.success('Legacy Gemini key migrated successfully');
       }
@@ -69,17 +78,25 @@ export const AIProviderSettings: React.FC = () => {
     }
   };
 
-  const saveSettings = async (newKeys?: APIKeys, newProvider?: string, newFallback?: boolean) => {
+  const saveSettings = async (params: { 
+    newKeys?: APIKeys, 
+    newProvider?: string, 
+    newFallback?: boolean,
+    newRotate?: boolean 
+  }) => {
+    const { newKeys, newProvider, newFallback, newRotate } = params;
     if (!currentUser) return;
     setLoading(true);
     
     try {
       // Encrypt keys before storing
       const keysToEncrypt = newKeys || keys;
-      const encryptedKeys: Record<string, string> = {};
+      const encryptedKeys: Record<string, string | string[]> = {};
       
       Object.entries(keysToEncrypt).forEach(([prov, val]) => {
-        if (val) {
+        if (Array.isArray(val)) {
+          encryptedKeys[prov] = val.map(v => v ? encryptKey(v, currentUser.id) : '').filter(Boolean);
+        } else if (val) {
           encryptedKeys[prov] = encryptKey(val, currentUser.id);
         }
       });
@@ -89,7 +106,8 @@ export const AIProviderSettings: React.FC = () => {
         .update({
           user_api_keys: encryptedKeys,
           preferred_api_provider: newProvider || provider,
-          api_fallback_enabled: newFallback ?? fallbackEnabled
+          api_fallback_enabled: newFallback ?? fallbackEnabled,
+          smart_rotate_enabled: newRotate ?? smartRotateEnabled
         })
         .eq('id', currentUser.id);
 
@@ -97,7 +115,7 @@ export const AIProviderSettings: React.FC = () => {
       
       // Update local store - filter out undefined values
       const keysToUpdate = newKeys || keys;
-      const cleanKeys: Record<string, string> = {};
+      const cleanKeys: Record<string, string | string[]> = {};
       Object.entries(keysToUpdate).forEach(([k, v]) => {
         if (v) cleanKeys[k] = v;
       });
@@ -105,7 +123,8 @@ export const AIProviderSettings: React.FC = () => {
       updateProfile({
         user_api_keys: cleanKeys,
         preferred_api_provider: newProvider || provider,
-        api_fallback_enabled: newFallback ?? fallbackEnabled
+        api_fallback_enabled: newFallback ?? fallbackEnabled,
+        smart_rotate_enabled: newRotate ?? smartRotateEnabled
       });
       
       toast.success('AI settings updated');
@@ -127,6 +146,25 @@ export const AIProviderSettings: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Premium Credits Display */}
+      <section className="p-4 rounded-2xl bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-500/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+             <div className="p-3 rounded-xl bg-purple-500 shadow-lg shadow-purple-500/20">
+                <Zap className="w-6 h-6 text-white" />
+             </div>
+             <div>
+                <h3 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Premium Credits</h3>
+                <p className="text-sm opacity-70" style={{ color: 'var(--t-text-muted)' }}>Required for non-local AI models</p>
+             </div>
+          </div>
+          <div className="text-right">
+             <div className="text-3xl font-black text-purple-500">{premiumCredits}</div>
+             <div className="text-[10px] uppercase tracking-widest font-bold opacity-60">Remaining</div>
+          </div>
+        </div>
+      </section>
+
       {/* Provider Selection */}
       <section>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--t-text)' }}>
@@ -139,7 +177,7 @@ export const AIProviderSettings: React.FC = () => {
               key={p.id}
               onClick={() => {
                 setProvider(p.id);
-                saveSettings(keys, p.id);
+                saveSettings({ newProvider: p.id });
               }}
               className={`p-4 rounded-xl border text-left transition-all duration-300 group relative overflow-hidden ${
                 provider === p.id 
@@ -178,17 +216,31 @@ export const AIProviderSettings: React.FC = () => {
               Enable premium cloud models by adding your own keys.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-             <span className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>API Fallback</span>
-             <button
-               onClick={() => {
-                 setFallbackEnabled(!fallbackEnabled);
-                 saveSettings(keys, provider, !fallbackEnabled);
-               }}
-               className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${fallbackEnabled ? 'bg-[var(--t-success)]' : 'bg-[var(--t-border)]'}`}
-             >
-               <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-300 ${fallbackEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
-             </button>
+          <div className="flex items-center gap-6">
+             <div className="flex items-center gap-3">
+               <span className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>Smart Rotate</span>
+               <button
+                 onClick={() => {
+                   setSmartRotateEnabled(!smartRotateEnabled);
+                   saveSettings({ newRotate: !smartRotateEnabled });
+                 }}
+                 className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ${smartRotateEnabled ? 'bg-purple-500' : 'bg-[var(--t-border)]'}`}
+               >
+                 <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-300 ${smartRotateEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+               </button>
+             </div>
+             <div className="flex items-center gap-3">
+               <span className="text-xs font-medium" style={{ color: 'var(--t-text-muted)' }}>API Fallback</span>
+               <button
+                 onClick={() => {
+                   setFallbackEnabled(!fallbackEnabled);
+                   saveSettings({ newFallback: !fallbackEnabled });
+                 }}
+                 className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-300 ${fallbackEnabled ? 'bg-[var(--t-success)]' : 'bg-[var(--t-border)]'}`}
+               >
+                 <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-300 ${fallbackEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+               </button>
+             </div>
           </div>
         </div>
 
@@ -201,7 +253,12 @@ export const AIProviderSettings: React.FC = () => {
                 </label>
                 <div className="flex items-center gap-4">
                   <a 
-                    href={p.id === 'gemini' ? 'https://aistudio.google.com/app/apikey' : p.id === 'openai' ? 'https://platform.openai.com/api-keys' : '#'} 
+                    href={
+                      p.id === 'gemini' ? 'https://aistudio.google.com/app/apikey' : 
+                      p.id === 'openai' ? 'https://platform.openai.com/api-keys' : 
+                      p.id === 'claude' ? 'https://console.anthropic.com/settings/keys' :
+                      p.id === 'minimax' ? 'https://platform.minimax.io/api-keys' : '#'
+                    } 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-[10px] flex items-center gap-1 hover:underline font-medium"
@@ -217,25 +274,55 @@ export const AIProviderSettings: React.FC = () => {
                   </button>
                 </div>
               </div>
-              <div className="relative">
-                <input
-                  type={showKeys[p.id] ? 'text' : 'password'}
-                  id={`key-${p.id}`}
-                  value={keys[p.id as keyof APIKeys] || ''}
-                  onChange={(e) => {
-                    const newKeys = { ...keys, [p.id]: e.target.value };
-                    setKeys(newKeys);
-                  }}
-                  onBlur={() => saveSettings(keys)}
-                  placeholder={`sk-...${p.id === 'gemini' ? 'AIza...' : ''}`}
-                  className="w-full h-12 px-4 rounded-xl border border-[var(--t-border)] bg-[var(--t-bg)] focus:ring-2 focus:ring-[var(--t-primary)] focus:border-transparent transition-all outline-none font-mono text-sm"
-                  style={{ color: 'var(--t-text)' }}
-                />
-                {!keys[p.id as keyof APIKeys] && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-amber-500 font-medium flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" /> Required for {p.name}
-                  </div>
-                )}
+              <div className="space-y-3">
+                {(() => {
+                  const currentKeys = Array.isArray(keys[p.id]) ? (keys[p.id] as string[]) : [keys[p.id] as string || ''];
+                  return (
+                    <>
+                      {currentKeys.map((keyVal, idx) => (
+                        <div key={idx} className="relative group/key">
+                          <input
+                            type={showKeys[p.id] ? 'text' : 'password'}
+                            value={keyVal}
+                            onChange={(e) => {
+                              const updated = [...currentKeys];
+                              updated[idx] = e.target.value;
+                              const newKeys = { ...keys, [p.id]: updated };
+                              setKeys(newKeys);
+                            }}
+                            onBlur={() => saveSettings({ newKeys: keys })}
+                            placeholder={`API Key ${idx + 1}...`}
+                            className="w-full h-10 px-4 pr-10 rounded-lg border border-[var(--t-border)] bg-[var(--t-bg)] focus:ring-2 focus:ring-[var(--t-primary)] focus:border-transparent transition-all outline-none font-mono text-xs"
+                            style={{ color: 'var(--t-text)' }}
+                          />
+                          {currentKeys.length > 1 && (
+                            <button 
+                              onClick={() => {
+                                const updated = currentKeys.filter((_, i) => i !== idx);
+                                const newKeys = { ...keys, [p.id]: updated };
+                                setKeys(newKeys);
+                                saveSettings({ newKeys });
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-red-500 p-1 opacity-0 group-hover/key:opacity-100 transition-opacity"
+                            >
+                              &times;
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          const updated = [...currentKeys, ''];
+                          const newKeys = { ...keys, [p.id]: updated };
+                          setKeys(newKeys);
+                        }}
+                        className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-text-muted)] hover:text-[var(--t-primary)] transition-colors flex items-center gap-1"
+                      >
+                        + Add Failover Key
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           ))}
