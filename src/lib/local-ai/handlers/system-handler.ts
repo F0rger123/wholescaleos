@@ -12,7 +12,7 @@ export class SystemHandler extends BaseHandler {
   intent = 'system_action'; // Handles manifold system intents
 
   async execute(params: any): Promise<TaskResponse> {
-    const { action, text, path, phrase } = params;
+    const { action, text, path } = params;
 
     switch (action) {
       case 'small_talk':
@@ -33,7 +33,7 @@ export class SystemHandler extends BaseHandler {
 
   private async handleSmallTalk(text: string): Promise<TaskResponse> {
     const lower = text.toLowerCase();
-    
+
     // Affirmation handling (transferred from TaskExecutor)
     if (/^(yes|yeah|y|yep|yup|ya|yah|sure|do it|proceed|exactly|correct)$/i.test(lower)) {
       const suggestion = getLastSuggestion();
@@ -41,8 +41,8 @@ export class SystemHandler extends BaseHandler {
         clearLastSuggestion();
         // Since we are in a handler, we might need TaskExecutor to re-execute
         // But for now, we'll return the intent to chain it.
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: "Confirmed. Executing that now.",
           nextIntent: { name: suggestion.action, params: suggestion.params }
         };

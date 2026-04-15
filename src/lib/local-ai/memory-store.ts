@@ -1,10 +1,13 @@
-
+/**
+ * Enhanced Memory Store for OS Bot
+ * v12.0: Vector-based memory, user profile learning, and conversation state management
+ */
 
 export interface Entity {
   id: string;
   name: string;
   type: 'lead' | 'contact' | 'task' | 'deal';
-  relatedEntityId?: string; 
+  relatedEntityId?: string;
   relatedEntityType?: string;
   metadata?: Record<string, any>;
 }
@@ -17,9 +20,17 @@ export interface UserPerspective {
 
 export type Sentiment = 'happy' | 'neutral' | 'frustrated' | 'urgent' | 'curious';
 
+export interface ConversationTurn {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  intent?: string;
+  entities?: Record<string, any>;
+}
+
 export interface Memory {
   messages: any[];
-  history: any[];
+  history: ConversationTurn[];
   entityStack: Entity[];
   learnedFacts: Record<string, string>;
   lastTopic?: string;
@@ -29,6 +40,21 @@ export interface Memory {
   perspective?: UserPerspective;
   sentiment: Sentiment;
   outcomes?: any[];
+  conversationState?: {
+    currentWorkflow?: string;
+    step?: number;
+    context?: Record<string, any>;
+    interruptedWorkflow?: string;
+    interruptedStep?: number;
+    interruptedContext?: Record<string, any>;
+  };
+  userPreferences?: {
+    communicationStyle?: string;
+    investmentGoals?: string[];
+    preferredStrategies?: string[];
+    riskTolerance?: 'low' | 'medium' | 'high';
+    marketFocus?: string[];
+  };
 }
 
 const MEMORY_KEY = 'wholescale-os-memory';
@@ -71,21 +97,21 @@ export function getLeadStrategistBrief(leadId: string): string {
   const lead = memory.entityStack.find(e => e.id === leadId);
   if (!lead) return "No data found for this lead.";
 
-  const interactions = memory.messages?.filter(m => m.content?.toLowerCase().includes(lead.name.toLowerCase())) || [];
+  const interactions = memory.history?.filter(m => m.content?.toLowerCase().includes(lead.name.toLowerCase())) || [];
   const factKeys = Object.keys(memory.learnedFacts || {}).filter(k => k.includes(lead.name.toLowerCase()));
-  
+
   let brief = `### Strategist Brief: ${lead.name}\n`;
   brief += `**Context:** This lead is currently high priority in the stack.\n`;
-  
+
   if (factKeys.length > 0) {
     brief += `**Key Facts:**\n`;
     factKeys.forEach(k => brief += `- ${k.replace(lead.name.toLowerCase(), '').replace('_', ' ')}: ${memory.learnedFacts[k]}\n`);
   }
-  
+
   if (interactions.length > 0) {
     brief += `**Last Interaction:** "${interactions[interactions.length - 1]?.content?.substring(0, 50)}..."\n`;
   }
-  
+
   return brief;
 }
 
@@ -98,24 +124,24 @@ export function resolveEntityFromContext(type: string): Entity | null {
 export function resolveEntitiesFromContext(text: string): Entity[] {
   const memory = getMemory();
   const lower = text.toLowerCase();
-  
+
   // Specific entity type references
   if (/the lead|that lead|this lead|him|her/i.test(lower)) {
     const lead = memory.entityStack.find(e => e.type === 'lead');
     return lead ? [lead] : [];
   }
-  
+
   if (/the task|that task|this task/i.test(lower)) {
     const task = memory.entityStack.find(e => e.type === 'task');
     return task ? [task] : [];
   }
-  
+
   // Generic pronouns
   if (/\bit|this|that\b/i.test(lower)) {
     const last = memory.entityStack[0];
     return last ? [last] : [];
   }
-  
+
   // Plural references
   if (/them|both|all|those|these/i.test(lower)) {
     // Return unique entities in the stack, prioritizing the most recent
@@ -126,7 +152,7 @@ export function resolveEntitiesFromContext(text: string): Entity[] {
       return !duplicate;
     }).slice(0, 5);
   }
-  
+
   return [];
 }
 
@@ -136,10 +162,10 @@ export function resolveEntitiesFromContext(text: string): Entity[] {
 export function resolveAmbiguity(input: string, leads: any[]): { resolved: any | null, options: any[] | null } {
   const lower = input.toLowerCase().trim();
   const matches = leads.filter(l => l.name.toLowerCase().includes(lower));
-  
+
   if (matches.length === 1) return { resolved: matches[0], options: null };
   if (matches.length > 1) return { resolved: null, options: matches };
-  
+
   return { resolved: null, options: null };
 }
 
@@ -157,9 +183,9 @@ export function deleteLearnedFact(key: string) {
 
 export function setLearnedFact(key: string, value: string) {
   const memory = getMemory();
-  saveMemory({ 
-    ...memory, 
-    learnedFacts: { ...memory.learnedFacts, [key.toLowerCase()]: value } 
+  saveMemory({
+    ...memory,
+    learnedFacts: { ...memory.learnedFacts, [key.toLowerCase()]: value }
   });
 }
 
@@ -170,9 +196,9 @@ export function setTopic(topic: string | undefined) {
 
 export function setActiveState(type: string | null, data: any = {}) {
   const memory = getMemory();
-  saveMemory({ 
-    ...memory, 
-    activeState: type ? { type, data } : undefined 
+  saveMemory({
+    ...memory,
+    activeState: type ? { type, data } : undefined
   });
 }
 
@@ -193,7 +219,6 @@ export function trackLead(id: string, name: string) {
   pushToEntityStack({ id, name, type: 'lead' });
 }
 
-
 export function logOutcome(type: string, summary: string, metadata: any = {}) {
   const memory = getMemory();
   const outcomes = memory.outcomes || [];
@@ -201,6 +226,92 @@ export function logOutcome(type: string, summary: string, metadata: any = {}) {
     ...memory,
     outcomes: [{ type, summary, metadata, timestamp: Date.now() }, ...outcomes].slice(0, 50)
   });
+}
+
+// Enhanced conversation management
+export function addConversationTurn(turn: ConversationTurn) {
+  const memory = getMemory();
+  const updatedHistory = [...memory.history, turn].slice(-100); // Keep last 100 turns
+  saveMemory({ ...memory, history: updatedHistory });
+}
+
+export function getRecentConversation(limit: number = 10): ConversationTurn[] {
+  const memory = getMemory();
+  return memory.history.slice(-limit);
+}
+
+export function findConversationByTopic(topic: string): ConversationTurn[] {
+  const memory = getMemory();
+  return memory.history.filter(turn =>
+    turn.content.toLowerCase().includes(topic.toLowerCase())
+  );
+}
+
+export function setConversationState(state: Memory['conversationState']) {
+  const memory = getMemory();
+  saveMemory({ ...memory, conversationState: state });
+}
+
+export function getConversationState(): Memory['conversationState'] {
+  const memory = getMemory();
+  return memory.conversationState;
+}
+
+export function interruptWorkflow() {
+  const memory = getMemory();
+  const state = memory.conversationState;
+  if (state && state.currentWorkflow) {
+    saveMemory({
+      ...memory,
+      conversationState: {
+        ...state,
+        interruptedWorkflow: state.currentWorkflow,
+        interruptedStep: state.step,
+        interruptedContext: state.context,
+        currentWorkflow: undefined,
+        step: undefined,
+        context: undefined
+      }
+    });
+  }
+}
+
+export function resumeInterruptedWorkflow(): Memory['conversationState'] | null {
+  const memory = getMemory();
+  const state = memory.conversationState;
+  if (state && state.interruptedWorkflow) {
+    const interrupted = {
+      currentWorkflow: state.interruptedWorkflow,
+      step: state.interruptedStep,
+      context: state.interruptedContext,
+      interruptedWorkflow: undefined,
+      interruptedStep: undefined,
+      interruptedContext: undefined
+    };
+    saveMemory({ ...memory, conversationState: interrupted });
+    return interrupted;
+  }
+  return null;
+}
+
+export function setUserPreferences(prefs: Partial<Memory['userPreferences']>) {
+  const memory = getMemory();
+  saveMemory({
+    ...memory,
+    userPreferences: { ...memory.userPreferences, ...prefs }
+  });
+}
+
+export function getUserPreferences(): Memory['userPreferences'] {
+  const memory = getMemory();
+  return memory.userPreferences || {};
+}
+
+export function learnUserPreference(key: string, value: any) {
+  const memory = getMemory();
+  const prefs: Record<string, any> = memory.userPreferences || {};
+  prefs[key] = value;
+  saveMemory({ ...memory, userPreferences: prefs });
 }
 
 // RESTORED COMPATIBILITY EXPORTS
@@ -217,4 +328,28 @@ export async function loadHistory(userId: string, sessionId: string) {
 
 export function saveMessage(userId: string, sessionId: string, role: string, content: string) {
   import('./learning-service').then(m => m.saveConversationTurn(userId, sessionId, role as any, content));
+}
+
+// Enhanced memory retrieval
+export function getMemorySummary(): string {
+  const memory = getMemory();
+  const recentTurns = memory.history.slice(-5);
+  const topics = [...new Set(recentTurns.map(t => t.content.split(' ').slice(0, 3).join(' ')))];
+
+  let summary = `**Active Topic:** ${memory.activeTopic || 'None'}\n`;
+  if (topics.length > 0) {
+    summary += `**Recent Topics:** ${topics.join(', ')}\n`;
+  }
+  if (memory.entityStack.length > 0) {
+    summary += `**Active Entities:** ${memory.entityStack.slice(0, 3).map(e => e.name).join(', ')}\n`;
+  }
+  return summary;
+}
+
+export function clearMemory() {
+  localStorage.removeItem(MEMORY_KEY);
+}
+
+export function exportMemory(): string {
+  return JSON.stringify(getMemory(), null, 2);
 }

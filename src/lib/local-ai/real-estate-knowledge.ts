@@ -28,9 +28,12 @@ export const REAL_ESTATE_CONCEPTS: Record<string, RealEstateConcept> = {
     details: [
       'NOI = Gross Income - Operating Expenses',
       'Lower cap rates (4-6%) often indicate lower risk and higher stability.',
-      'Higher cap rates (8%+) often indicate higher risk or value-add opportunities.'
+      'Higher cap rates (8%+) often indicate higher risk or value-add opportunities.',
+      'Cap rate is used to estimate the potential return on an investment property.',
+      'It\'s a snapshot metric that doesn\'t account for financing or appreciation.'
     ],
-    benchmarks: '4-6% for low-risk A-class, 7-9% for solid B/C class, 10%+ for opportunistic/high-risk.'
+    benchmarks: '4-6% for low-risk A-class, 7-9% for solid B/C class, 10%+ for opportunistic/high-risk.',
+    whyMatters: 'Helps investors compare properties and assess risk-adjusted returns across different markets.'
   },
   'cash on cash': {
     term: 'Cash-on-Cash Return (CoC)',
@@ -231,7 +234,7 @@ export const REAL_ESTATE_SCRIPTS: ScriptTemplate[] = [
     category: 'expired',
     title: 'Expired Listing Script',
     script: "Hi [Name], this is [Agent] with WholeScale Realty. I saw your home recently came off the market and I wanted to reach out personally. I know this can be frustrating. I actually previewed your home when it was active and noticed a few things that might have held it back. Would you be open to a quick 5-minute conversation about what happened and whether it makes sense to try a different approach?",
-    tips: ['Listen more than you talk', 'Ask what feedback they received', 'Have comps ready' ]
+    tips: ['Listen more than you talk', 'Ask what feedback they received', 'Have comps ready']
   },
   {
     category: 'fsbo',
@@ -363,11 +366,11 @@ export function calculateDeal(type: 'flip' | 'rental' | 'sub2', data: any): Flip
     const insurance = 100;
     const management = monthlyRent * 0.10;
     const maintenance = monthlyRent * 0.05;
-    
+
     // Simple mortgage estimate (calc is for 7% interest, 30yr)
     const loanAmount = purchase - downPayment;
     const monthlyMortgage = (loanAmount * 0.00665) / (1 - Math.pow(1 + 0.00665, -360));
-    
+
     const monthlyExpenses = taxes + insurance + management + maintenance + monthlyMortgage + vacancy;
     const cashFlow = monthlyRent - monthlyExpenses;
     const annualCashFlow = cashFlow * 12;
@@ -394,7 +397,7 @@ export function calculateDeal(type: 'flip' | 'rental' | 'sub2', data: any): Flip
     const monthlyPITI = Number(data.monthlyPITI || 0);
     const rent = Number(data.rent || 0);
     const entryCost = Number(data.entryCost || 0);
-    
+
     const cashFlow = rent - monthlyPITI - (rent * 0.15); // subtracting 15% for vacancy/maint
     const coc = (cashFlow * 12 / (entryCost || 1)) * 100;
 

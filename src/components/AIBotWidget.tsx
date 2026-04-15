@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Bot, X, Send, 
+import {
+  Bot, X, Send,
   User, Key, Mic, Volume2, VolumeX,
   Layout as LayoutIcon, Loader2,
   MessageSquare, CheckCircle2, FileText
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
-import { 
-  hasUserApiKey, 
-  processPrompt, 
+import {
+  hasUserApiKey,
+  processPrompt,
   generatePageInsights
 } from '../lib/gemini';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -19,7 +19,7 @@ import { RateLimitModal } from './RateLimitModal';
 import { voiceService } from '../lib/voice-service';
 import { usageTracker, UsageData } from '../lib/usage-tracking';
 import { UsageLimitModal } from './UsageLimitModal';
-import { 
+import {
   executeTask,
   generateResponse,
   generateErrorResponse,
@@ -27,17 +27,17 @@ import {
 } from '../lib/local-ai';
 import { NLUEngine } from '../lib/local-ai/engine/nlu-engine';
 import { ContextManager } from '../lib/local-ai/engine/context-manager';
-import { 
-  saveMessage, 
-  getMemory, 
+import {
+  saveMessage,
+  getMemory,
   syncUserProfile,
   loadHistory
 } from '../lib/local-ai/memory-store';
 import { AIBotLearningButtons } from './AIBotLearningButtons';
 import { saveLearnedIntent } from '../lib/local-ai/learning-service';
 import { intents } from '../lib/ai/intents';
-import { 
-  saveConversationTurn, 
+import {
+  saveConversationTurn,
   generateSessionId,
   getUserPreferences,
   getConversationContext
@@ -60,7 +60,7 @@ const FormattedContent: React.FC<{ content: string }> = ({ content }) => {
 
   // Simple regex-based markdown parser for headings, bold, and bullet points
   const lines = content.split('\n');
-  
+
   return (
     <div className="flex flex-col gap-1.5">
       {lines.map((line, i) => {
@@ -73,7 +73,7 @@ const FormattedContent: React.FC<{ content: string }> = ({ content }) => {
             </div>
           );
         }
-        
+
         // Blockquotes/Insights: > "Quote"
         if (line.trim().startsWith('>')) {
           return (
@@ -140,7 +140,7 @@ export function AIBotWidget() {
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
   const [insights, setInsights] = useState<string[]>([]);
   const [insightsLoading, setInsightsLoading] = useState(false);
-  const { 
+  const {
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiModel, isAiDocked, setAiDocked,
@@ -203,7 +203,7 @@ export function AIBotWidget() {
         localStorage.setItem('os_bot_session_id', sessionId);
       }
       setSessionId(sessionId);
-      
+
       // Load user preferences
       const userId = currentUser?.id;
       if (userId) {
@@ -226,7 +226,7 @@ export function AIBotWidget() {
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   const [saveContactModal, setSaveContactModal] = useState<{
@@ -237,7 +237,7 @@ export function AIBotWidget() {
     phone: '',
   });
 
-  const [pendingTypoSuggestion, setPendingTypoSuggestion] = useState<{suggestedText: string, keyword: string} | null>(null);
+  const [pendingTypoSuggestion, setPendingTypoSuggestion] = useState<{ suggestedText: string, keyword: string } | null>(null);
 
   // Handle Dragging
   const startDrag = (e: React.MouseEvent) => {
@@ -258,7 +258,7 @@ export function AIBotWidget() {
     const onMouseMove = (e: MouseEvent) => {
       const deltaX = dragStart.current.x - e.clientX;
       const deltaY = dragStart.current.y - e.clientY;
-      
+
       const newPos = {
         x: Math.max(20, Math.min(window.innerWidth - 60, dragStart.current.posX + deltaX)),
         y: Math.max(20, Math.min(window.innerHeight - 60, dragStart.current.posY + deltaY))
@@ -289,28 +289,28 @@ export function AIBotWidget() {
   useEffect(() => {
     async function loadPrefs() {
       if (!currentUser?.id) return;
-      
+
       const keyExists = await hasUserApiKey();
       setHasKey(keyExists);
 
       if (isSupabaseConfigured) {
         // Fetch usage data
         await fetchUsage();
-        
+
         // Sync user profile and load history from Supabase
         syncUserProfile(currentUser.id);
         await loadHistory(currentUser.id, sessionId);
-        
+
         // Load combined history from memory store after sync
         const memory = getMemory();
         if (memory.history.length > 0) {
           const chatHistory: ChatMessage[] = memory.history.map((m, i) => ({
-             id: `hist-${i}-${m.timestamp}`,
-             role: m.role === 'assistant' || m.role === 'system' ? 'ai' : 'user',
-             content: m.content,
-             timestamp: m.timestamp,
-             intent: m.intent,
-             systemLog: "🤖 OS Bot"
+            id: `hist-${i}-${m.timestamp}`,
+            role: m.role === 'assistant' ? 'ai' : 'user',
+            content: m.content,
+            timestamp: m.timestamp,
+            intent: m.intent,
+            systemLog: "🤖 OS Bot"
           }));
           setMessages(chatHistory);
         } else {
@@ -339,12 +339,12 @@ export function AIBotWidget() {
       setAiOpen(true);
       setIsMinimized(false);
     };
-    
+
     const handleDock = () => {
       setAiDocked(true);
       setAiOpen(false);
     };
-    
+
     window.addEventListener('toggle-ai-widget', handleToggle);
     window.addEventListener('clear-ai-chat', handleClear);
     window.addEventListener('undock-ai-widget', handleUndock);
@@ -358,7 +358,7 @@ export function AIBotWidget() {
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       window.removeEventListener('toggle-ai-widget', handleToggle);
       window.removeEventListener('clear-ai-chat', handleClear);
@@ -373,10 +373,10 @@ export function AIBotWidget() {
     voiceService.setCallbacks(
       (transcript) => setPrompt(prev => prev + transcript),
       (isRec) => {
-         setIsRecording(isRec);
+        setIsRecording(isRec);
       },
       (err) => {
-         console.warn(err);
+        console.warn(err);
       }
     );
   }, []);
@@ -390,7 +390,7 @@ export function AIBotWidget() {
   // Handle auto-submit on recording end
   useEffect(() => {
     if (!isRecording && promptRef.current.trim().length > 0 && !loading) {
-      const dummyEvent = { preventDefault: () => {} } as React.FormEvent;
+      const dummyEvent = { preventDefault: () => { } } as React.FormEvent;
       handleSubmit(dummyEvent);
     }
   }, [isRecording]);
@@ -434,8 +434,8 @@ export function AIBotWidget() {
     }
 
     // Set initial state immediately to avoid flashing previous text
-    setDisplayedText(''); 
-    
+    setDisplayedText('');
+
     const fullText = message.content;
     let currentText = '';
     let index = 0;
@@ -477,9 +477,9 @@ export function AIBotWidget() {
   const getContextualResponse = async (input: string): Promise<string | null> => {
     const userId = currentUser?.id;
     if (!userId || !sessionId) return null;
-    
+
     const context = await getConversationContext(userId, sessionId, 3);
-    
+
     // Check for "it" or "that" referring to previous topic
     if (input.toLowerCase().match(/^(it|that|this|those|these)$/)) {
       const lastMessages = context.filter((m: any) => m.role === 'assistant').slice(-1);
@@ -487,7 +487,7 @@ export function AIBotWidget() {
         return `You were asking about ${lastMessages[0].content.substring(0, 100)}... Can you be more specific?`;
       }
     }
-    
+
     return null;
   };
 
@@ -517,14 +517,14 @@ export function AIBotWidget() {
       content: userText,
       timestamp: new Date().toISOString()
     };
-    
+
     // Save to locally persistent and Supabase memory
     if (currentUser?.id) saveMessage(currentUser.id, sessionId, 'user', userText);
-    
+
     if (sessionId && currentUser?.id) {
       await saveConversationTurn(currentUser.id, sessionId, 'user', userText);
     }
-    
+
     setMessages(prev => [...prev, userMsg]);
     setPrompt('');
     setLoading(true);
@@ -599,13 +599,13 @@ export function AIBotWidget() {
 
       // ── MODULAR NLU PIPELINE (v11.0) ───────────────────────────────────
       console.log('[🤖 OS BOT] Execution Pipeline Start:', userText);
-      
+
       let response: any;
 
       try {
         // 1. Get Contextual History
         const context = await ContextManager.getContext(currentUser?.id || 'system', sessionId);
-        
+
         // 2. Process via NLUEngine (Semantic + Fast Path)
         const nluResult = await NLUEngine.process(userText, context);
         console.log(`[🤖 OS BOT] NLU Result: ${nluResult.intent}`, nluResult.entities);
@@ -624,7 +624,7 @@ export function AIBotWidget() {
           };
         } else {
           console.log('[🤖 OS BOT] Falling back to Gemini Logic for complex prompt');
-          finalResponse = await processPrompt(userText, { 
+          finalResponse = await processPrompt(userText, {
             page: location.pathname,
             currentTime: new Date().toISOString(),
             sessionId,
@@ -640,7 +640,7 @@ export function AIBotWidget() {
           response: "I ran into a problem processing that. Try again or say 'help'.",
           systemLog: '🤖 OS Bot'
         };
-        
+
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
           role: 'ai',
@@ -800,15 +800,15 @@ export function AIBotWidget() {
   const handleLearnIntent = async (originalPhrase: string, intent: string, params: Record<string, any> = {}) => {
     const userId = currentUser?.id;
     if (!userId) return;
-    
+
     await saveLearnedIntent(userId, originalPhrase, intent, params);
     console.log(`[🤖 OS Bot] Learned: "${originalPhrase}" → ${intent}`);
-    
+
     const intentObj = intents.find(i => i.name === intent);
     if (intentObj) {
       const result = await executeTask(intentObj.action, { ...params });
       const response = generateResponse(intentObj, result, originalPhrase);
-      
+
       const botMsg: ChatMessage = {
         id: Date.now().toString(),
         role: 'ai',
@@ -823,7 +823,7 @@ export function AIBotWidget() {
 
   const handleExecuteAction = async (intent: string, data: any) => {
     let result: { success: boolean; message: string; data?: any } | null = null;
-    
+
     try {
       // 1. Domain Action Normalization (v11.0 Legacy Support)
       let domainAction = intent;
@@ -847,10 +847,10 @@ export function AIBotWidget() {
       } else {
         setLoading(true);
         const taskResponse = await TaskExecutor.execute(domainAction, actionParams);
-        result = { 
-          success: taskResponse.success, 
+        result = {
+          success: taskResponse.success,
           message: taskResponse.message,
-          data: taskResponse.data 
+          data: taskResponse.data
         };
         setLoading(false);
       }
@@ -870,8 +870,8 @@ export function AIBotWidget() {
         intent: intent
       }]);
       setTypingMessageId(finalId);
-      
-      const speechText = result 
+
+      const speechText = result
         ? (result.success ? result.message : `Error. ${result.message}`)
         : 'Action completed.';
       speak(speechText);
@@ -890,11 +890,11 @@ export function AIBotWidget() {
     }
   };
 
-  if (!showFloatingAIWidget) return null; 
+  if (!showFloatingAIWidget) return null;
 
   if (hasKey === false && isAiOpen) {
     return (
-      <div 
+      <div
         className="fixed z-[var(--z-popover)] animate-in fade-in slide-in-from-bottom-4 pointer-events-none"
         style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
       >
@@ -906,8 +906,8 @@ export function AIBotWidget() {
           </div>
           <h3 className="font-bold mb-2" style={{ color: 'var(--t-text)' }}>Setup Required</h3>
           <p className="text-[var(--t-text-muted)] mb-4">Please configure your AI API key to use the floating assistant.</p>
-          <button 
-            onClick={() => navigate('/settings/ai')} 
+          <button
+            onClick={() => navigate('/settings/ai')}
             className="text-xs px-4 py-2 rounded-lg text-white font-bold"
             style={{ background: 'var(--t-primary)' }}
           >
@@ -920,20 +920,19 @@ export function AIBotWidget() {
   }
 
   return (
-    <div 
-      className={`fixed z-[var(--z-loader)] flex items-end pointer-events-none ${
-        position.y > window.innerHeight / 2 ? 'flex-col' : 'flex-col-reverse'
-      }`}
+    <div
+      className={`fixed z-[var(--z-loader)] flex items-end pointer-events-none ${position.y > window.innerHeight / 2 ? 'flex-col' : 'flex-col-reverse'
+        }`}
       style={{ bottom: `${position.y}px`, right: `${position.x}px` }}
     >
-      
+
       {/* Expanded Chat Window */}
       {isAiOpen && !isMinimized && (
-        <div 
+        <div
           className={`w-80 md:w-96 h-[500px] border rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto mb-4 animate-in zoom-in-95 duration-200 
             ${position.y > window.innerHeight / 2 ? 'order-last mt-4 mb-0 origin-top-right' : 'mb-4 origin-bottom-right'}`}
-          style={{ 
-            background: 'var(--t-surface)', 
+          style={{
+            background: 'var(--t-surface)',
             borderColor: 'var(--t-border)',
             position: 'absolute',
             bottom: position.y > window.innerHeight / 2 ? 'auto' : '100%',
@@ -941,15 +940,15 @@ export function AIBotWidget() {
             right: 0
           }}
         >
-          
+
           {/* Header */}
-          <div 
+          <div
             className={`p-3 flex items-center justify-between cursor-move ${position.y < 200 ? 'order-last border-t rounded-b-2xl' : 'border-b rounded-t-2xl'}`}
             style={{ background: 'var(--t-surface-hover)', borderColor: 'var(--t-border)' }}
             onMouseDown={startDrag}
           >
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => { setAiDocked(true); setAiOpen(false); }}
                 className="w-6 h-6 rounded-lg flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
                 style={{ background: 'var(--t-primary)' }}
@@ -960,16 +959,15 @@ export function AIBotWidget() {
               <div className="flex flex-col">
                 <h2 className="text-xs font-black text-[var(--t-text)] leading-none">🤖 {userName ? `OS Bot | ${userName}` : 'OS Bot'}</h2>
                 {usage && (
-                  <span className={`text-[9px] font-bold mt-0.5 ${
-                    usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
-                  }`}>
+                  <span className={`text-[9px] font-bold mt-0.5 ${usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
+                    }`}>
                     🔋 {usage.remaining} left today
                   </span>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button 
+              <button
                 onClick={() => setSpeechEnabled(!speechEnabled)}
                 className={`p-1.5 rounded-lg transition-colors group ${speechEnabled ? 'text-[var(--t-primary)]' : 'text-[var(--t-text-muted)]'}`}
                 title={speechEnabled ? "Mute AI Voice" : "Enable AI Voice"}
@@ -980,7 +978,7 @@ export function AIBotWidget() {
                   <VolumeX size={16} />
                 )}
               </button>
-              <button 
+              <button
                 onClick={() => {
                   setAiDocked(true);
                   setAiOpen(false);
@@ -990,10 +988,10 @@ export function AIBotWidget() {
               >
                 <LayoutIcon size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
               </button>
-              <button 
-                onClick={() => { 
+              <button
+                onClick={() => {
                   setAiDocked(true);
-                  setAiOpen(false); 
+                  setAiOpen(false);
                 }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
                 title="Close"
@@ -1004,7 +1002,7 @@ export function AIBotWidget() {
           </div>
 
           {/* Messages Area */}
-          <div 
+          <div
             ref={scrollRef}
             className={`flex-1 overflow-y-auto p-4 space-y-4 ${position.y < 200 ? 'order-1' : ''}`}
             style={{ background: 'var(--t-background)' }}
@@ -1062,9 +1060,8 @@ export function AIBotWidget() {
                     {msg.role === 'user' ? <User className="w-3 h-3" style={{ color: 'var(--t-on-primary)' }} /> : <Bot className="w-3 h-3" style={{ color: 'var(--t-primary)' }} />}
                   </div>
                   <div className={`max-w-[85%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                    <div className={`px-4 py-3 rounded-[1.5rem] text-xs leading-relaxed shadow-lg ${
-                      msg.role === 'user' ? 'rounded-tr-none bg-[var(--t-primary)] text-[var(--t-on-primary)]' : 'border rounded-tl-none bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)]'
-                    }`}>
+                    <div className={`px-4 py-3 rounded-[1.5rem] text-xs leading-relaxed shadow-lg ${msg.role === 'user' ? 'rounded-tr-none bg-[var(--t-primary)] text-[var(--t-on-primary)]' : 'border rounded-tl-none bg-[var(--t-surface)] border-[var(--t-border)] text-[var(--t-text)]'
+                      }`}>
                       <div className="flex flex-col gap-2 min-w-[140px]">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-[var(--t-primary)] text-[var(--t-on-primary)] uppercase tracking-tighter">
@@ -1201,30 +1198,30 @@ export function AIBotWidget() {
 
             <div className="flex gap-2 w-full relative">
               <div className="relative flex-1">
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={isRecording ? "Listening..." : "Ask anything..."}
-                className="w-full border rounded-lg pl-3 pr-8 py-2 text-xs outline-none focus:ring-1 transition-all"
-                style={{ 
-                  background: 'var(--t-background)', 
-                  borderColor: isRecording ? 'var(--t-primary)' : 'var(--t-border)', 
-                  color: 'var(--t-text)',
-                  // @ts-expect-error custom prop
-                  '--tw-ring-color': 'var(--t-primary)'
-                }}
-                disabled={loading}
-              />
-              <button
-                type="button"
-                onClick={toggleRecording}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 transition-colors ${isRecording ? 'animate-pulse' : ''}`}
-                style={{ color: isRecording ? 'var(--t-primary)' : 'var(--t-text-muted)' }}
-              >
-                <Mic size={14} />
-              </button>
-            </div>
+                <input
+                  type="text"
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder={isRecording ? "Listening..." : "Ask anything..."}
+                  className="w-full border rounded-lg pl-3 pr-8 py-2 text-xs outline-none focus:ring-1 transition-all"
+                  style={{
+                    background: 'var(--t-background)',
+                    borderColor: isRecording ? 'var(--t-primary)' : 'var(--t-border)',
+                    color: 'var(--t-text)',
+                    // @ts-expect-error custom prop
+                    '--tw-ring-color': 'var(--t-primary)'
+                  }}
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 transition-colors ${isRecording ? 'animate-pulse' : ''}`}
+                  style={{ color: isRecording ? 'var(--t-primary)' : 'var(--t-text-muted)' }}
+                >
+                  <Mic size={14} />
+                </button>
+              </div>
               <button
                 disabled={loading || !prompt.trim()}
                 className="p-2 rounded-lg disabled:opacity-50 transition-colors"
@@ -1238,7 +1235,7 @@ export function AIBotWidget() {
       )}
 
       {/* Floating Bubble Button */}
-      <button 
+      <button
         onMouseDown={startDrag}
         onClick={(e) => {
           const moved = Math.abs(e.clientX - dragStart.current.x) > 5 || Math.abs(e.clientY - dragStart.current.y) > 5;
@@ -1257,10 +1254,9 @@ export function AIBotWidget() {
             setIsMinimized(false);
           }
         }}
-        className={`pointer-events-auto p-4 rounded-full shadow-2xl transition-all duration-500 hover:scale-110 active:scale-95 flex items-center justify-center group relative ${
-          isAiOpen && !isMinimized ? 'rotate-90' : 'hover:shadow-lg'
-        } ${isAiDocked ? 'scale-75 opacity-50 hover:opacity-100 hover:scale-100' : ''}`}
-        style={{ 
+        className={`pointer-events-auto p-4 rounded-full shadow-2xl transition-all duration-500 hover:scale-110 active:scale-95 flex items-center justify-center group relative ${isAiOpen && !isMinimized ? 'rotate-90' : 'hover:shadow-lg'
+          } ${isAiDocked ? 'scale-75 opacity-50 hover:opacity-100 hover:scale-100' : ''}`}
+        style={{
           background: (isAiOpen && !isMinimized) || isAiDocked ? 'var(--t-surface-active)' : 'var(--t-primary)',
           color: (isAiOpen && !isMinimized) || isAiDocked ? 'var(--t-primary)' : 'var(--t-on-primary)',
           transition: 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
@@ -1276,12 +1272,12 @@ export function AIBotWidget() {
           })
         }}
       >
-        {isAiDocked ? <LayoutIcon size={24} /> : (isAiOpen && !isMinimized ? <X size={24}/> : <Bot size={24} />)}
-        
+        {isAiDocked ? <LayoutIcon size={24} /> : (isAiOpen && !isMinimized ? <X size={24} /> : <Bot size={24} />)}
+
         {!isAiOpen && (
           <div className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--t-error)] border-2 border-[var(--t-background)] rounded-full animate-pulse" />
         )}
-        
+
         {!isAiOpen && (
           <div className="absolute right-full mr-3 whitespace-nowrap bg-[var(--t-surface)] text-[var(--t-text)] text-xs px-2 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-[var(--t-border)] shadow-xl">
             How can I help you, {currentUser?.email?.split('@')[0]}?
@@ -1307,7 +1303,7 @@ export function AIBotWidget() {
         phone={saveContactModal.phone}
         onClose={() => setSaveContactModal(prev => ({ ...prev, isOpen: false }))}
       />
-      
+
       <UsageLimitModal
         isOpen={showUsageModal}
         onClose={() => setShowUsageModal(false)}

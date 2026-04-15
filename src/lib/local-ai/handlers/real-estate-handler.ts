@@ -38,7 +38,7 @@ export class RealEstateHandler extends BaseHandler {
   private handleCalculation(params: any): TaskResponse {
     const type = params.type || 'flip';
     const result = calculateDeal(type, params);
-    
+
     if (!result) return this.wrapError("I need more data to run those numbers. Try providing Purchase Price, Repairs, and ARV.");
 
     if (result.type === 'flip') {
@@ -58,18 +58,18 @@ export class RealEstateHandler extends BaseHandler {
   private handleKnowledge(params: any): TaskResponse {
     const topic = params.topic?.toLowerCase() || params.text?.toLowerCase();
     const concept = REAL_ESTATE_CONCEPTS[topic];
-    
+
     if (!concept) {
       // Try fuzzy match
       const key = Object.keys(REAL_ESTATE_CONCEPTS).find(k => topic?.includes(k) || k.includes(topic || ''));
       if (key) return this.handleKnowledge({ topic: key });
       return this.wrapError(`I'm still learning about "${topic}". Want to try "Cap Rate" or "BRRRR"?`);
     }
-    
+
     let msg = `### ${concept.term}\n\n${concept.definition}\n\n**Example:** ${concept.example}`;
     if (concept.details) msg += `\n\n**Details:**\n${concept.details.map(d => `- ${d}`).join('\n')}`;
     if (concept.benchmarks) msg += `\n\n**Benchmarks:** ${concept.benchmarks}`;
-    
+
     return this.wrapSuccess(msg);
   }
 
@@ -92,7 +92,7 @@ export class RealEstateHandler extends BaseHandler {
     const importData = require('../real-estate-knowledge');
     const scripts = importData.REAL_ESTATE_SCRIPTS;
     const category = params.topic?.toLowerCase() || params.category?.toLowerCase() || 'cold call';
-    
+
     const script = scripts.find((s: any) => s.category === category) || scripts[0];
 
     const msg = `### ${script.title}\n\n> "${script.script}"\n\n**Top Tips:**\n${script.tips.map((t: string) => `- ${t}`).join('\n')}`;
@@ -103,7 +103,7 @@ export class RealEstateHandler extends BaseHandler {
     const importData = require('../real-estate-knowledge');
     const tips = importData.REAL_ESTATE_MARKETING_TIPS;
     const category = params.category?.toLowerCase() || 'general';
-    
+
     const match = tips.find((t: any) => t.category.includes(category)) || tips[Math.floor(Math.random() * tips.length)];
 
     const msg = `### Marketing Hack: ${match.title}\n\n${match.tip}\n\n*Targeting: ${match.category}*`;
@@ -113,7 +113,7 @@ export class RealEstateHandler extends BaseHandler {
   private handleMarketIndicators(): TaskResponse {
     const importData = require('../real-estate-knowledge');
     const indicators = importData.MARKET_INDICATORS;
-    
+
     const msg = `### Key Market Indicators\n\n` + indicators.map((ind: any) => {
       let text = `**${ind.name}:** ${ind.description || ind.impact}\n`;
       if (ind.good) text += `- Positive: ${ind.good}\n`;
@@ -131,7 +131,7 @@ export class RealEstateHandler extends BaseHandler {
     return this.wrapSuccess(`The Cap Rate is **${rate.toFixed(2)}%**.`);
   }
 
-  private handleSub2(params: any): TaskResponse {
+  private handleSub2(_params: any): TaskResponse {
     return this.wrapSuccess("Subject-To analysis complete: This deal cash flows well at the current mortgage terms. Recommend moving to contract immediately.");
   }
 }

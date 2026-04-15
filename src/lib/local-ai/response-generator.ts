@@ -42,6 +42,60 @@ const defaultEndings = [
 ];
 
 /**
+ * Contextual follow-up question generator based on intent and conversation state.
+ */
+function generateFollowUp(intent: string, entities: any, _context: any): string | null {
+  const memory = getMemory();
+
+  // Real estate calculations - ask for missing data
+  if (intent === 'real_estate_action' && entities.action === 'calculate_deal') {
+    if (!entities.arv) return "What's the After Repair Value (ARV) you're working with?";
+    if (!entities.purchase) return "What's the purchase price?";
+    if (!entities.repairs) return "What are the estimated repair costs?";
+  }
+
+  // Lead management - ask for clarification if needed
+  if (intent === 'crm_action') {
+    if (entities.action === 'send_sms' && !entities.message) {
+      return "What message would you like me to send?";
+    }
+    if (entities.action === 'update_status' && !entities.status) {
+      return "What status should I update them to?";
+    }
+  }
+
+  // Check if we should resume interrupted workflow
+  if (memory.conversationState?.interruptedWorkflow && Math.random() > 0.7) {
+    return `By the way, we were working on ${memory.conversationState.interruptedWorkflow}. Want to continue that?`;
+  }
+
+  return null;
+}
+
+/**
+ * Educational explanation generator for real estate concepts.
+ */
+function addEducationalContext(intent: string, response: string): string {
+  if (intent !== 'real_estate_action') return response;
+
+  const memory = getMemory();
+  const userPrefs = memory.userPreferences;
+
+  // Add context based on user's experience level
+  if (userPrefs?.riskTolerance === 'low' || userPrefs?.investmentGoals?.includes('education')) {
+    const educationalAdditions = [
+      "\n\n💡 **Pro Tip:** Always run the numbers multiple ways before making an offer.",
+      "\n\n📚 **Remember:** The best deals are found off-market through direct marketing.",
+      "\n\n🎯 **Key Insight:** Focus on motivated sellers, not just discounted properties.",
+      "\n\n⚡ **Quick Tip:** Speed matters - the first qualified offer often wins."
+    ];
+    return response + pick(educationalAdditions, 'edu_tip');
+  }
+
+  return response;
+}
+
+/**
  * Applies personality style to a response.
  * Rules:
  * - Small talk / greeting responses are NEVER personality-wrapped (they already have tone).
@@ -253,6 +307,17 @@ export function generateResponse(
     }
   }
 
+  // Add contextual follow-up questions
+  const followUp = generateFollowUp(intentName, result?.data, context);
+  if (followUp && !result?.clean) {
+    message += `\n\n❓ ${followUp}`;
+  }
+
+  // Add educational context for real estate queries
+  if (!result?.clean) {
+    message = addEducationalContext(intentName, message);
+  }
+
   // Personalize with Name if known
   const userName = getLearnedFact('name');
   if (userName && !result?.clean && Math.random() > 0.4 && intentName !== 'greeting') {
@@ -281,9 +346,9 @@ export function generateErrorResponse(error: string): string {
   const store = useStore.getState();
   const aiName = store.aiName || 'OS Bot';
   const personality = store.aiPersonality || 'Default';
-  
+
   console.log(`[🎭 Personality] Error response | Personality: "${personality}"`);
-  
+
   const base = `I ran into an issue: ${error}. Want to try a different command?`;
   if (personality.toLowerCase() === 'professional') {
     return `🤖 ${aiName}: ${base} I can assist with leads, tasks, and messages.`;
@@ -357,12 +422,12 @@ export function mergeResponses(
     if (!mergedMessage.endsWith('.') && !mergedMessage.endsWith('!') && !mergedMessage.endsWith('?')) {
       mergedMessage += '.';
     }
-    
+
     // Add a natural transition
     const transition = suggestionMsg.toLowerCase().includes('recommend') || suggestionMsg.toLowerCase().includes('should')
       ? ` Based on that, `
       : ` Also, `;
-    
+
     mergedMessage += transition + suggestionMsg;
 
     // Apply personality once at the end
@@ -376,16 +441,45 @@ export function mergeResponses(
   results.forEach((r, i) => {
     let msg = r.result.message || "";
     msg = msg.replace('✅ ', '').trim();
-    
+
     if (i > 0) {
       const transitions = [" Additionally, ", " Also, ", " Separately, ", " Furthermore, "];
       combinedMessage += transitions[i % transitions.length];
     }
-    
+
     combinedMessage += msg;
   });
 
   const prefix = `🤖 ${aiName}: `;
   const finalMessage = applyPersonality(combinedMessage, personality, 'compound_intent', '');
   return `${prefix}${finalMessage}`;
+}
+
+/**
+ * Generate a contextual clarification question when entities are missing.
+ */
+export function generateClarificationQuestion(intent: string, missingEntities: string[]): string {
+  const questions: Record<string, string[]> = {
+    'calculate_deal': [
+      "I need a few more details to run the numbers. What's the [missing]?",
+      "To give you an accurate analysis, please provide the [missing].",
+      "Can you tell me the [missing] so I can calculate this properly?"
+    ],
+    'send_sms': [
+      "Who would you like me to send that to?",
+      "What's the phone number or lead name?",
+      "Should I send that to a specific lead?"
+    ],
+    'update_status': [
+      "What status should I update them to?",
+      "Which stage of the pipeline should they move to?",
+      "What's the new status for this lead?"
+    ]
+  };
+
+  const actionKey = intent.split('_').slice(1).join('_');
+  const actionQuestions = questions[actionKey] || questions['calculate_deal'];
+
+  const missing = missingEntities[0] || 'more details';
+  return pick(actionQuestions, 'clarify').replace('[missing]', missing);
 }
