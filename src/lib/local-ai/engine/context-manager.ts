@@ -1,5 +1,5 @@
-import { getMemory, trackLead, pushToEntityStack } from '../memory-store';
-import { addMentionedLead } from '../learning-service';
+import { getMemory } from '../memory-store';
+import { addMentionedLead, getConversationContext } from '../learning-service';
 
 /**
  * Manages conversation continuity, pronoun resolution, and implicit entity linking.

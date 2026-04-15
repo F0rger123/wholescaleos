@@ -600,22 +600,57 @@ export function AIBotWidget() {
       // ── MODULAR NLU PIPELINE (v11.0) ───────────────────────────────────
       console.log('[🤖 OS BOT] Execution Pipeline Start:', userText);
       
-      // 1. Get Contextual History
-      const context = await ContextManager.getContext(currentUser?.id || 'system', sessionId);
-      
-      // 2. Process via NLUEngine (Semantic + Fast Path)
-      const nluResult = await NLUEngine.process(userText, context);
-      console.log(`[🤖 OS BOT] NLU Result: ${nluResult.intent}`, nluResult.entities);
+      let response: any;
 
-      // 3. Interface with Gemini Logic (Model Context, Personality, etc.)
-      const response = await processPrompt(userText, { 
-        page: location.pathname,
-        currentTime: new Date().toISOString(),
-        sessionId,
-        nluResult // Pass pre-resolved NLU
-      }, aiModel);
+      try {
+        // 1. Get Contextual History
+        const context = await ContextManager.getContext(currentUser?.id || 'system', sessionId);
+        
+        // 2. Process via NLUEngine (Semantic + Fast Path)
+        const nluResult = await NLUEngine.process(userText, context);
+        console.log(`[🤖 OS BOT] NLU Result: ${nluResult.intent}`, nluResult.entities);
 
-      /* The unified processPrompt now handles all cases including local AI */
+        // 3. Execution (Modular v11.0 Branching)
+        let finalResponse: any;
+
+        if (nluResult && nluResult.intent !== 'unknown' && nluResult.confidence > 0.4) {
+          console.log('[🤖 OS BOT] Executing Local Task:', nluResult.intent);
+          const executionResult = await TaskExecutor.execute(nluResult.intent, nluResult.entities);
+          finalResponse = {
+            intent: nluResult.intent,
+            response: executionResult.message,
+            data: executionResult.data,
+            systemLog: '🤖 OS Bot'
+          };
+        } else {
+          console.log('[🤖 OS BOT] Falling back to Gemini Logic for complex prompt');
+          finalResponse = await processPrompt(userText, { 
+            page: location.pathname,
+            currentTime: new Date().toISOString(),
+            sessionId,
+            nluResult
+          }, aiModel);
+        }
+
+        response = finalResponse;
+      } catch (err) {
+        console.error('[🤖 OS BOT] NLU Pipeline Error:', err);
+        const errorResponse = {
+          intent: 'error',
+          response: "I ran into a problem processing that. Try again or say 'help'.",
+          systemLog: '🤖 OS Bot'
+        };
+        
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: 'ai',
+          content: errorResponse.response,
+          timestamp: new Date().toISOString()
+        }]);
+        setLoading(false);
+        return;
+      }
+
       if (response.intent === 'rate_limit') {
         setShowRateLimitModal(true);
         const finalId = (Date.now() + 1).toString();
