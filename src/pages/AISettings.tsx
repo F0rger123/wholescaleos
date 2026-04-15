@@ -8,7 +8,6 @@ import { AIProviderSettings } from '../components/settings/AIProviderSettings';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [provider, setProvider] = useState<'gemini' | 'local'>('local');
-  const [geminiKey, setGeminiKey] = useState('');
   const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/v1');
   const [model, setModel] = useState('os-bot');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -64,12 +63,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
           if (connections) {
             connections.forEach((conn: any) => {
-              if (conn.provider === 'gemini') {
-                setGeminiKey(conn.refresh_token || '');
-                if (localStorage.getItem('user_ai_provider') === 'gemini' || !localStorage.getItem('user_ai_provider')) {
-                  setModel(conn.access_token || 'gemini-3.1-flash-lite');
-                }
-              } else if (conn.provider === 'local') {
+              if (conn.provider === 'local') {
                 setLocalEndpoint(conn.refresh_token || 'http://localhost:11434/v1');
                 if (localStorage.getItem('user_ai_provider') === 'local') {
                   setModel(conn.access_token || 'os-bot');
@@ -101,7 +95,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           console.error('Failed to load settings:', err);
         }
       } else {
-        setGeminiKey(localStorage.getItem('user_gemini_api_key') || '');
         setLocalEndpoint(localStorage.getItem('user_local_ai_endpoint') || 'http://localhost:11434/v1');
         
         const localProvider = localStorage.getItem('user_ai_provider') as any;
@@ -136,36 +129,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     loadKey();
   }, [currentUser]);
 
-  const handleTestKey = async () => {
-    if (provider === 'gemini' && !geminiKey.trim()) return;
-    setTesting(true);
-    setTestResult(null);
-
-    try {
-      if (provider === 'gemini') {
-        const apiVersion = (model.includes('1.5') || model.includes('2.0') || model.includes('exp')) ? 'v1beta' : 'v1';
-        const res = await fetch(`https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${geminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Hello' }] }] })
-        });
-        if (res.ok) setTestResult({ success: true, message: 'Gemini connection successful!' });
-        else throw new Error('Invalid key or model');
-      } else if (provider === 'local') {
-        if (model === 'os-bot') {
-          setTestResult({ success: true, message: 'OS Bot is always ready! No connection test needed.' });
-        } else {
-          const res = await fetch(`${localEndpoint}/models`);
-          if (res.ok) setTestResult({ success: true, message: 'Local AI connection successful!' });
-          else throw new Error('Local endpoint not reachable.');
-        }
-      }
-    } catch (err: any) {
-      setTestResult({ success: false, message: `Connection failed: ${err.message}` });
-    } finally {
-      setTesting(false);
-    }
-  };
 
   const handleSavePersona = async () => {
     if (!currentUser?.id) return;

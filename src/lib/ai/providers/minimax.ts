@@ -1,13 +1,17 @@
-export async function callMiniMax(input: string, context: any, apiKey: string): Promise<string> {
+export async function callMiniMax(input: string, context: any, apiKey: string, signal?: AbortSignal): Promise<string> {
+  const model = context.model || 'abab6.5s-chat';
+  const url = `https://api.minimax.chat/v1/text/chatcompletion_v2?key=${apiKey}`;
+
   try {
-    const res = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
+      signal,
       body: JSON.stringify({
-        model: 'abab6.5-chat',
+        model: 'abab6.5s-chat',
         messages: [
           { 
             role: 'system', 

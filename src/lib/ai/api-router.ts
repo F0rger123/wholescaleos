@@ -3,10 +3,12 @@ import { callGemini } from './providers/gemini';
 import { callOpenAI } from './providers/openai';
 import { callClaude } from './providers/claude';
 import { callMiniMax } from './providers/minimax';
+import { decryptKey } from './crypto';
 
 export async function callExternalAPI(
   input: string, 
-  context: any
+  context: any,
+  signal?: AbortSignal
 ): Promise<string | null> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -24,22 +26,24 @@ export async function callExternalAPI(
     if (!provider || provider === 'local') return null;
 
     const apiKeys = profile.user_api_keys || {};
-    const apiKey = apiKeys[provider];
+    const encryptedKey = apiKeys[provider];
     
-    if (!apiKey) {
+    if (!encryptedKey) {
       console.warn(`[API Router] Provider ${provider} selected but no API key found.`);
       return null;
     }
+
+    const apiKey = decryptKey(encryptedKey, user.id);
     
     switch (provider) {
       case 'gemini':
-        return await callGemini(input, context, apiKey);
+        return await callGemini(input, context, apiKey, signal);
       case 'openai':
-        return await callOpenAI(input, context, apiKey);
+        return await callOpenAI(input, context, apiKey, signal);
       case 'claude':
-        return await callClaude(input, context, apiKey);
+        return await callClaude(input, context, apiKey, signal);
       case 'minimax':
-        return await callMiniMax(input, context, apiKey);
+        return await callMiniMax(input, context, apiKey, signal);
       default:
         console.warn(`[API Router] Unsupported provider: ${provider}`);
         return null;

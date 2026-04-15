@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useStore } from '../../store/useStore';
-import { Bot, Key, Shield, Zap, Info, ExternalLink, Moon, Sparkles, AlertCircle } from 'lucide-react';
+import { Bot, Key, Shield, Zap, Info, ExternalLink, Moon, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { encryptKey, decryptKey } from '../../lib/ai/crypto';
 
 interface APIKeys {
   gemini?: string;
@@ -16,26 +17,75 @@ export const AIProviderSettings: React.FC = () => {
   const [keys, setKeys] = useState<APIKeys>({});
   const [provider, setProvider] = useState<string>('local');
   const [fallbackEnabled, setFallbackEnabled] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [migrating, setMigrating] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
-      setKeys(currentUser.user_api_keys || {});
+      // Decrypt keys for local state
+      const decryptedKeys: APIKeys = {};
+      const encryptedKeys = currentUser.user_api_keys || {};
+      
+      Object.entries(encryptedKeys).forEach(([provider, key]) => {
+        decryptedKeys[provider as keyof APIKeys] = decryptKey(key as string, currentUser.id);
+      });
+      
+      setKeys(decryptedKeys);
       setProvider(currentUser.preferred_api_provider || 'local');
       setFallbackEnabled(currentUser.api_fallback_enabled ?? true);
+      
+      // Trigger migration check once on load
+      checkLegacyMigration();
     }
-  }, [currentUser]);
+  }, [currentUser?.id]);
+
+  const checkLegacyMigration = async () => {
+    if (!currentUser?.id || localStorage.getItem('ai_keys_migrated')) return;
+    
+    try {
+      const { data: connections } = await supabase
+        .from('user_connections')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('provider', 'gemini')
+        .maybeSingle();
+
+      if (connections?.refresh_token && !currentUser.user_api_keys?.gemini) {
+        setMigrating(true);
+        const legacyKey = connections.refresh_token;
+        const newKeys = { ...keys, gemini: legacyKey };
+        
+        // Save using current logic (which will encrypt)
+        await saveSettings(newKeys);
+        localStorage.setItem('ai_keys_migrated', 'true');
+        toast.success('Legacy Gemini key migrated successfully');
+      }
+    } catch (err) {
+      console.error('Migration failed:', err);
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   const saveSettings = async (newKeys?: APIKeys, newProvider?: string, newFallback?: boolean) => {
     if (!currentUser) return;
     setLoading(true);
     
     try {
+      // Encrypt keys before storing
+      const keysToEncrypt = newKeys || keys;
+      const encryptedKeys: Record<string, string> = {};
+      
+      Object.entries(keysToEncrypt).forEach(([prov, val]) => {
+        if (val) {
+          encryptedKeys[prov] = encryptKey(val, currentUser.id);
+        }
+      });
+
       const { error } = await supabase
         .from('profiles')
         .update({
-          user_api_keys: newKeys || keys,
+          user_api_keys: encryptedKeys,
           preferred_api_provider: newProvider || provider,
           api_fallback_enabled: newFallback ?? fallbackEnabled
         })

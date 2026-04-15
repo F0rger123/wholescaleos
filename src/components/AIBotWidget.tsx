@@ -4,7 +4,7 @@ import {
   Bot, X, Send,
   User, Key, Mic, Volume2, VolumeX,
   Layout as LayoutIcon, Loader2,
-  MessageSquare, CheckCircle2, FileText, Sparkles, Shield, Zap, Moon
+  MessageSquare, CheckCircle2, FileText, Shield, Zap
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
@@ -152,7 +152,7 @@ export function AIBotWidget() {
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiModel, isAiDocked, setAiDocked,
-    sidebarOpen
+    sidebarOpen, aiName
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);

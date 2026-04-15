@@ -1,6 +1,7 @@
 import { useStore } from '../../../store/useStore';
 import { getMemory } from '../memory-store';
 import { getConversationContext } from '../learning-service';
+import { callExternalAPI } from '../../ai/api-router';
 
 export interface ParsedIntent {
   intent: string;
@@ -11,8 +12,8 @@ export interface ParsedIntent {
 
 /**
  * The Brain of OS Bot's NLU.
- * Combines high-precision Gemini extraction with a local regex "Fast Path".
- * v12.0: Enhanced with 50+ patterns, semantic similarity, and better entity extraction.
+ * Combines high-precision Cloud extraction with a local regex "Fast Path".
+ * v13.0: Refactored to use Hybrid API Router for secure, multi-provider extraction.
  */
 export class NLUEngine {
   private static FAST_PATH_PATTERNS = [
@@ -65,67 +66,20 @@ export class NLUEngine {
     { regex: /^analyze (.+) as (flip|rental|wholesale|brrrr)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
     { regex: /^calculate (.+) as (flip|rental|wholesale|brrrr)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
 
-    // Task Management
-    { regex: /^(show|list|get|view|display) (my )?tasks/i, intent: 'task_action', params: { action: 'list_tasks' } },
-    { regex: /^(show|list|get) (my )?pending tasks/i, intent: 'task_action', params: { action: 'list_tasks', status: 'pending' } },
-    { regex: /^(show|list|get) (my )?overdue tasks/i, intent: 'task_action', params: { action: 'list_tasks', overdue: true } },
-    { regex: /^(create|add|new|make) (a )?task/i, intent: 'task_action', params: { action: 'create_task' } },
-    { regex: /^(update|edit|modify|change) (the )?task/i, intent: 'task_action', params: { action: 'update_task' } },
-    { regex: /^(complete|finish|done|mark done) (the )?task/i, intent: 'task_action', params: { action: 'complete_task' } },
-    { regex: /^(delete|remove|cancel) (the )?task/i, intent: 'task_action', params: { action: 'delete_task' } },
-
     // Communication - SMS
     { regex: /^(send|text|sms) (a message to )?(.+)/i, intent: 'comms_action', params: { action: 'send_sms' } },
     { regex: /^(text|send|message) (.+) (that|to say) (.+)/i, intent: 'comms_action', params: { action: 'send_sms' } },
     { regex: /^draft (an|a) (sms|text|message) for (.+)/i, intent: 'comms_action', params: { action: 'draft_sms' } },
-    { regex: /^follow up with (.+)/i, intent: 'comms_action', params: { action: 'send_sms' } },
-    { regex: /^check in with (.+)/i, intent: 'comms_action', params: { action: 'send_sms' } },
 
     // Navigation
     { regex: /^(go to|navigate to|open|show me|take me to) (.+)/i, intent: 'system_action', params: { action: 'navigate' } },
     { regex: /^(open|show|go to) (the )?(dashboard|leads|tasks|calendar|settings|pipeline)/i, intent: 'system_action', params: { action: 'navigate' } },
-
-    // Proactive & Suggestions
-    { regex: /^(any suggestions|what should i do|check pipeline|proactive|give me suggestions|what's next)/i, intent: 'proactive_trigger' },
-    { regex: /^(prioritize|what's most important|where should i focus)/i, intent: 'proactive_trigger' },
-    { regex: /^pipeline (analysis|review|check|health)/i, intent: 'proactive_trigger' },
-
-    // Real Estate Knowledge & Analysis
-    { regex: /^what is (.+)/i, intent: 'real_estate_action', params: { action: 'get_knowledge' } },
-    { regex: /^explain (.+)/i, intent: 'real_estate_action', params: { action: 'get_knowledge' } },
-    { regex: /^tell me about (.+)/i, intent: 'crm_action', params: { action: 'get_lead' } },
-    { regex: /^how do i (.+)/i, intent: 'real_estate_action', params: { action: 'strategy_advice' } },
-    { regex: /^calculate (the )?(.+)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
-    { regex: /^analyze (.+) as (.+)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
-    { regex: /^analyze (the )?property/i, intent: 'real_estate_action', params: { action: 'analyze_property' } },
-    { regex: /^run (the )?numbers/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
-    { regex: /^flip analysis|analyze this flip/i, intent: 'real_estate_action', params: { action: 'calculate_deal', type: 'flip' } },
-    { regex: /^rental analysis|analyze this rental/i, intent: 'real_estate_action', params: { action: 'calculate_deal', type: 'rental' } },
-    { regex: /^cap rate (for|on) (.+)/i, intent: 'real_estate_action', params: { action: 'cap_rate' } },
-    { regex: /^generate (a )?script/i, intent: 'real_estate_action', params: { action: 'script_generation' } },
-    { regex: /^marketing tips?/i, intent: 'real_estate_action', params: { action: 'marketing_advice' } },
-    { regex: /^market trends?|market analysis/i, intent: 'real_estate_action', params: { action: 'market_trends' } },
-
-    // Specific CRM/Lead Lookups
-    { regex: /^what is (.+)'s phone/i, intent: 'crm_action', params: { action: 'get_lead' } },
-    { regex: /^what is (.+)'s email/i, intent: 'crm_action', params: { action: 'get_lead' } },
-    { regex: /^who is (.+)/i, intent: 'crm_action', params: { action: 'get_lead' } },
-
-    // Time & Date Queries
-    { regex: /^schedule (a )?(call|meeting|appointment)/i, intent: 'task_action', params: { action: 'create_task', type: 'meeting' } },
-    { regex: /^set (a )?reminder/i, intent: 'task_action', params: { action: 'create_task', type: 'reminder' } },
-    { regex: /^what's on my (calendar|schedule)/i, intent: 'task_action', params: { action: 'list_tasks', type: 'calendar' } },
-
-    // Memory & Context
-    { regex: /^what did we talk about/i, intent: 'system_action', params: { action: 'memory_recall' } },
-    { regex: /^remember (that|this)/i, intent: 'system_action', params: { action: 'remember_fact' } },
-    { regex: /^what do you know about (.+)/i, intent: 'system_action', params: { action: 'memory_recall' } },
   ];
 
   /**
    * Main entry point for NLU resolution.
    */
-  async resolve(text: string, apiKey: string): Promise<ParsedIntent> {
+  async resolve(text: string): Promise<ParsedIntent> {
     console.log('[🤖 NLU] Resolving:', text);
 
     // 1. Check Fast Path (Low latency)
@@ -142,63 +96,24 @@ export class NLUEngine {
       return semanticMatch;
     }
 
-    // 3. Fallback to Gemini Semantic Extraction (High latency)
-    console.log('[🤖 NLU] Falling back to Gemini Semantic Extraction');
-    const geminiMatch = await this.resolveSemantic(text, apiKey);
-
-    // Ensure we have a valid intent even if confidence is low
-    if (geminiMatch.confidence < 0.3) {
-      console.warn('[🤖 NLU] Low confidence match:', geminiMatch.intent);
-    }
-
-    console.log('[🤖 NLU] Gemini Result:', geminiMatch.intent, geminiMatch.entities);
-    return geminiMatch;
+    // 3. Fallback to Hybrid Semantic Extraction (High latency)
+    console.log('[🤖 NLU] Falling back to Hybrid Semantic Extraction');
+    return this.resolveSemantic(text);
   }
 
   /**
    * Static wrapper for easy access.
-   * Matches the v12.0 desired signature.
    */
   static async process(text: string, _context: any = {}): Promise<ParsedIntent> {
-    const apiKey = localStorage.getItem('user_ai_api_key') || localStorage.getItem('user_gemini_api_key') || '';
-
     const engine = new NLUEngine();
-    return engine.resolve(text, apiKey);
+    return engine.resolve(text);
   }
 
   private checkFastPath(text: string): ParsedIntent | null {
     for (const { regex, intent, params } of NLUEngine.FAST_PATH_PATTERNS) {
       const match = text.match(regex);
       if (match) {
-        // Extract entities from the match groups
         const entities: Record<string, any> = { ...params };
-        if (match.length > 1) {
-          const firstValue = match[1].trim();
-
-          // Plural check (them, both, all)
-          if (/\b(them|both|all|those|these)\b/i.test(firstValue)) {
-            entities.isBulk = true;
-          }
-
-          // Dynamic mapping based on intent/action
-          if (intent === 'crm_action' && params?.action === 'get_lead') {
-            const type = this.detectLeadIdentifierType(firstValue);
-            if (type === 'phone') entities.phone = firstValue;
-            else if (type === 'address') entities.address = firstValue;
-            else entities.name = firstValue;
-          } else if (intent === 'real_estate_action' && params?.action === 'calculate_deal') {
-            entities.address = firstValue;
-            if (match[2]) entities.strategy = match[2].trim();
-          } else if (intent === 'system_action' && params?.action === 'navigate') {
-            entities.target = match[match.length - 1].trim();
-          }
-          
-          // Fallback: capture first group as 'text' if not mapped
-          if (!entities.name && !entities.address && !entities.target && !entities.phone) {
-            entities.text = firstValue;
-          }
-        }
-
         return {
           intent,
           entities,
@@ -210,59 +125,30 @@ export class NLUEngine {
     return null;
   }
 
-  private detectLeadIdentifierType(text: string): 'phone' | 'address' | 'name' {
-    if (/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(text)) return 'phone';
-    if (/\d+\s+[a-zA-Z0-9\s]+(st|ave|rd|blvd|lane|drive|way|court|plaza)\b/i.test(text)) return 'address';
-    return 'name';
-  }
-
   /**
-   * Semantic similarity matching using hydrated learned intents and token-weighted matching.
-   * v13.0: Supports cross-session persistent intelligence.
+   * Semantic similarity matching using token-weighted overlap.
    */
   private async checkSemanticSimilarity(text: string): Promise<ParsedIntent | null> {
     const memory = getMemory();
     const normalizedInput = text.toLowerCase().trim();
     const inputTokens = new Set(normalizedInput.split(/\s+/));
 
-    // 1. Check Hydrated Neural Intents from Supabase
     if (memory.learnedIntents && memory.learnedIntents.length > 0) {
       for (const learned of memory.learnedIntents) {
         const learnedPhrase = learned.phrase.toLowerCase().trim();
         const learnedTokens = new Set(learnedPhrase.split(/\s+/));
         
-        // Calculate Jaccard Similarity: Intersection / Union
         const intersection = new Set([...inputTokens].filter(t => learnedTokens.has(t)));
         const union = new Set([...inputTokens, ...learnedTokens]);
         const similarity = intersection.size / union.size;
 
-        // High threshold for direct intent mapping
         if (similarity > 0.75) {
-          console.log(`[🤖 NLU] Neural Match: "${learnedPhrase}" (${Math.round(similarity * 100)}%)`);
           return {
             intent: learned.intent,
             entities: learned.params || {},
             confidence: similarity,
-            reasoning: `Neural Match: ${Math.round(similarity * 100)}% token alignment with cross-session learning.`
+            reasoning: `Neural Match: ${Math.round(similarity * 100)}% token alignment.`
           };
-        }
-      }
-    }
-
-    // 2. Check Local Learned Facts (Legacy fallback)
-    if (memory.learnedFacts) {
-      for (const [key, value] of Object.entries(memory.learnedFacts)) {
-        if (key.startsWith('intent_') && typeof value === 'string') {
-          const learnedPhrase = key.replace('intent_', '');
-          const similarity = this.calculateSimilarity(normalizedInput, learnedPhrase);
-          if (similarity > 0.8) {
-            return {
-              intent: value,
-              entities: {},
-              confidence: similarity,
-              reasoning: `Local Fact Match: ${Math.round(similarity * 100)}% similarity.`
-            };
-          }
         }
       }
     }
@@ -270,68 +156,29 @@ export class NLUEngine {
     return null;
   }
 
-  /**
-   * Simple similarity calculation using word overlap.
-   */
-  private calculateSimilarity(a: string, b: string): number {
-    const wordsA = new Set(a.split(/\s+/));
-    const wordsB = new Set(b.split(/\s+/));
-    const intersection = new Set([...wordsA].filter(x => wordsB.has(x)));
-    const union = new Set([...wordsA, ...wordsB]);
-    return intersection.size / union.size;
-  }
-
-  private async resolveSemantic(prompt: string, apiKey: string): Promise<ParsedIntent> {
+  private async resolveSemantic(prompt: string): Promise<ParsedIntent> {
     const store = useStore.getState();
     const memory = getMemory();
     const history = await getConversationContext(store.currentUser?.id || 'system', memory.sessionId);
 
-    const systemPrompt = `You are the NLU engine for OS Bot, a high-performance real estate assistant.
-    Your job is to extract the user's intent and entities with extreme precision. 
-    Return ONLY valid JSON.
-    
-    INTENTS:
-    - crm_action: { "action": "get_lead|create_lead|update_status|filter_leads|compare_leads|analyze_lead|get_lead_score|delete_lead|update_lead", "name": "...", "status": "...", "leadId": "...", "address": "...", "targets": ["name1", "name2"] }
-    - comms_action: { "action": "send_sms|draft_sms", "target": "...", "message": "...", "carrier": "..." }
-    - task_action: { "action": "create_task|list_tasks|update_task|complete_task|delete_task", "title": "...", "dueDate": "...", "priority": "...", "type": "meeting|reminder|call" }
-    - system_action: { "action": "navigate|help|small_talk|memory_recall|remember_fact", "path": "leads|tasks|calendar|dashboard|settings", "text": "..." }
-    - real_estate_action: { "action": "calculate_deal|analyze_property|get_knowledge|strategy_advice|script_generation|marketing_advice|market_trends|cap_rate", "topic": "...", "type": "flip|rental|sub2", "address": "...", "strategy": "wholesaling|brrrr|sub2" }
-    - proactive_trigger: Analysis and suggestions for the pipeline.
-    - unknown: Use if the intent is missing or unintelligible.
-
-    RULES:
-    1. CONTEXT: If user says "him", "the guy", "that property", resolve to the Lead Name or Address from history.
-    2. CORRECTIONS: User might change mind ("Schedule a call—actually, make it an SMS"). Identify action as 'send_sms' and treat the first part as noise.
-    3. BULK: "Text both" or "Message them" -> action 'send_sms', target 'both' or 'them'.
-    4. ADDRESSES: Extract property addresses clearly in the "address" field.
-    5. COMPARISON: "Compare [X] and [Y]" -> action 'compare_leads', targets: ["X", "Y"].
-    6. REAL ESTATE: If user asks about real estate concepts, strategies, or calculations, use real_estate_action.
-
-    OUTPUT SCHEMA:
-    {
-      "intent": "string",
-      "entities": "object",
-      "confidence": "number (0-1)",
-      "reasoning": "string"
-    }`;
+    const systemPrompt = `You are the NLU engine for OS Bot. Extract intent and entities as JSON.
+    INTENTS: crm_action, comms_action, task_action, system_action, real_estate_action, proactive_trigger.
+    OUTPUT SCHEMA: { "intent": "string", "entities": {}, "confidence": number, "reasoning": "string" }`;
 
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nContext History: ${JSON.stringify(history)}\n\nUser Input: ${prompt}` }] }],
-          generationConfig: { temperature: 0.1, response_mime_type: "application/json" }
-        })
+      const responseText = await callExternalAPI(prompt, {
+        systemInstruction: systemPrompt,
+        history,
+        isExtraction: true
       });
 
-      if (!res.ok) throw new Error("Gemini NLU extraction failed.");
-      const data = await res.json();
-      const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      return JSON.parse(rawJson);
+      if (!responseText) throw new Error("Hybrid extraction failed.");
+      
+      const parsed = JSON.parse(responseText.trim());
+      return parsed;
     } catch (e) {
-      console.error("[NLU] Semantic resolution error:", e);
-      return { intent: 'unknown', entities: {}, confidence: 0, reasoning: "Error during semantic resolution." };
+      console.error("[NLU] Hybrid resolution error:", e);
+      return { intent: 'unknown', entities: {}, confidence: 0, reasoning: "Error during hybrid extraction." };
     }
   }
 }

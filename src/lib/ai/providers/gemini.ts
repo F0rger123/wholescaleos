@@ -1,4 +1,4 @@
-export async function callGemini(input: string, context: any, apiKey: string): Promise<string> {
+export async function callGemini(input: string, context: any, apiKey: string, signal?: AbortSignal): Promise<string> {
   const systemPrompt = `You are OS Bot, a real estate CRM assistant.
 Personality: ${context.personality || 'professional'}
 Recent context: ${JSON.stringify(context.recentMessages || [])}`;
@@ -9,6 +9,7 @@ Recent context: ${JSON.stringify(context.recentMessages || [])}`;
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal,
         body: JSON.stringify({
           system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: 'user', parts: [{ text: input }] }],

@@ -7,6 +7,22 @@ export async function logLocalAIFailure(input: string, reason: string) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+
+    // Deduplication check: Has something similar been logged by this user in the last hour?
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: recentFailures } = await supabase
+      .from('local_ai_failures')
+      .select('input')
+      .eq('user_id', user.id)
+      .gte('created_at', oneHourAgo);
+
+    if (recentFailures) {
+      const isDuplicate = recentFailures.some(f => calculateSimilarity(f.input, input) > 0.85);
+      if (isDuplicate) {
+        console.log(`[Local AI Tracker] Skipping duplicate failure log for: "${input.substring(0, 30)}..."`);
+        return;
+      }
+    }
     
     await supabase.from('local_ai_failures').insert({
       user_id: user.id,
