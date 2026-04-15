@@ -4,7 +4,7 @@ import {
   Bot, X, Send,
   User, Key, Mic, Volume2, VolumeX,
   Layout as LayoutIcon, Loader2,
-  MessageSquare, CheckCircle2, FileText
+  MessageSquare, CheckCircle2, FileText, Sparkles, Shield, Zap, Moon
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { ConfirmModal } from './ConfirmModal';
@@ -1053,7 +1053,23 @@ export function AIBotWidget() {
                 <Bot className="w-4 h-4" style={{ color: 'var(--t-on-primary)' }} />
               </button>
               <div className="flex flex-col">
-                <h2 className="text-xs font-black text-[var(--t-text)] leading-none">🤖 {userName ? `OS Bot | ${userName}` : 'OS Bot'}</h2>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-xs font-black text-[var(--t-text)] leading-none">
+                    {userName ? `${aiName} | ${userName}` : aiName}
+                  </h2>
+                  {currentUser?.preferred_api_provider !== 'local' && (
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                      <Zap className="w-2.5 h-2.5 text-blue-500" />
+                      <span className="text-[8px] font-bold text-blue-500 uppercase tracking-tighter">Premium</span>
+                    </div>
+                  )}
+                  {currentUser?.preferred_api_provider === 'local' && (
+                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--t-success)]/10 border border-[var(--t-success)]/20">
+                      <Shield className="w-2.5 h-2.5 text-[var(--t-success)]" />
+                      <span className="text-[8px] font-bold text-[var(--t-success)] uppercase tracking-tighter">Local</span>
+                    </div>
+                  )}
+                </div>
                 {usage && (
                   <span className={`text-[9px] font-bold mt-0.5 ${usage.remaining < (usage.limit * 0.1) ? 'text-[var(--t-error)]' : (usage.remaining < (usage.limit * 0.25) ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
                     }`}>

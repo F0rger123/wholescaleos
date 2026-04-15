@@ -4,6 +4,7 @@ import { resolveEntitiesFromContext, resolveEntityFromContext, getMemory, setAct
 import { getLearnedIntent } from './learning-service';
 import { useStore } from '../../store/useStore';
 import { expandSynonyms } from './utils/synonym-mapper';
+import { routeHybridIntent } from './improvements/local-first-router';
 
 // Debug mode — toggle to true to see detailed intent matching logs
 const DEBUG_MODE = true;
@@ -1300,23 +1301,20 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     };
   }
 
-  // STAGE 5: Typo Suggestion
-  const inputWords = normalized.split(/\s+/);
-  if (inputWords.length <= 3) {
-    const keywords = ['lead', 'task', 'sms', 'text', 'calendar', 'weather', 'motivation', 'help'];
-    for (const kw of keywords) {
-      for (const word of inputWords) {
-        if (word.length >= 4 && getLevenshteinDistance(word, kw) === 1) {
-          debugLog('TYPO', `Suggested: ${kw} for ${word}`);
-          return {
-            intent: intents.find(i => i.name === 'typo_suggestion')!,
-            params: { suggestion: kw },
-            confidence: 100,
-            needsAgentLoop: false,
-            matchedBy: 'typo_detection'
-          };
-        }
-      }
+  // ═══════════════════════════════════════════════════════════════════════
+  // STAGE 5: HYBRID ROUTING (Local Fallback to External)
+  // ═══════════════════════════════════════════════════════════════════════
+  if (!best || best.score < 70) {
+    const context = { personality: memory.personality, recentMessages: memory.history };
+    const hybridResult = await routeHybridIntent(input, context, {
+      exact: best && best.score === 100 ? best : null,
+      regex: best && best.score >= 80 ? best : null,
+      embedding: best // Pass whatever we have
+    });
+
+    if (hybridResult) {
+      debugLog('HYBRID', `Resolution matched via: ${hybridResult.matchedBy}`);
+      return hybridResult;
     }
   }
 

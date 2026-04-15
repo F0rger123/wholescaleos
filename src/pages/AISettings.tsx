@@ -3,7 +3,8 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { toast } from 'react-hot-toast';
 import { useStore } from '../store/useStore';
-import { Key, Loader2, Check, Save, Sparkles } from 'lucide-react';
+import { Key, Loader2, Check, Save, Sparkles, Bot, Shield, Zap } from 'lucide-react';
+import { AIProviderSettings } from '../components/settings/AIProviderSettings';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [provider, setProvider] = useState<'gemini' | 'local'>('local');
@@ -166,31 +167,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
     }
   };
 
-  const handleSaveKey = async () => {
+  const handleSavePersona = async () => {
     if (!currentUser?.id) return;
     setSaving(true);
 
-    const key = provider === 'gemini' ? geminiKey : localEndpoint;
-
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data: existing } = await supabase
-          .from('user_connections')
-          .select('id')
-          .eq('user_id', currentUser.id)
-          .eq('provider', provider)
-          .maybeSingle();
-
-        if (existing) {
-          await supabase.from('user_connections').update({
-            access_token: model, refresh_token: key, updated_at: new Date().toISOString(),
-          }).eq('id', existing.id);
-        } else {
-          await supabase.from('user_connections').insert({
-            user_id: currentUser.id, provider, access_token: model, refresh_token: key, updated_at: new Date().toISOString(),
-          });
-        }
-
         const { data: profile } = await supabase.from('profiles').select('settings').eq('id', currentUser.id).maybeSingle();
         await supabase.from('profiles').update({
           settings: {
@@ -199,30 +181,24 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
             ai_personality: aiPersonality, 
             ai_custom_prompt: aiCustomPrompt,
             show_floating_widget: showWidget,
-            active_ai_provider: provider, 
-            active_ai_model: model,
             google_integrations: googleIntegrations,
             updated_at: new Date().toISOString()
           }
         }).eq('id', currentUser.id);
 
-        localStorage.setItem('user_ai_provider', provider);
-        localStorage.setItem('wholescale-ai-model', model);
         localStorage.setItem('wholescale-ai-name', aiName);
         setStoreAiName(aiName);
         localStorage.setItem('wholescale-ai-personality', aiPersonality);
         setStoreAiPersonality(aiPersonality);
         localStorage.setItem('wholescale-ai-custom-prompt', aiCustomPrompt);
         setStoreAiCustomPrompt(aiCustomPrompt);
-        // Also sync tone to match personality if not custom
+        
         if (aiPersonality !== 'Custom') {
            setAiTone(aiPersonality);
            localStorage.setItem('wholescale-ai-tone', aiPersonality);
         }
 
-        if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
         window.dispatchEvent(new CustomEvent('ai-settings-updated'));
-        
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
       } catch (err: any) {
@@ -230,25 +206,18 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         toast.error('Failed to save settings.');
       }
     } else {
-      localStorage.setItem('user_gemini_api_key', geminiKey);
-      localStorage.setItem('user_ai_provider', provider);
-      localStorage.setItem('wholescale-ai-model', model);
       localStorage.setItem('wholescale-ai-name', aiName);
       setStoreAiName(aiName);
       localStorage.setItem('wholescale-ai-personality', aiPersonality);
       setStoreAiPersonality(aiPersonality);
       localStorage.setItem('wholescale-ai-custom-prompt', aiCustomPrompt);
       setStoreAiCustomPrompt(aiCustomPrompt);
-      // Also sync tone
       if (aiPersonality !== 'Custom') {
          setAiTone(aiPersonality);
          localStorage.setItem('wholescale-ai-tone', aiPersonality);
       }
-
       localStorage.setItem('user_show_floating_widget', showWidget.toString());
-      if (provider === 'local') localStorage.setItem('user_local_ai_endpoint', localEndpoint);
       window.dispatchEvent(new CustomEvent('ai-settings-updated'));
-      
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     }
@@ -284,56 +253,8 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
         </div>
       )}
 
-      {/* Provider Selection */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { id: 'local', label: 'OS Bot (Native)', icon: '🤖', desc: 'Free, unlimited, zero-latency' },
-          { id: 'gemini', label: 'OS Bot (Cloud Brain)', icon: '☁️', desc: 'High-performance cloud intelligence' }
-        ].map((p) => (
-          <button
-            key={p.id}
-            onClick={() => {
-              setProvider(p.id as any);
-              setModel(p.id === 'gemini' ? 'gemini-3.1-flash-lite' : 'os-bot');
-              setTestResult(null);
-            }}
-            className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
-              provider === p.id 
-                ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' 
-                : 'bg-[var(--t-surface)] border-[var(--t-border)] hover:border-[var(--t-border)]/80'
-            }`}
-          >
-            <span className="text-2xl">{p.icon}</span>
-            <span className={`text-[10px] font-black uppercase tracking-tight ${provider === p.id ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>{p.label}</span>
-            <span className="text-[9px] text-[var(--t-text-muted)]">{p.desc}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-[var(--t-surface)]/50 rounded-2xl border border-[var(--t-border)] p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Key className="w-5 h-5 text-[var(--t-primary)]" />
-          {provider === 'local' ? 'OS Bot — Ready to Go' : 'Setup Instructions: OS CLOUD'}
-        </h2>
-        
-        <div className="space-y-3 text-[var(--t-text-muted)] text-sm">
-          {provider === 'gemini' ? (
-            <>
-              <p>Get your free API key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-[var(--t-primary)] underline font-bold">Google AI Studio</a>.</p>
-              <ol className="list-decimal list-inside space-y-2 ml-2">
-                <li>Sign in to your developer console.</li>
-                <li>Create or copy your secret API key.</li>
-                <li>Paste it into the configuration field below and click Save.</li>
-              </ol>
-            </>
-          ) : (
-            <div className="bg-[var(--t-success)]/5 border border-[var(--t-success)]/20 rounded-xl p-4">
-              <p className="text-[var(--t-success)] font-bold text-sm mb-1">✅ No setup needed!</p>
-              <p>OS Bot is powered by our custom-built AI. Zero cost, unlimited messages, runs entirely in your browser.</p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* New Hybrid AI Provider Settings */}
+      <AIProviderSettings />
 
       <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-primary)]/20 shadow-lg shadow-[var(--t-primary)]/5 p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -379,7 +300,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 type="text"
                 value={aiName}
                 onChange={(e) => setAiName(e.target.value)}
-                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all font-medium"
+                className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all font-medium"
               />
             </div>
             <div>
@@ -394,7 +315,7 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                   }
                   setAiPersonalityState(val);
                 }}
-                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all appearance-none"
+                className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all appearance-none"
               >
                 <option value="Professional">Professional</option>
                 <option value="Casual">Casual</option>
@@ -413,22 +334,18 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
                 onChange={(e) => setAiCustomPromptState(e.target.value)}
                 rows={3}
                 placeholder="e.g. Call me Commander. Sassy and witty. Emoji overload."
-                className="w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
+                className="w-full bg-[var(--t-bg)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all resize-none text-sm"
               />
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: Try "Talk like a pirate"</span>
-                <span className="text-[10px] bg-[var(--t-primary)]/10 text-[var(--t-primary)] px-2 py-0.5 rounded-full border border-[var(--t-primary)]/20">Tip: "Use lots of fire emojis"</span>
-              </div>
             </div>
           )}
-          <div className="flex items-center justify-between p-4 bg-[var(--t-surface)]/50 rounded-xl border border-[var(--t-border)]">
+          <div className="flex items-center justify-between p-4 bg-[var(--t-bg)] rounded-xl border border-[var(--t-border)]">
             <div>
               <p className="text-white font-medium">Floating AI Widget</p>
               <p className="text-xs text-[var(--t-text-muted)]">Show a draggable AI bubble available on all pages</p>
             </div>
             <button
               onClick={() => handleToggleWidget(!showWidget)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${showWidget ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-subtle)]'}`}
+              className={`w-12 h-6 rounded-full transition-colors relative ${showWidget ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-border)]'}`}
             >
               <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${showWidget ? 'left-7' : 'left-1'}`} />
             </button>
@@ -438,12 +355,12 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
       <div className="flex justify-end pt-4">
         <button
-          onClick={handleSaveKey}
+          onClick={handleSavePersona}
           disabled={saving}
           className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all shadow-lg hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 ${
             saveSuccess 
-              ? 'bg-[var(--t-success)] text-white shadow-[var(--t-success-dim)]' 
-              : 'bg-[var(--t-primary)] text-[var(--t-on-primary)] shadow-[var(--t-primary-dim)]'
+              ? 'bg-[var(--t-success)] text-white' 
+              : 'bg-[var(--t-primary)] text-white'
           }`}
         >
           {saving ? (
@@ -456,46 +373,13 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           ) : (
             <>
               <Save className="w-5 h-5" />
-              Save AI Settings
+              Save Persona Settings
             </>
           )}
         </button>
       </div>
 
-      {!(provider === 'local' && model === 'os-bot') && (
-        <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-2">
-              {provider === 'local' ? 'API Endpoint URL' : 'OS Cloud API Key'}
-            </label>
-            <div className="flex gap-2">
-              <input
-                type={provider === 'local' ? 'text' : 'password'}
-                value={provider === 'gemini' ? geminiKey : localEndpoint}
-                onChange={(e) => {
-                  if (provider === 'gemini') setGeminiKey(e.target.value);
-                  else setLocalEndpoint(e.target.value);
-                }}
-                className="flex-1 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl px-4 py-2.5 text-white outline-none focus:ring-2 focus:ring-[var(--t-primary)]/50 transition-all"
-              />
-              <button
-                onClick={handleTestKey}
-                disabled={testing || (provider === 'gemini' && !geminiKey)}
-                className="px-4 py-2 bg-[var(--t-surface)] hover:bg-[var(--t-surface-subtle)] text-white rounded-xl border border-[var(--t-border)] transition-colors flex items-center gap-2"
-              >
-                {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Test'}
-              </button>
-            </div>
-          </div>
-
-          {testResult && (
-            <div className={`p-4 rounded-xl flex items-start gap-3 ${testResult.success ? 'bg-[var(--t-success)]/10 text-[var(--t-success)]' : 'bg-[var(--t-error)]/10 text-[var(--t-error)]'}`}>
-              <Check className="w-5 h-5 mt-0.5" />
-              <p className="text-sm">{testResult.message}</p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Legacy/Testing section removed - handled by AIProviderSettings */}
 
       {/* Google Ecosystem Connection */}
       <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] p-4">

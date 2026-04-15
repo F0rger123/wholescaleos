@@ -266,6 +266,9 @@ export interface UserProfile {
   totalEarnings?: number;
   availableEarnings?: number;
   referralCount?: number;
+  user_api_keys?: Record<string, string>;
+  preferred_api_provider?: string;
+  api_fallback_enabled?: boolean;
 }
 
 export interface Task {
