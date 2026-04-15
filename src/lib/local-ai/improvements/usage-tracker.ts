@@ -17,7 +17,7 @@ export async function logLocalAIFailure(input: string, reason: string) {
       .gte('created_at', oneHourAgo);
 
     if (recentFailures) {
-      const isDuplicate = recentFailures.some(f => calculateSimilarity(f.input, input) > 0.85);
+      const isDuplicate = recentFailures.some((f: { input: string }) => calculateSimilarity(f.input, input) > 0.85);
       if (isDuplicate) {
         console.log(`[Local AI Tracker] Skipping duplicate failure log for: "${input.substring(0, 30)}..."`);
         return;
@@ -102,7 +102,7 @@ export async function getFailureClusters() {
     
     if (!data) return {};
     
-    const inputs = data.map(d => d.input);
+    const inputs = data.map((d: any) => d.input);
     return clusterSimilarInputs(inputs);
   } catch (err) {
     console.error('[Local AI Tracker] Failed to get clusters:', err);

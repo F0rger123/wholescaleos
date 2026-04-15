@@ -1,24 +1,12 @@
-import { useStore, TaskPriority, LeadStatus, STATUS_FLOW, STATUS_LABELS } from '../store/useStore';
+import { useStore } from '../store/useStore';
 import type { Lead } from '../store/useStore';
-import { supabase, isSupabaseConfigured } from './supabase';
-import { sendSMS } from './sms-service';
-import { executeTask } from './local-ai/task-executor';
-import { generateResponse } from './local-ai/response-generator';
-import { saveMessage, getMemory } from './local-ai/memory-store';
 
 // New Modular Architecture Imports
-import { NLUEngine, ParsedIntent } from './local-ai/engine/nlu-engine';
-import { ContextManager } from './local-ai/engine/context-manager';
 import { 
-  callExternalAPI, 
-  initializeRouter, 
-  hasUserApiKey as routerHasUserApiKey,
-  getEncryptedAPIKey,
-  saveEncryptedAPIKey
+  callExternalAPI
 } from './ai/api-router';
 import { TaskExecutor } from './local-ai';
 
-const nlu = new NLUEngine();
 
 export interface BotResponse {
   intent: string;
@@ -80,8 +68,8 @@ export async function sendSMSViaAI(target: string, message: string, carrier?: st
 
 export async function generatePageInsights(url: string, context: any) {
   const prompt = `Analyze this page: ${url}. Context: ${JSON.stringify(context)}. Provide 3 strategic insights.`;
-  const result = await callExternalAPI(prompt, 'gemini');
-  return result.response;
+  const response = await callExternalAPI(prompt, context || {});
+  return response || "No insights available at this time.";
 }
 
 export interface CallScriptTemplate {
@@ -91,9 +79,7 @@ export interface CallScriptTemplate {
   description: string;
 }
 
-export async function generateCallScriptTemplates(lead: Lead): Promise<CallScriptTemplate[]> {
-  const firstName = lead.name ? lead.name.split(' ')[0] : 'there';
-  const address = lead.propertyAddress || 'your property';
+export async function generateCallScriptTemplates(_lead: Lead): Promise<CallScriptTemplate[]> {
 
   const defaults: CallScriptTemplate[] = [
     {
@@ -175,7 +161,7 @@ export async function processPrompt(
 export function hasUserApiKey() {
   const store = useStore.getState();
   // Check profile keys in store or local fallback
-  const profileKeys = store.currentUser?.profile?.user_api_keys;
+  const profileKeys = store.currentUser?.user_api_keys;
   if (profileKeys && Object.keys(profileKeys).length > 0) return true;
   
   return !!(

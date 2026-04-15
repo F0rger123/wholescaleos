@@ -1305,7 +1305,11 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
   // STAGE 5: HYBRID ROUTING (Local Fallback to External)
   // ═══════════════════════════════════════════════════════════════════════
   if (!best || best.score < 70) {
-    const context = { personality: memory.personality, recentMessages: memory.history };
+    const state = useStore.getState();
+    const context = { 
+      personality: state.aiTone || 'professional', 
+      recentMessages: memory.history 
+    };
     const hybridResult = await routeHybridIntent(input, context, {
       exact: best && best.score === 100 ? best : null,
       regex: best && best.score >= 80 ? best : null,

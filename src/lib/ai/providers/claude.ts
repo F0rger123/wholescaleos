@@ -1,4 +1,4 @@
-export async function callClaude(input: string, context: any, apiKey: string): Promise<string> {
+export async function callClaude(input: string, context: any, apiKey: string, signal?: AbortSignal): Promise<string> {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -6,8 +6,9 @@ export async function callClaude(input: string, context: any, apiKey: string): P
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json',
-        'dangerouslyAllowBrowser': 'true' // Note: In a production app, use a backend proxy.
+        'dangerouslyAllowBrowser': 'true'
       },
+      signal,
       body: JSON.stringify({
         model: 'claude-3-haiku-20240307',
         max_tokens: 512,

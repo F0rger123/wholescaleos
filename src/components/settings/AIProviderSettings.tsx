@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useStore } from '../../store/useStore';
-import { Bot, Key, Shield, Zap, Info, ExternalLink, Moon, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import { Bot, Key, Shield, Zap, ExternalLink, Moon, Sparkles, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { encryptKey, decryptKey } from '../../lib/ai/crypto';
 
@@ -10,6 +10,7 @@ interface APIKeys {
   openai?: string;
   claude?: string;
   minimax?: string;
+  [key: string]: string | undefined;
 }
 
 export const AIProviderSettings: React.FC = () => {
@@ -18,7 +19,8 @@ export const AIProviderSettings: React.FC = () => {
   const [provider, setProvider] = useState<string>('local');
   const [fallbackEnabled, setFallbackEnabled] = useState(true);
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
-  const [migrating, setMigrating] = useState(false);
+  const [_migrating, setMigrating] = useState(false);
+  const [_loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -93,9 +95,15 @@ export const AIProviderSettings: React.FC = () => {
 
       if (error) throw error;
       
-      // Update local store
+      // Update local store - filter out undefined values
+      const keysToUpdate = newKeys || keys;
+      const cleanKeys: Record<string, string> = {};
+      Object.entries(keysToUpdate).forEach(([k, v]) => {
+        if (v) cleanKeys[k] = v;
+      });
+
       updateProfile({
-        user_api_keys: newKeys || keys,
+        user_api_keys: cleanKeys,
         preferred_api_provider: newProvider || provider,
         api_fallback_enabled: newFallback ?? fallbackEnabled
       });

@@ -11,7 +11,7 @@ export async function callMiniMax(input: string, context: any, apiKey: string, s
       },
       signal,
       body: JSON.stringify({
-        model: 'abab6.5s-chat',
+        model,
         messages: [
           { 
             role: 'system', 

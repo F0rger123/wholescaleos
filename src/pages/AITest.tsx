@@ -391,7 +391,7 @@ export default function AITest() {
         createTask(finalData);
         log = `System: Created task '${finalData.title}'`;
       } else if (intent === 'update_status' && finalData?.leadId) {
-        const res = updateLeadStatusViaAI(finalData.leadId, finalData.newStatus);
+        const res = await updateLeadStatusViaAI(finalData.leadId, finalData.newStatus);
         log = `System: ${res.message}`;
       } else if (intent === 'send_sms' && (finalData?.target || finalData?.leadId) && finalData?.message) {
         setLoading(true);

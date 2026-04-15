@@ -3,15 +3,13 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { toast } from 'react-hot-toast';
 import { useStore } from '../store/useStore';
-import { Key, Loader2, Check, Save, Sparkles, Bot, Shield, Zap } from 'lucide-react';
+import { Loader2, Check, Save, Sparkles } from 'lucide-react';
 import { AIProviderSettings } from '../components/settings/AIProviderSettings';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [aiName, setAiName] = useState('OS Bot');
   const [aiPersonality, setAiPersonalityState] = useState('Professional');
   const [aiCustomPrompt, setAiCustomPromptState] = useState('');

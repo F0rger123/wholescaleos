@@ -1,4 +1,4 @@
-export async function callOpenAI(input: string, context: any, apiKey: string): Promise<string> {
+export async function callOpenAI(input: string, context: any, apiKey: string, signal?: AbortSignal): Promise<string> {
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -6,6 +6,7 @@ export async function callOpenAI(input: string, context: any, apiKey: string): P
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
+      signal,
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [

@@ -492,8 +492,8 @@ export function AIBotWidget() {
       const loadInsights = async () => {
         setInsightsLoading(true);
         try {
-          const res = await generatePageInsights(location.pathname);
-          setInsights(res);
+          const res = await generatePageInsights(location.pathname, { path: location.pathname });
+          setInsights([res]);
         } catch (err) {
           console.error("Failed to load insights:", err);
         } finally {
