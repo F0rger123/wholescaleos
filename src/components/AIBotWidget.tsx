@@ -626,12 +626,13 @@ export function AIBotWidget() {
             systemLog: '🤖 OS Bot'
           };
         } else {
-          console.log('[🤖 OS BOT] NLU confidence low or intent unknown. Attempting fuzzy suggestions or Gemini fallback.');
+          console.log('[🤖 OS BOT] NLU confidence low or intent unknown. Attempting fuzzy suggestions.');
           
           const fuzzySuggestion = fuzzySuggestCommands(userText);
           const isGenericFuzzy = fuzzySuggestion.includes("didn't quite catch that");
           
           if (!isGenericFuzzy) {
+             console.log(`[Fuzzy] Suggesting for: "${userText}"`);
              finalResponse = {
                intent: 'unknown',
                response: fuzzySuggestion,
@@ -639,20 +640,29 @@ export function AIBotWidget() {
              };
           } else {
              console.log('[🤖 OS BOT] No strong fuzzy match. Falling back to Gemini Logic.');
-             finalResponse = await processPrompt(userText, {
+             const geminiResult = await processPrompt(userText, {
                page: location.pathname,
                currentTime: new Date().toISOString(),
                sessionId,
                nluResult
              }, aiModel);
              
-             // Combined logic: if Gemini result is empty or error-like, use our fuzzy suggestions
-             if (!finalResponse || !finalResponse.response || finalResponse.response.length < 5) {
-               finalResponse = {
-                 intent: 'unknown',
-                 response: fuzzySuggestion,
-                 systemLog: '🤖 OS Bot (Fallback)'
-               };
+             // Combined logic: if Gemini result is empty, error-like, or explicitly "failed", use fuzzy fallback
+             const resultText = geminiResult?.response || '';
+             const isGeminiError = !geminiResult || resultText.length < 5 || 
+                                  resultText.toLowerCase().includes('failed') || 
+                                  resultText.toLowerCase().includes('error') ||
+                                  resultText.toLowerCase().includes('technical glitch');
+
+             if (isGeminiError) {
+                console.log('[🤖 OS BOT] Gemini extraction failed or returned error. Using fuzzy fallback.');
+                finalResponse = {
+                  intent: 'unknown',
+                  response: fuzzySuggestion,
+                  systemLog: '🤖 OS Bot (Fallback)'
+                };
+             } else {
+                finalResponse = geminiResult;
              }
           }
         }

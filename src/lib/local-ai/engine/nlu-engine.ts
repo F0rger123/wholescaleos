@@ -90,9 +90,10 @@ export class NLUEngine {
     // Real Estate Knowledge & Analysis
     { regex: /^what is (.+)/i, intent: 'real_estate_action', params: { action: 'get_knowledge' } },
     { regex: /^explain (.+)/i, intent: 'real_estate_action', params: { action: 'get_knowledge' } },
-    { regex: /^tell me about (.+)/i, intent: 'real_estate_action', params: { action: 'get_knowledge' } },
+    { regex: /^tell me about (.+)/i, intent: 'crm_action', params: { action: 'get_lead' } },
     { regex: /^how do i (.+)/i, intent: 'real_estate_action', params: { action: 'strategy_advice' } },
     { regex: /^calculate (the )?(.+)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
+    { regex: /^analyze (.+) as (.+)/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
     { regex: /^analyze (the )?property/i, intent: 'real_estate_action', params: { action: 'analyze_property' } },
     { regex: /^run (the )?numbers/i, intent: 'real_estate_action', params: { action: 'calculate_deal' } },
     { regex: /^flip analysis|analyze this flip/i, intent: 'real_estate_action', params: { action: 'calculate_deal', type: 'flip' } },
@@ -102,10 +103,15 @@ export class NLUEngine {
     { regex: /^marketing tips?/i, intent: 'real_estate_action', params: { action: 'marketing_advice' } },
     { regex: /^market trends?|market analysis/i, intent: 'real_estate_action', params: { action: 'market_trends' } },
 
+    // Specific CRM/Lead Lookups
+    { regex: /^what is (.+)'s phone/i, intent: 'crm_action', params: { action: 'get_lead' } },
+    { regex: /^what is (.+)'s email/i, intent: 'crm_action', params: { action: 'get_lead' } },
+    { regex: /^who is (.+)/i, intent: 'crm_action', params: { action: 'get_lead' } },
+
     // Time & Date Queries
     { regex: /^schedule (a )?(call|meeting|appointment)/i, intent: 'task_action', params: { action: 'create_task', type: 'meeting' } },
     { regex: /^set (a )?reminder/i, intent: 'task_action', params: { action: 'create_task', type: 'reminder' } },
-    { regex: /^what's on my calendar/i, intent: 'task_action', params: { action: 'list_tasks', type: 'calendar' } },
+    { regex: /^what's on my (calendar|schedule)/i, intent: 'task_action', params: { action: 'list_tasks', type: 'calendar' } },
 
     // Memory & Context
     { regex: /^what did we talk about/i, intent: 'system_action', params: { action: 'memory_recall' } },
@@ -164,15 +170,21 @@ export class NLUEngine {
         // Extract entities from the match groups
         const entities: Record<string, any> = { ...params };
         if (match.length > 1) {
-          // Try to extract meaningful entities from capture groups
-          for (let i = 1; i <= match.length; i++) {
-            if (match[i]) {
-              const value = match[i].trim();
-              // Don't overwrite existing params
-              if (!entities.text && value.length > 2) {
-                entities.text = value;
-              }
-            }
+          // Dynamic mapping based on intent/action
+          const firstValue = match[1].trim();
+          
+          if (intent === 'crm_action' && params?.action === 'get_lead') {
+            entities.name = firstValue;
+          } else if (intent === 'real_estate_action' && params?.action === 'calculate_deal') {
+            entities.address = firstValue;
+            if (match[2]) entities.strategy = match[2].trim();
+          } else if (intent === 'system_action' && params?.action === 'navigate') {
+            entities.target = match[match.length - 1].trim();
+          }
+          
+          // Fallback: capture first group as 'text' if not mapped
+          if (!entities.name && !entities.address && !entities.target) {
+            entities.text = firstValue;
           }
         }
 

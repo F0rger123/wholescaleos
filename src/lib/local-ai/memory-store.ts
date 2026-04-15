@@ -62,7 +62,24 @@ const SESSION_PREFIX = 'os_session_';
 
 export function getMemory(): Memory {
   const stored = localStorage.getItem(MEMORY_KEY);
-  if (stored) return JSON.parse(stored);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      // Ensure all fields exist for v12.0 stability
+      return {
+        messages: parsed.messages || [],
+        history: parsed.history || [],
+        entityStack: parsed.entityStack || [],
+        learnedFacts: parsed.learnedFacts || {},
+        sessionId: parsed.sessionId || (SESSION_PREFIX + Date.now()),
+        sentiment: parsed.sentiment || 'neutral',
+        outcomes: parsed.outcomes || [],
+        conversationState: parsed.conversationState || {}
+      };
+    } catch (e) {
+      console.error('[🤖 MEMORY] Failed to parse memory:', e);
+    }
+  }
   return {
     messages: [],
     history: [],

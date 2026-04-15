@@ -14,7 +14,7 @@ export class CRMHandler extends BaseHandler {
 
     switch (action) {
       case 'get_lead':
-        return this.getLead(leadId || name || params.address);
+        return this.getLead(leadId || name || params.text || params.address);
       case 'update_status':
         return this.updateStatus(leadId, status);
       case 'create_lead':
@@ -41,23 +41,28 @@ export class CRMHandler extends BaseHandler {
       const query = identifier.toLowerCase().trim();
       
       // Support matching by ID, Name, or Property Address
-      const lead = store.leads.find(l => 
-        l.id === identifier || 
-        (l.name && l.name.toLowerCase().includes(query)) ||
-        (l.propertyAddress && l.propertyAddress.toLowerCase().includes(query))
-      );
+      const lead = store.leads.find(l => {
+        if (!l) return false;
+        const nameMatch = l.name && l.name.toLowerCase().includes(query);
+        const addressMatch = l.propertyAddress && l.propertyAddress.toLowerCase().includes(query);
+        const idMatch = l.id === identifier;
+        return !!(idMatch || nameMatch || addressMatch);
+      });
       
       if (!lead) {
         console.warn('[🤖 CRM HANDLER] Lead not found for query:', query);
-        return this.wrapError(`Couldn't find record for: ${identifier}`);
+        return this.wrapError(`Couldn't find record for: ${String(identifier)}`);
       }
       
       console.log('[🤖 CRM HANDLER] Found lead:', lead.name);
-      trackLead(lead.id, lead.name);
+      if (typeof trackLead === 'function') {
+        trackLead(lead.id, lead.name);
+      }
+      
       return this.wrapSuccess(`Found lead: **${lead.name}** at ${lead.propertyAddress || 'No Address'}.`, { lead });
     } catch (error) {
       console.error('[🤖 CRM HANDLER] Crash in getLead:', error);
-      return this.wrapError(`Technical glitch while searching for "${identifier}". My team has been notified.`);
+      return this.wrapError(`Technical glitch while searching for "${String(identifier)}". My team has been notified.`);
     }
   }
 
@@ -122,17 +127,22 @@ export class CRMHandler extends BaseHandler {
       }
 
       if (params.minScore) {
-        // Use pre-calculated dealScore if available, otherwise calculate on the fly
+        const min = Number(params.minScore);
         leads = leads.filter(l => {
-          const score = l.dealScore !== undefined && l.dealScore !== null ? l.dealScore : calculateDealScore(l);
-          return score >= params.minScore;
+          // Force recalculation for real-time accuracy and to bypass stale '0' scores
+          const score = calculateDealScore(l);
+          if (score >= min) {
+             console.log(`[🤖 CRM HANDLER] Lead "${l.name}" SCORE: ${score} (PASS >= ${min})`);
+          }
+          return score >= min;
         });
       }
 
       if (params.maxScore) {
+        const max = Number(params.maxScore);
         leads = leads.filter(l => {
-          const score = l.dealScore !== undefined && l.dealScore !== null ? l.dealScore : calculateDealScore(l);
-          return score <= params.maxScore;
+          const score = calculateDealScore(l);
+          return score <= max;
         });
       }
 
