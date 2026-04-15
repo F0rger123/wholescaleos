@@ -9,6 +9,7 @@ import { CommunicationHandler } from './handlers/communication-handler';
 import { TaskHandler } from './handlers/task-handler';
 import { SystemHandler } from './handlers/system-handler';
 import { RealEstateHandler } from './handlers/real-estate-handler';
+import { getMemory } from './memory-store';
 
 /**
  * Registry of modular AI handlers (v11.0).
