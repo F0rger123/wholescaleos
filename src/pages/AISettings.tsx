@@ -7,11 +7,7 @@ import { Key, Loader2, Check, Save, Sparkles, Bot, Shield, Zap } from 'lucide-re
 import { AIProviderSettings } from '../components/settings/AIProviderSettings';
 
 export default function AISettings({ hideHeader = false }: { hideHeader?: boolean }) {
-  const [provider, setProvider] = useState<'gemini' | 'local'>('local');
-  const [localEndpoint, setLocalEndpoint] = useState('http://localhost:11434/v1');
-  const [model, setModel] = useState('os-bot');
   const [saveSuccess, setSaveSuccess] = useState(false);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -56,25 +52,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
 
       if (isSupabaseConfigured && supabase) {
         try {
-          const { data: connections } = await supabase
-            .from('user_connections')
-            .select('provider, refresh_token, access_token')
-            .eq('user_id', currentUser.id);
-
-          if (connections) {
-            connections.forEach((conn: any) => {
-              if (conn.provider === 'local') {
-                setLocalEndpoint(conn.refresh_token || 'http://localhost:11434/v1');
-                if (localStorage.getItem('user_ai_provider') === 'local') {
-                  setModel(conn.access_token || 'os-bot');
-                }
-              }
-            });
-          }
-
-          const activeProv = localStorage.getItem('user_ai_provider') as any;
-          if (activeProv) setProvider(activeProv);
-
           const { data: profile } = await supabase
             .from('profiles')
             .select('settings')
@@ -95,14 +72,6 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
           console.error('Failed to load settings:', err);
         }
       } else {
-        setLocalEndpoint(localStorage.getItem('user_local_ai_endpoint') || 'http://localhost:11434/v1');
-        
-        const localProvider = localStorage.getItem('user_ai_provider') as any;
-        if (localProvider) setProvider(localProvider);
-        
-        const localModel = localStorage.getItem('user_ai_model');
-        if (localModel) setModel(localModel);
-        
         const localAiName = localStorage.getItem('wholescale-ai-name');
         if (localAiName) setAiName(localAiName);
         else setAiName(storeAiName);
@@ -219,41 +188,11 @@ export default function AISettings({ hideHeader = false }: { hideHeader?: boolea
       {/* New Hybrid AI Provider Settings */}
       <AIProviderSettings />
 
-      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-primary)]/20 shadow-lg shadow-[var(--t-primary)]/5 p-6 space-y-4">
+      <div className="bg-[var(--t-surface)] rounded-2xl border border-[var(--t-border)] shadow-lg p-6 space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-[var(--t-primary)]" />
-          General AI Settings
+          Bot Personalization
         </h2>
-        <div>
-          <label className="block text-sm font-medium text-[var(--t-text-muted)] mb-3">Preferred Model</label>
-          <div className="grid grid-cols-1 gap-3">
-            {provider === 'local' && (
-              <button
-                onClick={() => setModel('os-bot')}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === 'os-bot' ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === 'os-bot' ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
-                  <span className={`font-medium ${model === 'os-bot' ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>🤖 OS Bot (Built-in AI)</span>
-                </div>
-                <span className="text-xs text-[var(--t-text-muted)]">Zero cost, unlimited messages, runs entirely in your browser.</span>
-              </button>
-            )}
-
-            {provider === 'gemini' && (
-              <button
-                onClick={() => setModel('gemini-3.1-flash-lite')}
-                className={`flex flex-col items-start p-4 rounded-xl border transition-all text-left ${model === 'gemini-3.1-flash-lite' ? 'bg-[var(--t-primary)]/10 border-[var(--t-primary)] ring-1 ring-[var(--t-primary)]' : 'bg-[var(--t-surface)]/50 border-[var(--t-border)] hover:border-[var(--t-border)]/80'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className={`w-2 h-2 rounded-full ${model === 'gemini-3.1-flash-lite' ? 'bg-[var(--t-primary)]' : 'bg-[var(--t-surface-dim)]'}`} />
-                  <span className={`font-medium ${model === 'gemini-3.1-flash-lite' ? 'text-white' : 'text-[var(--t-text-muted)]'}`}>Gemini 3.1 Flash-Lite</span>
-                </div>
-                <span className="text-xs text-[var(--t-text-muted)]">High-performance cloud intelligence (mapped to 2.0 Flash).</span>
-              </button>
-            )}
-          </div>
-        </div>
 
         <div className="pt-6 border-t border-[var(--t-border)] space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
