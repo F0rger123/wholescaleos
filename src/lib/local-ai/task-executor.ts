@@ -1,7 +1,8 @@
 import { wrapResponse } from './personality-engine';
 
 // Handlers and Types
-import { TaskResponse } from './types';
+import { TaskResponse, Entity } from './types';
+export type { TaskResponse, Entity };
 import { BaseHandler } from './handlers/base-handler';
 import { CRMHandler } from './handlers/crm-handler';
 import { CommunicationHandler } from './handlers/communication-handler';
@@ -79,3 +80,11 @@ export async function executeTask(action: string, entities: any): Promise<TaskRe
     };
   }
 }
+
+/**
+ * TaskExecutor Namespace (v11.0)
+ */
+export const TaskExecutor = {
+  execute: executeTask,
+  handlers: HANDLERS
+};

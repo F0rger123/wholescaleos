@@ -7,6 +7,22 @@ import { addMentionedLead } from '../learning-service';
 export class ContextManager {
   
   /**
+   * Retrieves the current conversation context including history and active entities.
+   */
+  static async getContext(userId: string, sessionId: string) {
+    const memory = getMemory();
+    const history = await getConversationContext(userId, sessionId);
+    
+    return {
+      userId,
+      sessionId,
+      history,
+      lastEntity: memory.entityStack[0] || null,
+      currentTime: new Date().toISOString()
+    };
+  }
+
+  /**
    * Resolves implicit entities (Pronouns like "him", "it", "that lead").
    * v11.0: Supports merged entity resolution for corrections.
    */

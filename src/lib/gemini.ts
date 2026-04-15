@@ -7,7 +7,7 @@ import { generateResponse } from './local-ai/response-generator';
 import { saveMessage, getMemory } from './local-ai/memory-store';
 
 // New Modular Architecture Imports
-import { NLUEngine } from './local-ai/engine/nlu-engine';
+import { NLUEngine, ParsedIntent } from './local-ai/engine/nlu-engine';
 import { ContextManager } from './local-ai/engine/context-manager';
 import { ProactiveAdvisor } from './local-ai/engine/proactive-advisor';
 
@@ -368,15 +368,14 @@ export async function generateCallScript(lead: Lead, _customContext?: string): P
  * OS Bot Processing Fallback
  * Tries to handle the prompt locally/semantically before falling back to external raw text APIs.
  */
-export async function processWithLocalAI(prompt: string): Promise<BotResponse | null> {
+export async function processWithLocalAI(prompt: string, apiKey: string, preResolvedNLU?: ParsedIntent): Promise<BotResponse | null> {
   const store = useStore.getState();
-  const apiKey = localStorage.getItem('user_gemini_api_key') || '';
 
   try {
-    // 1. Resolve Intent & Entities using NLU Engine
-    const nluResult = await nlu.resolve(prompt, apiKey);
+    // 1. Resolve Intent & Entities using NLU Engine (if not already resolved)
+    const nluResult = preResolvedNLU || await nlu.resolve(prompt, apiKey);
     
-    if (nluResult && nluResult.confidence > 0.4) {
+    if (nluResult && (nluResult.confidence > 0.3 || preResolvedNLU)) {
       // 2. Contextual Entity Resolution (him, her, it, that)
       const resolvedEntities = ContextManager.resolveEntities(prompt, nluResult.entities);
       
@@ -432,13 +431,31 @@ export async function processPrompt(prompt: string, context: Record<string, any>
   const store = useStore.getState();
   const userId = store.currentUser?.id;
   
-  // Save user message to local memory
-  saveMessage(userId || 'system', getMemory().sessionId, 'user', prompt);
+  // 1. Resolve Provider, Model, and Key
+  let provider: 'gemini' | 'openai' | 'anthropic' | 'local' = 'local';
+  let apiKey = '';
+  let model = modelOverride || '';
 
-  // ── OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
+  if (userId && isSupabaseConfigured && supabase) {
+    try {
+      const { data: profile } = await supabase.from('profiles').select('settings').eq('id', userId).maybeSingle();
+      provider = profile?.settings?.active_ai_provider || 'local';
+      if (!model) model = profile?.settings?.active_ai_model || '';
+
+      const { data: conn } = await supabase.from('user_connections').select('refresh_token, access_token').eq('user_id', userId).eq('provider', 'gemini').maybeSingle();
+      if (conn?.refresh_token) apiKey = conn.refresh_token;
+    } catch (err) { console.error(err); }
+  }
+
+  if (!apiKey) {
+    apiKey = localStorage.getItem('user_ai_api_key') || localStorage.getItem('user_gemini_api_key') || '';
+    provider = (localStorage.getItem('user_ai_provider') as any) || 'local';
+  }
+
+  // 2. OS BOT ENGINE (PRIORITY) ──────────────────────────────────────
   if (!context?.test) {
-    const isLocalSelected = modelOverride === 'os-bot' || localStorage.getItem('user_ai_provider') === 'local';
-    const localResponse = await processWithLocalAI(prompt);
+    const isLocalSelected = modelOverride === 'os-bot' || provider === 'local' || localStorage.getItem('user_ai_provider') === 'local';
+    const localResponse = await processWithLocalAI(prompt, apiKey, context?.nluResult);
     
     // If local is explicitly selected, we MUST return something from local processing
     if (isLocalSelected) {
@@ -467,58 +484,29 @@ export async function processPrompt(prompt: string, context: Record<string, any>
 
 
   
-  let provider: 'gemini'|'openai'|'anthropic'|'local' = 'gemini';
-  let apiKey = '';
-  let model = modelOverride || '';
-
-  // 1. Resolve Provider, Model, and Key
-  if (userId) {
-    if (isSupabaseConfigured && supabase) {
-      try {
-        // Get active provider from profile
-        const { data: profile } = await supabase.from('profiles').select('settings').eq('id', userId).maybeSingle();
-        provider = profile?.settings?.active_ai_provider || 'gemini';
-        if (!model) model = profile?.settings?.active_ai_model || '';
-
-        // Get key for that provider
-        const { data: conn } = await supabase
-          .from('user_connections')
-          .select('refresh_token, access_token')
-          .eq('user_id', userId)
-          .eq('provider', provider)
-          .maybeSingle();
-        
-        if (conn?.refresh_token) apiKey = conn.refresh_token;
-        if (!model && conn?.access_token && conn.access_token !== 'active') model = conn.access_token;
-      } catch (err) {
-        console.error('Error fetching provider/key:', err);
-      }
-    }
+  // Fallback to local storage if needed
+  if (!apiKey) {
+    provider = (localStorage.getItem('user_ai_provider') as any) || 'local';
+    model = model || localStorage.getItem('user_ai_model') || '';
     
-    // Fallback to local storage
-    if (!apiKey) {
-      provider = (localStorage.getItem('user_ai_provider') as any) || 'local';
-      model = localStorage.getItem('user_ai_model') || '';
-      
-      if (provider === 'gemini') {
-        apiKey = localStorage.getItem('user_gemini_api_key') || '';
-        if (!model || !model.startsWith('gemini')) model = 'gemini-2.0-flash';
-      } else if (provider === 'openai') {
-        apiKey = localStorage.getItem('user_openai_api_key') || '';
-        if (!model || !model.startsWith('gpt')) model = 'gpt-4o';
-      } else if (provider === 'anthropic') {
-        apiKey = localStorage.getItem('user_anthropic_api_key') || '';
-        if (!model || !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
-      } else if (provider === 'local') {
-        apiKey = 'local';
-        model = 'local-engine';
-      }
-    } else {
-      // Even if we have a key (from Supabase), validate the model-provider combo
-      if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
-      if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
-      if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
+    if (provider === 'gemini') {
+      apiKey = localStorage.getItem('user_gemini_api_key') || '';
+      if (!model || !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+    } else if (provider === 'openai') {
+      apiKey = localStorage.getItem('user_openai_api_key') || '';
+      if (!model || !model.startsWith('gpt')) model = 'gpt-4o';
+    } else if (provider === 'anthropic') {
+      apiKey = localStorage.getItem('user_anthropic_api_key') || '';
+      if (!model || !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
+    } else if (provider === 'local') {
+      apiKey = 'local';
+      model = 'local-engine';
     }
+  } else {
+    // Even if we have a key (from Supabase), validate the model-provider combo
+    if (provider === 'gemini' && !model.startsWith('gemini')) model = 'gemini-2.0-flash';
+    if (provider === 'openai' && !model.startsWith('gpt')) model = 'gpt-4o';
+    if (provider === 'anthropic' && !model.startsWith('claude')) model = 'claude-3-5-sonnet-latest';
   }
 
   // CRITICAL: Final safeguard against model name mismatch in URL construction
@@ -814,7 +802,7 @@ Time: ${context.currentTime || new Date().toISOString()}`;
       console.warn(`[AI Fallback] Rate limit reached for ${provider}. Falling back to OS Bot...`);
       
       // Try local processing first
-      const localFallback = await processWithLocalAI(prompt);
+      const localFallback = await processWithLocalAI(prompt, apiKey);
       if (localFallback) {
         return {
           ...localFallback,

@@ -29,26 +29,36 @@ export class NLUEngine {
    * Main entry point for NLU resolution.
    */
   async resolve(text: string, apiKey: string): Promise<ParsedIntent> {
-    console.log('[NLU] Processing:', text);
+    console.log('[🤖 NLU] Resolving:', text);
     
     // 1. Check Fast Path (Low latency)
     const fastMatch = this.checkFastPath(text);
     if (fastMatch) {
-      console.log('[NLU] Fast Path Match:', fastMatch.intent);
+      console.log('[🤖 NLU] Fast Path Match:', fastMatch.intent);
       return fastMatch;
     }
 
     // 2. Fallback to Gemini Semantic Extraction
-    console.log('[NLU] Falling back to Semantic Extraction');
+    console.log('[🤖 NLU] Falling back to Semantic Extraction');
     const semanticMatch = await this.resolveSemantic(text, apiKey);
-    console.log('[NLU] Semantic Match:', semanticMatch.intent, semanticMatch.entities);
+    
+    // Ensure we have a valid intent even if confidence is low
+    if (semanticMatch.confidence < 0.3) {
+      console.warn('[🤖 NLU] Low confidence match:', semanticMatch.intent);
+    }
+
+    console.log('[🤖 NLU] Semantic Result:', semanticMatch.intent, semanticMatch.entities);
     return semanticMatch;
   }
 
   /**
    * Static wrapper for easy access.
+   * Matches the v11.0 desired signature.
    */
-  static async process(text: string, apiKey: string): Promise<ParsedIntent> {
+  static async process(text: string, context: any = {}): Promise<ParsedIntent> {
+    const store = useStore.getState();
+    const apiKey = localStorage.getItem('user_ai_api_key') || localStorage.getItem('user_gemini_api_key') || '';
+    
     const engine = new NLUEngine();
     return engine.resolve(text, apiKey);
   }

@@ -11,13 +11,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { 
   hasUserApiKey, 
   processPrompt, 
-  generatePageInsights, 
-  createTask, 
-  updateLeadStatusViaAI, 
-  createLeadViaAI, 
-  updateLeadViaAI, 
-  deleteLeadViaAI, 
-  sendSMSViaAI 
+  generatePageInsights
 } from '../lib/gemini';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { SaveLeadModal } from './SaveLeadModal';
@@ -26,10 +20,13 @@ import { voiceService } from '../lib/voice-service';
 import { usageTracker, UsageData } from '../lib/usage-tracking';
 import { UsageLimitModal } from './UsageLimitModal';
 import { 
-  executeTask, 
+  executeTask,
   generateResponse,
-  generateErrorResponse
+  generateErrorResponse,
+  TaskExecutor
 } from '../lib/local-ai';
+import { NLUEngine } from '../lib/local-ai/engine/nlu-engine';
+import { ContextManager } from '../lib/local-ai/engine/context-manager';
 import { 
   saveMessage, 
   getMemory, 
@@ -601,12 +598,21 @@ export function AIBotWidget() {
       }
 
       // ── MODULAR NLU PIPELINE (v11.0) ───────────────────────────────────
-      console.log('[OS BOT] Processing via Unified Pipeline:', userText);
+      console.log('[🤖 OS BOT] Execution Pipeline Start:', userText);
       
+      // 1. Get Contextual History
+      const context = await ContextManager.getContext(currentUser?.id || 'system', sessionId);
+      
+      // 2. Process via NLUEngine (Semantic + Fast Path)
+      const nluResult = await NLUEngine.process(userText, context);
+      console.log(`[🤖 OS BOT] NLU Result: ${nluResult.intent}`, nluResult.entities);
+
+      // 3. Interface with Gemini Logic (Model Context, Personality, etc.)
       const response = await processPrompt(userText, { 
         page: location.pathname,
         currentTime: new Date().toISOString(),
-        sessionId
+        sessionId,
+        nluResult // Pass pre-resolved NLU
       }, aiModel);
 
       /* The unified processPrompt now handles all cases including local AI */
@@ -781,52 +787,37 @@ export function AIBotWidget() {
   };
 
   const handleExecuteAction = async (intent: string, data: any) => {
-    let result: { success: boolean; message: string } | null = null;
+    let result: { success: boolean; message: string; data?: any } | null = null;
     
     try {
-      if (intent === 'create_task') {
-        createTask(data);
-        result = { success: true, message: `Successfully created task: ${data.title}` };
-      } else if (intent === 'update_status' && data?.leadId) {
-        result = updateLeadStatusViaAI(data.leadId, data.newStatus);
-        if (result?.success) {
-          useStore.getState().updateLeadStatus(data.leadId, data.newStatus, currentUser?.id || 'system');
-        }
-      } else if (intent === 'create_lead') {
-        result = createLeadViaAI(data);
-      } else if (intent === 'update_lead' && data?.leadId) {
-        result = updateLeadViaAI(data.leadId, data);
-      } else if (intent === 'delete_lead' && data?.leadId) {
-        result = deleteLeadViaAI(data.leadId);
-      } else if (intent === 'send_sms') {
-        const target = data?.target || data?.leadId || data?.phone;
-        const message = data?.message;
-        
-        if (!target || !target.toString().trim() || !message) {
-          result = { success: false, message: "Missing phone/target or message content for SMS." };
-        } else {
-          setLoading(true);
-          try {
-            result = await sendSMSViaAI(target.toString(), message, data?.targetCarrier);
-          } catch (smsErr: any) {
-        result = { success: false, message: smsErr?.message || 'SMS send failed. Check Google connection in Settings.' };
-          } finally {
-            setLoading(false);
-          }
-        }
-      } else if (['crm_action', 'comms_action', 'task_action', 'real_estate_action', 'system_action'].includes(intent)) {
-        // Modular Handler Flow (v11.0)
-        setLoading(true);
-        const taskResponse = await (await import('../lib/local-ai/task-executor')).executeTask(intent, data);
-        result = { success: taskResponse.success, message: taskResponse.message };
-        setLoading(false);
-      } else if (intent === 'confirm_action') {
+      // 1. Domain Action Normalization (v11.0 Legacy Support)
+      let domainAction = intent;
+      let actionParams = { ...data };
+
+      if (intent === 'create_task') { domainAction = 'task_action'; actionParams.action = 'create_task'; }
+      else if (intent === 'update_status') { domainAction = 'crm_action'; actionParams.action = 'update_status'; actionParams.status = data.newStatus; }
+      else if (intent === 'create_lead') { domainAction = 'crm_action'; actionParams.action = 'create_lead'; }
+      else if (intent === 'update_lead') { domainAction = 'crm_action'; actionParams.action = 'update_lead'; }
+      else if (intent === 'delete_lead') { domainAction = 'crm_action'; actionParams.action = 'delete_lead'; }
+      else if (intent === 'send_sms') { domainAction = 'comms_action'; actionParams.action = 'send_sms'; }
+
+      // 2. Centralized Execution (v11.0)
+      if (domainAction === 'confirm_action') {
         const underlyingIntent = data?.intent;
         if (underlyingIntent && underlyingIntent !== 'confirm_action') {
           return handleExecuteAction(underlyingIntent, data);
         } else {
           result = { success: false, message: 'Invalid confirmation target.' };
         }
+      } else {
+        setLoading(true);
+        const taskResponse = await TaskExecutor.execute(domainAction, actionParams);
+        result = { 
+          success: taskResponse.success, 
+          message: taskResponse.message,
+          data: taskResponse.data 
+        };
+        setLoading(false);
       }
 
       // Increment usage if successful

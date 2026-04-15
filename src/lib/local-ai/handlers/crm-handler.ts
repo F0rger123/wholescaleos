@@ -23,6 +23,10 @@ export class CRMHandler extends BaseHandler {
         return this.filterLeads(params);
       case 'compare_leads':
         return this.compareLeads(params.targets || [name, params.secondLead]);
+      case 'update_lead':
+        return this.updateLead(leadId, params);
+      case 'delete_lead':
+        return this.deleteLead(leadId);
       default:
         return this.wrapError(`Unknown CRM action: ${action}`);
     }
@@ -105,5 +109,23 @@ export class CRMHandler extends BaseHandler {
     if (params.minScore) leads = leads.filter(l => (l.dealScore || 0) >= params.minScore);
 
     return this.wrapSuccess(`Found ${leads.length} matching leads.`, { count: leads.length, leads: leads.slice(0, 5) });
+  }
+
+  private async updateLead(leadId: string, data: any): Promise<TaskResponse> {
+    const store = useStore.getState();
+    const lead = store.leads.find(l => l.id === leadId);
+    if (!lead) return this.wrapError("Lead not found.");
+
+    store.updateLead(leadId, data);
+    return this.wrapSuccess(`Got it. I've updated the info for **${lead.name}**.`);
+  }
+
+  private async deleteLead(leadId: string): Promise<TaskResponse> {
+    const store = useStore.getState();
+    const lead = store.leads.find(l => l.id === leadId);
+    if (!lead) return this.wrapError("Lead not found.");
+
+    store.deleteLead(leadId);
+    return this.wrapSuccess(`Permanently removed **${lead.name}** from your pipeline.`);
   }
 }
