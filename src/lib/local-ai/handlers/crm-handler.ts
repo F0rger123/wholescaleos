@@ -26,7 +26,7 @@ export class CRMHandler extends BaseHandler {
       case 'update_lead':
         return this.updateLead(leadId, params);
       case 'delete_lead':
-        return this.deleteLead(leadId);
+        return this.deleteLead(leadId, params.confirmed);
       default:
         return this.wrapError(`Unknown CRM action: ${action}`);
     }
@@ -163,10 +163,19 @@ export class CRMHandler extends BaseHandler {
     return this.wrapSuccess(`Got it. I've updated the info for **${lead.name}**.`);
   }
 
-  private async deleteLead(leadId: string): Promise<TaskResponse> {
+  private async deleteLead(leadId: string, confirmed: boolean = false): Promise<TaskResponse> {
     const store = useStore.getState();
     const lead = store.leads.find(l => l.id === leadId);
     if (!lead) return this.wrapError("Lead not found.");
+
+    if (!confirmed) {
+      return {
+        success: true,
+        message: `Are you sure you want to permanently remove **${lead.name}**? This action cannot be undone.`,
+        needsConfirmation: true,
+        data: { leadId, action: 'delete_lead' }
+      };
+    }
 
     store.deleteLead(leadId);
     return this.wrapSuccess(`Permanently removed **${lead.name}** from your pipeline.`);

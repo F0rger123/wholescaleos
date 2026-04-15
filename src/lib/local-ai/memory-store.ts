@@ -44,6 +44,7 @@ export interface Memory {
     currentWorkflow?: string;
     step?: number;
     context?: Record<string, any>;
+    pageContext?: { path: string; [key: string]: any };
     interruptedWorkflow?: string;
     interruptedStep?: number;
     interruptedContext?: Record<string, any>;
@@ -55,6 +56,35 @@ export interface Memory {
     riskTolerance?: 'low' | 'medium' | 'high';
     marketFocus?: string[];
   };
+  pendingAction?: {
+    intent: string;
+    entities: Record<string, any>;
+    description: string;
+  } | null;
+  learnedIntents?: Array<{
+    phrase: string;
+    intent: string;
+    params?: Record<string, any>;
+  }>;
+}
+
+export function setPendingAction(action: Memory['pendingAction']) {
+  const memory = getMemory();
+  saveMemory({ ...memory, pendingAction: action });
+}
+
+export function getPendingAction() {
+  return getMemory().pendingAction;
+}
+
+export function clearPendingAction() {
+  const memory = getMemory();
+  saveMemory({ ...memory, pendingAction: null });
+}
+
+export function setLearnedIntents(intents: Memory['learnedIntents']) {
+  const memory = getMemory();
+  saveMemory({ ...memory, learnedIntents: intents });
 }
 
 const MEMORY_KEY = 'wholescale-os-memory';
@@ -234,6 +264,18 @@ export function clearLastSuggestion() {
 
 export function trackLead(id: string, name: string) {
   pushToEntityStack({ id, name, type: 'lead' });
+}
+
+export function setActivePage(path: string, context: any = {}) {
+  const memory = getMemory();
+  saveMemory({
+    ...memory,
+    activeTopic: path.split('/').pop() || 'dashboard',
+    conversationState: {
+      ...memory.conversationState,
+      pageContext: { path, ...context }
+    }
+  });
 }
 
 export function logOutcome(type: string, summary: string, metadata: any = {}) {

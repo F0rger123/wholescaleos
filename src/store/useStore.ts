@@ -614,13 +614,24 @@ export function calculateDealScore(lead: Lead): number {
   const engageScore = ((lead.engagementLevel || 3) - 1) * 25;
   const urgencyScore = ((lead.timelineUrgency || 3) - 1) * 25;
   const competitionScore = (5 - (lead.competitionLevel || 3)) * 25;
+  
+  // Source Weight (High-quality sources boost the score)
+  const sourceQuality: Record<string, number> = {
+    'personal-relations': 20,
+    'referral': 15,
+    'fsbo': 10,
+    'pay-per-lead': 5,
+    'bandit-signs': -5,
+  };
+  const sourceBoost = sourceQuality[lead.source] || 0;
 
   const raw = (
     valueScore * 0.35 +
-    probScore * 0.25 +
+    probScore * 0.20 +
     engageScore * 0.15 +
     urgencyScore * 0.15 +
-    competitionScore * 0.10
+    competitionScore * 0.10 +
+    sourceBoost
   );
 
   return Math.round(Math.min(Math.max(raw, 0), 100));

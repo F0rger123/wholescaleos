@@ -32,7 +32,12 @@ import {
   saveMessage,
   getMemory,
   syncUserProfile,
-  loadHistory
+  loadHistory,
+  setActivePage,
+  getPendingAction,
+  setPendingAction,
+  clearPendingAction,
+  setLearnedIntents
 } from '../lib/local-ai/memory-store';
 import { AIBotLearningButtons } from './AIBotLearningButtons';
 import { saveLearnedIntent } from '../lib/local-ai/learning-service';
@@ -41,7 +46,9 @@ import {
   saveConversationTurn,
   generateSessionId,
   getUserPreferences,
-  getConversationContext
+  getConversationContext,
+  getAllLearnedIntents,
+  LearnedIntent
 } from '../lib/local-ai/learning-service';
 
 interface ChatMessage {
@@ -188,6 +195,15 @@ export function AIBotWidget() {
     }
   }, [isRecording, isSpeaking]);
 
+  // v12.0: Active Page Context Tracking
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.length > 1) {
+      console.log(`[🤖 OS BOT] Syncing context for page: ${path}`);
+      setActivePage(path);
+    }
+  }, [location.pathname]);
+
   // SMS Session State — collects target + message without repeat-asking
   const [smsSession, setSmsSession] = useState<{
     active: boolean;
@@ -205,12 +221,25 @@ export function AIBotWidget() {
       }
       setSessionId(sessionId);
 
-      // Load user preferences
+      // Load user preferences and Learned Intents
       const userId = currentUser?.id;
       if (userId) {
+        // 1. Load Preferences
         const prefs = await getUserPreferences(userId);
         if (prefs?.preferred_name) {
           setUserName(prefs.preferred_name);
+        }
+
+        // 2. Hydrate Neural Learning
+        console.log('[🤖 OS BOT] Synchronizing Neural Intents from Supabase...');
+        const learned = await getAllLearnedIntents(userId);
+        if (learned && learned.length > 0) {
+          console.log(`[🤖 OS BOT] Hydrated ${learned.length} learned patterns.`);
+          setLearnedIntents(learned.map((l: LearnedIntent) => ({
+            phrase: l.phrase,
+            intent: l.mapped_intent,
+            params: l.params
+          })));
         }
       }
     };
@@ -616,9 +645,41 @@ export function AIBotWidget() {
         // 3. Execution (Modular v11.0 Branching)
         let finalResponse: any;
 
-        if (nluResult && nluResult.intent !== 'unknown' && nluResult.confidence > 0.4) {
+        // v12.1: Affirmation Loop Handler
+        const pending = getPendingAction();
+        if (nluResult.intent === 'affirm_action' && pending) {
+          if (nluResult.entities.value === true) {
+            console.log('[🤖 OS BOT] Executing Pending Affirmation:', pending.intent);
+            const executionResult = await TaskExecutor.execute(pending.intent, pending.entities);
+            clearPendingAction();
+            finalResponse = {
+              intent: pending.intent,
+              response: generateResponse(pending.intent, executionResult, userText, personality),
+              data: executionResult.data,
+              systemLog: '🤖 OS Bot'
+            };
+          } else {
+            console.log('[🤖 OS BOT] User cancelled pending action.');
+            clearPendingAction();
+            finalResponse = {
+              intent: 'system_action',
+              response: "No problem, I've cancelled that. What else can I do for you?",
+              systemLog: '🤖 OS Bot'
+            };
+          }
+        } else if (nluResult && nluResult.intent !== 'unknown' && nluResult.confidence > 0.4) {
           console.log('[🤖 OS BOT] Executing Local Task:', nluResult.intent);
           const executionResult = await TaskExecutor.execute(nluResult.intent, nluResult.entities);
+          
+          // Persistence: If the handler says it needs confirmation, save it
+          if (executionResult.needsConfirmation) {
+            setPendingAction({
+              intent: nluResult.intent,
+              entities: { ...nluResult.entities, confirmed: true },
+              description: executionResult.message
+            });
+          }
+
           finalResponse = {
             intent: nluResult.intent,
             response: generateResponse(nluResult.intent, executionResult, userText, personality),

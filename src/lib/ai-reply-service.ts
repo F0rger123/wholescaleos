@@ -41,7 +41,7 @@ export async function analyzeConversation(
 
   // OS Bot Logic (No API Credits)
   const lastMessage = messages[messages.length - 1].content.toLowerCase();
-  
+
   let category = 'default';
   if (lastMessage.includes('price') || lastMessage.includes('offer') || lastMessage.includes('worth') || lastMessage.includes('much')) {
     category = 'pricing';
@@ -57,7 +57,7 @@ export async function analyzeConversation(
   await new Promise(r => setTimeout(r, 800));
 
   const replies = TEMPLATES[category] || TEMPLATES.default;
-  
+
   return {
     summary: `Client is asking about ${category}.`,
     intent: category,

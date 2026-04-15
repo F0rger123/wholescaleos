@@ -31,6 +31,19 @@ const HANDLERS: Record<string, BaseHandler> = {
  * Routes requests to specialized domain handlers.
  */
 async function executeTaskInternal(action: string, entities: any): Promise<TaskResponse> {
+  const memory = getMemory();
+  
+  // v13.0: Implicit Context Bonding
+  // If we're creating a task/sms and no leadId is provided, bind to the last mentioned lead
+  if ((action === 'task_action' || action === 'comms_action') && !entities.leadId && !entities.target) {
+    const lastLead = memory.entityStack.find(e => e.type === 'lead');
+    if (lastLead) {
+      console.log(`[🤖 OS BOT] Bonding ${action} to lead: ${lastLead.name}`);
+      entities.leadId = lastLead.id;
+      entities.target = lastLead.name;
+    }
+  }
+
   // 1. Delegate to Modular Handlers if available
   if (HANDLERS[action]) {
     try {

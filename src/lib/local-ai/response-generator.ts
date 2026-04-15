@@ -131,13 +131,8 @@ const applyPersonality = (
   const memory = getMemory();
   const sentiment = memory.sentiment;
   if (sentiment === 'frustrated') {
-    const empatheticEndings = [
-      ' Let me know if I can help clear things up.',
-      ' I know this can be frustrating. What specifically can I assist with?',
-      ' Take your time, I am here to help.',
-      ' Let\'s get this sorted out together.',
-    ];
-    return `${base}${pick(empatheticEndings, 'frustrated')}`;
+    // If frustrated, keep it extremely brief and direct, bypass normal personality
+    return `${base} I understand. Let's get this done. What's the next specific step?`;
   }
 
   if (p === 'professional') {

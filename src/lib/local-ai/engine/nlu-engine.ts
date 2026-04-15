@@ -25,9 +25,12 @@ export class NLUEngine {
     { regex: /^(help|what can you do|commands|capabilities|skills|what are you|who are you)/i, intent: 'system_action', params: { action: 'help' } },
     { regex: /^(list commands|show me what you can do|tutorial|guide me)/i, intent: 'system_action', params: { action: 'help' } },
 
-    // Lead Management - Viewing
-    { regex: /^(show|list|get|view|display|pull up) (my )?leads/i, intent: 'crm_action', params: { action: 'filter_leads' } },
-    { regex: /^show my current leads/i, intent: 'crm_action', params: { action: 'filter_leads' } },
+    // v12.1: Affirmation Loop
+    { regex: /^(yes|yeah|yup|affirmative|do it|okay|ok|sure|proceed|confirm)$/i, intent: 'affirm_action', params: { value: true } },
+    { regex: /^(no|nope|nah|negative|stop|cancel|don't|dont)$/i, intent: 'affirm_action', params: { value: false } },
+
+    // CRM Actions
+    { regex: /^show (?:my )?leads$/i, intent: 'crm_action', params: { action: 'list_leads' } },
     { regex: /^(show|list|get) (my )?hot leads/i, intent: 'crm_action', params: { action: 'filter_leads', minScore: 80 } },
     { regex: /^(show|list|get) (my )?cold leads/i, intent: 'crm_action', params: { action: 'filter_leads', maxScore: 40 } },
     { regex: /^(show|list|get) (my )?new leads/i, intent: 'crm_action', params: { action: 'filter_leads', status: 'new' } },
@@ -170,11 +173,19 @@ export class NLUEngine {
         // Extract entities from the match groups
         const entities: Record<string, any> = { ...params };
         if (match.length > 1) {
-          // Dynamic mapping based on intent/action
           const firstValue = match[1].trim();
-          
+
+          // Plural check (them, both, all)
+          if (/\b(them|both|all|those|these)\b/i.test(firstValue)) {
+            entities.isBulk = true;
+          }
+
+          // Dynamic mapping based on intent/action
           if (intent === 'crm_action' && params?.action === 'get_lead') {
-            entities.name = firstValue;
+            const type = this.detectLeadIdentifierType(firstValue);
+            if (type === 'phone') entities.phone = firstValue;
+            else if (type === 'address') entities.address = firstValue;
+            else entities.name = firstValue;
           } else if (intent === 'real_estate_action' && params?.action === 'calculate_deal') {
             entities.address = firstValue;
             if (match[2]) entities.strategy = match[2].trim();
@@ -183,7 +194,7 @@ export class NLUEngine {
           }
           
           // Fallback: capture first group as 'text' if not mapped
-          if (!entities.name && !entities.address && !entities.target) {
+          if (!entities.name && !entities.address && !entities.target && !entities.phone) {
             entities.text = firstValue;
           }
         }
@@ -199,14 +210,46 @@ export class NLUEngine {
     return null;
   }
 
+  private detectLeadIdentifierType(text: string): 'phone' | 'address' | 'name' {
+    if (/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/.test(text)) return 'phone';
+    if (/\d+\s+[a-zA-Z0-9\s]+(st|ave|rd|blvd|lane|drive|way|court|plaza)\b/i.test(text)) return 'address';
+    return 'name';
+  }
+
   /**
-   * Semantic similarity matching using learned intents and fuzzy matching.
+   * Semantic similarity matching using hydrated learned intents and token-weighted matching.
+   * v13.0: Supports cross-session persistent intelligence.
    */
   private async checkSemanticSimilarity(text: string): Promise<ParsedIntent | null> {
     const memory = getMemory();
     const normalizedInput = text.toLowerCase().trim();
+    const inputTokens = new Set(normalizedInput.split(/\s+/));
 
-    // Check learned intents first
+    // 1. Check Hydrated Neural Intents from Supabase
+    if (memory.learnedIntents && memory.learnedIntents.length > 0) {
+      for (const learned of memory.learnedIntents) {
+        const learnedPhrase = learned.phrase.toLowerCase().trim();
+        const learnedTokens = new Set(learnedPhrase.split(/\s+/));
+        
+        // Calculate Jaccard Similarity: Intersection / Union
+        const intersection = new Set([...inputTokens].filter(t => learnedTokens.has(t)));
+        const union = new Set([...inputTokens, ...learnedTokens]);
+        const similarity = intersection.size / union.size;
+
+        // High threshold for direct intent mapping
+        if (similarity > 0.75) {
+          console.log(`[🤖 NLU] Neural Match: "${learnedPhrase}" (${Math.round(similarity * 100)}%)`);
+          return {
+            intent: learned.intent,
+            entities: learned.params || {},
+            confidence: similarity,
+            reasoning: `Neural Match: ${Math.round(similarity * 100)}% token alignment with cross-session learning.`
+          };
+        }
+      }
+    }
+
+    // 2. Check Local Learned Facts (Legacy fallback)
     if (memory.learnedFacts) {
       for (const [key, value] of Object.entries(memory.learnedFacts)) {
         if (key.startsWith('intent_') && typeof value === 'string') {
@@ -217,7 +260,7 @@ export class NLUEngine {
               intent: value,
               entities: {},
               confidence: similarity,
-              reasoning: `Matched learned intent with ${Math.round(similarity * 100)}% similarity.`
+              reasoning: `Local Fact Match: ${Math.round(similarity * 100)}% similarity.`
             };
           }
         }
