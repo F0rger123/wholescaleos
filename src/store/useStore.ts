@@ -93,6 +93,8 @@ export interface ChatMessage {
 export interface AIUsage {
   used: number;
   limit: number;
+  lastReset: string;
+  lastUpdated?: string;
 }
 
 export const AI_PLAN_LIMITS: Record<string, number> = {
@@ -576,11 +578,7 @@ export interface CalculatorScenario {
 
 // ——— AI Types —————————————————————————————————————————————————————————————————————————————————————
 
-export interface AIUsage {
-  used: number;
-  limit: number;
-  lastReset: string;
-}
+// AIUsage interface is now defined at the top of the file
 
 export type AIPriorityLevel = 'high' | 'medium' | 'low';
 export type AIActionType = 'call' | 'email' | 'meeting' | 'follow-up' | 'offer' | 'status-change';
@@ -1529,8 +1527,8 @@ interface AppState {
   setCalendarEvents: (events: any[]) => void;
   setMergedGoogleEvents: (events: any[]) => void;
   aiUsage: Record<string, AIUsage>;
-  incrementAiUsage: (model: string) => void;
-  setAiUsage: (_model: string, _used: number, _limit?: number) => void;
+  incrementAiUsage: (amount?: number) => Promise<void>;
+  setAiUsage: (model: string, used: number, limit?: number) => void;
   aiThreads: AIThread[];
   currentAiThreadId: string | null;
   aiMessages: Record<string, AIBotMessage[]>;
@@ -3497,8 +3495,8 @@ export const useStore = create<AppState>((set, get) => ({
   },
   incrementAiUsage: async (amount = 1) => {
     const { currentUser, credits_remaining, total_credits_used_today } = get();
-    const newRemaining = Math.max(0, credits_remaining - amount);
-    const newUsedToday = total_credits_used_today + amount;
+    const newRemaining = Math.max(0, (credits_remaining || 0) - amount);
+    const newUsedToday = (total_credits_used_today || 0) + amount;
     
     set({ 
       credits_remaining: newRemaining,
@@ -3524,11 +3522,16 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       aiUsage: {
         ...s.aiUsage,
-        [model]: { used, limit, lastUpdated: new Date().toISOString() }
+        [model]: { 
+          used, 
+          limit: limit || 0, 
+          lastReset: s.aiUsage[model]?.lastReset || new Date().toISOString(),
+          lastUpdated: new Date().toISOString() 
+        }
       }
     }));
     // Also update credits remaining based on usage if applicable
-    if (model === 'premium-credits') {
+    if (model === 'premium-credits' && limit !== undefined) {
       set({ credits_remaining: limit - used });
     }
   },

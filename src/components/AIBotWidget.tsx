@@ -35,9 +35,7 @@ import {
   syncUserProfile,
   loadHistory,
   setActivePage,
-  getPendingAction,
   setPendingAction,
-  clearPendingAction,
   setLearnedIntents
 } from '../lib/local-ai/memory-store';
 import { AIBotLearningButtons } from './AIBotLearningButtons';
@@ -650,8 +648,8 @@ export function AIBotWidget() {
       let response: any;
 
       try {
-        // 1. Get Contextual History
-        const context = await ContextManager.getContext(currentUser?.id || 'system', sessionId);
+        // 1. Log session activity
+        console.log(`[🤖 OS BOT] Active Session: ${sessionId}`);
 
         // 2. Process via recognizeIntent (v13.0 Comprehensive local-first NLU)
         const nluResult = await recognizeIntent(userText);
@@ -660,7 +658,7 @@ export function AIBotWidget() {
         // 3. Execution & Response Generation
         let finalResponse: any;
 
-        if (nluResult && nluResult.intent && nluResult.intent.name !== 'unknown' && nluResult.confidence >= 40) {
+        if (nluResult && nluResult.intent && nluResult.confidence >= 40) {
           console.log('[🤖 OS BOT] Executing Local Task:', nluResult.intent.name);
           const executionResult = await TaskExecutor.execute(nluResult.intent.name, nluResult.params);
           
