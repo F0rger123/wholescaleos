@@ -28,7 +28,6 @@ import {
   TaskExecutor,
   recognizeIntent
 } from '../lib/local-ai';
-import { ContextManager } from '../lib/local-ai/engine/context-manager';
 import {
   saveMessage,
   getMemory,
@@ -765,7 +764,7 @@ export function AIBotWidget() {
       await refreshCredits();
 
       if (response.intent !== 'error' && response.intent !== 'rate_limit' && !response.systemLog?.includes('OS Bot')) {
-        incrementAiUsage(aiModel);
+        incrementAiUsage(1);
       }
 
       if (response.intent === 'redirect_setup') {
