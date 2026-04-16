@@ -79,6 +79,14 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
 
       // 3. Fallback to query params
       const params = new URLSearchParams(window.location.search);
+      
+      // Auto-populate referral code if present
+      const refCode = params.get('ref') || params.get('referral');
+      if (refCode) {
+        setForm(prev => ({ ...prev, referralCode: refCode }));
+        setCodeType('referral');
+      }
+
       if (params.get('signup') === 'true' || defaultMode === 'signup') {
         setMode('signup');
       } else if (params.get('mode') === 'forgot') {
@@ -592,7 +600,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
   return (
     <div className="min-h-screen flex bg-black overflow-hidden font-inter">
       {/* Left: Brand Panel (Cinematic) */}
-      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-16 relative overflow-hidden"
+      <div className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 relative overflow-hidden"
         style={{ 
           background: 'radial-gradient(circle at top left, rgba(99, 102, 241, 0.15), transparent), radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.1), transparent)'
         }}
@@ -604,7 +612,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMzYjgyZjYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDE4YzEuNjU3IDAgMyAxLjM0MyAzIDN2MThsLTMgM0gxOGwtMy0zVjIxYzAtMS42NTcgMS4zNDMtMyAzLTNoMTh6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50" />
 
         <div className="relative z-10 animate-in fade-in slide-in-from-top-8 duration-1000">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 mb-6">
             <Logo size={48} />
             <div>
               <h1 className="text-3xl font-black tracking-tighter text-white">WholeScale</h1>
@@ -639,7 +647,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 relative">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 relative overflow-y-auto">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[20%] right-[10%] w-64 h-64 bg-indigo-500/5 blur-[100px] rounded-full" />
           <div className="absolute bottom-[20%] left-[10%] w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full" />
@@ -651,7 +659,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
             <Logo size={40} showText={true} />
           </div>
 
-          <div className="mb-10 text-center lg:text-left">
+          <div className="mb-6 text-center lg:text-left">
             <h2 className="text-3xl font-black tracking-tight text-white mb-2">
               {mode === 'login' ? 'Mission Control' : 
                mode === 'signup' ? 'Initiate Sequence' : 

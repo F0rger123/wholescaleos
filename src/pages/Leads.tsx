@@ -864,7 +864,7 @@ export default function Leads() {
                               </div>
                               <button 
                                 onClick={() => logAct(lead.id, nba.type)} 
-                                className="px-3 py-1.5 text-white text-sm rounded-lg flex items-center gap-1 hover:opacity-90 transition-all font-bold"
+                                className="px-3 py-1.5 text-[var(--t-on-primary)] text-sm rounded-lg flex items-center gap-1 hover:opacity-90 transition-all font-bold"
                                 style={{ background: 'var(--t-primary)' }}
                               >
                                 <Zap className="w-3 h-3" /> {nba.actionLabel}
@@ -1036,8 +1036,8 @@ export default function Leads() {
                               <div className="flex flex-wrap gap-2 mb-4">
                                 <button 
                                   onClick={() => logAct(lead.id, 'call')} 
-                                  className="px-3 py-1.5 border hover:opacity-80 rounded-lg text-sm flex items-center gap-1 transition-all"
-                                  style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)', borderColor: 'var(--t-primary-dim)' }}
+                                  className="px-3 py-1.5 border hover:opacity-90 rounded-lg text-sm flex items-center gap-1 transition-all shadow-sm font-bold"
+                                  style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)', borderColor: 'var(--t-primary)' }}
                                 >
                                   <PhoneCall className="w-3 h-3" /> Log Call
                                 </button>

@@ -77,6 +77,12 @@ export const referralService = {
 
       if (error) throw error;
       
+      // Also update the referred_by in profiles for the new user
+      await supabase
+        .from('profiles')
+        .update({ referred_by: referrerId })
+        .eq('id', referredId);
+
       // Also increment usage count on the code
       await supabase.rpc('increment_referral_usage', { p_code: codeUsed.trim().toUpperCase() });
       

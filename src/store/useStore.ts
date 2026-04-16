@@ -1615,6 +1615,7 @@ interface AppState {
   credits_reset_at: string | null;
   total_credits_used_today: number;
   onboarding_ai_choice_seen: boolean;
+  refreshCredits: () => Promise<void>;
   setOnboardingAiChoiceSeen: (v: boolean) => void;
 }
 
@@ -1919,6 +1920,14 @@ export const useStore = create<AppState>((set, get) => ({
             name: profile.full_name || s.currentUser.name,
             avatar: profile.avatar_url || s.currentUser.avatar,
             teamId: teamId || (s.currentUser as any).teamId,
+            premium_credits: profile.premium_credits,
+            credits_remaining: profile.credits_remaining,
+            credits_reset_at: profile.credits_reset_at,
+            onboarding_ai_choice_seen: profile.onboarding_ai_choice_seen,
+            smart_rotate_enabled: profile.smart_rotate_enabled,
+            preferred_api_provider: profile.preferred_api_provider,
+            api_fallback_enabled: profile.api_fallback_enabled,
+            user_api_keys: profile.user_api_keys,
           } : {
             id: profile.id,
             email: profile.email || '',
@@ -1937,6 +1946,14 @@ export const useStore = create<AppState>((set, get) => ({
             referredBy: profile.referred_by,
             totalEarnings: profile.total_earnings || 0,
             availableEarnings: profile.available_earnings || 0,
+            premium_credits: profile.premium_credits,
+            credits_remaining: profile.credits_remaining,
+            credits_reset_at: profile.credits_reset_at,
+            onboarding_ai_choice_seen: profile.onboarding_ai_choice_seen,
+            smart_rotate_enabled: profile.smart_rotate_enabled,
+            preferred_api_provider: profile.preferred_api_provider || 'local',
+            api_fallback_enabled: profile.api_fallback_enabled ?? true,
+            user_api_keys: profile.user_api_keys || {},
           },
           teamId: teamId,
           notificationSettings: profile.settings?.notifications || s.notificationSettings,
@@ -1946,6 +1963,10 @@ export const useStore = create<AppState>((set, get) => ({
           milestones: profile.settings?.team_milestones || s.milestones,
           preferred_api_provider: profile.preferred_api_provider || 'local',
           api_fallback_enabled: profile.api_fallback_enabled ?? true,
+          smart_rotate_enabled: profile.smart_rotate_enabled ?? false,
+          credits_remaining: profile.credits_remaining ?? 100,
+          credits_reset_at: profile.credits_reset_at || null,
+          onboarding_ai_choice_seen: profile.onboarding_ai_choice_seen ?? false,
           dataLoaded: true,
         }));
       }
@@ -2290,11 +2311,41 @@ export const useStore = create<AppState>((set, get) => ({
     set({ smart_rotate_enabled: v });
   },
   setCreditsRemaining: (v: number) => set({ credits_remaining: v }),
-  setOnboardingAiChoiceSeen: (v: boolean) => {
+  refreshCredits: async () => {
+    const { currentUser } = get();
+    if (!currentUser?.id || !isSupabaseConfigured || !supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('credits_remaining')
+        .eq('id', currentUser.id)
+        .single();
+      
+      if (data && !error) {
+        set({ credits_remaining: data.credits_remaining });
+      }
+    } catch (err) {
+      console.error('Failed to refresh credits:', err);
+    }
+  },
+  setOnboardingAiChoiceSeen: async (v: boolean) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('wholescale-ai-onboarding-seen', v.toString());
     }
     set({ onboarding_ai_choice_seen: v });
+    
+    // Sync to Supabase
+    const { currentUser } = get();
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ onboarding_ai_choice_seen: v })
+          .eq('id', currentUser.id);
+      } catch (err) {
+        console.error('Failed to sync onboarding status to Supabase:', err);
+      }
+    }
   },
   searchResults: { leads: [], tasks: [], sms: [] },
   performSearch: (query: string) => {

@@ -126,10 +126,17 @@ export async function processPrompt(
     
     if (!responseText) {
       return {
-        intent: 'failed',
-        response: 'failed',
+        intent: 'unknown',
+        response: "I'm having trouble connecting to my external intelligence. I'll switch to my local core for now. How can I help with your leads or tasks?",
         systemLog: '🤖 Hybrid AI (No response)'
       };
+    }
+
+    // Success: Refresh credits in UI
+    try {
+      useStore.getState().refreshCredits();
+    } catch (err) {
+      console.warn('[🤖 Hybrid AI] Failed to refresh credits:', err);
     }
 
     // Attempt to parse as JSON if it looks like one, otherwise return as text

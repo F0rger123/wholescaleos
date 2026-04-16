@@ -97,6 +97,12 @@ const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; lab
   'fsbo': { bg: 'rgba(99, 102, 241, 0.15)', text: 'rgb(129, 140, 248)', bar: 'rgb(99, 102, 241)', label: 'FSBO' },
   'cold-call': { bg: 'var(--t-primary-dim)', text: 'var(--t-primary)', bar: 'var(--t-primary)', label: 'Cold Call' },
   'email-campaign': { bg: 'rgba(107, 114, 128, 0.15)', text: 'rgb(156, 163, 175)', bar: 'rgb(107, 114, 128)', label: 'Email Campaign' },
+  'google-sheets': { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e', bar: '#22c55e', label: 'Google Sheets' },
+  'homes-com': { bg: 'var(--t-primary-dim)', text: 'var(--t-primary)', bar: 'var(--t-primary)', label: 'Homes.com' },
+  'pdf': { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444', bar: '#ef4444', label: 'PDF Upload' },
+  'smart-paste': { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', bar: '#a855f7', label: 'Smart Paste' },
+  'manual': { bg: 'var(--t-surface-hover)', text: 'var(--t-text-muted)', bar: 'var(--t-border)', label: 'Manual' },
+  'ai_bot': { bg: 'var(--t-primary-dim)', text: 'var(--t-primary)', bar: 'var(--t-primary)', label: 'AI Bot' },
   other: { bg: 'var(--t-surface-hover)', text: 'var(--t-text-muted)', bar: 'var(--t-border)', label: 'Other' },
 };
 
@@ -257,7 +263,7 @@ export default function Dashboard() {
   const sourceCounts: Record<string, number> = {};
   dataToUse.forEach(l => {
     if (!l) return;
-    const src = l.source || 'other';
+    const src = l.source || l.importSource || 'other';
     sourceCounts[src] = (sourceCounts[src] || 0) + 1;
   });
   const recentLeads = [...dataToUse]

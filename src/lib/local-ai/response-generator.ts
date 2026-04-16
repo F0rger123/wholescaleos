@@ -358,28 +358,37 @@ export function generateUnknownResponse(input: string, suggestion?: string): str
   const memory = getMemory();
 
   if (suggestion) {
-    return `${prefix}I'm not exactly sure what you mean by "${input}". Did you mean **"${suggestion}"**?`;
+    return `${prefix}I'm not exactly sure what you mean by "${input}". Did you mean **"${suggestion}"**? I can help you with that right now!`;
   }
 
-  if (memory.lastTopic) {
+  const commonSuggestions = [
+    "🏘️ **'show leads'** - view your pipeline",
+    "✅ **'tasks'** - see what's due",
+    "💬 **'text [Name]'** - send a message",
+    "📊 **'hot leads'** - see top opportunities",
+    "❓ **'help'** - see everything I can do"
+  ];
+
+  if (memory.activeTopic && memory.activeTopic !== 'general') {
     const contextualFallback = [
-      `I didn't quite catch that. Were you trying to check on your ${memory.lastTopic}?`,
-      `Hmm, I'm not understanding "${input}". We were just talking about ${memory.lastTopic} — want to go back to that?`,
-      `Not sure what that means. If you still want to manage your ${memory.lastTopic}, just let me know!`,
+      `I didn't quite catch that. Since we were just looking at **${memory.activeTopic}**, did you want to see more details or perform an action there?`,
+      `Hmm, I'm not understanding "${input}". If you still want to manage your **${memory.activeTopic}**, just let me know what you need!`,
+      `I'm a bit lost on that one. Try asking for something specific like **'list ${memory.activeTopic}'** or say **'help'** for options.`,
     ];
-    return `${prefix}${pick(contextualFallback, 'unknown_context')}`;
+    return `${prefix}${pick(contextualFallback, 'unknown_context')}\n\nAlternatively, try:\n${pick(commonSuggestions, 'context_suggest')}`;
   }
 
   const fallbacks = [
-    `Hmm, I'm not sure what "${input}" means. I'm best with leads, tasks, and SMS — try 'show my leads' or 'help' for a full list.`,
-    `I didn't quite catch that. Try rephrasing, or say 'help' to see what I can do!`,
-    `That's outside my wheelhouse for now. I'm great at managing your CRM — try 'leads', 'tasks', or 'text [name]'.`,
-    `Not sure I follow. Want to try one of these? 'show tasks', 'top leads', 'text someone', or just say 'help'.`,
-    `I'm still learning! For now, I handle leads, tasks, SMS, and calendar. Type 'help' to see the full command list.`,
+    `Hmm, I'm not sure what "${input}" means. I'm best with leads, tasks, and SMS. Try one of these:\n\n${commonSuggestions.join('\n')}`,
+    `I didn't quite catch that. Try rephrasing, or say **'help'** to see a list of my skills!`,
+    `That's a bit outside my local core's expertise for now. I'm great at managing your CRM — try **'leads'**, **'tasks'**, or **'text [name]'**.`,
+    `Not sure I follow. Would you like to try one of these?\n\n${pick(commonSuggestions, 'suggest_1')}\n${pick(commonSuggestions, 'suggest_2')}`,
+    `I'm still learning! For now, I handle leads, tasks, SMS, and real estate analysis. Type **'help'** to see the full command list.`,
   ];
 
   return `${prefix}${pick(fallbacks, 'unknown')}`;
 }
+
 
 export function mergeResponses(
   results: { intent: Intent; result: any; segment: string }[],

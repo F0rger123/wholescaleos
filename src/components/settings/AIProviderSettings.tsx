@@ -141,7 +141,7 @@ export const AIProviderSettings: React.FC = () => {
     { id: 'gemini', name: 'Google Gemini', icon: Sparkles, desc: 'High-performance multimodal model. Requires Gemini API Key.', color: '#4285F4' },
     { id: 'openai', name: 'OpenAI GPT-4o', icon: Zap, desc: 'Industry-leading intelligence. Requires OpenAI API Key.', color: '#10a37f' },
     { id: 'claude', name: 'Anthropic Claude', icon: Shield, desc: 'Advanced reasoning and safety. Requires Claude API Key.', color: '#d97757' },
-    { id: 'minimax', name: 'MiniMax', icon: Moon, desc: 'Elite Chinese LLM optimized for speed.', color: '#8b5cf6' },
+    { id: 'minimax', name: 'MiniMax-01', icon: Moon, desc: 'High-speed intelligence from MiniMax. Optimized for low-latency operations.', color: '#8b5cf6' },
   ];
 
   return (

@@ -12,7 +12,7 @@ import {
   LayoutDashboard, Users, 
   Settings, Search,
   Bot, Smartphone, StickyNote,
-  CheckCircle, Mail, CloudCheck, Shield, Workflow,
+  CheckCircle, Mail, CloudCheck, Shield, Workflow, Zap,
   Undo2, Redo2, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
   Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature,
@@ -46,7 +46,8 @@ export function Layout() {
     activeLeadModalId,
     setActiveLeadModalId,
     undo, redo, history, future,
-    manualSave, saveStatus, isSyncing
+    manualSave, saveStatus, isSyncing,
+    credits_remaining, refreshCredits
   } = useStore();
 
   // Auto-save loop (every 5 minutes)
@@ -180,6 +181,33 @@ export function Layout() {
       }
     }
     loadPrefs();
+  }, [currentUser?.id]);
+
+  // Real-time Credits Sync
+  useEffect(() => {
+    if (!currentUser?.id || !isSupabaseConfigured || !supabase) return;
+
+    const channel = supabase
+      .channel(`profile-updates-${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${currentUser.id}`
+        },
+        (payload) => {
+          if (payload.new && 'credits_remaining' in payload.new) {
+            useStore.setState({ credits_remaining: payload.new.credits_remaining });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentUser?.id]);
 
   useEffect(() => {
@@ -576,7 +604,7 @@ export function Layout() {
               </div>
 
               {showSearchResults && searchQuery && (
-                <div className="absolute top-full left-0 mt-2 w-96 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl overflow-hidden z-50">
+                <div className="absolute top-full left-0 mt-2 w-[calc(100vw-2rem)] sm:w-96 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-xl shadow-2xl overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="max-h-[min(500px,70vh)] overflow-y-auto p-2 space-y-4">
                     {searchResults.leads.length > 0 && (
                       <div>
@@ -620,6 +648,14 @@ export function Layout() {
                 <CloudCheck size={14} className="text-[var(--t-primary)] animate-pulse" />
                 <span className="text-[10px] font-black text-[var(--t-primary)] uppercase tracking-wider">Syncing</span>
               </div>
+            )}
+            {credits_remaining !== undefined && credits_remaining !== null && (
+               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)] shadow-sm">
+                  <Zap size={14} className={credits_remaining < 10 ? 'text-[var(--t-error)] animate-pulse' : 'text-[var(--t-primary)]'} />
+                  <span className={`text-[10px] font-black uppercase tracking-wider ${credits_remaining < 10 ? 'text-[var(--t-error)]' : 'text-[var(--t-text)]'}`}>
+                    {credits_remaining} Credits
+                  </span>
+               </div>
             )}
             <div className="flex items-center gap-1.5 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
               <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mr-1.5">

@@ -25,9 +25,9 @@ import {
   generateResponse,
   generateErrorResponse,
   fuzzySuggestCommands,
-  TaskExecutor
+  TaskExecutor,
+  recognizeIntent
 } from '../lib/local-ai';
-import { NLUEngine } from '../lib/local-ai/engine/nlu-engine';
 import { ContextManager } from '../lib/local-ai/engine/context-manager';
 import {
   saveMessage,
@@ -143,7 +143,6 @@ export function AIBotWidget() {
   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
   const [displayedText, setDisplayedText] = useState('');
   const [usage, setUsage] = useState<UsageData | null>(null);
-  const [sessionId, setSessionId] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
@@ -337,7 +336,7 @@ export function AIBotWidget() {
 
         // Sync user profile and load history from Supabase
         syncUserProfile(currentUser.id);
-        await loadHistory(currentUser.id, sessionId);
+        await loadHistory(currentUser.id, 'default_session');
 
         // Load combined history from memory store after sync
         const memory = getMemory();
@@ -366,7 +365,7 @@ export function AIBotWidget() {
 
     window.addEventListener('ai-settings-updated', loadPrefs);
     return () => window.removeEventListener('ai-settings-updated', loadPrefs);
-  }, [currentUser?.id]);
+  }, [currentUser?.id, onboarding_ai_choice_seen]);
 
   // Handle outside toggle events
   useEffect(() => {
@@ -641,7 +640,7 @@ export function AIBotWidget() {
         return;
       }
 
-      // ── MODULAR NLU PIPELINE (v11.0) ───────────────────────────────────
+      // ── MODULAR NLU PIPELINE (v13.0) ───────────────────────────────────
       console.log('[🤖 OS BOT] Execution Pipeline Start:', userText);
 
       const store = useStore.getState();
@@ -652,56 +651,34 @@ export function AIBotWidget() {
         // 1. Get Contextual History
         const context = await ContextManager.getContext(currentUser?.id || 'system', sessionId);
 
-        // 2. Process via NLUEngine (Semantic + Fast Path)
-        const nluResult = await NLUEngine.process(userText, context);
-        console.log(`[🤖 OS BOT] NLU Result: ${nluResult.intent}`, nluResult.entities);
+        // 2. Process via recognizeIntent (v13.0 Comprehensive local-first NLU)
+        const nluResult = await recognizeIntent(userText);
+        console.log(`[🤖 OS BOT] NLU Result: ${nluResult?.intent?.name || 'null'}`, nluResult?.params);
 
-        // 3. Execution (Modular v11.0 Branching)
+        // 3. Execution & Response Generation
         let finalResponse: any;
 
-        // v12.1: Affirmation Loop Handler
-        const pending = getPendingAction();
-        if (nluResult.intent === 'affirm_action' && pending) {
-          if (nluResult.entities.value === true) {
-            console.log('[🤖 OS BOT] Executing Pending Affirmation:', pending.intent);
-            const executionResult = await TaskExecutor.execute(pending.intent, pending.entities);
-            clearPendingAction();
-            finalResponse = {
-              intent: pending.intent,
-              response: generateResponse(pending.intent, executionResult, userText, personality),
-              data: executionResult.data,
-              systemLog: '🤖 OS Bot'
-            };
-          } else {
-            console.log('[🤖 OS BOT] User cancelled pending action.');
-            clearPendingAction();
-            finalResponse = {
-              intent: 'system_action',
-              response: "No problem, I've cancelled that. What else can I do for you?",
-              systemLog: '🤖 OS Bot'
-            };
-          }
-        } else if (nluResult && nluResult.intent !== 'unknown' && nluResult.confidence > 0.4) {
-          console.log('[🤖 OS BOT] Executing Local Task:', nluResult.intent);
-          const executionResult = await TaskExecutor.execute(nluResult.intent, nluResult.entities);
+        if (nluResult && nluResult.intent && nluResult.intent.name !== 'unknown' && nluResult.confidence >= 40) {
+          console.log('[🤖 OS BOT] Executing Local Task:', nluResult.intent.name);
+          const executionResult = await TaskExecutor.execute(nluResult.intent.name, nluResult.params);
           
           // Persistence: If the handler says it needs confirmation, save it
           if (executionResult.needsConfirmation) {
             setPendingAction({
-              intent: nluResult.intent,
-              entities: { ...nluResult.entities, confirmed: true },
+              intent: nluResult.intent.name,
+              entities: { ...nluResult.params, confirmed: true },
               description: executionResult.message
             });
           }
 
           finalResponse = {
-            intent: nluResult.intent,
+            intent: nluResult.intent.name,
             response: generateResponse(nluResult.intent, executionResult, userText, personality),
             data: executionResult.data,
-            systemLog: '🤖 OS Bot'
+            systemLog: `🤖 OS Bot (${nluResult.matchedBy || 'Local'})`
           };
         } else {
-          console.log('[🤖 OS BOT] NLU confidence low or intent unknown. Attempting fuzzy suggestions.');
+          console.log('[🤖 OS BOT] Local NLU confidence low or intent unknown. Attempting fuzzy suggestions.');
           
           const fuzzySuggestion = fuzzySuggestCommands(userText);
           const isGenericFuzzy = fuzzySuggestion.includes("didn't quite catch that");
@@ -731,10 +708,13 @@ export function AIBotWidget() {
 
              if (isGeminiError) {
                 console.log('[🤖 OS BOT] Gemini extraction failed or returned error. Using fuzzy fallback.');
+                const fallbackMsg = fuzzySuggestCommands(userText);
                 finalResponse = {
                   intent: 'unknown',
-                  response: fuzzySuggestion,
-                  systemLog: '🤖 OS Bot (Fallback)'
+                  response: fallbackMsg.includes("didn't quite catch that") 
+                    ? "I'm having trouble connecting to my external intelligence, but my local core is ready! Try asking for 'leads', 'tasks', or say 'help' to see what I can do locally."
+                    : fallbackMsg,
+                  systemLog: '🤖 OS Bot (Local Fallback)'
                 };
              } else {
                 finalResponse = geminiResult;
@@ -743,6 +723,7 @@ export function AIBotWidget() {
         }
 
         response = finalResponse;
+
       } catch (err) {
         console.error('[🤖 OS BOT] NLU Pipeline Error:', err);
         const errorResponse = {
@@ -986,15 +967,19 @@ export function AIBotWidget() {
         : 'Action completed.';
       speak(speechText);
     } catch (err: any) {
-      console.error('Widget action failed:', err);
       setLoading(false);
       const errId = (Date.now() + 1).toString();
+      const errorMessage = err?.message || "Something went wrong.";
+      const helpfulError = errorMessage.toLowerCase().includes('google') || errorMessage.toLowerCase().includes('sms')
+        ? `❌ ${errorMessage}. Please check your connection in Settings.`
+        : `❌ I couldn't complete that action. This usually happens if a service is temporarily offline. Try again in a moment!`;
+
       setMessages(prev => [...prev, {
         id: errId,
         role: 'ai',
-        content: `❌ ${err?.message || "Couldn't complete that action. Please check your Google/SMS settings."}`,
+        content: helpfulError,
         timestamp: new Date().toISOString(),
-        systemLog: aiModel === 'os-bot' ? "🤖 OS Bot" : "✨ Gemini"
+        systemLog: "🤖 OS Bot (Local)"
       }]);
       setTypingMessageId(errId);
     }
@@ -1067,7 +1052,7 @@ export function AIBotWidget() {
                     </div>
                   )}
                 </div>
-                {usage && (
+                {(credits_remaining !== undefined && credits_remaining !== null) && (
                   <span className={`text-[9px] font-bold mt-0.5 ${credits_remaining < 10 ? 'text-[var(--t-error)]' : (credits_remaining < 25 ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
                     }`}>
                     🔥 {credits_remaining} credits today

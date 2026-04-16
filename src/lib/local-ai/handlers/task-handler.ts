@@ -11,13 +11,21 @@ export class TaskHandler extends BaseHandler {
 
   async execute(params: any): Promise<TaskResponse> {
     const { action, title, dueDate, priority, leadId, name } = params;
+    console.log(`[🤖 TASK HANDLER] Executing action: ${action}`, params);
 
     switch (action) {
       case 'create_task':
+      case 'add_task':
         return this.createTask(title, dueDate, priority, leadId || name);
       case 'list_tasks':
+      case 'show_tasks':
+      case 'tasks_due':
+      case 'task_query':
         return this.listTasks();
+      case 'complete_task':
+        return this.completeTask(title);
       default:
+        console.warn(`[🤖 TASK HANDLER] Unhandled action: ${action}`);
         return this.wrapError(`Unknown task action: ${action}`);
     }
   }
@@ -57,4 +65,16 @@ export class TaskHandler extends BaseHandler {
     
     return this.wrapSuccess(`You have ${pending.length} pending tasks.`, { tasks: pending.slice(0, 5) });
   }
+
+  private async completeTask(title: string): Promise<TaskResponse> {
+    if (!title) return this.wrapError("Which task should I mark as complete?");
+    const store = useStore.getState();
+    const task = store.tasks.find(t => t.title.toLowerCase().includes(title.toLowerCase()));
+    
+    if (!task) return this.wrapError(`Couldn't find task: "${title}"`);
+    
+    store.updateTask(task.id, { status: 'completed' });
+    return this.wrapSuccess(`Marked task "${task.title}" as complete.`);
+  }
 }
+

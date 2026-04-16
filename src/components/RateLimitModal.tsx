@@ -31,7 +31,7 @@ export function RateLimitModal({ isOpen, onClose }: RateLimitModalProps) {
           <button
             onClick={() => {
               onClose();
-              navigate('/settings/ai');
+              navigate('/pricing');
             }}
             className="w-full flex items-center justify-between p-4 rounded-xl transition-all hover:scale-[1.02]"
             style={{ background: 'linear-gradient(135deg, var(--t-primary), #a855f7)', color: 'white' }}

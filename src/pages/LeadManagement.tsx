@@ -177,10 +177,10 @@ export default function LeadManagement() {
             >
               <FileCode size={16} className="text-[var(--t-primary)]" /> Generate Script
             </button>
-            <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[var(--t-primary)] text-white rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary)]/20 hover:brightness-110 active:scale-95 transition-all">
+            <button className="hidden sm:flex items-center gap-2 px-4 py-2 bg-[var(--t-primary)] text-[var(--t-on-primary)] rounded-xl font-bold text-sm shadow-lg shadow-[var(--t-primary)]/20 hover:brightness-110 active:scale-95 transition-all">
               <Phone size={16} /> Call Lead
             </button>
-            <button className="sm:hidden p-2 bg-[var(--t-primary)] text-white rounded-xl">
+            <button className="sm:hidden p-2 bg-[var(--t-primary)] text-[var(--t-on-primary)] rounded-xl">
               <Phone size={20} />
             </button>
           </div>
@@ -198,7 +198,7 @@ export default function LeadManagement() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                   activeTab === tab.id 
-                    ? 'bg-[var(--t-primary)] text-white shadow-lg' 
+                    ? 'bg-[var(--t-primary)] text-[var(--t-on-primary)] shadow-lg' 
                     : 'text-[var(--t-text-muted)] hover:text-white hover:bg-[var(--t-surface-hover)]'
                 }`}
               >
@@ -224,7 +224,7 @@ export default function LeadManagement() {
                     {nextAction.description || "Based on the lead's current status and engagement level, we recommend reaching out within the next 24 hours to clarify property details."}
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    <button className="px-5 py-2.5 bg-[var(--t-primary)] text-white rounded-xl text-sm font-bold hover:brightness-110 active:scale-95 transition-all">
+                    <button className="px-5 py-2.5 bg-[var(--t-primary)] text-[var(--t-on-primary)] rounded-xl text-sm font-bold hover:brightness-110 active:scale-95 transition-all">
                       Take Recommended Action
                     </button>
                     <button className="px-5 py-2.5 bg-[var(--t-surface-hover)] text-white border border-[var(--t-border)] rounded-xl text-sm font-bold hover:bg-[var(--t-surface-active)] transition-all">

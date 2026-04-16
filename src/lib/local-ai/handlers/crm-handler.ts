@@ -10,35 +10,59 @@ export class CRMHandler extends BaseHandler {
   intent = 'crm_action';
 
   async execute(params: any): Promise<TaskResponse> {
-    const { action, leadId, name, status } = params;
+    const { action, leadId, name, status, text, leadName } = params;
+    console.log(`[🤖 CRM HANDLER] Executing action: ${action}`, params);
 
     switch (action) {
       case 'get_lead':
-        return this.getLead(leadId || name || params.text || params.address);
+      case 'lead_details':
+      case 'lead_context_query':
+      case 'get_lead_info':
+        return this.getLead(leadId || name || leadName || text || params.address);
+      case 'list_leads':
+      case 'list_all_leads':
+      case 'lead_query':
+        return this.filterLeads({ ...params, status: params.status || 'all' });
+      case 'hot_leads':
+        return this.filterLeads({ ...params, minScore: 80 });
       case 'update_status':
-        return this.updateStatus(leadId, status);
+        return this.updateStatus(leadId || name || leadName, status || params.newStatus);
       case 'create_lead':
         return this.createLead(params);
       case 'filter_leads':
+      case 'filter_leads_source':
+      case 'filter_leads_time':
+      case 'filter_leads_location':
         return this.filterLeads(params);
       case 'compare_leads':
         return this.compareLeads(params.targets || [name, params.secondLead]);
       case 'update_lead':
-        return this.updateLead(leadId, params);
+        return this.updateLead(leadId || name || leadName, params);
       case 'delete_lead':
-        return this.deleteLead(leadId, params.confirmed);
+        return this.deleteLead(leadId || name || leadName, params.confirmed);
       default:
+        console.warn(`[🤖 CRM HANDLER] Unhandled action: ${action}`);
         return this.wrapError(`Unknown CRM action: ${action}`);
     }
   }
 
   private async getLead(identifier: string | undefined): Promise<TaskResponse> {
     try {
-      console.log('[🤖 CRM HANDLER] Looking up lead:', identifier);
-      if (!identifier) return this.wrapError("I need a name or address to look up the lead.");
+      if (!identifier || identifier === 'this') {
+        // Try to resolve from context if 'this' or missing
+        const memory = getMemory();
+        const lastLead = memory.entityStack.find(e => e.type === 'lead');
+        if (lastLead) {
+          identifier = lastLead.id;
+        } else {
+          return this.wrapError("I need a name or address to look up the lead.");
+        }
+      }
       
       const store = useStore.getState();
       const query = identifier.toLowerCase().trim();
+      
+      console.log('[🤖 CRM HANDLER] Searching for lead with query:', query);
       
       // Support matching by ID, Name, or Property Address
       const lead = store.leads.find(l => {

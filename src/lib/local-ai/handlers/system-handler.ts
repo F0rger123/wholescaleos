@@ -12,27 +12,41 @@ export class SystemHandler extends BaseHandler {
   intent = 'system_action'; // Handles manifold system intents
 
   async execute(params: any): Promise<TaskResponse> {
-    const { action, text, path } = params;
+    const { action, text, path, prompt } = params;
+    console.log(`[🤖 SYSTEM HANDLER] Executing action: ${action}`, params);
 
     switch (action) {
       case 'small_talk':
-        return this.handleSmallTalk(text || params.prompt || '');
+      case 'greeting':
+        return this.handleSmallTalk(text || prompt || params.text || '');
       case 'navigate':
-        return this.handleNavigation(path);
+        return this.handleNavigation(path || params.path);
       case 'help':
+      case 'help_commands':
+      case 'capabilities':
         return this.handleHelp();
       case 'memory_recall':
         return this.handleMemoryRecall();
       case 'time_query':
         return this.handleTimeQuery();
+      case 'test_query':
+      case 'system_status':
+        return this.wrapSuccess("OS Bot local core is online and functioning at 100% capacity.");
+      case 'joke':
+        return this.handleSmallTalk('joke');
+      case 'mood_check':
+        return this.wrapSuccess("You're doing great! Your pipeline is active and your strategy is solid. Let's keep the momentum going.");
+      case 'motivation':
+        return this.wrapSuccess("The difference between a successful person and others is not a lack of strength, not a lack of knowledge, but rather a lack of will. You've got this!");
       default:
-        // Default to small talk if action is ambiguous
-        return this.handleSmallTalk(text || params.prompt || '');
+        console.warn(`[🤖 SYSTEM HANDLER] Defaulting to small talk for action: ${action}`);
+        return this.handleSmallTalk(text || prompt || params.text || '');
     }
   }
 
-  private async handleSmallTalk(text: string): Promise<TaskResponse> {
-    const lower = text.toLowerCase();
+  private async handleSmallTalk(text: string = ''): Promise<TaskResponse> {
+    const lower = (text || '').toLowerCase().trim();
+    console.log(`[🤖 SYSTEM HANDLER] Small talk input: "${lower}"`);
 
     // Affirmation handling (transferred from TaskExecutor)
     if (/^(yes|yeah|y|yep|yup|ya|yah|sure|do it|proceed|exactly|correct)$/i.test(lower)) {

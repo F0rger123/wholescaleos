@@ -81,17 +81,25 @@ export async function callExternalAPI(
             }
         } catch (error: any) {
             lastError = error;
-            const isRateLimit = error.message?.toLowerCase().includes('429') || 
-                               error.message?.toLowerCase().includes('rate limit') ||
-                               error.message?.toLowerCase().includes('too many requests');
+            const errorMsg = error.message?.toLowerCase() || '';
+            const isRetryable = errorMsg.includes('429') || 
+                               errorMsg.includes('rate limit') ||
+                               errorMsg.includes('too many requests') ||
+                               errorMsg.includes('quota') ||
+                               errorMsg.includes('exhausted') ||
+                               errorMsg.includes('500') ||
+                               errorMsg.includes('503');
 
-            if (smartRotate && isRateLimit && i < keysArray.length - 1) {
-                console.log(`[API Router] Key ${i+1} rate limited. Rotating to next key...`);
+            if (smartRotate && isRetryable && i < keysArray.length - 1) {
+                console.warn(`[API Router] Key ${i+1} failed (${errorMsg}). Rotating to key ${i+2}...`);
                 continue; // Try next key
             }
             
-            // If not rotating or it's a non-rate-limit error, or it's the last key
-            throw error; 
+            // If we've exhausted all keys OR it's not a retryable error
+            if (i === keysArray.length - 1 || !isRetryable) {
+              console.error(`[API Router] Error for ${provider}: ${errorMsg}`);
+              break; // Exit loop and return null (which triggers local fallback)
+            }
         }
     }
 
