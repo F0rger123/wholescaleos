@@ -9,7 +9,7 @@ import {
 } from '../lib/gemini';
 import { 
   Bot, User, Send, Target, Sparkles, Check, Trash2, 
-  UserPlus, Key, Loader2, AlertTriangle, 
+  UserPlus, Loader2, AlertTriangle, 
   RefreshCw, Smartphone, Search, X, ArrowDown,
   Plus, MessageSquare, History, ChevronLeft, ChevronRight,
   Mic, Pin, Edit2
@@ -32,7 +32,6 @@ interface AIBotMessage {
 }
 
 export default function AITest() {
-  const navigate = useNavigate();
   const { 
     leads, currentUser, 
     aiUsage, incrementAiUsage,

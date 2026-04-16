@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useStore } from '../../store/useStore';
+import { useStore, AI_PLAN_LIMITS } from '../../store/useStore';
 import { Bot, Key, Shield, Zap, ExternalLink, Moon, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { encryptKey, decryptKey } from '../../lib/ai/crypto';
@@ -21,8 +21,25 @@ export const AIProviderSettings: React.FC = () => {
   const [smartRotateEnabled, setSmartRotateEnabled] = useState(false);
   const [premiumCredits, setPremiumCredits] = useState<number>(0);
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
-  const [_migrating, setMigrating] = useState(false);
-  const [_loading, setLoading] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [resetTime, setResetTime] = useState('');
+
+  useEffect(() => {
+    const updateResetTime = () => {
+      const now = new Date();
+      const nextReset = new Date(now);
+      nextReset.setHours(24, 0, 0, 0);
+      const diff = nextReset.getTime() - now.getTime();
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      setResetTime(`${hours}h ${minutes}m`);
+    };
+
+    updateResetTime();
+    const timer = setInterval(updateResetTime, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -144,6 +161,11 @@ export const AIProviderSettings: React.FC = () => {
     { id: 'minimax', name: 'MiniMax-01', icon: Moon, desc: 'High-speed intelligence from MiniMax. Optimized for low-latency operations.', color: '#8b5cf6' },
   ];
 
+
+  const currentPlan = (currentUser as any)?.plan || 'Free';
+  const planLimit = AI_PLAN_LIMITS[currentPlan] || 50;
+  const usedToday = (useStore.getState() as any).total_credits_used_today || 0;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Premium Credits Display */}
@@ -155,12 +177,20 @@ export const AIProviderSettings: React.FC = () => {
              </div>
              <div>
                 <h3 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Premium Credits</h3>
-                <p className="text-sm opacity-70" style={{ color: 'var(--t-text-muted)' }}>Required for non-local AI models</p>
+                <p className="text-xs opacity-70" style={{ color: 'var(--t-text-muted)' }}>
+                  Plan: <span className="font-bold text-purple-400">{currentPlan}</span> ({planLimit} / day)
+                </p>
              </div>
           </div>
           <div className="text-right">
-             <div className="text-3xl font-black text-purple-500">{premiumCredits}</div>
-             <div className="text-[10px] uppercase tracking-widest font-bold opacity-60">Remaining</div>
+             <div className="text-3xl font-black text-purple-500">
+               {premiumCredits}
+               <span className="text-xs font-normal opacity-40 ml-1">/ {planLimit}</span>
+             </div>
+             <div className="text-[10px] uppercase tracking-widest font-bold opacity-60">Remaining Today</div>
+             <div className="mt-1 text-[9px] font-bold text-blue-500/80 bg-blue-500/5 px-2 py-0.5 rounded-full inline-block">
+               Resets in {resetTime || '--:--'}
+             </div>
           </div>
         </div>
       </section>

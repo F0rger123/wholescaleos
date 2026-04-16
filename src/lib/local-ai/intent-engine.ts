@@ -1,10 +1,7 @@
 import { Intent, intents } from '../ai/intents';
-import { spellCheck, getLevenshteinDistance } from './spell-checker';
-import { resolveEntitiesFromContext, resolveEntityFromContext, getMemory, setActiveState, setTopic, getLearnedFact, getLastSuggestion, clearLastSuggestion } from './memory-store';
-import { getLearnedIntent } from './learning-service';
-import { useStore } from '../../store/useStore';
+import { getLevenshteinDistance } from './spell-checker';
+import { getMemory } from './memory-store';
 import { expandSynonyms } from './utils/synonym-mapper';
-import { routeHybridIntent } from './improvements/local-first-router';
 
 // Debug mode — toggle to true to see detailed intent matching logs
 const DEBUG_MODE = true;
@@ -260,12 +257,12 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     const normalized = normalizeInput(normalizedOrig);
     
     const exactMap: Record<string, string> = {
-      'tasks': 'show_tasks', 'task': 'show_tasks', 'my tasks': 'show_tasks',
-      'leads': 'list_leads', 'lead': 'list_leads', 'my leads': 'list_leads',
-      'help': 'help_commands', 'help me': 'help_commands', 'commands': 'help_commands',
-      'what can you do': 'capabilities', 'capabilities': 'capabilities',
-      'hot leads': 'hot_leads', 'top leads': 'hot_leads',
-      'hi': 'small_talk', 'hello': 'small_talk', 'hey': 'small_talk',
+      'tasks': 'show_tasks', 'task': 'show_tasks', 'my tasks': 'show_tasks', 'list tasks': 'show_tasks', 'show tasks': 'show_tasks',
+      'leads': 'list_leads', 'lead': 'list_leads', 'my leads': 'list_leads', 'list leads': 'list_leads', 'show leads': 'list_leads',
+      'help': 'help_commands', 'help me': 'help_commands', 'commands': 'help_commands', 'options': 'help_commands', 'command list': 'help_commands',
+      'what can you do': 'capabilities', 'capabilities': 'capabilities', 'features': 'capabilities', 'who are you': 'capabilities',
+      'hot leads': 'hot_leads', 'top leads': 'hot_leads', 'best leads': 'hot_leads',
+      'hi': 'small_talk', 'hello': 'small_talk', 'hey': 'small_talk', 'yo': 'small_talk', 'whats up': 'small_talk', 'sup': 'small_talk',
       'test': 'test_query', 'ping': 'test_query', 'joke': 'joke', 'time': 'time_query'
     };
 
@@ -305,18 +302,35 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
 
     if (best && best.score >= 40) {
       debugLog('WINNER', `${best.intent.name} (${best.score}%)`);
-      return { ...best, confidence: best.score, originalText: rawInput, needsAgentLoop };
+      return { 
+        ...best, 
+        confidence: best.score, 
+        originalText: rawInput, 
+        needsAgentLoop: false,
+        matchedBy: best.matchedBy || 'regex'
+      };
     }
 
-    // 7. HYBRID ROUTING
-    debugLog('HYBRID', 'Falling back to External API...');
+    // 7. HYBRID ROUTING & LOCAL FALLBACK
+    debugLog('HYBRID', 'Falling back to External API check...');
     const context = { personality: useStore.getState().aiTone || 'professional', recentMessages: memory.history };
     const hybrid = await routeHybridIntent(rawInput, context, { exact: best?.score === 100 ? best : null, regex: best?.score >= 80 ? best : null, embedding: best });
 
-    if (hybrid) return hybrid;
+    if (hybrid) {
+      return { ...hybrid, needsAgentLoop: hybrid.needsAgentLoop ?? false };
+    }
 
-    debugLog('NO_MATCH', 'No intent found.');
-    return null;
+    // 8. FINAL LOCAL FALLBACK (Help/Capabilities)
+    debugLog('NO_MATCH', 'Returning helpful local fallback.');
+    const helpIntent = intents.find(i => i.name === 'help_commands' || i.name === 'capabilities');
+    return {
+      intent: helpIntent || intents[0],
+      params: { action: 'help_commands' },
+      confidence: 100,
+      matchedBy: 'final_local_fallback',
+      reasoning: "No intent found locally or via API. Providing help/capabilities as fallback.",
+      needsAgentLoop: false
+    };
   } catch (error) {
     console.error('[❌ OS Bot] recognizeIntent Crash:', error);
     return null;

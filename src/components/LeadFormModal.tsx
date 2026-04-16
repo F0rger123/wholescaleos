@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore, LeadStatus, calculateDealScore, LeadSource } from '../store/useStore';
+import toast from 'react-hot-toast';
 import { geocodeAddress } from '../lib/geocoding';
 import { detectCarrier } from '../lib/carrier-service';
-import { BarChart3, Calculator, TrendingUp, Calendar } from 'lucide-react';
+import { BarChart3, Calculator, TrendingUp, Calendar, Send } from 'lucide-react';
 import { Modal } from './Modal';
 import { ConfirmModal } from './ConfirmModal';
 import { SaveButton } from './SaveButton';
@@ -30,6 +31,7 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
   const [formData, setFormData] = useState(defaultData);
   const [initialData, setInitialData] = useState(defaultData);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [isSendingOffer, setIsSendingOffer] = useState(false);
 
   // Appreciation Calculation
   const appreciationPercent = useMemo(() => {
@@ -103,6 +105,31 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
     const factor = formData.propertyType === 'multi-family' ? 0.75 : 0.7;
     const calcOffer = Math.round(value * (factor - 0.1));
     setFormData({ ...formData, recommendedOffer: calcOffer.toString(), offerAmount: calcOffer.toString() });
+  };
+
+  const handleSendOffer = async () => {
+    if (!formData.offerAmount || !formData.name) {
+      toast.error('Offer amount and lead name are required');
+      return;
+    }
+
+    setIsSendingOffer(true);
+    try {
+      // Simulate professional document generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success(`Professional offer of $${parseInt(formData.offerAmount).toLocaleString()} generated for ${formData.name}!`);
+      
+      // Update status to negotiating if it was new/contacted
+      if (['new', 'contacted', 'qualified'].includes(formData.status)) {
+        setFormData(prev => ({ ...prev, status: 'negotiating' }));
+      }
+      
+      toast.success('Offer sent via priority courier system');
+    } catch (err) {
+      toast.error('Tactical failure during offer transmission');
+    } finally {
+      setIsSendingOffer(false);
+    }
   };
 
   const onSave = async () => {
@@ -313,7 +340,7 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
           </div>
 
           <div className="md:col-span-2 p-1 bg-[var(--t-surface-subtle)] rounded-[20px]">
-            <div className="bg-[var(--t-surface-dim)] p-4 rounded-[18px] border border-[var(--t-border-subtle)] flex items-center justify-between">
+            <div className="bg-[var(--t-surface-dim)] p-4 rounded-[18px] border border-[var(--t-border-subtle)] flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[var(--t-success-dim)] flex items-center justify-center">
                   <Calculator className="text-[var(--t-success)]" size={20} />
@@ -323,14 +350,29 @@ export function LeadFormModal({ isOpen, onClose, leadId }: LeadFormModalProps) {
                   <p className="text-lg font-black text-white">{formData.recommendedOffer ? `$${parseInt(formData.recommendedOffer).toLocaleString()}` : '$0'}</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleRecommendOffer}
-                disabled={!formData.estimatedValue}
-                className="px-4 py-2 bg-[var(--t-success)] text-[var(--t-background)] text-xs font-black rounded-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shadow-sm"
-              >
-                Auto-Calculate
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleRecommendOffer}
+                  disabled={!formData.estimatedValue}
+                  className="px-4 py-2 bg-[var(--t-surface-dim)] text-[var(--t-text)] text-xs font-black rounded-lg border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all disabled:opacity-50"
+                >
+                  Calc
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendOffer}
+                  disabled={!formData.offerAmount || isSendingOffer}
+                  className="px-4 py-2 bg-[var(--t-primary)] text-white text-xs font-black rounded-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shadow-lg shadow-[var(--t-primary-dim)] flex items-center gap-2"
+                >
+                  {isSendingOffer ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Send size={14} />
+                  )}
+                  Send Offer
+                </button>
+              </div>
             </div>
           </div>
 

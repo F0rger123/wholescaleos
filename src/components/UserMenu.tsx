@@ -214,10 +214,9 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
 
               <button
                 onClick={async () => {
-                  await useStore.getState().logout();
                   setIsOpen(false);
                   onOpenChange?.(false);
-                  navigate('/login');
+                  await useStore.getState().logout();
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{

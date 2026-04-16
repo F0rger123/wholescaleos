@@ -498,8 +498,14 @@ export function TeamOverviewTab() {
 
       {/* Invite Modal */}
       {showInvite && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={() => setShowInvite(false)}
+        >
+          <div 
+            className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
              <div className="absolute top-0 right-0 p-8 opacity-5">
                 <Users size={120} />
              </div>
@@ -542,8 +548,14 @@ export function TeamOverviewTab() {
 
       {/* Add Member Modal */}
       {showAddMember && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-           <div className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={() => setShowAddMember(false)}
+        >
+           <div 
+             className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-lg w-full shadow-2xl relative overflow-hidden"
+             onClick={(e) => e.stopPropagation()}
+           >
               <div className="flex justify-between items-start mb-8">
                  <div>
                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">Recruit Operative</h3>
@@ -621,8 +633,14 @@ export function TeamOverviewTab() {
 
       {/* Add Milestone Modal */}
       {showAddMilestone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-           <div className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-lg w-full shadow-2xl relative overflow-hidden">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={() => setShowAddMilestone(false)}
+        >
+           <div 
+             className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-lg w-full shadow-2xl relative overflow-hidden"
+             onClick={(e) => e.stopPropagation()}
+           >
               <div className="flex justify-between items-start mb-8">
                  <div>
                    <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[var(--t-text)]">New Objective</h3>

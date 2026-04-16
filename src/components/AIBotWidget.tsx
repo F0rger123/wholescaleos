@@ -154,7 +154,7 @@ export function AIBotWidget() {
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiModel, isAiDocked, setAiDocked,
     sidebarOpen, aiName,
-    credits_remaining, onboarding_ai_choice_seen, setOnboardingAiChoiceSeen
+    credits_remaining, refreshCredits, onboarding_ai_choice_seen, setOnboardingAiChoiceSeen
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -214,14 +214,16 @@ export function AIBotWidget() {
     waitingFor: 'target' | 'message' | null;
   }>({ active: false, waitingFor: null });
 
+  const [sessionId, setSessionId] = useState<string>('');
+
   useEffect(() => {
     const initSession = async () => {
-      let sessionId = localStorage.getItem('os_bot_session_id');
-      if (!sessionId) {
-        sessionId = generateSessionId();
-        localStorage.setItem('os_bot_session_id', sessionId);
+      let id = localStorage.getItem('os_bot_session_id');
+      if (!id) {
+        id = generateSessionId();
+        localStorage.setItem('os_bot_session_id', id);
       }
-      setSessionId(sessionId);
+      setSessionId(id);
 
       // Load user preferences and Learned Intents
       const userId = currentUser?.id;
@@ -762,6 +764,7 @@ export function AIBotWidget() {
       // Increment Usage for AI Model processing
       await usageTracker.incrementUsage();
       await fetchUsage();
+      await refreshCredits();
 
       if (response.intent !== 'error' && response.intent !== 'rate_limit' && !response.systemLog?.includes('OS Bot')) {
         incrementAiUsage(aiModel);
@@ -1095,11 +1098,13 @@ export function AIBotWidget() {
             </div>
           </div>
 
-          {/* Messages Area */}
           <div
             ref={scrollRef}
             className={`flex-1 overflow-y-auto p-4 space-y-4 ${position.y < 200 ? 'order-1' : ''}`}
-            style={{ background: 'var(--t-background)' }}
+            style={{ 
+              background: 'var(--t-background)',
+              color: 'var(--t-text)'
+            }}
           >
             {/* Proactive Insights */}
             {insights.length > 0 && (

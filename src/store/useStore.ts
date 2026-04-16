@@ -95,6 +95,14 @@ export interface AIUsage {
   limit: number;
 }
 
+export const AI_PLAN_LIMITS: Record<string, number> = {
+  'Free': 50,
+  'Solo': 500,
+  'Pro': 5000,
+  'Team': 50000,
+  'Agency': 500000
+};
+
 export interface AIThread {
   id: string;
   title: string;
@@ -1805,8 +1813,54 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
   logout: async () => {
-    const { isAuthenticated, currentUser } = get();
-    if (!isAuthenticated && !currentUser) return;
+    // 1. Clear store state immediately to trigger UI guards
+    set({
+      isAuthenticated: false,
+      currentUser: null,
+      leads: [],
+      team: [],
+      tasks: [],
+      channels: [],
+      messages: {},
+      buyers: [],
+      coverageAreas: [],
+      notifications: [],
+      callRecordings: [],
+      smsMessages: [],
+      unreadCounts: { sms: 0 },
+      chatSearchQuery: '',
+      currentChannelId: null,
+      dataLoaded: false,
+      teamId: null
+    });
+
+    // 2. Clear all sensitive localStorage keys
+    if (typeof window !== 'undefined') {
+      const keysToClear = [
+        'wholescale-preferred-team',
+        'os_bot_session_id',
+        'ai-usage-map',
+        'ai-threads',
+        'ai-messages-map',
+        'tasks-quick-notes',
+        'sms-contacts',
+        'dashboard-layout',
+        'current-ai-thread-id',
+        'wholescale-last-autosave',
+        'ai_widget_docked',
+        'wholescale-ai-learned-intents'
+      ];
+      keysToClear.forEach(key => localStorage.removeItem(key));
+      
+      // Also clear any dynamic keys matching prefixes
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('wholescale-') || key.startsWith('os_bot_') || key.startsWith('ai-')) {
+          localStorage.removeItem(key);
+        }
+      });
+    }
+
+    // 3. Handle Supabase signOut if configured
     if (isSupabaseConfigured && supabase) {
       try {
         await supabase.auth.signOut();
@@ -1814,12 +1868,6 @@ export const useStore = create<AppState>((set, get) => ({
         console.error('Logout error:', err);
       }
     }
-    set({
-      isAuthenticated: false, currentUser: null, leads: [], team: [], tasks: [],
-      channels: [], messages: {}, buyers: [], coverageAreas: [], notifications: [],
-      callRecordings: [], smsMessages: [], unreadCounts: { sms: 0 },
-      chatSearchQuery: '', currentChannelId: null, dataLoaded: false, teamId: null
-    });
   },
   forgotPassword: async (email) => {
     set({ authLoading: true, authError: null });
@@ -1892,24 +1940,21 @@ export const useStore = create<AppState>((set, get) => ({
       if (profile) {
         let teamId = profile.team_id || null;
         const preferredId = typeof window !== 'undefined' ? localStorage.getItem('wholescale-preferred-team') : null;
+        
         if (isSupabaseConfigured && supabase) {
           const { data: memberships } = await supabase
             .from('team_members')
-            .select('team_id')
-            .eq('user_id', userId);
+            .select('team_id, last_seen')
+            .eq('user_id', userId)
+            .order('last_seen', { ascending: false });
+          
           const validTeamIds = (memberships || []).map((m: any) => m.team_id);
+          
           if (preferredId && validTeamIds.includes(preferredId)) {
             teamId = preferredId;
-          } else if (!teamId && validTeamIds.length > 0) {
-            const { data: recent } = await supabase
-              .from('team_members')
-              .select('team_id')
-              .eq('user_id', userId)
-              .order('last_seen', { ascending: false })
-              .limit(1);
-            if (recent && recent.length > 0) {
-              teamId = recent[0].team_id;
-            }
+          } else if (validTeamIds.length > 0) {
+            // Pick most recent instead of relying on profile.team_id which can be stale
+            teamId = validTeamIds[0];
           }
         }
         set((s) => ({ 
@@ -1990,7 +2035,7 @@ export const useStore = create<AppState>((set, get) => ({
       teamId = get().teamId;
     }
     if (!teamId || !isSupabaseConfigured || !supabase) {
-      set({ dataLoaded: true });
+      set({ dataLoaded: true, leads: [], tasks: [] });
       return;
     }
     try {
@@ -3450,8 +3495,43 @@ export const useStore = create<AppState>((set, get) => ({
       set((s: any) => ({ unreadCounts: { ...s.unreadCounts, sms: count || 0 } }));
     } catch (err) { console.error(err); }
   },
-  incrementAiUsage: () => {},
-  setAiUsage: (_model, _used, _limit) => {},
+  incrementAiUsage: async (amount = 1) => {
+    const { currentUser, credits_remaining, total_credits_used_today } = get();
+    const newRemaining = Math.max(0, credits_remaining - amount);
+    const newUsedToday = total_credits_used_today + amount;
+    
+    set({ 
+      credits_remaining: newRemaining,
+      total_credits_used_today: newUsedToday
+    });
+
+    if (currentUser?.id && isSupabaseConfigured && supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ 
+            credits_remaining: newRemaining,
+            total_credits_used_today: newUsedToday,
+            last_ai_usage_at: new Date().toISOString()
+          })
+          .eq('id', currentUser.id);
+      } catch (err) {
+        console.error('❌ Failed to sync AI usage to Supabase:', err);
+      }
+    }
+  },
+  setAiUsage: (model, used, limit) => {
+    set((s) => ({
+      aiUsage: {
+        ...s.aiUsage,
+        [model]: { used, limit, lastUpdated: new Date().toISOString() }
+      }
+    }));
+    // Also update credits remaining based on usage if applicable
+    if (model === 'premium-credits') {
+      set({ credits_remaining: limit - used });
+    }
+  },
   createAiThread: (title) => {
     const id = uuidv4();
     const newThread: AIThread = { id, title: title || 'New Conversation', createdAt: new Date().toISOString(), lastMessageAt: new Date().toISOString() };

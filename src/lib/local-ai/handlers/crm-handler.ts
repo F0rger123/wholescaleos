@@ -1,7 +1,7 @@
 import { BaseHandler } from './base-handler';
 import { TaskResponse } from '../task-executor';
 import { useStore, calculateDealScore } from '../../../store/useStore';
-import { trackLead } from '../memory-store';
+import { trackLead, getMemory } from '../memory-store';
 
 /**
  * Handles all CRM-related AI actions: Lead creation, status updates, and lookups.
@@ -146,7 +146,7 @@ export class CRMHandler extends BaseHandler {
       const store = useStore.getState();
       let leads = [...store.leads];
 
-      if (params.status) {
+      if (params.status && params.status !== 'all') {
         leads = leads.filter(l => l.status === params.status);
       }
 

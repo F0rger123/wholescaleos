@@ -253,39 +253,6 @@
   transform: scale(1.05);
 }
 
-/* ===== MOONLIGHT ===== */
-[data-theme="moon"] {
-  --t-background: #020617; /* Deep Slate 950 */
-  --t-surface: #0f172a;    /* Slate 900 */
-  --t-surface-hover: #1e293b;
-  --t-surface-active: #334155;
-  --t-primary: #818cf8;    /* Indigo 400 — High contrast vs dark */
-  --t-primary-hover: #6366f1;
-  --t-primary-dim: rgba(129, 140, 248, 0.15);
-  --t-on-primary: #020617;
-  --t-text: #f8fafc;       /* Slate 50 */
-  --t-text-secondary: #94a3b8;
-  --t-text-muted: #64748b;
-  --t-border: #1e293b;
-  --t-border-light: rgba(255, 255, 255, 0.1);
-  --t-success: #34d399;    /* Bright green for dark theme */
-  --t-warning: #fbbf24;    /* Bright amber */
-  --t-error: #f87171;      /* Bright red */
-  --t-sidebar-bg: #020617;
-  --t-sidebar-border: #1e293b;
-  --t-sidebar-hover: #0f172a;
-
-  /* Button & Component Overrides for Moon */
-  --t-button-bg: #818cf8;
-  --t-button-text: #020617; /* High contrast dark text on light indigo */
-  --t-on-primary: #020617;  /* High contrast dark text on light indigo */
-  --t-secondary: #334155;
-  --t-on-secondary: #f8fafc;
-  --t-accent-dim: rgba(139, 92, 246, 0.2);
-  --t-success-dim: rgba(52, 211, 153, 0.1);
-  --t-error-dim: rgba(248, 113, 113, 0.1);
-  --t-warning-dim: rgba(251, 191, 36, 0.1);
-}
 
 [data-theme="moon"] .astral-glass {
   background: var(--t-surface);
