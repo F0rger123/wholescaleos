@@ -143,15 +143,13 @@ export function AIBotWidget() {
   const [userName, setUserName] = useState<string>('');
   const [showUsageModal, setShowUsageModal] = useState(false);
   const [showRateLimitModal, setShowRateLimitModal] = useState(false);
-  const [insights, setInsights] = useState<string[]>([]);
-  const [insightsLoading, setInsightsLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const {
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiModel, isAiDocked, setAiDocked,
     sidebarOpen, aiName,
-    credits_remaining, refreshCredits, onboarding_ai_choice_seen, setOnboardingAiChoiceSeen
+    credits_remaining, refreshCredits, setOnboardingAiChoiceSeen
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -492,23 +490,7 @@ export function AIBotWidget() {
     };
   }, [typingMessageId, messages]);
 
-  // Proactive Insights based on page
-  useEffect(() => {
-    if (isAiOpen && !isMinimized && hasKey && !loading) {
-      const loadInsights = async () => {
-        setInsightsLoading(true);
-        try {
-          const res = await generatePageInsights(location.pathname, { path: location.pathname });
-          setInsights([res]);
-        } catch (err) {
-          console.error("Failed to load insights:", err);
-        } finally {
-          setInsightsLoading(false);
-        }
-      };
-      loadInsights();
-    }
-  }, [location.pathname, isAiOpen, isMinimized, hasKey, loading]);
+  // Proactive Insights disabled for now to clean up state
 
   const getContextualResponse = async (input: string): Promise<string | null> => {
     const userId = currentUser?.id;
@@ -689,36 +671,46 @@ export function AIBotWidget() {
                response: fuzzySuggestion,
                systemLog: '🤖 OS Bot (Fuzzy Match)'
              };
-          } else {
-             console.log('[🤖 OS BOT] No strong fuzzy match. Falling back to Gemini Logic.');
-             const geminiResult = await processPrompt(userText, {
-               page: location.pathname,
-               currentTime: new Date().toISOString(),
-               sessionId,
-               nluResult
-             }, aiModel);
-             
-             // Combined logic: if Gemini result is empty, error-like, or explicitly "failed", use fuzzy fallback
-             const resultText = geminiResult?.response || '';
-             const isGeminiError = !geminiResult || resultText.length < 5 || 
-                                  resultText.toLowerCase().includes('failed') || 
-                                  resultText.toLowerCase().includes('error') ||
-                                  resultText.toLowerCase().includes('technical glitch');
-
-             if (isGeminiError) {
-                console.log('[🤖 OS BOT] Gemini extraction failed or returned error. Using fuzzy fallback.');
-                const fallbackMsg = fuzzySuggestCommands(userText);
-                finalResponse = {
-                  intent: 'unknown',
-                  response: fallbackMsg.includes("didn't quite catch that") 
-                    ? "I'm having trouble connecting to my external intelligence, but my local core is ready! Try asking for 'leads', 'tasks', or say 'help' to see what I can do locally."
-                    : fallbackMsg,
-                  systemLog: '🤖 OS Bot (Local Fallback)'
-                };
              } else {
-                finalResponse = geminiResult;
+               const isLocalMode = aiModel === 'os-bot' || useStore.getState().preferred_api_provider === 'local';
+               
+               if (isLocalMode) {
+                 console.log('[🤖 OS BOT] Local Mode active. Bypassing Gemini.');
+                 finalResponse = {
+                   intent: 'unknown',
+                   response: "I didn't quite catch that. Since I'm in **Local AI** mode, I only process specific commands. Try saying 'help' to see what I can do!",
+                   systemLog: '🤖 OS Bot (Local Mode)'
+                 };
+               } else {
+                 console.log('[🤖 OS BOT] No strong fuzzy match. Falling back to Gemini Logic.');
+                 const geminiResult = await processPrompt(userText, {
+                   page: location.pathname,
+                   currentTime: new Date().toISOString(),
+                   sessionId,
+                   nluResult
+                 }, aiModel);
+                 
+                 const resultText = geminiResult?.response || '';
+                 const isGeminiError = !geminiResult || resultText.length < 5 || 
+                                      resultText.toLowerCase().includes('failed') || 
+                                      resultText.toLowerCase().includes('error') ||
+                                      resultText.toLowerCase().includes('technical glitch');
+
+                 if (isGeminiError) {
+                    console.log('[🤖 OS BOT] Gemini extraction failed or returned error. Using fuzzy fallback.');
+                    const fallbackMsg = fuzzySuggestCommands(userText);
+                    finalResponse = {
+                      intent: 'unknown',
+                      response: fallbackMsg.includes("didn't quite catch that") 
+                        ? "I'm having trouble connecting to my external intelligence, but my local core is ready! Try asking for 'leads', 'tasks', or say 'help' to see what I can do locally."
+                        : fallbackMsg,
+                      systemLog: '🤖 OS Bot (Local Fallback)'
+                    };
+                 } else {
+                    finalResponse = geminiResult;
+                 }
+               }
              }
-          }
         }
 
         response = finalResponse;
@@ -1052,7 +1044,9 @@ export function AIBotWidget() {
                     </div>
                   )}
                 </div>
-                {(credits_remaining !== undefined && credits_remaining !== null) && (
+                {(credits_remaining !== undefined && credits_remaining !== null) && 
+                  currentUser?.preferred_api_provider !== 'local' && 
+                  !(currentUser?.user_api_keys && Object.keys(currentUser.user_api_keys).length > 0) && (
                   <span className={`text-[9px] font-bold mt-0.5 ${credits_remaining < 10 ? 'text-[var(--t-error)]' : (credits_remaining < 25 ? 'text-[var(--t-warning)]' : 'text-[var(--t-primary)]')
                     }`}>
                     🔥 {credits_remaining} credits today

@@ -506,7 +506,7 @@ export function TeamOverviewTab() {
             className="bg-[var(--t-surface)] rounded-[2.5rem] border border-[var(--t-border)] p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-             <div className="absolute top-0 right-0 p-8 opacity-5">
+             <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
                 <Users size={120} />
              </div>
              
@@ -516,6 +516,7 @@ export function TeamOverviewTab() {
                   <p className="text-sm text-[var(--t-text-muted)]">Expand your tactical operations.</p>
                 </div>
                 <button 
+                   type="button"
                    onClick={() => setShowInvite(false)}
                    className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] hover:text-white transition-colors"
                 >
@@ -562,6 +563,7 @@ export function TeamOverviewTab() {
                    <p className="text-sm text-[var(--t-text-muted)]">Direct enlistment into your team.</p>
                  </div>
                  <button 
+                    type="button"
                     onClick={() => setShowAddMember(false)}
                     className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] hover:text-white transition-colors"
                  >
@@ -647,6 +649,7 @@ export function TeamOverviewTab() {
                    <p className="text-sm text-[var(--t-text-muted)]">Strategic goal for the command center.</p>
                  </div>
                  <button 
+                    type="button"
                     onClick={() => setShowAddMilestone(false)}
                     className="p-2 rounded-xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] hover:text-white transition-colors"
                  >

@@ -308,8 +308,14 @@ export default function TeamSelection() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--t-background)' }}>
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ backgroundColor: 'var(--t-background)' }}>
+      {/* Background Glows */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[20%] right-[10%] w-96 h-96 bg-indigo-500/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[20%] left-[10%] w-96 h-96 bg-purple-500/5 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="w-full max-w-lg relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
           <Logo size={64} className="mx-auto mb-4" />

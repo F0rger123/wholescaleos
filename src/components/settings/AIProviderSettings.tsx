@@ -162,38 +162,40 @@ export const AIProviderSettings: React.FC = () => {
   ];
 
 
-  const currentPlan = (currentUser as any)?.plan || 'Free';
+  const currentPlan = currentUser?.subscriptionTier || 'Free';
   const planLimit = AI_PLAN_LIMITS[currentPlan] || 50;
-  const usedToday = (useStore.getState() as any).total_credits_used_today || 0;
+  const usedToday = currentUser?.total_credits_used_today || 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Premium Credits Display */}
-      <section className="p-4 rounded-2xl bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-500/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-             <div className="p-3 rounded-xl bg-purple-500 shadow-lg shadow-purple-500/20">
-                <Zap className="w-6 h-6 text-white" />
-             </div>
-             <div>
-                <h3 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Premium Credits</h3>
-                <p className="text-xs opacity-70" style={{ color: 'var(--t-text-muted)' }}>
-                  Plan: <span className="font-bold text-purple-400">{currentPlan}</span> ({planLimit} / day)
-                </p>
-             </div>
+      {provider !== 'local' && !(keys && Object.keys(keys).length > 0) && (
+        <section className="p-4 rounded-2xl bg-gradient-to-r from-purple-600/10 to-blue-600/10 border border-purple-500/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+               <div className="p-3 rounded-xl bg-purple-500 shadow-lg shadow-purple-500/20">
+                  <Zap className="w-6 h-6 text-white" />
+               </div>
+               <div>
+                  <h3 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>Premium Credits</h3>
+                  <p className="text-xs opacity-70" style={{ color: 'var(--t-text-muted)' }}>
+                    Plan: <span className="font-bold text-purple-400">{currentPlan}</span> ({planLimit} / day)
+                  </p>
+               </div>
+            </div>
+            <div className="text-right">
+               <div className="text-3xl font-black text-purple-500">
+                 {premiumCredits}
+                 <span className="text-xs font-normal opacity-40 ml-1">/ {planLimit}</span>
+               </div>
+               <div className="text-[10px] uppercase tracking-widest font-bold opacity-60">Remaining Today</div>
+               <div className="mt-1 text-[9px] font-bold text-blue-500/80 bg-blue-500/5 px-2 py-0.5 rounded-full inline-block">
+                 Resets in {resetTime || '--:--'}
+               </div>
+            </div>
           </div>
-          <div className="text-right">
-             <div className="text-3xl font-black text-purple-500">
-               {premiumCredits}
-               <span className="text-xs font-normal opacity-40 ml-1">/ {planLimit}</span>
-             </div>
-             <div className="text-[10px] uppercase tracking-widest font-bold opacity-60">Remaining Today</div>
-             <div className="mt-1 text-[9px] font-bold text-blue-500/80 bg-blue-500/5 px-2 py-0.5 rounded-full inline-block">
-               Resets in {resetTime || '--:--'}
-             </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Provider Selection */}
       <section>

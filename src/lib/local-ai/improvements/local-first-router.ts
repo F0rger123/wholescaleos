@@ -12,7 +12,8 @@ export async function routeHybridIntent(
     exact?: any;
     embedding?: any;
     regex?: any;
-  }
+  },
+  allowExternal: boolean = true
 ) {
   // 1. Exact Match (Instant, Free)
   if (localMatches.exact) {
@@ -29,23 +30,34 @@ export async function routeHybridIntent(
     return { ...localMatches.regex, matchedBy: 'local_regex' };
   }
   
-  // 4. If all local fails AND user has API key → offer to use their API
-  try {
-    const apiResponse = await callExternalAPI(input, context);
-    if (apiResponse) {
-      return {
-        intent: { name: 'external_ai_response' },
-        params: {},
-        confidence: 100,
-        replyText: apiResponse,
-        matchedBy: 'external_api'
-      };
+  // 4. External Intelligence Fallback (Only if allowed)
+  if (allowExternal) {
+    try {
+      const apiResponse = await callExternalAPI(input, context);
+      if (apiResponse) {
+        return {
+          intent: { name: 'external_ai_response' },
+          params: {},
+          confidence: 100,
+          replyText: apiResponse,
+          matchedBy: 'external_api'
+        };
+      }
+    } catch (error) {
+      console.error('[Hybrid Router] External API fallback failed:', error);
     }
-  } catch (error) {
-    console.error('[Hybrid Router] External API fallback failed:', error);
+  } else {
+    // 5. Explicitly return a local "Can't help yet" intent for privacy
+    return {
+      intent: { name: 'local_privacy_fallback' },
+      params: {},
+      confidence: 100,
+      replyText: "I'm currently in Local Brain mode to keep your data private on this machine. I didn't recognize that specific command locally. Try asking for 'help' to see what I can do without an external connection!",
+      matchedBy: 'local_bypass'
+    };
   }
   
-  // 5. Otherwise → Graceful fallback
+  // 6. Otherwise → Graceful fallback
   await logLocalAIFailure(input, 'no_match');
   return null;
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Search, Edit2, UserPlus, X, Mail, User, 
   Activity, Loader2, Save, Key, ShieldCheck, 
-  AlertTriangle, Info, ChevronDown, Filter
+  AlertTriangle, Info, ChevronDown, Filter, Trash2
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
@@ -221,7 +221,7 @@ export default function AdminUserManagement() {
             userId: editingUser.id,
             updates: authUpdates
           }
-        }) as { data: { error?: string } | null; error: any });
+        }) as any);
 
         if (authError || authData?.error) throw new Error(authError?.message || authData?.error);
         toast.success(editUserData.newPassword ? 'Auth & Password updated' : 'Authentication updated');
@@ -250,6 +250,30 @@ export default function AdminUserManagement() {
       toast.error(`Edit failed: ${message}`);
     } finally {
       setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!supabase) return;
+    if (!window.confirm('WARNING: This will permanently delete this user from BOTH Auth and the database. This cannot be undone. Proceed?')) return;
+    
+    setLoadingId(userId);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-actions', {
+        body: { action: 'delete_user', userId }
+      });
+
+      if (error || data?.error) throw new Error(error?.message || data?.error);
+
+      // Also ensure profile is gone (Edge function should handle it, but we'll remove from state)
+      setUsers(users.filter(u => u.id !== userId));
+      toast.success('User purged from system');
+      setShowEditUserModal(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Purge failed: ${message}`);
+    } finally {
+      setLoadingId(null);
     }
   };
 
@@ -435,6 +459,14 @@ export default function AdminUserManagement() {
                     >
                       <Edit2 size={16} className="text-[var(--t-text-muted)]" />
                     </button>
+                    <button 
+                      onClick={() => handleDeleteUser(user.id)}
+                      disabled={loadingId === user.id}
+                      className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--t-text-muted)] hover:text-red-500 transition-colors"
+                      title="Delete User"
+                    >
+                      {loadingId === user.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -552,6 +584,13 @@ export default function AdminUserManagement() {
             </div>
 
             <div className="flex gap-3 pt-2">
+              <button 
+                onClick={() => handleDeleteUser(editingUser?.id || '')}
+                className="px-4 py-3.5 rounded-2xl bg-red-500/10 text-red-500 font-black uppercase tracking-widest text-[10px] border border-red-500/20 hover:bg-red-500 hover:text-white transition-all group"
+                title="Purge User"
+              >
+                <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+              </button>
               <button 
                 onClick={() => setShowEditUserModal(false)}
                 className="flex-1 py-3.5 rounded-2xl bg-[var(--t-surface-dim)] text-[var(--t-text-muted)] font-black uppercase tracking-widest text-[10px] border border-[var(--t-border)] hover:bg-[var(--t-border)] transition-all"

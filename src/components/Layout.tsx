@@ -3,7 +3,6 @@ import { NavLink, Link, Outlet, useNavigate, useLocation } from 'react-router-do
 import { useStore } from '../store/useStore';
 import { UserMenu } from './UserMenu';
 import { NotificationPanel } from './NotificationPanel';
-import { ThemeSwitcher } from './ThemeSwitcher';
 import { JoinTeamModal } from './JoinTeamModal';
 import { CreateTeamModal } from './CreateTeamModal';
 import { switchToTeam } from '../lib/team-utils';
@@ -649,14 +648,7 @@ export function Layout() {
                 <span className="text-[10px] font-black text-[var(--t-primary)] uppercase tracking-wider">Syncing</span>
               </div>
             )}
-            {credits_remaining !== undefined && credits_remaining !== null && (
-               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--t-surface-subtle)] border border-[var(--t-border)] shadow-sm">
-                  <Zap size={14} className={credits_remaining < 10 ? 'text-[var(--t-error)] animate-pulse' : 'text-[var(--t-primary)]'} />
-                  <span className={`text-[10px] font-black uppercase tracking-wider ${credits_remaining < 10 ? 'text-[var(--t-error)]' : 'text-[var(--t-text)]'}`}>
-                    {credits_remaining} Credits
-                  </span>
-               </div>
-            )}
+
             <div className="flex items-center gap-1.5 bg-[var(--t-surface-subtle)] p-1 rounded-xl border border-[var(--t-border)] shadow-sm">
               <div className="flex items-center gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mr-1.5">
                 <button
@@ -733,7 +725,6 @@ export function Layout() {
                 </>
               )}
 
-              <div className="hover:scale-110 transition-transform"><ThemeSwitcher /></div>
               <div className="hover:scale-110 transition-transform"><NotificationPanel /></div>
             </div>
             <div className="hover:scale-105 active:scale-95 transition-all">

@@ -647,7 +647,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-8 relative overflow-y-auto">
+      <div className="flex-1 flex flex-col items-center justify-start lg:justify-center p-6 sm:p-8 overflow-y-auto bg-black scrollbar-hide py-12 lg:py-8">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[20%] right-[10%] w-64 h-64 bg-indigo-500/5 blur-[100px] rounded-full" />
           <div className="absolute bottom-[20%] left-[10%] w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full" />

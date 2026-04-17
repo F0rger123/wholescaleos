@@ -11,11 +11,11 @@ const normalizePhone = (p: string) => p.replace(/\D/g, '');
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'negotiating' | 'closed-won' | 'closed-lost' | 'contract-in' | 'under-contract' | 'follow-up';
 
-export function isValidStatus(status: any): status is LeadStatus {
+export function isValidStatus(status: unknown): status is LeadStatus {
   return typeof status === 'string' && ['new', 'contacted', 'qualified', 'negotiating', 'closed-won', 'closed-lost', 'contract-in', 'under-contract', 'follow-up'].includes(status);
 }
 
-export function ensureStringStatus(status: any): LeadStatus {
+export function ensureStringStatus(status: unknown): LeadStatus {
   if (isValidStatus(status)) return status;
   return 'new';
 }
@@ -1625,14 +1625,18 @@ interface AppState {
   setOnboardingAiChoiceSeen: (v: boolean) => void;
 }
 
-const calculateSmartLeadScore = (lead: any): number => {
+const calculateSmartLeadScore = (lead: Partial<Lead>): number => {
   let score = 50;
-  if (lead.timelineUrgency === 'high' || lead.timeline_urgency === 'high') score += 25;
-  if (lead.timelineUrgency === 'medium' || lead.timeline_urgency === 'medium') score += 10;
-  if (lead.timelineUrgency === 'low' || lead.timeline_urgency === 'low') score -= 5;
-  if (lead.engagementLevel === 'high' || lead.engagement_level === 'high') score += 15;
-  if (lead.engagementLevel === 'medium' || lead.engagement_level === 'medium') score += 5;
-  const lastContact = lead.last_contact || lead.lastContact || lead.updated_at || lead.updatedAt;
+  const timelineUrgency = lead.timelineUrgency || (lead as any).timeline_urgency;
+  if (timelineUrgency === 'high') score += 25;
+  if (timelineUrgency === 'medium') score += 10;
+  if (timelineUrgency === 'low') score -= 5;
+  
+  const engagementLevel = lead.engagementLevel || (lead as any).engagement_level;
+  if (engagementLevel === 'high') score += 15;
+  if (engagementLevel === 'medium') score += 5;
+  
+  const lastContact = (lead as any).last_contact || lead.lastContact || lead.updatedAt;
   if (lastContact) {
     const daysSince = Math.floor((Date.now() - new Date(lastContact).getTime()) / (1000 * 60 * 60 * 24));
     score -= Math.min(daysSince, 20);
@@ -1880,7 +1884,7 @@ export const useStore = create<AppState>((set, get) => ({
       set({ authLoading: false });
     }
   },
-  updateProfile: async (updates: any) => {
+  updateProfile: async (updates: Partial<UserProfile>) => {
     const { currentUser } = get();
     if (!currentUser) return;
     const newUser = { ...currentUser, ...updates };
@@ -1955,6 +1959,35 @@ export const useStore = create<AppState>((set, get) => ({
             teamId = validTeamIds[0];
           }
         }
+        const tier = profile.subscription_tier || 'Free';
+        const planLimit = AI_PLAN_LIMITS[tier] || 50;
+        
+        // Handle Daily Credit Reset
+        const now = new Date();
+        const resetAt = profile.credits_reset_at ? new Date(profile.credits_reset_at) : null;
+        const isNewDay = !resetAt || resetAt.getDate() !== now.getDate() || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear();
+        
+        let finalRemaining = profile.credits_remaining;
+        let finalUsedToday = profile.total_credits_used_today || 0;
+        
+        if (isNewDay) {
+          finalRemaining = planLimit;
+          finalUsedToday = 0;
+          
+          // Sync reset to Supabase if config is active
+          if (currentUser?.id && isSupabaseConfigured && supabase) {
+            supabase.from('profiles').update({
+              credits_remaining: finalRemaining,
+              total_credits_used_today: finalUsedToday,
+              credits_reset_at: now.toISOString()
+            }).eq('id', currentUser.id).then(({ error }) => {
+              if (error) console.error('Failed to sync credit reset:', error);
+            });
+          }
+        } else if (finalRemaining === null || finalRemaining === undefined) {
+          finalRemaining = planLimit;
+        }
+
         set((s) => ({ 
           currentUser: s.currentUser ? {
             ...s.currentUser,
@@ -1964,13 +1997,15 @@ export const useStore = create<AppState>((set, get) => ({
             avatar: profile.avatar_url || s.currentUser.avatar,
             teamId: teamId || (s.currentUser as any).teamId,
             premium_credits: profile.premium_credits,
-            credits_remaining: profile.credits_remaining,
+            credits_remaining: finalRemaining,
             credits_reset_at: profile.credits_reset_at,
             onboarding_ai_choice_seen: profile.onboarding_ai_choice_seen,
             smart_rotate_enabled: profile.smart_rotate_enabled,
             preferred_api_provider: profile.preferred_api_provider,
             api_fallback_enabled: profile.api_fallback_enabled,
             user_api_keys: profile.user_api_keys,
+            subscriptionTier: tier,
+            total_credits_used_today: finalUsedToday,
           } : {
             id: profile.id,
             email: profile.email || '',
@@ -1983,20 +2018,21 @@ export const useStore = create<AppState>((set, get) => ({
             createdAt: profile.created_at || new Date().toISOString(),
             settings: profile.settings || {},
             stripeCustomerId: profile.stripe_customer_id,
-            subscriptionTier: profile.subscription_tier || 'Free',
+            subscriptionTier: tier,
             subscriptionStatus: profile.subscription_status || 'active',
             referralCode: profile.referral_code,
             referredBy: profile.referred_by,
             totalEarnings: profile.total_earnings || 0,
             availableEarnings: profile.available_earnings || 0,
             premium_credits: profile.premium_credits,
-            credits_remaining: profile.credits_remaining,
+            credits_remaining: finalRemaining,
             credits_reset_at: profile.credits_reset_at,
             onboarding_ai_choice_seen: profile.onboarding_ai_choice_seen,
             smart_rotate_enabled: profile.smart_rotate_enabled,
             preferred_api_provider: profile.preferred_api_provider || 'local',
             api_fallback_enabled: profile.api_fallback_enabled ?? true,
             user_api_keys: profile.user_api_keys || {},
+            total_credits_used_today: finalUsedToday,
           },
           teamId: teamId,
           notificationSettings: profile.settings?.notifications || s.notificationSettings,
@@ -2007,7 +2043,8 @@ export const useStore = create<AppState>((set, get) => ({
           preferred_api_provider: profile.preferred_api_provider || 'local',
           api_fallback_enabled: profile.api_fallback_enabled ?? true,
           smart_rotate_enabled: profile.smart_rotate_enabled ?? false,
-          credits_remaining: profile.credits_remaining ?? 100,
+          credits_remaining: finalRemaining,
+          total_credits_used_today: finalUsedToday,
           credits_reset_at: profile.credits_reset_at || null,
           onboarding_ai_choice_seen: profile.onboarding_ai_choice_seen ?? false,
           dataLoaded: true,
@@ -3261,16 +3298,16 @@ export const useStore = create<AppState>((set, get) => ({
         ),
       };
     }),
-  currentTheme: (typeof window !== 'undefined' && localStorage.getItem('wholescale-theme')) || 'dark',
+  currentTheme: 'moon',
   setTheme: (theme) => {
-    set({ currentTheme: theme });
+    set({ currentTheme: 'moon' });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('wholescale-theme', theme);
-      const themeData = themes[theme];
+      localStorage.setItem('wholescale-theme', 'moon');
+      const themeData = themes['moon'];
       if (themeData) {
         const root = document.documentElement;
         const customColors = get().customColors;
-        root.setAttribute('data-theme', theme);
+        root.setAttribute('data-theme', 'moon');
         const toKebab = (str: string) => str.replace(/([A-Z])/g, '-$1').toLowerCase();
         Object.entries(themeData.colors).forEach(([key, value]) => {
           const cssVar = `--t-${toKebab(key)}`;

@@ -34,7 +34,8 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
   return (
     <div className="relative">
       <button
-        onClick={toggleOpen}
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); toggleOpen(); }}
         className="flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-300 hover-lift astral-glass border border-white/10 group"
       >
         <div
@@ -75,7 +76,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
             {/* Menu items */}
             <div className="p-1">
               <button
-                onClick={() => {
+                onMouseDown={() => {
                   navigate('/');
                   setIsOpen(false);
                   onOpenChange?.(false);
@@ -96,7 +97,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
               </button>
 
               <button
-                onClick={() => {
+                onMouseDown={() => {
                   navigate('/settings');
                   setIsOpen(false);
                   onOpenChange?.(false);
@@ -119,7 +120,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
               </button>
 
               <button
-                onClick={() => {
+                onMouseDown={() => {
                   navigate('/dashboard/billing');
                   setIsOpen(false);
                   onOpenChange?.(false);
@@ -142,7 +143,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
               </button>
 
               <button
-                onClick={() => {
+                onMouseDown={() => {
                   navigate('/dashboard/billing?tab=referral');
                   setIsOpen(false);
                   onOpenChange?.(false);
@@ -165,7 +166,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
               </button>
 
               <button
-                onClick={() => {
+                onMouseDown={() => {
                   navigate('/dashboard/billing?tab=profile');
                   setIsOpen(false);
                   onOpenChange?.(false);
@@ -190,7 +191,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
               <div className="border-t my-1" style={{ borderColor: 'var(--t-border)' }} />
 
               <button
-                onClick={() => {
+                onMouseDown={() => {
                   window.open('/', '_self');
                   setIsOpen(false);
                   onOpenChange?.(false);
@@ -213,7 +214,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
               <div className="border-t my-1" style={{ borderColor: 'var(--t-border)' }} />
 
               <button
-                onClick={async () => {
+                onMouseDown={async () => {
                   setIsOpen(false);
                   onOpenChange?.(false);
                   await useStore.getState().logout();

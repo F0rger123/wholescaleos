@@ -77,7 +77,7 @@ export function splitMultiIntent(input: string): string[] {
   return segments.map(s => s.trim()).filter(s => s.length > 2);
 }
 
-function scoreIntent(intent: any, input: string, context: any): { score: number; params: any } {
+function scoreIntent(intent: { intent: string; patterns: (string | RegExp)[]; params: any }, input: string, context: any): { score: number; params: any } {
   let score = 0;
   let detectedParams: any = {};
   const normalized = input.toLowerCase().trim();
@@ -99,23 +99,24 @@ function scoreIntent(intent: any, input: string, context: any): { score: number;
         const lowerPattern = pattern.toLowerCase();
         if (normalized === lowerPattern) {
           score = 100;
-          detectedParams = intent.params || {};
+          detectedParams = typeof intent.params === 'function' ? intent.params() : (intent.params || {});
           break;
         } else if (normalized.includes(lowerPattern)) {
           score = Math.max(score, 70);
-          detectedParams = intent.params || {};
+          detectedParams = typeof intent.params === 'function' ? intent.params() : (intent.params || {});
         }
       }
     }
   }
 
   const activeState = context.activeState;
-  if (activeState && activeState.type.toLowerCase().includes(intent.intent.toLowerCase())) {
+  const intentName = intent.intent;
+  if (activeState && intentName && activeState.type.toLowerCase().includes(intentName.toLowerCase())) {
     score += 20;
   }
 
-  if (score < 70) {
-    const keywords = intent.intent.split('_');
+  if (score < 70 && intentName) {
+    const keywords = intentName.split('_');
     const matches = keywords.filter((kw: string) => normalized.includes(kw));
     const keywordScore = (matches.length / keywords.length) * 60;
     score = Math.max(score, keywordScore);
@@ -124,15 +125,18 @@ function scoreIntent(intent: any, input: string, context: any): { score: number;
   return { score: Math.min(score, 100), params: detectedParams };
 }
 
-function fuzzyIntentMatch(input: string, allIntents: any[]): ParsedIntent | null {
+function fuzzyIntentMatch(input: string, allIntents: Intent[]): ParsedIntent | null {
   const normalized = input.toLowerCase().trim();
   const words = normalized.split(/\s+/);
   
-  let bestMatch: any = null;
+  let bestMatch: Intent | null = null;
   let highestScore = 0;
 
   for (const intent of allIntents) {
-    const keywords = intent.name.split('_');
+    const name = intent.name || (intent as any).intent;
+    if (!name) continue;
+    
+    const keywords = name.split('_');
     let hits = 0;
     
     keywords.forEach((kw: string) => {
@@ -312,9 +316,22 @@ export async function recognizeIntent(input: string): Promise<ParsedIntent | nul
     }
 
     // 7. HYBRID ROUTING & LOCAL FALLBACK
-    debugLog('HYBRID', 'Falling back to External API check...');
+    const provider = useStore.getState().currentUser?.preferred_api_provider;
+    const allowExternal = provider !== 'local';
+    
+    debugLog('HYBRID', allowExternal ? 'Falling back to External API check...' : 'Local Mode: Bypassing External API');
+    
     const context = { personality: useStore.getState().aiTone || 'professional', recentMessages: memory.history };
-    const hybrid = await routeHybridIntent(rawInput, context, { exact: best?.score === 100 ? best : null, regex: best?.score >= 80 ? best : null, embedding: best });
+    const hybrid = await routeHybridIntent(
+      rawInput, 
+      context, 
+      { 
+        exact: best?.score === 100 ? best : null, 
+        regex: best?.score >= 80 ? best : null, 
+        embedding: best 
+      },
+      allowExternal
+    );
 
     if (hybrid) {
       return { ...hybrid, needsAgentLoop: hybrid.needsAgentLoop ?? false };

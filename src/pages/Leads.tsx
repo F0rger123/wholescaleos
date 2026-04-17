@@ -957,7 +957,10 @@ export default function Leads() {
                                 style={{ border: 0 }}
                                 loading="lazy"
                                 allowFullScreen
-                                src={`https://maps.google.com/maps?q=&layer=c&cbll=${lead.lat || 30.2672},${lead.lng || -97.7431}&cbp=11,0,0,0,0&output=svembed`}
+                                src={lead.lat && lead.lng 
+                                  ? `https://maps.google.com/maps?q=&layer=c&cbll=${lead.lat},${lead.lng}&cbp=11,0,0,0,0&output=svembed`
+                                  : `https://maps.google.com/maps?q=${encodeURIComponent(lead.propertyAddress)}&layer=c&cbp=11,0,0,0,0&output=svembed`
+                                }
                               />
                             </div>
                           </div>
