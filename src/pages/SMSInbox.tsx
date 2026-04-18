@@ -27,6 +27,7 @@ interface SMSMessage {
 }
 
 import { analyzeSMSConversation, SMSAnalysis } from '../lib/sms-analysis-service';
+import { SMSInboxSkeleton } from '../components/Skeleton';
 
 import { CARRIER_GATEWAYS } from '../lib/sms-gateways';
 
@@ -571,9 +572,7 @@ export default function SMSInbox() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--t-primary)' }} />
-      </div>
+      <SMSInboxSkeleton />
     );
   }
 

@@ -12,6 +12,7 @@ import {
   HardDrive, Send, Sparkles, ExternalLink, QrCode, Award, 
   Linkedin, Facebook, Instagram, Twitter, Share2
 } from 'lucide-react';
+import { SettingsSkeleton } from '../components/Skeleton';
 import AISettings from './AISettings';
 import SMSSettings from './SMSSettings';
 import ShortcutSettings from './ShortcutSettings';
@@ -1933,6 +1934,7 @@ export default function SettingsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('general');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1940,11 +1942,19 @@ export default function SettingsPage() {
     if (tab && TABS.some(t => t.id === tab)) {
       setActiveTab(tab);
     }
+    
+    // Premium loading feel
+    const timer = setTimeout(() => setIsLoading(false), 400);
+    return () => clearTimeout(timer);
   }, [location.search]);
 
   const handleTabChange = (tabId: string) => {
+    setIsLoading(true);
     setActiveTab(tabId);
     navigate(`/settings?tab=${tabId}`, { replace: true });
+    
+    // Small delay for smooth transition
+    setTimeout(() => setIsLoading(false), 300);
   };
 
   return (
@@ -1987,18 +1997,24 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {activeTab === 'general' && <GeneralTab />}
-          {activeTab === 'profile' && <ProfileTab />}
-          {activeTab === 'notifications' && <NotificationsTab />}
-          {activeTab === 'security' && <SecurityTab />}
-          {activeTab === 'appearance' && <AppearanceTab />}
-          {activeTab === 'team' && <TeamTab />}
-          {activeTab === 'email' && <EmailTab />}
-          {activeTab === 'ai' && <AISettings hideHeader />}
-          {activeTab === 'sms' && <SMSSettings />}
-          {activeTab === 'shortcuts' && <ShortcutSettings />}
-          {activeTab === 'backup' && <BackupTab />}
-          {activeTab === 'data' && <DataTab />}
+          {isLoading ? (
+            <SettingsSkeleton />
+          ) : (
+            <>
+              {activeTab === 'general' && <GeneralTab />}
+              {activeTab === 'profile' && <ProfileTab />}
+              {activeTab === 'notifications' && <NotificationsTab />}
+              {activeTab === 'security' && <SecurityTab />}
+              {activeTab === 'appearance' && <AppearanceTab />}
+              {activeTab === 'team' && <TeamTab />}
+              {activeTab === 'email' && <EmailTab />}
+              {activeTab === 'ai' && <AISettings hideHeader />}
+              {activeTab === 'sms' && <SMSSettings />}
+              {activeTab === 'shortcuts' && <ShortcutSettings />}
+              {activeTab === 'backup' && <BackupTab />}
+              {activeTab === 'data' && <DataTab />}
+            </>
+          )}
         </div>
       </div>
     </div>

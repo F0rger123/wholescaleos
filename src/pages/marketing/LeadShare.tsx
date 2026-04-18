@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { MessageSquare, ShieldCheck, ChevronLeft, Share2, MapPin, BadgeDollarSign, Calendar, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { MessageSquare, ShieldCheck, ChevronLeft, Share2, MapPin, BadgeDollarSign, Calendar, Image as ImageIcon } from 'lucide-react';
+import { LeadShareSkeleton } from '../../components/Skeleton';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../lib/supabase';
 
@@ -73,11 +74,7 @@ export default function LeadShare() {
   }, [id, leads]);
 
   if (loading) {
-    return (
-      <div className="bg-[#0f172a] min-h-screen text-white flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
-      </div>
-    );
+    return <LeadShareSkeleton />;
   }
 
   if (!lead) {

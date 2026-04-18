@@ -16,9 +16,8 @@ import {
   fetchEmailCampaigns, saveEmailCampaign, deleteEmailCampaign,
   fetchEmailSchedules, deleteEmailSchedule, dbEmailSchedule, dbEmailTemplate, dbEmailCampaign
 } from '../lib/email';
-import EmailComposeModal from '../components/EmailComposeModal';
-import RichTextEditor from '../components/admin/RichTextEditor';
 import { AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES, AgentTemplate } from '../lib/default-templates';
+import { EmailInboxSkeleton } from '../components/Skeleton';
 
 type EmailView = 'inbox' | 'sent' | 'starred' | 'trash' | 'templates' | 'campaigns' | 'scheduled';
 
@@ -189,9 +188,17 @@ export default function EmailInbox() {
 
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {isLoading && !isRefreshing ? (
-              <div className="p-8 text-center space-y-4">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto text-[var(--t-primary)]" />
-                <p className="text-xs text-[var(--t-text-muted)]">Loading...</p>
+              <div className="p-4 space-y-4">
+                {[1, 2, 3, 4, 5, 6, 7].map(i => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between">
+                      <div className="h-4 w-32 bg-[var(--t-border)]/50 animate-pulse rounded" />
+                      <div className="h-3 w-12 bg-[var(--t-border)]/50 animate-pulse rounded" />
+                    </div>
+                    <div className="h-3 w-48 bg-[var(--t-border)]/50 animate-pulse rounded" />
+                    <div className="h-3 w-full bg-[var(--t-border)]/50 animate-pulse rounded opacity-50" />
+                  </div>
+                ))}
               </div>
             ) : view === 'templates' ? (
               <TemplatesList 

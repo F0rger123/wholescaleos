@@ -4,6 +4,7 @@ import {
   Building2, Loader2, Users, ArrowRight, ArrowRightLeft,
   Check, Copy, LogOut, Plus, X
 } from 'lucide-react';
+import { AuthSkeleton } from '../components/Skeleton';
 import { Logo } from '../components/Logo';
 import { useStore } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
@@ -296,15 +297,7 @@ export default function TeamSelection() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ backgroundColor: 'var(--t-background)' }}>
-        <Logo size={56} />
-        <div className="flex items-center gap-2" style={{ color: 'var(--t-text-muted)' }}>
-          <Loader2 size={16} className="animate-spin" />
-          <span className="text-sm">Finding your teams...</span>
-        </div>
-      </div>
-    );
+    return <AuthSkeleton />;
   }
 
   return (

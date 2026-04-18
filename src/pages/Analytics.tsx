@@ -12,6 +12,7 @@ import {
   DollarSign, CheckCircle2, Clock, Filter, FileText,
   Loader2, Activity, Layers
 } from 'lucide-react';
+import { AnalyticsSkeleton } from '../components/Skeleton';
 import { format, subDays, subMonths, isAfter, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay } from 'date-fns';
 import html2pdf from 'html2pdf.js';
 import Papa from 'papaparse';
@@ -99,7 +100,7 @@ function filterByTimeframe(leads: Lead[], timeframe: TimeframeKey, customStart?:
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function Analytics() {
-  const { leads, tasks, currentUser } = useStore();
+  const { leads, tasks, currentUser, dataLoaded } = useStore();
   const reportRef = useRef<HTMLDivElement>(null);
 
   // State
@@ -433,6 +434,14 @@ export default function Analytics() {
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  
+  if (!dataLoaded) {
+    return (
+      <div className="crm-container py-12">
+        <AnalyticsSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" ref={reportRef}>

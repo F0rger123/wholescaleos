@@ -4,6 +4,7 @@ import { useStore } from '../store/useStore';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
 import { GoogleCalendarService, GoogleCalendarEvent } from '../lib/google-calendar.js';
 import { supabase } from '../lib/supabase';
+import { CalendarSkeleton } from '../components/Skeleton';
 
 interface CalendarEvent {
   id: string;
@@ -604,7 +605,6 @@ function Calendar() {
         >
           <div className="font-medium" style={isToday ? { color: 'var(--t-primary)' } : { color: 'var(--t-text)' }}>
             {day}
-            {isLoading && day === 1 && <span className="ml-1 text-xs text-[var(--t-text-muted)]">⟳</span>}
           </div>
           {dayEvents.map(event => (
             <div 
@@ -1024,7 +1024,6 @@ function Calendar() {
         </button>
         <h2 className="text-xl font-semibold text-[var(--t-text)] dark:text-white">
           {getViewTitle()}
-          {isLoading && <span className="ml-2 text-sm text-[var(--t-text-muted)]">(loading...)</span>}
         </h2>
         <button
           onClick={() => navigateView('next')}
@@ -1035,9 +1034,15 @@ function Calendar() {
       </div>
 
       <div className="bg-white dark:bg-[var(--t-surface-dim)] rounded-lg shadow-lg p-6 border border-[var(--t-border)] dark:border-[var(--t-border)]">
-        {currentView === 'month' && renderMonthView()}
-        {currentView === 'week' && renderWeekView()}
-        {currentView === 'day' && renderDayView()}
+        {isLoading ? (
+          <CalendarSkeleton />
+        ) : (
+          <>
+            {currentView === 'month' && renderMonthView()}
+            {currentView === 'week' && renderWeekView()}
+            {currentView === 'day' && renderDayView()}
+          </>
+        )}
       </div>
 
       {/* Category Manager Modal */}

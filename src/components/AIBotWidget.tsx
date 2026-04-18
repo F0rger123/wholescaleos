@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  Bot, X, Send,
-  User, Mic, Volume2, VolumeX,
-  Layout as LayoutIcon, Loader2,
-  MessageSquare, CheckCircle2, FileText, Shield, Zap
-} from 'lucide-react';
+import { Bot, X, Send, User, Mic, Volume2, VolumeX, Layout as LayoutIcon, MessageSquare, CheckCircle2, FileText, Shield, Zap } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { AIBotSkeleton } from './Skeleton';
 import { ConfirmModal } from './ConfirmModal';
 import { AIOnboardingModal } from './modals/AIOnboardingModal';
 import {
@@ -1120,7 +1116,11 @@ export function AIBotWidget() {
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-primary)] flex items-center gap-1.5">
                     <Bot size={12} /> Proactive Insights
                   </span>
-                  {insightsLoading && <Loader2 size={10} className="animate-spin text-[var(--t-primary)]" />}
+                  {insightsLoading && (
+                    <div className="flex-1 mt-2">
+                      <AIBotSkeleton />
+                    </div>
+                  )}
                 </div>
                 {/* Voice Visualization Bars */}
                 {(isRecording || isSpeaking) && (
@@ -1232,22 +1232,8 @@ export function AIBotWidget() {
             })}
 
             {loading && (
-              <div className="flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-400">
-                <div className="w-6 h-6 rounded-full bg-[var(--t-surface-subtle)] border border-[var(--t-border)] flex items-center justify-center shrink-0">
-                  <Bot className="w-3 h-3 text-[var(--t-primary)]" />
-                </div>
-                <div className="px-4 py-3 bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[1.5rem] rounded-tl-none shadow-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-[var(--t-border)] text-[var(--t-text-muted)] uppercase tracking-tighter animate-pulse">
-                      Thinking...
-                    </span>
-                  </div>
-                  <div className="flex gap-1.5 p-1">
-                    <span className="w-2 h-2 bg-[var(--t-primary)] rounded-full animate-bounce [animation-duration:0.6s]" />
-                    <span className="w-2 h-2 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.2s] [animation-duration:0.6s]" />
-                    <span className="w-2 h-2 bg-[var(--t-primary)] rounded-full animate-bounce [animation-delay:0.4s] [animation-duration:0.6s]" />
-                  </div>
-                </div>
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-400">
+                <AIBotSkeleton />
               </div>
             )}
           </div>

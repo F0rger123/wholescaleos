@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Loader2, XCircle, ArrowRight, PartyPopper, Shield, Sparkles } from 'lucide-react';
+import { 
+  CheckCircle2, PartyPopper, Sparkles, Shield, XCircle, 
+  Loader2, ArrowRight 
+} from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useStore } from '../store/useStore';
+import { AuthSkeleton } from '../components/Skeleton';
 
 type VerificationState = 'verifying' | 'success' | 'error' | 'already-verified';
 
@@ -154,17 +158,7 @@ export default function EmailConfirmed() {
         </div>
 
         {/* ═══ VERIFYING STATE ═══ */}
-        {state === 'verifying' && (
-          <div className="bg-[var(--t-surface)]/80 backdrop-blur-sm border border-[var(--t-border)] rounded-3xl p-10 text-center">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-              style={{ background: 'var(--t-primary-dim)' }}
-            >
-              <Loader2 size={36} className="animate-spin" style={{ color: 'var(--t-primary)' }} />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">Verifying your email...</h2>
-            <p className="text-sm text-[var(--t-text-muted)]">This will only take a moment</p>
-          </div>
-        )}
+        {state === 'verifying' && <AuthSkeleton />}
 
         {/* ═══ SUCCESS STATE ═══ */}
         {state === 'success' && (

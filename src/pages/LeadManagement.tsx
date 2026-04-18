@@ -61,11 +61,7 @@ export default function LeadManagement() {
   }, [lead, leads, navigate]);
 
   if (!lead) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-[var(--t-bg)]">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--t-primary)]" />
-      </div>
-    );
+    return <LeadDetailSkeleton />;
   }
 
   const handleEditToggle = async () => {

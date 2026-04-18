@@ -123,12 +123,7 @@ END:VCARD`;
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[var(--t-bg)] flex flex-col items-center justify-center p-4">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-        <p className="text-gray-500 font-medium">Loading Agent Profile...</p>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   if (error || !agent) {

@@ -10,10 +10,12 @@
  */
 
 import { useEffect, useState, useRef, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStore, type Lead, type TeamMember, type Task, type ChatChannel, type ChatMessage, type Buyer, type CoverageArea, type AppNotification, type TimelineEntry, type StatusHistoryEntry } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { Loader2, Database, Wifi } from 'lucide-react';
 import { Logo } from '../components/Logo';
+import { DashboardSkeleton } from '../components/Skeleton';
 
 // ─── DB → Store Converters ────────────────────────────────────────────────────
 
@@ -207,35 +209,22 @@ function dbStatusHistoryToStore(row: Record<string, unknown>): StatusHistoryEntr
 
 function SyncLoadingScreen({ status }: { status: string }) {
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#060e20] text-[#dee5ff]">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-purple-500/10 blur-[80px] rounded-full pointer-events-none" />
+    <div className="min-h-screen bg-[var(--t-bg)] py-12 relative overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-indigo-600/5 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-600/5 blur-[100px] rounded-full animate-pulse" style={{ animationDelay: '1.5s' }} />
 
-      <div className="relative flex flex-col items-center">
-        <div className="mb-8 animate-astral-hero">
-          <Logo size={80} />
+      <DashboardSkeleton />
+      
+      {/* Floating Status Indicator */}
+      <div className="fixed bottom-12 right-12 z-[10000] flex items-center gap-4 px-8 py-4 rounded-3xl astral-glass border border-indigo-500/20 shadow-2xl animate-astral-fade-up">
+        <div className="relative">
+          <div className="w-3 h-3 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_10px_rgba(159,167,255,0.8)]" />
+          <div className="absolute inset-0 w-3 h-3 rounded-full bg-indigo-500 animate-ping opacity-40" />
         </div>
-
-        <div className="text-center animate-astral-fade-up">
-          <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-2">
-            WholeScale <span className="text-indigo-400">OS</span>
-          </h2>
-          <div className="flex items-center justify-center gap-3 text-indigo-400/60 font-black uppercase tracking-[0.2em] text-[10px]">
-            <Loader2 size={12} className="animate-spin" />
-            {status}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 mt-10 text-[10px] uppercase font-black tracking-widest text-[#a3aac4]">
-          <div className="flex items-center gap-1.5 text-[var(--t-success)]">
-            <Wifi size={12} />
-            Connected
-          </div>
-          <div className="w-1 h-1 rounded-full bg-white/10" />
-          <div className="flex items-center gap-1.5 text-indigo-400">
-            <Database size={12} />
-            Syncing
-          </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400 italic">WholeScale OS</span>
+          <span className="text-[12px] font-bold text-white tracking-tight">{status}</span>
         </div>
       </div>
     </div>
@@ -245,6 +234,7 @@ function SyncLoadingScreen({ status }: { status: string }) {
 // ─── Main Sync Component ──────────────────────────────────────────────────────
 
 export function SupabaseSync({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const currentUser = useStore((s) => s.currentUser);
   const teamId = useStore((s) => s.teamId);
   const dataLoaded = useStore((s) => s.dataLoaded);
@@ -290,9 +280,13 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
 
         console.log('[SupabaseSync] Found memberships:', teamMemberships?.length || 0);
         if (!teamMemberships || teamMemberships.length === 0) {
-          console.warn('[SupabaseSync] No teams found for user. Exiting sync...');
-          setLoading(false);
-          useStore.setState({ dataLoaded: true, teamId: null });
+          console.warn('[SupabaseSync] No teams found for user. Redirecting to team selection...');
+          setSyncStatus('Onboarding required...');
+          // Small delay for UX transition
+          setTimeout(() => {
+            useStore.setState({ dataLoaded: true, teamId: null });
+            navigate('/team-selection', { replace: true });
+          }, 1500);
           return;
         }
 

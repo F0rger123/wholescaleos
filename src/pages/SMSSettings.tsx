@@ -6,6 +6,7 @@ import {
   Loader2, AlertCircle, Send,
   Check
 } from 'lucide-react';
+import { SettingsSkeleton } from '../components/Skeleton';
 import { sendSMS } from '../lib/sms-service';
 import { GoogleCalendarService } from '../lib/google-calendar';
 import { GoogleCalendarConnect } from '../components/GoogleCalendarConnect';
@@ -143,11 +144,7 @@ export default function SMSSettings() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--t-primary)' }} />
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (
