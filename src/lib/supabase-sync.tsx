@@ -329,46 +329,60 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
         console.log('[SupabaseSync] teamConfig updated in store');
 
         // ── Step 2: Fetch all data in parallel ────────────────────────
-        setSyncStatus('Loading leads...');
+        setSyncStatus('Syncing Cloud infrastructure...');
 
-        const [
-          leadsRes, teamMembersRes, tasksRes, channelsRes,
-          buyersRes, coverageRes, notifRes, timelineRes, statusHistRes,
-        ] = await Promise.all([
-          supabase!.from('leads').select('*').eq('team_id', teamId).order('updated_at', { ascending: false }),
-          supabase!.from('team_members').select('*, profiles(*)').eq('team_id', teamId),
-          supabase!.from('tasks').select('*').eq('team_id', teamId).order('due_date', { ascending: true }),
-          supabase!.from('channels').select('*, channel_members(user_id)').eq('team_id', teamId).order('last_message_at', { ascending: false }),
-          supabase!.from('buyers').select('*').eq('team_id', teamId),
-          supabase!.from('coverage_areas').select('*').eq('team_id', teamId),
-          supabase!.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
-          supabase!.from('timeline_entries').select('*').order('created_at', { ascending: true }),
-          supabase!.from('status_history').select('*').order('changed_at', { ascending: true }),
-        ]);
+        const TIMEOUT_MS = 10000;
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('SYNC_TIMEOUT')), TIMEOUT_MS)
+        );
+
+        const fetchAllData = async () => {
+          const [
+            leadsRes, teamMembersRes, tasksRes, channelsRes,
+            buyersRes, coverageRes, notifRes
+          ] = await Promise.all([
+            supabase!.from('leads').select('*, timeline_entries(*), status_history(*)').eq('team_id', teamId).order('updated_at', { ascending: false }),
+            supabase!.from('team_members').select('*, profiles(*)').eq('team_id', teamId),
+            supabase!.from('tasks').select('*').eq('team_id', teamId).order('due_date', { ascending: true }),
+            supabase!.from('channels').select('*, channel_members(user_id)').eq('team_id', teamId).order('last_message_at', { ascending: false }),
+            supabase!.from('buyers').select('*').eq('team_id', teamId),
+            supabase!.from('coverage_areas').select('*').eq('team_id', teamId),
+            supabase!.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
+          ]);
+
+          return { leadsRes, teamMembersRes, tasksRes, channelsRes, buyersRes, coverageRes, notifRes };
+        };
+
+        let results;
+        try {
+          results = await Promise.race([fetchAllData(), timeoutPromise]) as any;
+        } catch (err: any) {
+          console.warn('[SupabaseSync] Initial sync timed out or failed, proceeding with partial state:', err);
+          if (err.message === 'SYNC_TIMEOUT') {
+            // If we timed out, we force dataLoaded: true to unstick the UI
+            useStore.setState({ dataLoaded: true });
+            setSyncStatus('Sync taking longer than expected. Continuing...');
+            return;
+          }
+          throw err;
+        }
+
+        const { leadsRes, teamMembersRes, tasksRes, channelsRes, buyersRes, coverageRes, notifRes } = results;
+
 
         if (cancelled) return;
         setSyncStatus('Processing data...');
 
-        // ── Step 3: Group timeline and status history by lead_id ──────
-        const timelineByLead: Record<string, TimelineEntry[]> = {};
-        for (const row of (timelineRes.data || [])) {
-          const leadId = (row as any).lead_id as string;
-          if (!timelineByLead[leadId]) timelineByLead[leadId] = [];
-          timelineByLead[leadId].push(dbTimelineToStore(row as any));
-        }
-
-        const statusHistByLead: Record<string, StatusHistoryEntry[]> = {};
-        for (const row of (statusHistRes.data || [])) {
-          const leadId = (row as any).lead_id as string;
-          if (!statusHistByLead[leadId]) statusHistByLead[leadId] = [];
-          statusHistByLead[leadId].push(dbStatusHistoryToStore(row as any));
-        }
-
         // ── Step 4: Convert all data ─────────────────────────────────
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const leads: Lead[] = (leadsRes.data || [])
-          .map((row: any) => dbLeadToStore(row, timelineByLead[row.id as string] || [], statusHistByLead[row.id as string] || []))
+          .map((row: any) => {
+            const timeline = (row.timeline_entries || []).map((e: any) => dbTimelineToStore(e));
+            const statusHistory = (row.status_history || []).map((h: any) => dbStatusHistoryToStore(h));
+            return dbLeadToStore(row, timeline, statusHistory);
+          })
           .filter((l: Lead | null): l is Lead => l !== null);
+
 
         // Enrich team members with deal counts from leads
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -389,28 +403,33 @@ export function SupabaseSync({ children }: { children: ReactNode }) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const tasks: Task[] = (tasksRes.data || []).map((row: any) => dbTaskToStore(row));
 
-        // Channels and messages
+        // Channels and messages (Parallelized)
         const channels: ChatChannel[] = [];
         const messages: Record<string, ChatMessage[]> = {};
         const unreadCounts: Record<string, number> & { sms: number } = { sms: 0 };
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        for (const chRow of ((channelsRes.data || []) as any[])) {
+        const channelEntries = (channelsRes.data || []) as any[];
+        await Promise.all(channelEntries.map(async (chRow) => {
           const chId = chRow.id as string;
           const memberIds = ((chRow.channel_members as Array<{ user_id: string }>) || []).map(cm => cm.user_id);
           channels.push(dbChannelToStore(chRow, memberIds));
 
-          const { data: msgData } = await supabase!
-            .from('messages')
-            .select('*')
-            .eq('channel_id', chId)
-            .order('created_at', { ascending: true })
-            .limit(100);
+          try {
+            const { data: msgData } = await supabase!
+              .from('messages')
+              .select('*')
+              .eq('channel_id', chId)
+              .order('created_at', { ascending: true })
+              .limit(50); // Reduced limit for faster initial load
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          messages[chId] = (msgData || []).map((m: any) => dbMessageToStore(m));
+            messages[chId] = (msgData || []).map((m: any) => dbMessageToStore(m));
+          } catch (err) {
+            console.error(`[SupabaseSync] Failed to fetch items for channel ${chId}:`, err);
+            messages[chId] = [];
+          }
           unreadCounts[chId] = 0;
-        }
+        }));
+
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const buyers: Buyer[] = (buyersRes.data || []).map((row: any) => dbBuyerToStore(row));

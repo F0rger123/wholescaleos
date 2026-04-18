@@ -802,3 +802,23 @@ body.modal-blur-active > #root > *:first-child {
   pointer-events: none;
   transition: filter 0.3s ease;
 }
+
+/* ─── Skeleton Styles ────────────────────────────────────────────────────── */
+
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+    background-color: var(--t-surface);
+  }
+  50% {
+    opacity: 0.6;
+    background-color: var(--t-border);
+  }
+}
+
+.skeleton-base {
+  animation: skeleton-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: var(--t-surface);
+  border: 1px solid var(--t-border);
+  display: block;
+}

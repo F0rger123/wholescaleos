@@ -11,6 +11,7 @@ import {
 } from '../store/useStore';
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { GoogleCalendarService } from '../lib/google-calendar';
+import { Skeleton } from '../components/Skeleton';
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -37,13 +38,66 @@ const inputStyle = {
   fontFamily: 'Inter, sans-serif'
 };
 
+const TasksSkeleton = () => (
+  <div className="crm-container space-y-8 animate-astral-hero">
+    <div className="flex items-center justify-between flex-wrap gap-4 bg-[var(--t-surface)] p-6 rounded-3xl border border-[var(--t-border)]/50 shadow-xl astral-glass">
+      <div className="space-y-2">
+        <Skeleton width="120px" height="24px" />
+        <Skeleton width="200px" height="12px" className="opacity-40" />
+      </div>
+      <div className="flex gap-3">
+        <Skeleton width="80px" height="36px" className="rounded-xl" />
+        <Skeleton width="80px" height="36px" className="rounded-xl" />
+        <Skeleton width="120px" height="36px" className="rounded-xl" />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="bg-[var(--t-surface)] border border-[var(--t-border)]/50 rounded-xl p-4 text-center astral-glass">
+          <Skeleton width="24px" height="24px" className="mx-auto mb-2 opacity-40 rounded-full" />
+          <Skeleton width="40px" height="20px" className="mx-auto mb-1" />
+          <Skeleton width="60px" height="8px" className="mx-auto opacity-30" />
+        </div>
+      ))}
+    </div>
+
+    <div className="flex gap-4">
+      <Skeleton width="400px" height="44px" className="rounded-xl" />
+      <Skeleton width="120px" height="44px" className="rounded-xl" />
+    </div>
+
+    <div className="space-y-3">
+      {[1, 2, 3, 4, 5].map(i => (
+        <div key={i} className="border border-[var(--t-border)]/30 rounded-xl p-4 astral-glass bg-white/[0.01]">
+          <div className="flex gap-4">
+            <Skeleton width="20px" height="20px" className="rounded-full mt-1" />
+            <div className="flex-1 space-y-3">
+              <div className="flex justify-between">
+                <Skeleton width="300px" height="14px" />
+                <Skeleton width="80px" height="14px" />
+              </div>
+              <div className="flex gap-4">
+                <Skeleton width="100px" height="10px" />
+                <Skeleton width="80px" height="10px" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 export default function Tasks() {
   const [searchParams] = useSearchParams();
+
   const taskId = searchParams.get('id');
 
   const { 
-    tasks, team, leads, addTask, updateTask, deleteTask, completeTask,
+    tasks, team, leads, addTask, updateTask, deleteTask, completeTask, dataLoaded
   } = useStore();
+
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
   const [filterPriority, setFilterPriority] = useState<TaskPriority | 'all'>('all');
@@ -312,7 +366,16 @@ export default function Tasks() {
     { status: 'done', label: 'Done', color: 'border-[var(--t-success)]' },
   ];
 
+  if (!dataLoaded || !tasks) {
+    return (
+      <div className="min-h-screen bg-[var(--t-bg)] py-12">
+        <TasksSkeleton />
+      </div>
+    );
+  }
+
   return (
+
     <div className="crm-container crm-page-transition space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 bg-[var(--t-surface)] p-4 rounded-3xl border border-[var(--t-border)] shadow-xl astral-glass">

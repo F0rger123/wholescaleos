@@ -1641,12 +1641,13 @@ const calculateSmartLeadScore = (lead: Partial<Lead>): number => {
     const daysSince = Math.floor((Date.now() - new Date(lastContact).getTime()) / (1000 * 60 * 60 * 24));
     score -= Math.min(daysSince, 20);
   }
-  const val = Number(lead.property_value || lead.estimatedValue || 0);
+  const val = Number(lead.estimatedValue || 0);
   if (val > 500000) score += 10;
   if (!lead.email) score -= 5;
   if (!lead.phone) score -= 5;
-  if (!lead.address && !lead.propertyAddress) score -= 10;
+  if (!lead.propertyAddress) score -= 10;
   return Math.min(Math.max(score, 0), 100);
+
 };
 
 export const useStore = create<AppState>((set, get) => ({
@@ -1932,12 +1933,14 @@ export const useStore = create<AppState>((set, get) => ({
   },
   fetchProfile: async (userId: string) => {
     if (!isSupabaseConfigured || !supabase) return;
+    const { currentUser } = get();
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
+
       if (error) throw error;
       if (profile) {
         let teamId = profile.team_id || null;
@@ -1980,10 +1983,11 @@ export const useStore = create<AppState>((set, get) => ({
               credits_remaining: finalRemaining,
               total_credits_used_today: finalUsedToday,
               credits_reset_at: now.toISOString()
-            }).eq('id', currentUser.id).then(({ error }) => {
+            }).eq('id', currentUser.id).then(({ error }: { error: any }) => {
               if (error) console.error('Failed to sync credit reset:', error);
             });
           }
+
         } else if (finalRemaining === null || finalRemaining === undefined) {
           finalRemaining = planLimit;
         }
@@ -2075,11 +2079,33 @@ export const useStore = create<AppState>((set, get) => ({
     }
     try {
       set({ dataLoaded: false });
-      const [leads, tasks] = await Promise.all([
-        leadsService.fetchAll(teamId),
-        tasksService.fetchAll(teamId)
-      ]);
+
+      const TIMEOUT_MS = 10000;
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('LOAD_LEADS_TIMEOUT')), TIMEOUT_MS)
+      );
+
+      const fetchData = async () => {
+        const [leads, tasks] = await Promise.all([
+          leadsService.fetchAll(teamId!),
+          tasksService.fetchAll(teamId!)
+        ]);
+        return { leads, tasks };
+      };
+
+      let results;
+      try {
+        results = await Promise.race([fetchData(), timeoutPromise]) as any;
+      } catch (err: any) {
+        console.warn('[useStore] loadLeads timed out or failed:', err);
+        set({ dataLoaded: true });
+        return;
+      }
+
+      const { leads, tasks } = results;
+
       const mappedLeads: Lead[] = (leads || []).map((l: any) => ({
+
         ...l,
         status: ensureStringStatus(l.status),
         propertyAddress: l.address || l.propertyAddress,
@@ -3299,15 +3325,16 @@ export const useStore = create<AppState>((set, get) => ({
       };
     }),
   currentTheme: 'moon',
-  setTheme: (theme) => {
-    set({ currentTheme: 'moon' });
+  setTheme: (theme: string) => {
+    set({ currentTheme: theme });
     if (typeof window !== 'undefined') {
-      localStorage.setItem('wholescale-theme', 'moon');
-      const themeData = themes['moon'];
+      localStorage.setItem('wholescale-theme', theme);
+      const themeData = themes[theme as keyof typeof themes] || themes['moon'];
       if (themeData) {
         const root = document.documentElement;
         const customColors = get().customColors;
-        root.setAttribute('data-theme', 'moon');
+        root.setAttribute('data-theme', theme);
+
         const toKebab = (str: string) => str.replace(/([A-Z])/g, '-$1').toLowerCase();
         Object.entries(themeData.colors).forEach(([key, value]) => {
           const cssVar = `--t-${toKebab(key)}`;

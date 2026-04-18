@@ -17,6 +17,7 @@ import { googleEcosystem } from '../lib/google-ecosystem';
 import { CallScriptModal } from '../components/CallScriptModal';
 import { BulkEmailModal } from '../components/BulkEmailModal';
 import { LeadFormModal } from '../components/LeadFormModal';
+import { Skeleton } from '../components/Skeleton';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -48,11 +49,55 @@ const SOURCE_BADGE: Record<string, string> = {
 
 
 
+const LeadsSkeleton = () => (
+  <div className="crm-container space-y-6 animate-astral-hero">
+    <div className="flex items-center justify-between mb-8">
+      <Skeleton width="180px" height="32px" />
+      <div className="flex gap-3">
+        <Skeleton width="100px" height="40px" className="rounded-xl" />
+        <Skeleton width="140px" height="40px" className="rounded-xl" />
+      </div>
+    </div>
+    
+    <div className="flex flex-wrap items-center gap-4 mb-8">
+      <Skeleton width="300px" height="44px" className="rounded-2xl" />
+      <Skeleton width="150px" height="44px" className="rounded-xl" />
+      <Skeleton width="150px" height="44px" className="rounded-xl" />
+    </div>
+
+    <div className="space-y-4">
+      {[1, 2, 3, 4, 5, 6].map(i => (
+        <div key={i} className="astral-glass p-6 rounded-2xl border border-[var(--t-border)]/50 bg-white/[0.01]">
+          <div className="flex items-center gap-6">
+            <Skeleton width="40px" height="40px" className="rounded-xl" />
+            <div className="flex-1 space-y-3">
+              <div className="flex justify-between items-center">
+                <Skeleton width="200px" height="16px" />
+                <Skeleton width="80px" height="12px" />
+              </div>
+              <div className="flex gap-4">
+                <Skeleton width="120px" height="10px" />
+                <Skeleton width="100px" height="10px" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 export default function Leads() {
   const { id } = useParams<{ id: string }>();
+
   const navigate = useNavigate();
   const store = useStore();
-  const { leads, updateLead, deleteLead, teamId, addTimelineEntry, updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, addLeadPhoto, removeLeadPhoto, currentUser } = store;
+  const { 
+    leads, updateLead, deleteLead, teamId, addTimelineEntry, 
+    updateLeadStatus, addCallRecording, analyzeRecording, callRecordings, 
+    addLeadPhoto, removeLeadPhoto, currentUser, dataLoaded 
+  } = store;
+
   const saveStatus = (store as any).saveStatus || 'idle';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -324,7 +369,16 @@ export default function Leads() {
   
 
 
+  if (!dataLoaded || !leads) {
+    return (
+      <div className="min-h-screen bg-[var(--t-bg)] py-12">
+        <LeadsSkeleton />
+      </div>
+    );
+  }
+
   return (
+
     <div className="crm-container crm-page-transition bg-[var(--t-bg)]">
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">

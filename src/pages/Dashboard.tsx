@@ -24,6 +24,8 @@ import { AIQuickBoard } from '../components/AIQuickBoard';
 import { PipelineChart } from '../components/PipelineChart';
 import { MetricCard } from '../components/MetricCard';
 import { useNavigate } from 'react-router-dom';
+import { Skeleton } from '../components/Skeleton';
+
 import { formatDistanceToNow } from 'date-fns';
 
 // ─── Money Formatter ─────────────────────────────────────────────────────────
@@ -145,8 +147,63 @@ class DashboardErrorBoundary extends Component<{ children: ReactNode }, { hasErr
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
+const DashboardSkeleton = () => (
+  <div className="crm-container space-y-8 animate-astral-hero">
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+      <div className="space-y-4">
+        <Skeleton width="180px" height="8px" className="opacity-40" />
+        <Skeleton width="320px" height="40px" />
+      </div>
+      <div className="flex gap-4">
+        <Skeleton width="120px" height="36px" className="rounded-full" />
+        <Skeleton width="120px" height="36px" className="rounded-full" />
+      </div>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="astral-glass p-8 rounded-[2.5rem] border border-[var(--t-border)]/50 bg-white/[0.02]">
+          <Skeleton width="40%" height="8px" className="mb-4 opacity-50" />
+          <Skeleton width="70%" height="28px" className="mb-2" />
+          <Skeleton width="30%" height="8px" className="opacity-30" />
+        </div>
+      ))}
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 astral-glass p-10 rounded-[3rem] border border-[var(--t-border)]/50 bg-white/[0.02]">
+        <div className="flex justify-between items-center mb-10">
+          <Skeleton width="220px" height="24px" />
+          <Skeleton width="140px" height="24px" className="rounded-full opacity-40" />
+        </div>
+        <Skeleton width="100%" height="280px" className="rounded-2xl opacity-20" />
+        <div className="mt-10 grid grid-cols-6 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Skeleton key={i} width="100%" height="60px" className="rounded-2xl" />
+          ))}
+        </div>
+      </div>
+      <div className="astral-glass p-10 rounded-[3rem] border border-[var(--t-border)]/50 bg-white/[0.02] flex flex-col">
+        <Skeleton width="180px" height="24px" className="mb-10" />
+        <div className="space-y-8 flex-1">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="space-y-3">
+              <div className="flex justify-between">
+                <Skeleton width="40%" height="8px" className="opacity-50" />
+                <Skeleton width="20%" height="8px" className="opacity-30" />
+              </div>
+              <Skeleton width="100%" height="6px" className="rounded-full opacity-20" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function Dashboard() {
   const navigate = useNavigate();
+
   const { 
     leads, team,
     loginStreak, taskStreak, memberStreaks,
@@ -204,13 +261,16 @@ export default function Dashboard() {
 
   if (!dataLoaded || !leads || !team) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--t-bg)] p-8">
-        <div className="w-20 h-20 border-4 border-[var(--t-primary)] border-t-transparent rounded-full animate-spin mb-8 shadow-[0_0_30px_var(--t-primary-dim)]"></div>
-        <h2 className="text-3xl font-black text-white mb-3 uppercase italic tracking-tighter">Initializing OS</h2>
-        <p className="text-[#6d758c] text-sm font-black uppercase tracking-[0.2em] animate-pulse">Syncing Cloud Infrastructure...</p>
+      <div className="min-h-screen bg-[var(--t-bg)] py-12">
+        <DashboardSkeleton />
+        <div className="fixed bottom-12 right-12 flex items-center gap-3 px-6 py-3 rounded-full astral-glass border-indigo-500/20">
+          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-spin border-2 border-t-transparent" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Syncing Infrastructure...</span>
+        </div>
       </div>
     );
   }
+
 
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
