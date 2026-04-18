@@ -5,20 +5,18 @@ import { v4 as uuidv4 } from 'uuid';
 import { format, formatDistanceToNow } from 'date-fns';
 import {
   Search, Plus, ChevronDown, ChevronRight, Phone, Mail, MapPin,
-  DollarSign, Calendar, Edit2, Trash2, X, Check,
+  DollarSign, Calendar, Edit2, Trash2, Trash, X, Check,
   Loader2, PhoneCall, Send,
   Users, Mic, Play, Pause, Square, Bot as Brain,
   Target, Zap, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
-  MoreVertical, CheckSquare,
-  Share2, UserMinus, ExternalLink
+  Share2, UserMinus, ExternalLink, Folder
 } from 'lucide-react';
 import { LeadsSkeleton } from '../components/Skeleton';
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { CallScriptModal } from '../components/CallScriptModal';
 import { BulkEmailModal } from '../components/BulkEmailModal';
 import { LeadFormModal } from '../components/LeadFormModal';
-import { Skeleton } from '../components/Skeleton';
 
 const STATUS_BADGE: Record<string, string> = {
   'new': 'bg-[var(--t-info)]/20 text-[var(--t-info)] border-[var(--t-info)]/30',
@@ -1018,7 +1016,7 @@ export default function Leads() {
                             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all hover:scale-[1.01] active:scale-95"
                             style={{ background: 'var(--t-surface-dim)', border: '1px solid var(--t-primary-dim)', color: 'var(--t-primary)' }}
                           >
-                            <ScriptIcon className="w-4 h-4" />
+                            <FileText className="w-4 h-4" />
                             Open AI Call Script Library
                           </button>
                         </div>
