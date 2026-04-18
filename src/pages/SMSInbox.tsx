@@ -18,7 +18,7 @@ import {
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { SMSAnalysis } from '../lib/sms-analysis-service';
+import { SMSAnalysis, analyzeSMSConversation } from '../lib/sms-analysis-service';
 
 // --- Types ---
 interface SMSMessage {
@@ -139,10 +139,28 @@ export default function SMSInbox() {
   const [carrierPicker, setCarrierPicker] = useState({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' });
   const [analysis, setAnalysis] = useState<SMSAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [showCompose, setShowCompose] = useState(false);
+
+  // Recovery / Confirm Modal
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Selected conversation specific derived state
+  const selectedMessages = useMemo(() => {
+    if (!selectedPhone) return [];
+    const p = selectedPhone.replace(/\D/g, '');
+    return messages
+      .filter(m => m.phone_number.replace(/\D/g, '') === p)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [messages, selectedPhone]);
 
   // Analyze conversation on phone selection
   useEffect(() => {
-    if (!selectedPhone) {
+    if (!selectedPhone || selectedMessages.length === 0) {
       setAnalysis(null);
       return;
     }
@@ -150,7 +168,13 @@ export default function SMSInbox() {
     async function runAnalysis() {
       setAnalyzing(true);
       try {
-        const result = await analyzeSMSConversation(selectedMessages);
+        // Transform the messages to the expected format for analysis
+        const formattedMessages = selectedMessages.map(m => ({
+          role: m.direction === 'inbound' ? 'user' as const : 'assistant' as const,
+          content: m.content
+        }));
+        
+        const result = await analyzeSMSConversation(formattedMessages);
         if (result) {
           setAnalysis(result);
         }
@@ -161,21 +185,8 @@ export default function SMSInbox() {
       }
     }
 
-    if (selectedMessages.length > 0) {
-      runAnalysis();
-    }
+    runAnalysis();
   }, [selectedPhone, selectedMessages.length]);
-
-
-  // Search and Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const [showCompose, setShowCompose] = useState(false);
-
-  // Recovery / Confirm Modal
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load from local storage / init
   useEffect(() => {
@@ -236,14 +247,6 @@ export default function SMSInbox() {
     (c.leadName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.lastMessage || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const selectedMessages = useMemo(() => {
-    if (!selectedPhone) return [];
-    const p = selectedPhone.replace(/\D/g, '');
-    return messages
-      .filter(m => m.phone_number.replace(/\D/g, '') === p)
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  }, [messages, selectedPhone]);
-
   const activeConversation = conversations.find(c => c.phone === selectedPhone?.replace(/\D/g, ''));
 
   const markAsRead = (phone: string) => {
@@ -541,18 +544,22 @@ export default function SMSInbox() {
             </div>
 
             {/* AI Summary Banner (Item 12) */}
-            {analysis && (
+            {(analysis || analyzing) && (
               <div className="px-4 py-3 border-b flex items-center gap-3 animate-in slide-in-from-top-2 duration-300" style={{ backgroundColor: 'rgba(var(--t-primary-rgb), 0.03)', borderColor: 'var(--t-border)' }}>
                 <div className="p-2 rounded-lg" style={{ background: 'var(--t-primary-dim)' }}>
-                  <Brain size={16} className="text-[var(--t-primary)]" />
+                  {analyzing ? <Loader2 size={16} className="text-[var(--t-primary)] animate-spin" /> : <Brain size={16} className="text-[var(--t-primary)]" />}
                 </div>
                 <div className="flex-1">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--t-primary)] mb-0.5">AI Conversation Analysis</div>
-                  <p className="text-[11px] font-medium italic leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>
-                    "{analysis.summary}"
-                  </p>
+                  {analyzing ? (
+                     <div className="h-3 w-32 bg-[var(--t-primary-dim)] rounded animate-pulse mt-1" />
+                  ) : (
+                    <p className="text-[11px] font-medium italic leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>
+                      "{analysis?.summary}"
+                    </p>
+                  )}
                 </div>
-                {analysis.intent === 'interest' && (
+                {!analyzing && analysis?.intent === 'interest' && (
                   <div className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[var(--t-success)]/10 text-[var(--t-success)] border border-[var(--t-success)]/20 uppercase tracking-tighter">
                     High Intent
                   </div>

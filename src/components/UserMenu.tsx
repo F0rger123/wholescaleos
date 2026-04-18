@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { LogOut, Settings, ChevronDown, User, Home, CreditCard, Users } from 'lucide-react';
+import { LogOut, Settings, ChevronDown, User, CreditCard, Users } from 'lucide-react';
 
 
 interface UserMenuProps {
