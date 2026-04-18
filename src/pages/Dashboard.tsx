@@ -24,7 +24,7 @@ import { AIQuickBoard } from '../components/AIQuickBoard';
 import { PipelineChart } from '../components/PipelineChart';
 import { MetricCard } from '../components/MetricCard';
 import { useNavigate } from 'react-router-dom';
-import { Skeleton, DashboardSkeleton } from '../components/Skeleton';
+import { DashboardSkeleton } from '../components/Skeleton';
 
 import { formatDistanceToNow } from 'date-fns';
 
@@ -274,6 +274,33 @@ export default function Dashboard() {
     const src = l.source || l.importSource || 'other';
     sourceCounts[src] = (sourceCounts[src] || 0) + 1;
   });
+  // Aggregate Recent Activity (Lead events, Task completions, etc.)
+  const allActivities = [
+    ...(dataToUse.flatMap(lead => 
+      (lead.timeline || []).map(entry => ({
+        id: entry.id,
+        type: 'lead',
+        activityType: entry.type,
+        leadName: lead.name,
+        leadId: lead.id,
+        content: entry.content || 'Activity on lead',
+        timestamp: entry.timestamp,
+        userName: entry.user || 'System'
+      }))
+    )),
+    ...(tasks.filter(t => t.completedAt).map(task => ({
+      id: task.id,
+      type: 'task',
+      activityType: 'completed',
+      leadName: dataToUse.find(l => l.id === task.leadId)?.name || 'General Task',
+      leadId: task.leadId,
+      content: `Completed task: ${task.title}`,
+      timestamp: task.completedAt!,
+      userName: 'User'
+    })))
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+   .slice(0, 8);
+
   const recentLeads = [...dataToUse]
     .filter(l => l && l.name && l.updatedAt)
     .sort((a, b) => {
@@ -497,30 +524,39 @@ export default function Dashboard() {
                         })}
                       </div>
                     </div>
-                    <div className="lg:col-span-2 astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
-                       <div className="flex items-center justify-between mb-8">
-                        <h2 className="text-xl font-black italic uppercase tracking-tight" style={{ color: 'var(--t-text)' }}>Recent Activity</h2>
-                        <button onClick={() => navigate('/leads')} className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] hover:text-indigo-300 transition-colors">View All Infrastructure</button>
-                       </div>
-                       <div className="space-y-4">
-                        {recentLeads.map(lead => (
-                          <div key={lead.id} onClick={() => navigate(`/leads/${lead.id}/manage`)} className="flex items-center gap-5 p-4 rounded-2xl border border-white/5 hover:border-indigo-500/20 hover:bg-white/5 transition-all cursor-pointer group/activity">
-                             <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center font-black text-indigo-400 group-hover/activity:scale-105 transition-transform shadow-inner">{lead.name[0]}</div>
-                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-black text-white uppercase italic group-hover/activity:text-indigo-300 transition-colors">{lead.name}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className={`w-2 h-2 rounded-full ${statusBarColors[String(lead.status)] || 'bg-white/10'}`} />
-                                  <span className="text-[9px] text-[#6d758c] uppercase font-black tracking-widest">{STATUS_LABELS[lead.status] || String(lead.status)}</span>
+                     <div className="lg:col-span-2 astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">
+                        <div className="flex items-center justify-between mb-8">
+                         <h2 className="text-xl font-black italic uppercase tracking-tight" style={{ color: 'var(--t-text)' }}>Recent Activity</h2>
+                         <button onClick={() => navigate('/leads')} className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] hover:text-indigo-300 transition-colors">Audit Full History</button>
+                        </div>
+                        <div className="space-y-4">
+                         {allActivities.length > 0 ? (
+                           allActivities.map(activity => (
+                             <div key={activity.id} onClick={() => activity.leadId && navigate(`/leads/${activity.leadId}/manage`)} className="flex items-center gap-5 p-4 rounded-2xl border border-white/5 hover:border-indigo-500/20 hover:bg-white/5 transition-all cursor-pointer group/activity">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center font-black text-indigo-400 group-hover/activity:scale-105 transition-transform shadow-inner shrink-0">
+                                  {activity.type === 'lead' ? <Target size={18} /> : <Check size={18} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                   <p className="text-sm font-black text-white uppercase italic group-hover/activity:text-indigo-300 transition-colors truncate">
+                                      {activity.leadName}
+                                   </p>
+                                   <p className="text-[10px] text-[#6d758c] truncate font-black uppercase tracking-widest mt-1">
+                                      {activity.content}
+                                   </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                   <p className="text-[9px] text-[var(--t-primary)] font-black uppercase tracking-widest mb-1 italic">{activity.userName}</p>
+                                   <p className="text-[9px] text-[#6d758c] font-bold uppercase tracking-widest">{formatDistanceToNow(new Date(activity.timestamp))} ago</p>
                                 </div>
                              </div>
-                             <div className="text-right">
-                                <p className="text-sm font-black text-white italic">{formatMoney(lead.estimatedValue)}</p>
-                                <p className="text-[9px] text-[#6d758c] font-bold uppercase tracking-widest">{formatDistanceToNow(new Date(lead.updatedAt))} ago</p>
-                             </div>
-                          </div>
-                        ))}
-                       </div>
-                    </div>
+                           ))
+                         ) : (
+                           <div className="py-12 text-center">
+                             <p className="text-[#6d758c] text-sm uppercase font-black tracking-widest opacity-50">No recent operational data found</p>
+                           </div>
+                         )}
+                        </div>
+                     </div>
                     <div className="lg:col-span-1 space-y-8">
                       <TeamLeaderboard />
                       <div className="astral-glass border border-indigo-500/10 rounded-[2.5rem] p-8 hover-lift group">

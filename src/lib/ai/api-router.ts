@@ -22,35 +22,49 @@ export async function callExternalAPI(
     
     if (!profile || !profile.api_fallback_enabled) return null;
     
-    // ── PREMIUM CREDIT ENFORCEMENT ────────────────────────────────────
-    if (profile.credits_remaining <= 0) {
-      console.warn(`[API Router] User ${user.id} has no premium credits remaining.`);
-      // Returning null instead of a message forces it to fall back to Local AI
-      return null;
-    }
-
     const provider = profile.preferred_api_provider;
     if (!provider || provider === 'local') return null;
 
     const apiKeysData = profile.user_api_keys || {};
-    const providerKeys = apiKeysData[provider];
-    
-    if (!providerKeys) {
-      console.warn(`[API Router] Provider ${provider} selected but no API key found.`);
+
+    // ── PREMIUM CREDIT ENFORCEMENT ────────────────────────────────────
+    // Only block if we KNOW we will need a platform key (no BYO key available)
+    const hasBYOKey = !!apiKeysData[provider];
+
+    if (!hasBYOKey && (profile.credits_remaining || 0) <= 0) {
+      console.warn(`[API Router] User ${user.id} has no premium credits remaining and no BYO key for ${provider}.`);
       return null;
+    }
+
+    let providerKeys = apiKeysData[provider];
+    let isPremium = false;
+    
+    // ── PREMIUM / PLATFORM FALLBACK ───────────────────────────────────
+    if (!providerKeys) {
+      // If no user key, check if we have a platform key for this provider
+      const platformKey = (import.meta as any).env[`VITE_${provider.toUpperCase()}_API_KEY`];
+      if (platformKey && profile.credits_remaining > 0) {
+        console.log(`[API Router] Using platform key for ${provider}. Credits remaining: ${profile.credits_remaining}`);
+        providerKeys = platformKey;
+        isPremium = true;
+      } else {
+        console.warn(`[API Router] Provider ${provider} selected but no key (BYO or Platform) is available.`);
+        return null;
+      }
     }
 
     // Support for both single key (string) and multiple keys (array)
     const keysArray = Array.isArray(providerKeys) ? providerKeys : [providerKeys];
     const smartRotate = profile.smart_rotate_enabled && keysArray.length > 1;
 
-    let lastError: any = null;
+
     
     // ── SMART ROTATE / FAILOVER LOOP ──────────────────────────────────
     for (let i = 0; i < keysArray.length; i++) {
         try {
-            const encryptedKey = keysArray[i];
-            const apiKey = decryptKey(encryptedKey, user.id);
+            const currentKey = keysArray[i];
+            // Only decrypt if it's a user-provided (encrypted) key, not the platform env key
+            const apiKey = isPremium ? currentKey : decryptKey(currentKey, user.id);
             let response: string | null = null;
 
             switch (provider) {
@@ -72,15 +86,17 @@ export async function callExternalAPI(
             }
 
             if (response) {
-                // ── SUCCESS: DEDUCT CREDIT ──────────────────────────────
-                await supabase.rpc('deduct_premium_credit', { 
-                  user_id: user.id,
-                  p_provider: provider 
-                });
+                // ── SUCCESS: DEDUCT CREDIT ONLY IF PREMIUM ────────────────
+                if (isPremium) {
+                    await supabase.rpc('deduct_premium_credit', { 
+                      user_id: user.id,
+                      p_provider: provider 
+                    });
+                }
                 return response;
             }
         } catch (error: any) {
-            lastError = error;
+
             const errorMsg = error.message?.toLowerCase() || '';
             const isRetryable = errorMsg.includes('429') || 
                                errorMsg.includes('rate limit') ||

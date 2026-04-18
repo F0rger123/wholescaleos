@@ -27,19 +27,23 @@ class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-6 text-white">
-          <div className="max-w-md w-full bg-[#121a2d] border border-white/10 rounded-[2rem] p-8 text-center shadow-2xl">
-            <div className="w-20 h-20 rounded-3xl bg-red-500/10 flex items-center justify-center text-red-500 mx-auto mb-6">
+        <div className="min-h-screen bg-[var(--t-bg)] flex items-center justify-center p-6 text-[var(--t-text)]">
+          <div className="max-w-md w-full bg-[var(--t-surface)] border border-[var(--t-border)] rounded-[2rem] p-8 text-center shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
+              <AlertTriangle size={120} />
+            </div>
+            
+            <div className="w-20 h-20 rounded-3xl bg-[var(--t-error-dim)] flex items-center justify-center text-[var(--t-error)] mx-auto mb-6 shadow-lg shadow-[var(--t-error)]/10">
               <AlertTriangle size={40} />
             </div>
             
-            <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
-            <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-              We encountered an unexpected error while rendering this page. The issue has been logged and we're working on a fix.
+            <h1 className="text-2xl font-black mb-2 uppercase italic tracking-tighter">System Error Detected</h1>
+            <p className="text-[var(--t-text-muted)] text-sm mb-8 leading-relaxed font-medium">
+              We encountered an unexpected error in the neural uplink. The issue has been logged for tactical remediation.
             </p>
 
-            <div className="bg-black/20 rounded-2xl p-4 mb-8 text-left overflow-auto max-h-32 border border-white/5">
-              <code className="text-[10px] text-red-400/80 font-mono">
+            <div className="bg-black/20 rounded-2xl p-4 mb-8 text-left overflow-auto max-h-32 border border-[var(--t-border)]">
+              <code className="text-[10px] text-[var(--t-error)] font-mono opacity-80">
                 {this.state.error?.message || "Unknown error"}
               </code>
             </div>
@@ -47,18 +51,19 @@ class ErrorBoundary extends Component<Props, State> {
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => window.location.reload()}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-sm transition-all"
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[var(--t-surface-hover)] hover:bg-[var(--t-surface)] border border-[var(--t-border)] font-bold text-xs uppercase tracking-widest transition-all"
+                style={{ color: 'var(--t-text)' }}
               >
-                <RefreshCw size={16} /> Reload
+                <RefreshCw size={14} /> Reboot
               </button>
               <button
                 onClick={() => {
                   this.setState({ hasError: false, error: null });
                   window.location.href = '/';
                 }}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-bold text-sm shadow-lg shadow-blue-600/20 transition-all"
+                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[var(--t-primary)] hover:opacity-90 font-bold text-xs text-white shadow-lg shadow-[var(--t-primary)]/20 transition-all uppercase tracking-widest"
               >
-                <Home size={16} /> Home
+                <Home size={14} /> Mission Home
               </button>
             </div>
           </div>

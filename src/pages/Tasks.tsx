@@ -11,7 +11,7 @@ import {
 } from '../store/useStore';
 import { googleEcosystem } from '../lib/google-ecosystem';
 import { GoogleCalendarService } from '../lib/google-calendar';
-import { Skeleton, TasksSkeleton } from '../components/Skeleton';
+import { TasksSkeleton } from '../components/Skeleton';
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 

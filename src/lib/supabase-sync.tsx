@@ -13,8 +13,6 @@ import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore, type Lead, type TeamMember, type Task, type ChatChannel, type ChatMessage, type Buyer, type CoverageArea, type AppNotification, type TimelineEntry, type StatusHistoryEntry } from '../store/useStore';
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Loader2, Database, Wifi } from 'lucide-react';
-import { Logo } from '../components/Logo';
 import { DashboardSkeleton } from '../components/Skeleton';
 
 // ─── DB → Store Converters ────────────────────────────────────────────────────

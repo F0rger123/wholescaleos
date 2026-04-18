@@ -21,8 +21,6 @@ export const AIProviderSettings: React.FC = () => {
   const [smartRotateEnabled, setSmartRotateEnabled] = useState(false);
   const [premiumCredits, setPremiumCredits] = useState<number>(0);
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
-  const [migrating, setMigrating] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [resetTime, setResetTime] = useState('');
 
   useEffect(() => {
@@ -79,7 +77,6 @@ export const AIProviderSettings: React.FC = () => {
         .maybeSingle();
 
       if (connections?.refresh_token && !currentUser.user_api_keys?.gemini) {
-        setMigrating(true);
         const legacyKey = connections.refresh_token;
         const newKeys = { ...keys, gemini: legacyKey };
         
@@ -91,7 +88,7 @@ export const AIProviderSettings: React.FC = () => {
     } catch (err) {
       console.error('Migration failed:', err);
     } finally {
-      setMigrating(false);
+
     }
   };
 
@@ -103,7 +100,7 @@ export const AIProviderSettings: React.FC = () => {
   }) => {
     const { newKeys, newProvider, newFallback, newRotate } = params;
     if (!currentUser) return;
-    setLoading(true);
+
     
     try {
       // Encrypt keys before storing
@@ -149,7 +146,7 @@ export const AIProviderSettings: React.FC = () => {
       console.error('Failed to save AI settings:', err);
       toast.error('Failed to save settings');
     } finally {
-      setLoading(false);
+  
     }
   };
 
@@ -164,7 +161,6 @@ export const AIProviderSettings: React.FC = () => {
 
   const currentPlan = currentUser?.subscriptionTier || 'Free';
   const planLimit = AI_PLAN_LIMITS[currentPlan] || 50;
-  const usedToday = currentUser?.total_credits_used_today || 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -289,7 +285,7 @@ export const AIProviderSettings: React.FC = () => {
                       p.id === 'gemini' ? 'https://aistudio.google.com/app/apikey' : 
                       p.id === 'openai' ? 'https://platform.openai.com/api-keys' : 
                       p.id === 'claude' ? 'https://console.anthropic.com/settings/keys' :
-                      p.id === 'minimax' ? 'https://platform.minimaxi.com/user-center/api-key' : '#'
+                      p.id === 'minimax' ? 'https://platform.minimaxi.com/default/user-center/api-key' : '#'
                     } 
                     target="_blank" 
                     rel="noopener noreferrer"

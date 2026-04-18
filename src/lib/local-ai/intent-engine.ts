@@ -1,7 +1,10 @@
 import { Intent, intents } from '../ai/intents';
-import { getLevenshteinDistance } from './spell-checker';
-import { getMemory } from './memory-store';
+import { getLevenshteinDistance, spellCheck } from './spell-checker';
+import { getMemory, getLastSuggestion, clearLastSuggestion } from './memory-store';
 import { expandSynonyms } from './utils/synonym-mapper';
+import { useStore } from '../../store/useStore';
+import { getLearnedIntent } from './learning-service';
+import { routeHybridIntent } from './improvements/local-first-router';
 
 // Debug mode — toggle to true to see detailed intent matching logs
 const DEBUG_MODE = true;
@@ -197,9 +200,7 @@ function isSmallTalkPhrase(input: string): boolean {
   return smallTalkPhrases.has(lower);
 }
 
-function categorizeSmallTalk(input: string): string {
-  return input.toLowerCase().trim();
-}
+
 
 // REGEX HANDLERS
 const handlers = [

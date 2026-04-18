@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { 
   processPrompt, 
   hasUserApiKey,
@@ -325,7 +324,7 @@ export default function AITest() {
         localStorage.setItem('ai_rate_limit_expiry', (Date.now() + retry * 1000).toString());
         pushMessage({ role: 'ai', content: `⚠️ Rate Limit Hit: ${response.response}` });
       } else {
-        incrementAiUsage(aiModel);
+        incrementAiUsage();
         let clean = response.response || '';
         if (typeof clean === 'string' && clean.trim().startsWith('{')) {
           try {
@@ -468,7 +467,7 @@ export default function AITest() {
   const resetTimer = `${hrsRem}h ${minsRem}m`;
 
   return (
-    <div className="flex h-[calc(100vh-73px)] overflow-hidden">
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden">
       {/* Thread Sidebar */}
       <aside 
         className={`${isSidebarOpen ? 'w-64' : 'w-0'} bg-[var(--t-surface)] border-r border-[var(--t-border)] transition-all duration-300 flex flex-col overflow-hidden relative shrink-0`}

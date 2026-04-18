@@ -11,7 +11,7 @@ import {
   LayoutDashboard, Users, 
   Settings, Search,
   Bot, Smartphone, StickyNote,
-  CheckCircle, Mail, CloudCheck, Shield, Workflow, Zap,
+  CheckCircle, Mail, CloudCheck, Shield, Workflow,
   Undo2, Redo2, UserCog, Map, Calendar,
   Building2, ChevronDown, ArrowRightLeft, Plus, MessageSquare,
   Loader2, CheckCircle2, Save, Upload, Calculator, FileSignature,
@@ -47,8 +47,7 @@ export function Layout() {
     activeLeadModalId,
     setActiveLeadModalId,
     undo, redo, history, future,
-    manualSave, saveStatus, isSyncing,
-    credits_remaining, refreshCredits
+    manualSave, saveStatus, isSyncing
   } = useStore();
 
   // Auto-save loop (every 5 minutes)
@@ -198,7 +197,7 @@ export function Layout() {
           table: 'profiles',
           filter: `id=eq.${currentUser.id}`
         },
-        (payload) => {
+        (payload: any) => {
           if (payload.new && 'credits_remaining' in payload.new) {
             useStore.setState({ credits_remaining: payload.new.credits_remaining });
           }

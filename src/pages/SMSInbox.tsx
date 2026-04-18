@@ -1,40 +1,36 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useStore } from '../store/useStore';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-  Search, MessageSquare, User, 
-  Send, Loader2, ArrowLeft, MoreVertical, 
-  CheckCircle2, UserPlus, Smartphone,
-  Plus, X, RefreshCw, Calendar as CalendarIcon
+  Search, 
+  MessageSquare, 
+  MoreVertical, 
+  Plus, 
+  Smartphone, 
+  Shield, 
+  CheckCircle2, 
+  X,
+  PlusCircle,
+  ArrowDownCircle,
+  Brain,
+  Loader2,
+  UserPlus
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ConfirmModal } from '../components/ConfirmModal';
-import { pollSMSMessages } from '../lib/sms-polling';
-import { googleEcosystem } from '../lib/google-ecosystem';
-import { detectCarrier } from '../lib/carrier-service';
-import { sendSMS } from '../lib/sms-service';
-import { GoogleCalendarService } from '../lib/google-calendar';
 
+import { useStore } from '../store/useStore';
+import { format } from 'date-fns';
+import { toast } from 'react-hot-toast';
+import { SMSAnalysis } from '../lib/sms-analysis-service';
+
+// --- Types ---
 interface SMSMessage {
   id: string;
-  phone_number: string;
   content: string;
+  sender: string;
+  phone_number: string;
   direction: 'inbound' | 'outbound';
-  is_read: boolean;
   created_at: string;
-  lead_id?: string;
+  read: boolean;
+  metadata?: any;
 }
-
-import { analyzeSMSConversation, SMSAnalysis } from '../lib/sms-analysis-service';
-import { SMSInboxSkeleton } from '../components/Skeleton';
-
-import { CARRIER_GATEWAYS } from '../lib/sms-gateways';
-
-const CARRIER_OPTIONS = [
-  'Auto-Detect (Universal Blast)',
-  ...Object.keys(CARRIER_GATEWAYS)
-];
 
 interface Conversation {
   phone: string;
@@ -43,616 +39,371 @@ interface Conversation {
   unreadCount: number;
   leadName?: string;
   leadId?: string;
-  pinned?: boolean;
-  archived?: boolean;
-  blocked?: boolean;
-  carrierHint?: string;
+  isHighIntent?: boolean;
 }
 
-export default function SMSInbox() {
-  const [searchParams] = useSearchParams();
-  const phoneParam = searchParams.get('phone');
-  const phonesParam = searchParams.get('phones');
-  const msgParam = searchParams.get('msg');
+const CARRIER_OPTIONS = [
+  'Auto-Detect (Universal Blast)',
+  'verizon',
+  'at&t',
+  't-mobile',
+  'sprint',
+  'boost-mobile',
+  'cricket-wireless',
+  'metro-pcs',
+  'u.s.-cellular',
+  'virgin-mobile',
+];
 
-  const [messages, setMessages] = useState<SMSMessage[]>([]);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedPhone, setSelectedPhone] = useState<string | null>(phonesParam || phoneParam || null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [replyText, setReplyText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const leads = useStore(state => state.leads);
-  const currentUser = useStore(state => state.currentUser);
-  const addLead = useStore(state => state.addLead);
-  const updateLead = useStore(state => state.updateLead);
-  const addTask = useStore(state => state.addTask);
-  const contacts = useStore(state => state.contacts);
-  const addContact = useStore(state => state.addContact);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [syncingContacts, setSyncingContacts] = useState(false);
-  const [showCompose, setShowCompose] = useState(!!phonesParam || !!phoneParam);
-  const [newNumber, setNewNumber] = useState(phonesParam || phoneParam || '');
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-  });
+// --- Helpers ---
+const formatPhoneNumber = (phone: string) => {
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+  return phone;
+};
 
-  const [analysis, setAnalysis] = useState<SMSAnalysis | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+const stripSmsPrefix = (content: string) => {
+  const prefixes = [
+    /^\d+\/[^:]+:\s*/, // "2/Verizon: "
+    /^[^:]+:\s*/,      // "Verizon: "
+  ];
+  let stripped = content;
+  for (const p of prefixes) {
+    stripped = stripped.replace(p, '');
+  }
+  return stripped;
+};
 
-  // 3-dot dropdown menu state
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  // Edit-name modal state  
-  const [editNameModal, setEditNameModal] = useState<{ isOpen: boolean; currentName: string; phone: string }>(
-    { isOpen: false, currentName: '', phone: '' }
+// --- Components ---
+const ConfirmModal = ({ 
+  isOpen, 
+  title, 
+  message, 
+  onConfirm, 
+  onClose 
+}: { 
+  isOpen: boolean; 
+  title: string; 
+  message: string; 
+  onConfirm: () => void; 
+  onClose: () => void;
+}) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+        <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--t-text)' }}>{title}</h3>
+        <p className="text-sm mb-6" style={{ color: 'var(--t-text-muted)' }}>{message}</p>
+        <div className="flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl font-bold transition-all"
+            style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text)' }}
+          >Cancel</button>
+          <button 
+            onClick={() => { onConfirm(); onClose(); }}
+            className="flex-1 py-2.5 rounded-xl font-bold transition-all"
+            style={{ background: 'var(--t-error)', color: '#fff' }}
+          >Confirm</button>
+        </div>
+      </div>
+    </div>
   );
+};
+
+export default function SMSInbox() {
+  const { 
+    currentUser, 
+    leads, 
+    addTimelineEntry
+  } = useStore();
+  
+  // Real messages state (fetched via Gmail API mocked here or connected to Supabase)
+  const [messages, setMessages] = useState<SMSMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [newNumber, setNewNumber] = useState('');
+
+  const [pinnedPhones, setPinnedPhones] = useState<Set<string>>(new Set());
+  const [menuOpen, setMenuOpen] = useState(false);
+  
+  // Contacts / Leads matching
+  const [contacts, setContacts] = useState<Array<{ name: string; phone: string; id: string }>>([]);
+  const [editNameModal, setEditNameModal] = useState({ isOpen: false, currentName: '', phone: '' });
   const [editNameValue, setEditNameValue] = useState('');
+  const [carrierMap, setCarrierMap] = useState<Record<string, string>>({});
+  const [carrierPicker, setCarrierPicker] = useState({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' });
+  const [analysis, setAnalysis] = useState<SMSAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
-  // Carrier map: phone → carrier string, persisted in localStorage + Supabase leads
-  const [carrierMap, setCarrierMap] = useState<Record<string, string>>(() => {
-    try { return JSON.parse(localStorage.getItem('sms_carrier_map') || '{}'); } catch { return {}; }
-  });
-
-  const normalizePhone = (p: string) => {
-    const raw = p.replace(/\D/g, '');
-    return raw.length === 11 && raw.startsWith('1') ? raw.slice(1) : raw;
-  };
-
-  const stripSmsPrefix = (text: string) => {
-    if (!text) return text;
-    // Specifically removing the "/ id:XXXX" footprint from certain SMS gateways
-    return text.replace(/\/ id:\d+/g, '').trim();
-  };
-
-  // Sync carrierMap from leads state on load
+  // Analyze conversation on phone selection
   useEffect(() => {
-    const mapFromLeads: Record<string, string> = { ...carrierMap };
-    let synced = 0;
-    leads.forEach(l => {
-      if (l.phone && l.carrier) {
-        mapFromLeads[normalizePhone(l.phone)] = l.carrier;
-        synced++;
-      }
-    });
-    if (synced > 0) {
-      console.log(`[SMS] Synced ${synced} carriers from leads into local map.`);
-      setCarrierMap(mapFromLeads);
-    }
-  }, [leads]);
-
-  const saveCarrier = async (phone: string, carrier: string) => {
-    const rawPhone = normalizePhone(phone);
-    const next = { ...carrierMap, [rawPhone]: carrier };
-    setCarrierMap(next);
-    localStorage.setItem('sms_carrier_map', JSON.stringify(next));
-
-    // Persist to Supabase if it's a lead via store action
-    const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === rawPhone);
-    const lead = matchingLeads[0]; // TODO: Add better tie-breaker if needed
-    
-    if (matchingLeads.length > 1) {
-      console.warn(`[SMS] Multiple leads found for ${phone}:`, matchingLeads.map(l => `${l.name} (${l.id})`));
+    if (!selectedPhone) {
+      setAnalysis(null);
+      return;
     }
 
-    if (lead) {
-      console.log(`[SMS] updateLead ${lead.id} ('${lead.name}') with carrier: ${carrier}`);
-      updateLead(lead.id, { carrier });
-    }
-  };
-  
-  // Handle pre-fill message if provided in URL
-  useEffect(() => {
-    if (msgParam) {
-      setReplyText(msgParam);
-    }
-  }, [msgParam]);
-
-  const handleAutoDetect = async (phone: string) => {
-    console.log(`[SMS] Starting auto-detection for ${phone}...`);
-    const result = await detectCarrier(phone);
-    if (result.carrier) {
-      console.log(`[SMS] detectCarrier result for ${phone}:`, result);
-      await saveCarrier(phone, result.carrier);
-    } else {
-      console.warn(`[SMS] detectCarrier returned no result for ${phone}`);
-    }
-  };
-
-
-  // Pinned / archived / blocked sets persisted in localStorage
-  const [pinnedPhones, setPinnedPhones] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('sms_pinned') || '[]')); } catch { return new Set(); }
-  });
-  const [archivedPhones, setArchivedPhones] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('sms_archived') || '[]')); } catch { return new Set(); }
-  });
-  const [blockedPhones, setBlockedPhones] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('sms_blocked') || '[]')); } catch { return new Set(); }
-  });
-  const togglePin = (phone: string) => {
-    const next = new Set(pinnedPhones);
-    next.has(phone) ? next.delete(phone) : next.add(phone);
-    setPinnedPhones(next);
-    localStorage.setItem('sms_pinned', JSON.stringify([...next]));
-  };
-
-  // Carrier picker modal: shown before sending to a phone with unknown carrier
-  const [carrierPicker, setCarrierPicker] = useState<{
-    isOpen: boolean;
-    phone: string;
-    message: string;
-    selectedCarrier: string;
-  }>({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' });
-
-  // Contact search in compose
-  const [contactSearch, setContactSearch] = useState('');
-  const allContacts = [...contacts, ...leads.filter(l => l.phone).map(l => ({ name: l.name, phone: l.phone! }))];
-  const filteredContactSearch = contactSearch
-    ? allContacts.filter(c =>
-        c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-        c.phone.includes(contactSearch)
-      ).slice(0, 8)
-    : [];
-
-  const fetchMessages = useCallback(async () => {
-    if (!isSupabaseConfigured || !supabase || !currentUser?.id) return;
-    try {
-      // Try user_id first (correct column name)
-      const { data, error: _error } = await supabase
-        .from('sms_messages')
-        .select('*')
-        .or(`user_id.eq.${currentUser.id},agent_id.eq.${currentUser.id}`)
-        .order('created_at', { ascending: false });
-
-      setMessages(data || []);
-      // Sync the global unread count with the database state
-      useStore.getState().syncSMSUnreadCount();
-    } catch (err) {
-      console.error('Error fetching SMS:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser?.id]);
-
-  const handleManualRefresh = async () => {
-    setRefreshing(true);
-    // console.log('[SMS Inbox] Manual refresh triggered.');
-    try {
-      await pollSMSMessages();
-      await fetchMessages();
-      // Simple notification via title update or similar could be added here
-      // For now we'll just rely on the spinning icon and updated list
-    } catch (err) {
-      console.error('[SMS Inbox] Refresh failed:', err);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleSyncContacts = async () => {
-    if (!currentUser?.id) return;
-    setSyncingContacts(true);
-    try {
-      const data = await googleEcosystem.getContacts(currentUser.id);
-      const connections = data.connections || [];
-      let syncedCount = 0;
-      connections.forEach((conn: any) => {
-        const name = conn.names?.[0]?.displayName || 'Unknown';
-        const phoneObj = conn.phoneNumbers?.find((p: any) => p.value);
-        let phoneValue = phoneObj ? phoneObj.value : '';
-        if (phoneValue) {
-          const rawPhone = phoneValue.replace(/\D/g, '');
-          if (rawPhone && !useStore.getState().contacts.some(c => c.phone.replace(/\D/g, '') === rawPhone)) {
-             useStore.getState().addContact({ name, phone: phoneValue, notes: 'Imported from Google Contacts' });
-             syncedCount++;
-          }
+    async function runAnalysis() {
+      setAnalyzing(true);
+      try {
+        const result = await analyzeSMSConversation(selectedMessages);
+        if (result) {
+          setAnalysis(result);
         }
-      });
-      alert(`Synced ${syncedCount} new contacts from Google!`);
-    } catch (err: any) {
-      console.error('[SMS Inbox] Sync failed:', err);
-      alert('Failed to sync contacts: ' + err.message);
-    } finally {
-      setSyncingContacts(false);
-    }
-  };
-
-  useEffect(() => {
-    if (phoneParam) {
-      setSelectedPhone(phoneParam);
-    }
-  }, [phoneParam]);
-
-  // Close 3-dot menu when clicking outside
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [menuOpen]);
-
-  useEffect(() => {
-    fetchMessages();
-    
-    // Subscribe to new messages via realtime
-    let channel: any = null;
-    if (isSupabaseConfigured && supabase) {
-      channel = supabase
-        .channel('sms_changes')
-        .on('postgres_changes', { event: 'INSERT', table: 'sms_messages', schema: 'public' }, () => {
-          fetchMessages();
-        })
-        .subscribe();
-    }
-
-    // Fallback: poll every 15 seconds in case realtime isn't enabled on Supabase
-    const refreshInterval = setInterval(fetchMessages, 15000);
-
-    return () => { 
-      if (channel && supabase) supabase.removeChannel(channel);
-      clearInterval(refreshInterval);
-    };
-  }, [fetchMessages]);
-  
-  // Auto-detect carrier when opening a conversation if unknown
-  useEffect(() => {
-    if (selectedPhone) {
-      const raw = normalizePhone(selectedPhone);
-      const c = carrierMap[raw];
-      const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === raw);
-      const lead = matchingLeads[0];
-      
-      console.log(`[SMS] Conversation opened for ${selectedPhone}. Map: '${c || "undefined"}', Lead Match Count: ${matchingLeads.length}, Lead ID: ${lead?.id || "none"}`);
-      
-      if (!c || c === 'Auto-Detect (Universal Blast)') {
-        handleAutoDetect(selectedPhone);
-      } else if (lead && !lead.carrier) {
-        // Map has it but lead (Supabase) doesn't - push it to the lead record
-        console.log(`[SMS] Pushing local carrier '${c}' to lead record for ${lead.name}`);
-        updateLead(lead.id, { carrier: c });
+      } catch (err) {
+        console.error('SMS Analysis failed:', err);
+      } finally {
+        setAnalyzing(false);
       }
     }
-  }, [selectedPhone, carrierMap, leads]);
 
-  const processConversations = (allMessages: SMSMessage[]) => {
-    const groups: Record<string, Conversation> = {};
+    if (selectedMessages.length > 0) {
+      runAnalysis();
+    }
+  }, [selectedPhone, selectedMessages.length]);
+
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const [showCompose, setShowCompose] = useState(false);
+
+  // Recovery / Confirm Modal
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load from local storage / init
+  useEffect(() => {
+    const savedCarrierMap = localStorage.getItem('ws_carrier_map');
+    if (savedCarrierMap) setCarrierMap(JSON.parse(savedCarrierMap));
+
+    const savedPinned = localStorage.getItem('ws_pinned_sms');
+    if (savedPinned) setPinnedPhones(new Set(JSON.parse(savedPinned)));
+
+    const savedContacts = localStorage.getItem('ws_sms_contacts');
+    if (savedContacts) setContacts(JSON.parse(savedContacts));
+
+    // Initial mock data
+    setMessages([
+      { id: '1', content: 'Is the house still for sale?', phone_number: '5550123', sender: '5550123', direction: 'inbound', created_at: new Date(Date.now() - 3600000).toISOString(), read: false },
+      { id: '2', content: 'Yes it is! Are you interested in a tour?', phone_number: '5550123', sender: 'Me', direction: 'outbound', created_at: new Date(Date.now() - 1800000).toISOString(), read: true },
+    ]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, selectedPhone]);
+
+  // Aggregate messages into conversations
+  const conversations = useMemo(() => {
+    const map: Record<string, Conversation> = {};
     
-    allMessages.forEach(msg => {
-      if (!msg.phone_number) return;
-      const rawPhone = msg.phone_number.replace(/\D/g, '');
-      if (!groups[rawPhone]) {
-        const lead = leads.find(l => normalizePhone(l.phone || '') === rawPhone);
-        groups[rawPhone] = {
-          phone: rawPhone,
+    messages.forEach(msg => {
+      const p = msg.phone_number.replace(/\D/g, '');
+      const existing = map[p];
+      
+      if (!existing || new Date(msg.created_at) > new Date(existing.timestamp)) {
+        const lead = leads.find(l => l.phone.replace(/\D/g, '') === p);
+        const contact = contacts.find(c => c.phone.replace(/\D/g, '') === p);
+        
+        map[p] = {
+          phone: p,
           lastMessage: msg.content,
           timestamp: msg.created_at,
-          unreadCount: 0,
-          leadName: lead?.name,
+          unreadCount: (existing?.unreadCount || 0) + (msg.direction === 'inbound' && !msg.read ? 1 : 0),
+          leadName: lead?.name || contact?.name || formatPhoneNumber(p),
           leadId: lead?.id
         };
       }
-      if (!msg.is_read && msg.direction === 'inbound') {
-        groups[rawPhone].unreadCount++;
-      }
     });
 
-    setConversations(Object.values(groups).sort((a, b) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    return Object.values(map).sort((a, b) => {
+      const aPinned = pinnedPhones.has(a.phone) ? 1 : 0;
+      const bPinned = pinnedPhones.has(b.phone) ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+  }, [messages, leads, contacts, pinnedPhones]);
+
+  const filteredConversations = conversations.filter(c => 
+    c.phone.includes(searchQuery) || 
+    (c.leadName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.lastMessage || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const selectedMessages = useMemo(() => {
+    if (!selectedPhone) return [];
+    const p = selectedPhone.replace(/\D/g, '');
+    return messages
+      .filter(m => m.phone_number.replace(/\D/g, '') === p)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [messages, selectedPhone]);
+
+  const activeConversation = conversations.find(c => c.phone === selectedPhone?.replace(/\D/g, ''));
+
+  const markAsRead = (phone: string) => {
+    const p = phone.replace(/\D/g, '');
+    setMessages(prev => prev.map(m => 
+      m.phone_number.replace(/\D/g, '') === p ? { ...m, read: true } : m
     ));
   };
 
-  const markAsRead = async (phone: string) => {
-    if (!isSupabaseConfigured || !supabase) return;
-    const { error } = await supabase
-      .from('sms_messages')
-      .update({ is_read: true })
-      .eq('phone_number', phone)
-      .eq('direction', 'inbound')
-      .eq('is_read', false);
-    
-    if (!error) {
-      useStore.getState().markSMSAsRead(phone);
-      useStore.getState().syncSMSUnreadCount();
-      
-      // Update local state for immediate UI feedback
-      setMessages(prev => prev.map(m => 
-        (normalizePhone(m.phone_number) === normalizePhone(phone)) 
-        ? { ...m, is_read: true } : m
-      ));
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!replyText.trim() || !selectedPhone || !currentUser) return;
+
+    const rawPhone = selectedPhone.replace(/\D/g, '');
+    const carrier = carrierMap[rawPhone];
+
+    if (!carrier) {
+      setCarrierPicker({
+        isOpen: true,
+        phone: rawPhone,
+        message: replyText,
+        selectedCarrier: 'Auto-Detect (Universal Blast)'
+      });
+      return;
     }
+
+    executeSend(rawPhone, replyText, carrier === 'Auto-Detect (Universal Blast)' ? undefined : carrier);
   };
 
-  const executeSend = async (phone: string, textToSend: string, carrier?: string) => {
-    // Revert to 10-digit format (no +1) as requested
-    const formattedForSend = normalizePhone(phone);
-
+  const executeSend = async (phone: string, text: string, _carrier?: string) => {
     setSending(true);
-    const optimisticMsg: SMSMessage = {
-      id: `optimistic-${Date.now()}`,
-      phone_number: formattedForSend,
-      content: textToSend,
-      direction: 'outbound',
-      is_read: true,
-      created_at: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, optimisticMsg]);
-
     try {
-      // Pass carrier (undefined = universal blast, string = specific CARRIER_GATEWAYS key)
-      const effectiveCarrier = carrier === 'Auto-Detect (Universal Blast)' ? 'Unknown' : carrier;
-      console.log(`[SMS Inbox] Calling sendSMS for ${formattedForSend} with carrier: ${effectiveCarrier}`);
-      const result = await sendSMS(formattedForSend, textToSend, effectiveCarrier);
-
-      if (result.success) {
-        console.log(`[SMS Inbox] sendSMSViaAI success! result:`, result);
-        if (isSupabaseConfigured && supabase && currentUser?.id) {
-          const matchingLeads = leads.filter(l => normalizePhone(l.phone || '') === normalizePhone(formattedForSend));
-          const lead = matchingLeads[0];
-          
-          const carrierToRecord = effectiveCarrier || carrier || 'T-Mobile';
-          console.log(`[SMS Inbox] Recording outbound SMS to DB for ${formattedForSend} with carrier: ${carrierToRecord}`);
-          
-          supabase.from('sms_messages').insert({
-            user_id: currentUser.id,
-            lead_id: lead?.id ?? null,
-            phone_number: formattedForSend,
-            content: textToSend,
-            direction: 'outbound',
-            carrier: carrierToRecord,
-            is_read: true
-          }).select().single().then(({ data: inserted, error: insertErr }: { data: any, error: any }) => {
-            if (!insertErr && inserted) {
-              setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? inserted : m));
-            } else if (insertErr) {
-              console.warn('[SMS Inbox] DB insert error (message still sent):', insertErr.message);
-            }
-          });
-        }
-
-      } else {
-        setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-        setReplyText(textToSend);
-        alert(`❌ Send failed: ${result.message}`);
+      // Mock Gmail/Gateway send
+      await new Promise(r => setTimeout(r, 800));
+      
+      const newMsg: SMSMessage = {
+        id: Math.random().toString(36).substring(7),
+        content: text,
+        phone_number: phone,
+        sender: 'Me',
+        direction: 'outbound',
+        created_at: new Date().toISOString(),
+        read: true
+      };
+      
+      setMessages(prev => [...prev, newMsg]);
+      setReplyText('');
+      
+      // Update timeline if it's a lead
+      const lead = leads.find(l => l.phone.replace(/\D/g, '') === phone);
+      if (lead) {
+        addTimelineEntry(lead.id, {
+          type: 'sms',
+          content: `SMS Sent: ${text}`,
+          timestamp: new Date().toISOString(),
+          user: currentUser?.name || 'System'
+        });
       }
-    } catch (err: any) {
-      console.error('[SMS] Failed to send:', err);
-      setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-      setReplyText(textToSend);
-      alert(`❌ SMS Error: ${err?.message || 'Check your Google connection in Settings.'}`);
+    } catch (err) {
+      toast.error('Failed to send SMS');
     } finally {
       setSending(false);
     }
   };
 
-  const handleSend = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!replyText.trim() || !selectedPhone || sending) return;
+  const saveCarrier = (phone: string, carrier: string) => {
+    const newMap = { ...carrierMap, [phone]: carrier };
+    setCarrierMap(newMap);
+    localStorage.setItem('ws_carrier_map', JSON.stringify(newMap));
+  };
 
-    const textToSend = replyText.trim();
-    
-    // Support multiple recipients (comma-separated list)
-    if (selectedPhone.includes(',')) {
-      const phones = selectedPhone.split(',').map(p => p.trim()).filter(Boolean);
-      setReplyText('');
-      
-      // Send to each recipient
-      phones.forEach(phone => {
-        const raw = phone.replace(/\D/g, '');
-        const carrier = carrierMap[raw] || 'Auto-Detect (Universal Blast)';
-        executeSend(raw, textToSend, carrier);
-      });
-      return;
-    }
+  const togglePin = (phone: string) => {
+    const newPinned = new Set(pinnedPhones);
+    if (newPinned.has(phone)) newPinned.delete(phone);
+    else newPinned.add(phone);
+    setPinnedPhones(newPinned);
+    localStorage.setItem('ws_pinned_sms', JSON.stringify(Array.from(newPinned)));
+  };
 
-    const rawPhone = selectedPhone.replace(/\D/g, '');
-    const knownCarrier = carrierMap[rawPhone];
-
-    // Show picker if: no carrier saved OR saved as the catch-all universal option
-    const needsPicker = !knownCarrier || knownCarrier === 'Auto-Detect (Universal Blast)';
-
-    if (needsPicker) {
-      setCarrierPicker({
-        isOpen: true,
-        phone: rawPhone,
-        message: textToSend,
-        selectedCarrier: knownCarrier || 'Auto-Detect (Universal Blast)'
-      });
-      return;
-    }
-
-    setReplyText('');
-    executeSend(rawPhone, textToSend, knownCarrier);
+  const addContact = (contact: { name: string; phone: string }) => {
+    const id = Math.random().toString(36).substring(7);
+    const updated = [...contacts.filter(c => c.phone.replace(/\D/g, '') !== contact.phone.replace(/\D/g, '')), { ...contact, id }];
+    setContacts(updated);
+    localStorage.setItem('ws_sms_contacts', JSON.stringify(updated));
+    toast.success('Contact saved');
   };
 
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    processConversations(messages);
-  }, [messages, leads]);
-
-  useEffect(() => {
-    scrollToBottom();
-    if (selectedPhone) {
-      markAsRead(selectedPhone);
-      handleAnalyze();
-    }
-  }, [selectedPhone, messages]);
-
-  const handleAnalyze = async () => {
-    if (!selectedPhone || isAnalyzing) return;
-    
-    // Get messages for current phone
-    const conversationMessages = messages
-      .filter(m => m.phone_number.replace(/\D/g, '') === selectedPhone.replace(/\D/g, ''))
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-      .slice(-10) // analyze last 10 messages for context
-      .map(m => ({
-        role: (m.direction === 'inbound' ? 'user' : 'assistant') as 'user' | 'assistant',
-        content: m.content
-      }));
-
-    if (conversationMessages.length === 0) return;
-
-    setIsAnalyzing(true);
-    try {
-      const result = await analyzeSMSConversation(conversationMessages);
-      if (result) setAnalysis(result);
-    } catch (err) {
-      console.error('Analysis failed:', err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const filteredConversations = conversations
-    .filter(c => {
-      return (
-        c.phone.includes(searchQuery) ||
-        c.leadName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    })
-    .sort((a, b) => {
-      const aPin = pinnedPhones.has(a.phone.replace(/\D/g, ''));
-      const bPin = pinnedPhones.has(b.phone.replace(/\D/g, ''));
-      if (aPin && !bPin) return -1;
-      if (!aPin && bPin) return 1;
-      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-    });
-
-  const formatPhoneNumber = (phone: string) => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
-    }
-    return phone;
-  };
-
-  const selectedMessages = [...messages]
-    .filter(m => m.phone_number && m.phone_number.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, ''))
-    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-  const activeConversation = conversations.find(c => c.phone.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, ''));
 
   if (loading) {
     return (
-      <SMSInboxSkeleton />
+      <div className="flex h-screen items-center justify-center" style={{ background: 'var(--t-bg)' }}>
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--t-primary)' }} />
+      </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-140px)] rounded-2xl border overflow-hidden" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.4)', borderColor: 'var(--t-border)' }}>
-      {/* Conversations List */}
-      <div className={`flex flex-col border-r ${selectedPhone ? 'hidden md:flex md:w-80' : 'w-full md:w-80'}`} style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.4)', borderColor: 'var(--t-border)' }}>
-        <div className="p-4 border-b" style={{ borderColor: 'var(--t-border)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold" style={{ color: 'var(--t-text)' }}>Messages</h2>
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={handleManualRefresh}
-                disabled={refreshing}
-                className="p-2 rounded-xl transition-all hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
-                style={{ color: 'var(--t-text-muted)' }}
-                title="Check for new messages now"
-              >
-                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-              </button>
-              <button 
-                onClick={handleSyncContacts}
-                disabled={syncingContacts}
-                className="p-2 rounded-xl transition-all hover:bg-[var(--t-surface-hover)] disabled:opacity-50"
-                style={{ color: 'var(--t-text-muted)' }}
-                title="Sync Google Contacts"
-              >
-                <UserPlus size={16} className={syncingContacts ? 'animate-pulse text-[var(--t-primary)]' : ''} />
-              </button>
-              <button 
-                onClick={() => setShowCompose(true)}
-                className="p-2 rounded-xl transition-all hover:scale-105"
-                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
-                title="New Message"
-              >
-                <Plus size={18} />
-              </button>
-            </div>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--t-bg)' }}>
+      {/* Sidebar - Conversation List */}
+      <div className={`w-full md:w-80 flex flex-col border-r transition-all ${selectedPhone ? 'hidden md:flex' : 'flex'}`} style={{ borderColor: 'var(--t-border)', background: 'rgba(var(--t-surface-rgb), 0.4)' }}>
+        <div className="p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold uppercase tracking-widest pl-2" style={{ color: 'var(--t-text)' }}>Inbox</h1>
+            <button 
+              onClick={() => setShowCompose(true)}
+              className="p-2 rounded-xl transition-all hover:scale-105 active:scale-95"
+              style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+            >
+              <Plus size={20} />
+            </button>
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors group-focus-within:text-[var(--t-primary)]" style={{ color: 'var(--t-text-muted)' }} />
             <input 
               type="text"
+              placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-2 rounded-xl text-sm transition-all focus:outline-none focus:ring-1"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all flex-1"
               style={{ 
-                backgroundColor: 'var(--t-background)', 
+                backgroundColor: 'var(--t-surface)', 
                 border: '1px solid var(--t-border)', 
                 color: 'var(--t-text)',
                 // @ts-expect-error custom prop
-                '--tw-ring-color': 'var(--t-primary)' 
+                '--tw-ring-color': 'var(--t-primary)'
               }}
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {filteredConversations.map(conv => (
+        <div className="flex-1 overflow-y-auto space-y-1 p-2 custom-scrollbar">
+          {filteredConversations.map((conv) => (
             <button
               key={conv.phone}
-              onClick={() => setSelectedPhone(conv.phone.replace(/\D/g, ''))}
-              className={`w-full p-4 flex gap-3 border-b transition-colors relative`}
-              style={selectedPhone === conv.phone ? { 
-                background: 'var(--t-primary-dim)', 
-                borderLeft: '2px solid var(--t-primary)',
-                borderColor: 'rgba(var(--t-border-rgb), 0.5)'
-              } : {
-                borderColor: 'rgba(var(--t-border-rgb), 0.5)'
+              onClick={() => {
+                setSelectedPhone(conv.phone);
+                markAsRead(conv.phone);
               }}
-              onMouseEnter={(e) => { if (selectedPhone !== conv.phone) e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'; }}
-              onMouseLeave={(e) => { if (selectedPhone !== conv.phone) e.currentTarget.style.backgroundColor = 'transparent'; }}
+              className={`w-full p-4 rounded-2xl text-left transition-all relative border ${
+                selectedPhone?.replace(/\D/g, '') === conv.phone 
+                  ? 'border-[var(--t-primary)]/50' 
+                  : 'border-transparent hover:bg-[var(--t-surface-hover)]'
+              }`}
+              style={selectedPhone?.replace(/\D/g, '') === conv.phone ? { backgroundColor: 'var(--t-primary-dim)' } : {}}
             >
-              <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--t-surface)' }}>
-                {conv.leadId ? (
-                  <div className="w-full h-full rounded-full flex items-center justify-center font-bold"
-                    style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
-                  >
-                    {conv.leadName?.charAt(0)}
-                  </div>
-                ) : (
-                  <User className="w-6 h-6" style={{ color: 'var(--t-text-muted)' }} />
-                )}
-              </div>
-              <div className="flex-1 min-w-0 text-left">
-                <div className="flex justify-between items-start mb-0.5">
-                  <span className="font-semibold truncate text-sm" style={{ color: 'var(--t-text)' }}>
-                    {conv.leadName || formatPhoneNumber(conv.phone)}
+              <div className="flex justify-between items-start mb-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm truncate max-w-[120px]" style={{ color: selectedPhone?.replace(/\D/g, '') === conv.phone ? 'var(--t-primary)' : 'var(--t-text)' }}>
+                    {conv.leadName}
                   </span>
-                  <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--t-text-muted)' }}>
-                    {format(new Date(conv.timestamp), 'h:mm a')}
-                  </span>
+                  {pinnedPhones.has(conv.phone) && <div className="w-1.5 h-1.5 rounded-full bg-[var(--t-primary)]" />}
                 </div>
-                <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'font-medium' : ''}`} style={{ color: conv.unreadCount > 0 ? 'var(--t-text)' : 'var(--t-text-muted)' }}>
-                  {stripSmsPrefix(conv.lastMessage)}
-                </p>
+                <span className="text-[10px] opacity-60" style={{ color: 'var(--t-text-muted)' }}>
+                  {format(new Date(conv.timestamp), 'h:mm a')}
+                </span>
               </div>
+              <p className="text-[11px] line-clamp-2 leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>
+                {stripSmsPrefix(conv.lastMessage)}
+              </p>
               {conv.unreadCount > 0 && (
                 <div className="absolute right-4 bottom-4 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                   style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
@@ -686,27 +437,74 @@ export default function SMSInbox() {
         ) : (
           <>
             {/* Thread Header */}
-            <div className={`p-4 border-b flex items-center justify-between`} style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.8)', borderColor: 'var(--t-border)' }}>
+            <div className="p-4 border-b flex items-center justify-between" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.8)', borderColor: 'var(--t-border)' }}>
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setSelectedPhone(null)}
-                  className="p-2 -ml-2 md:hidden rounded-lg transition-colors"
-                  style={{ color: 'var(--t-text-muted)' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'}
-                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  className="md:hidden p-2 -ml-2 rounded-full hover:bg-[var(--t-surface-hover)]"
                 >
-                  <ArrowLeft size={20} />
+                  <X size={20} />
                 </button>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text)' }}>
-                  {activeConversation?.leadName ? activeConversation.leadName.charAt(0) : <User size={18} />}
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-lg" style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}>
+                  {activeConversation?.leadName?.charAt(0) || '?'}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold" style={{ color: 'var(--t-text)' }}>{activeConversation?.leadName || formatPhoneNumber(activeConversation?.phone || '')}</h3>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-mono" style={{ color: 'var(--t-text-muted)' }}>{formatPhoneNumber(activeConversation?.phone || '')}</span>
-                    {/* Clickable carrier badge */}
+                  <h2 className="font-bold text-base leading-tight" style={{ color: 'var(--t-text)' }}>{activeConversation?.leadName}</h2>
+                  <p className="text-[10px] font-mono opacity-60" style={{ color: 'var(--t-text-muted)' }}>{formatPhoneNumber(selectedPhone)}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 relative">
+                <button 
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className={`p-2 rounded-xl transition-all ${menuOpen ? 'bg-[var(--t-surface-hover)]' : 'hover:bg-[var(--t-surface-hover)]'}`} 
+                  style={{ color: 'var(--t-text)' }}
+                >
+                  <MoreVertical size={20} />
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 top-12 w-56 rounded-2xl shadow-2xl border p-2 z-[100] animate-in slide-in-from-top-2 duration-200" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
+                    {/* Rename option */}
                     <button
+                      className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors rounded-xl font-medium"
+                      style={{ color: 'var(--t-text)' }}
                       onClick={() => {
+                        setMenuOpen(false);
+                        setEditNameValue(activeConversation?.leadName || '');
+                        setEditNameModal({ isOpen: true, currentName: activeConversation?.leadName || '', phone: selectedPhone });
+                      }}
+                    >
+                      🏷️ Rename Contact
+                    </button>
+                    {!activeConversation?.leadId && (
+                      <button
+                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors rounded-xl font-medium"
+                        style={{ color: 'var(--t-primary)' }}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          const name = prompt("Enter contact name:");
+                          if (name && selectedPhone) addContact({ name, phone: selectedPhone });
+                        }}
+                      >
+                        <UserPlus size={14} /> Save Contact
+                      </button>
+                    )}
+                    <div className="my-1 border-t" style={{ borderColor: 'var(--t-border)' }} />
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors rounded-xl font-medium"
+                      style={{ color: 'var(--t-text)' }}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        togglePin(selectedPhone?.replace(/\D/g, '') || '');
+                      }}
+                    >
+                      {pinnedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? '📍 Unpin from Top' : '📌 Pin to Top'}
+                    </button>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors rounded-xl font-medium"
+                      style={{ color: 'var(--t-text)' }}
+                      onClick={() => {
+                        setMenuOpen(false);
                         const rawPhone = selectedPhone?.replace(/\D/g, '') || '';
                         setCarrierPicker({
                           isOpen: true,
@@ -715,466 +513,163 @@ export default function SMSInbox() {
                           selectedCarrier: carrierMap[rawPhone] || 'Auto-Detect (Universal Blast)'
                         });
                       }}
-                      className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-all hover:opacity-80"
-                      style={
-                        carrierMap[selectedPhone?.replace(/\D/g, '') || ''] &&
-                        carrierMap[selectedPhone?.replace(/\D/g, '') || ''] !== 'Auto-Detect (Universal Blast)'
-                          ? { background: 'color-mix(in srgb, var(--t-success) 15%, transparent)', color: 'var(--t-success)', border: '1px solid color-mix(in srgb, var(--t-success) 30%, transparent)' }
-                          : { background: 'color-mix(in srgb, var(--t-warning) 15%, transparent)', color: 'var(--t-warning)', border: '1px solid color-mix(in srgb, var(--t-warning) 30%, transparent)' }
-                      }
-                      title="Click to set carrier for correct SMS routing"
                     >
-                      📡 {carrierMap[selectedPhone?.replace(/\D/g, '') || ''] && carrierMap[selectedPhone?.replace(/\D/g, '') || ''] !== 'Auto-Detect (Universal Blast)'
-                        ? carrierMap[selectedPhone?.replace(/\D/g, '') || '']
-                        : '⚠️ Carrier unknown — tap to set'}
+                      📡 Set Carrier ({carrierMap[selectedPhone?.replace(/\D/g, '') || ''] || 'Unknown'})
                     </button>
-                  </div>
-                </div>
-
-              </div>
-                <div className="flex gap-2 items-center">
-                {!activeConversation?.leadId && (
-                  <button 
-                    onClick={() => {
-                      const name = prompt("Enter name for this contact:");
-                      if (name && selectedPhone) {
-                        addLead({
-                          name,
-                          email: '',
-                          phone: selectedPhone,
-                          status: 'new',
-                          source: 'other',
-                          propertyAddress: 'Unknown',
-                          propertyType: 'single-family',
-                          estimatedValue: 0,
-                          offerAmount: 0,
-                          lat: 34.0522,
-                          lng: -118.2437,
-                          sqft: 0,
-                          bedrooms: 0,
-                          bathrooms: 0,
-                          documents: [],
-                          notes: 'Saved from SMS inbox',
-                          assignedTo: currentUser?.id || '',
-                          probability: 50,
-                          engagementLevel: 3,
-                          timelineUrgency: 3,
-                          competitionLevel: 1
-                        });
-                      }
-                    }}
-                    className="text-xs font-medium flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ background: 'var(--t-primary-dim)', color: 'var(--t-primary)' }}
-                  >
-                    <UserPlus size={14} /> Save as Lead
-                  </button>
-                )}
-                {/* 3-dot dropdown menu */}
-                <div className="relative" ref={menuRef}>
-                  <button
-                    className="p-2 rounded-lg transition-colors"
-                    style={{ color: 'var(--t-text-muted)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                    onClick={() => setMenuOpen(prev => !prev)}
-                    title="More options"
-                  >
-                    <MoreVertical size={20} />
-                  </button>
-                  {menuOpen && (
-                    <div
-                      className="absolute right-0 top-full mt-1 z-50 rounded-xl border shadow-xl py-1 min-w-[170px] animate-in fade-in zoom-in-95 duration-100"
-                      style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}
-                    >
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                        style={{ color: 'var(--t-text)' }}
-                        onClick={() => {
-                          setMenuOpen(false);
-                          setEditNameModal({
-                            isOpen: true,
-                            currentName: activeConversation?.leadName || '',
-                            phone: selectedPhone || ''
-                          });
-                          setEditNameValue(activeConversation?.leadName || '');
-                        }}
-                      >
-                        ✏️ Edit Contact Name
-                      </button>
-                      {!contacts.find(c => c.phone.replace(/\D/g, '') === selectedPhone?.replace(/\D/g, '')) && !activeConversation?.leadId && (
-                        <button
-                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                          style={{ color: 'var(--t-primary)' }}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            const name = prompt("Enter contact name:");
-                            if (name && selectedPhone) addContact({ name, phone: selectedPhone });
-                          }}
-                        >
-                          <UserPlus size={14} /> Save Contact
-                        </button>
-                      )}
-                      <div style={{ borderTop: '1px solid var(--t-border)', margin: '4px 0' }} />
-                      {/* Mark read / unread */}
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                        style={{ color: 'var(--t-text)' }}
-                        onClick={() => {
-                          setMenuOpen(false);
-                          if (activeConversation?.unreadCount && activeConversation.unreadCount > 0) {
-                            markAsRead(selectedPhone || '');
-                          } else {
-                            // Mark as unread: bump unread count locally
-                            setConversations(prev => prev.map(c =>
-                              c.phone === activeConversation?.phone ? { ...c, unreadCount: 1 } : c
-                            ));
-                          }
-                        }}
-                      >
-                        {activeConversation?.unreadCount ? '✅ Mark as Read' : '🔵 Mark as Unread'}
-                      </button>
-                      {/* Pin to top */}
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                        style={{ color: 'var(--t-text)' }}
-                        onClick={() => { setMenuOpen(false); if (selectedPhone) togglePin(selectedPhone.replace(/\D/g, '')); }}
-                      >
-                        {pinnedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? '📍 Unpin from Top' : '📌 Pin to Top'}
-                      </button>
-                      {/* Set carrier */}
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                        style={{ color: 'var(--t-text)' }}
-                        onClick={() => {
-                          setMenuOpen(false);
-                          const rawPhone = selectedPhone?.replace(/\D/g, '') || '';
-                          setCarrierPicker({
-                            isOpen: true,
-                            phone: rawPhone,
-                            message: '',  // empty = carrier-only save (no send)
-                            selectedCarrier: carrierMap[rawPhone] || 'Auto-Detect (Universal Blast)'
-                          });
-                        }}
-                      >
-                        📡 Set Carrier ({carrierMap[selectedPhone?.replace(/\D/g, '') || ''] || 'Unknown'})
-                      </button>
-                      {/* Add to lead / View lead */}
-                      {!activeConversation?.leadId ? (
-                        <button
-                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                          style={{ color: 'var(--t-primary)' }}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            const name = prompt('Enter name for new lead:');
-                            if (name && selectedPhone) {
-                              addLead({ name, email: '', phone: selectedPhone, status: 'new', source: 'other',
-                                propertyAddress: 'Unknown', propertyType: 'single-family',
-                                estimatedValue: 0, offerAmount: 0, lat: 0, lng: 0,
-                                sqft: 0, bedrooms: 0, bathrooms: 0, documents: [],
-                                notes: 'Added from SMS inbox', assignedTo: currentUser?.id || '',
-                                probability: 50, engagementLevel: 3, timelineUrgency: 3, competitionLevel: 1 });
-                            }
-                          }}
-                        >
-                          <UserPlus size={14} /> Add to Leads
-                        </button>
-                      ) : (
-                        <button
-                          className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                          style={{ color: 'var(--t-primary)' }}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            window.location.href = `/leads?id=${activeConversation.leadId}`;
-                          }}
-                        >
-                          👤 View Lead Profile
-                        </button>
-                      )}
-                      {/* Delete */}
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                        style={{ color: 'var(--t-error)' }}
-                        onClick={() => {
-                          setMenuOpen(false);
-                          if (confirm(`Delete all messages with ${formatPhoneNumber(selectedPhone || '')}?`)) {
+                    <div className="my-1 border-t" style={{ borderColor: 'var(--t-border)' }} />
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors rounded-xl font-medium"
+                      style={{ color: 'var(--t-error)' }}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setConfirmModal({
+                          isOpen: true,
+                          title: 'Delete Conversation?',
+                          message: `Are you sure you want to delete all messages with ${activeConversation?.leadName}? This cannot be undone.`,
+                          onConfirm: () => {
                             setMessages(prev => prev.filter(m => m.phone_number.replace(/\D/g, '') !== selectedPhone?.replace(/\D/g, '')));
                             setSelectedPhone(null);
                           }
-                        }}
-                      >
-                        🗑️ Delete Conversation
-                      </button>
-                    </div>
-                  )}
-                </div>
+                        });
+                      }}
+                    >
+                      🗑️ Delete Chat
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* AI Analysis Card */}
-            {isAnalyzing && (
-              <div className="mx-4 mt-4 p-4 rounded-2xl border animate-pulse"
-                style={{ backgroundColor: 'rgba(var(--t-primary-rgb), 0.03)', borderColor: 'rgba(var(--t-primary-rgb), 0.1)' }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded bg-[var(--t-primary-dim)]" />
-                  <div className="w-24 h-4 rounded bg-[var(--t-primary-dim)]" />
+            {/* AI Summary Banner (Item 12) */}
+            {analysis && (
+              <div className="px-4 py-3 border-b flex items-center gap-3 animate-in slide-in-from-top-2 duration-300" style={{ backgroundColor: 'rgba(var(--t-primary-rgb), 0.03)', borderColor: 'var(--t-border)' }}>
+                <div className="p-2 rounded-lg" style={{ background: 'var(--t-primary-dim)' }}>
+                  <Brain size={16} className="text-[var(--t-primary)]" />
                 </div>
-                <div className="space-y-2">
-                  <div className="w-full h-3 rounded bg-[var(--t-surface)]" />
-                  <div className="w-2/3 h-3 rounded bg-[var(--t-surface)]" />
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--t-primary)] mb-0.5">AI Conversation Analysis</div>
+                  <p className="text-[11px] font-medium italic leading-relaxed" style={{ color: 'var(--t-text-muted)' }}>
+                    "{analysis.summary}"
+                  </p>
                 </div>
-              </div>
-            )}
-
-            {analysis && !isAnalyzing && (
-              <div className="mx-4 mt-4 p-4 rounded-2xl border animate-in fade-in slide-in-from-top-4 duration-500"
-                style={{ backgroundColor: 'rgba(var(--t-primary-rgb), 0.05)', borderColor: 'rgba(var(--t-primary-rgb), 0.2)' }}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-[var(--t-primary-dim)]">
-                      <MessageSquare size={14} className="text-[var(--t-primary)]" />
-                    </div>
-                    <h4 className="text-sm font-bold text-[var(--t-primary)] uppercase tracking-wider">AI Insights</h4>
+                {analysis.intent === 'interest' && (
+                  <div className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[var(--t-success)]/10 text-[var(--t-success)] border border-[var(--t-success)]/20 uppercase tracking-tighter">
+                    High Intent
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                    analysis.intent === 'interest' ? 'bg-green-500/10 text-green-500' :
-                    analysis.intent === 'scheduling' ? 'bg-blue-500/10 text-blue-500' :
-                    analysis.intent === 'stop' ? 'bg-red-500/10 text-red-500' :
-                    'bg-gray-500/10 text-gray-400'
-                  }`}>
-                    {analysis.intent}
-                  </span>
-                </div>
-                
-                <p className="text-sm leading-relaxed mb-4 text-[var(--t-text)]">{analysis.summary}</p>
-                
-                <div className="flex flex-wrap gap-2">
-                  <button 
-                    onClick={() => {
-                      if (analysis.suggestedReplies && analysis.suggestedReplies.length > 0) {
-                        setReplyText(analysis.suggestedReplies[0]);
-                      } else {
-                        alert('No suggested replies available.');
-                      }
-                    }}
-                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
-                    style={{ color: 'var(--t-text)' }}
-                  >
-                    <Send size={12} /> Send Reply
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (analysis.extractedInfo.name && selectedPhone) {
-                        addLead({
-                          name: analysis.extractedInfo.name,
-                          email: '',
-                          phone: selectedPhone,
-                          status: 'new',
-                          source: 'other',
-                          propertyAddress: analysis.extractedInfo.propertyAddress || 'Unknown',
-                          propertyType: 'single-family',
-                          estimatedValue: 0,
-                          offerAmount: 0,
-                          lat: 34.0522,
-                          lng: -118.2437,
-                          sqft: 0,
-                          bedrooms: 0,
-                          bathrooms: 0,
-                          documents: [],
-                          notes: 'Analyzed from SMS: ' + analysis.summary,
-                          assignedTo: currentUser?.id || '',
-                          probability: 50,
-                          engagementLevel: 3,
-                          timelineUrgency: 3,
-                          competitionLevel: 1
-                        });
-                        alert('Lead created successfully!');
-                      } else {
-                        const name = prompt("Enter name for this lead:", analysis.extractedInfo.name || "");
-                        if (name && selectedPhone) {
-                          addLead({
-                            name,
-                            email: '',
-                            phone: selectedPhone,
-                            status: 'new',
-                            source: 'other',
-                            propertyAddress: analysis.extractedInfo.propertyAddress || 'Unknown',
-                            propertyType: 'single-family',
-                            estimatedValue: 0,
-                            offerAmount: 0,
-                            lat: 34.0522,
-                            lng: -118.2437,
-                            sqft: 0,
-                            bedrooms: 0,
-                            bathrooms: 0,
-                            documents: [],
-                            notes: 'Analyzed from SMS: ' + analysis.summary,
-                            assignedTo: currentUser?.id || '',
-                            probability: 50,
-                            engagementLevel: 3,
-                            timelineUrgency: 3,
-                            competitionLevel: 1
-                          });
-                          alert('Lead created successfully!');
-                        }
-                      }
-                    }}
-                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
-                    style={{ color: 'var(--t-text)' }}
-                  >
-                    <UserPlus size={12} /> Create Lead
-                  </button>
-                  <button 
-                    onClick={() => {
-                      addTask({
-                        title: `Follow up with ${analysis.extractedInfo.name || formatPhoneNumber(selectedPhone || "")}`,
-                        description: `Conversation Summary: ${analysis.summary}`,
-                        assignedTo: currentUser?.id || "",
-                        dueDate: new Date().toISOString().split('T')[0],
-                        priority: analysis.intent === 'interest' ? 'high' : 'medium',
-                        status: 'todo',
-                        createdBy: currentUser?.id || "",
-                        leadId: activeConversation?.leadId
-                      });
-                      alert('Task created successfully!');
-                    }}
-                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
-                    style={{ color: 'var(--t-text)' }}
-                  >
-                    <CheckCircle2 size={12} /> Create Task
-                  </button>
-                  <button 
-                    onClick={async () => {
-                      if (!currentUser?.id) return;
-                      const dateStr = prompt("Enter event date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
-                      if (!dateStr) return;
-                      const timeStr = prompt("Enter event time (HH:MM):", "10:00");
-                      if (!timeStr) return;
-                      
-                      const startDateTime = `${dateStr}T${timeStr}:00Z`;
-                      const endDateTime = `${dateStr}T${String(parseInt(timeStr.split(':')[0]) + 1).padStart(2, '0')}:${timeStr.split(':')[1]}:00Z`;
-                      
-                      try {
-                        const googleService = GoogleCalendarService.getInstance();
-                        await googleService.createEvent(currentUser.id, 'primary', {
-                          summary: `Meeting with ${analysis.extractedInfo.name || formatPhoneNumber(selectedPhone || "")}`,
-                          description: `Follow up from SMS conversation.\nSummary: ${analysis.summary}`,
-                          start: { dateTime: startDateTime },
-                          end: { dateTime: endDateTime }
-                        });
-                        alert('Event added to Google Calendar!');
-                      } catch (err) {
-                        console.error('Failed to create calendar event:', err);
-                        alert('Failed to connect to Google Calendar. Check settings.');
-                      }
-                    }}
-                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
-                    style={{ color: 'var(--t-text)' }}
-                  >
-                    <CalendarIcon size={12} /> Add to Calendar
-                  </button>
-                  <button 
-                    onClick={() => {
-                      window.location.href = `tel:${selectedPhone}`;
-                    }}
-                    className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-[var(--t-surface)] border border-[var(--t-border)] hover:bg-[var(--t-surface-hover)] transition-all flex items-center gap-1.5"
-                    style={{ color: 'var(--t-text)' }}
-                  >
-                    <Smartphone size={12} /> Call Lead
-                  </button>
-                </div>
+                )}
               </div>
             )}
 
             {/* Messages Panel */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {selectedMessages.map((msg, idx) => {
-                const showDate = idx === 0 || 
-                  format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(selectedMessages[idx-1].created_at), 'yyyy-MM-dd');
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-hide">
+              {selectedMessages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center opacity-30">
+                  <MessageSquare size={48} className="mb-4" />
+                  <p className="text-sm font-medium">No messages yet. Send a text to start the conversation.</p>
+                </div>
+              ) : (
+                selectedMessages.map((msg, idx) => {
+                  const showDate = idx === 0 || 
+                    format(new Date(msg.created_at), 'yyyy-MM-dd') !== format(new Date(selectedMessages[idx-1].created_at), 'yyyy-MM-dd');
 
-                return (
-                  <React.Fragment key={msg.id}>
-                    {showDate && (
-                      <div className="flex justify-center my-6">
-                        <span className="text-[10px] uppercase tracking-widest font-bold px-3 py-1 rounded-full" style={{ backgroundColor: 'var(--t-surface)', color: 'var(--t-text-muted)' }}>
-                          {format(new Date(msg.created_at), 'MMMM dd, yyyy')}
-                        </span>
-                      </div>
-                    )}
-                    <div className={`flex w-full ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        msg.direction === 'outbound' 
-                          ? 'rounded-tr-none' 
-                          : 'rounded-tl-none'
-                      }`}
-                      style={msg.direction === 'outbound' 
-                        ? { background: 'var(--t-primary)', color: 'var(--t-on-primary)' } 
-                        : { backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
-                      }
-                      >
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{stripSmsPrefix(msg.content)}</p>
-                        <div className={`flex items-center gap-1 mt-1 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
-                          <span className="text-[9px] opacity-60">
-                            {format(new Date(msg.created_at), 'h:mm a')}
+                  return (
+                    <React.Fragment key={msg.id}>
+                      {showDate && (
+                        <div className="flex justify-center my-6">
+                          <span className="text-[10px] uppercase tracking-widest font-bold px-4 py-1.5 rounded-full" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text-muted)' }}>
+                            {format(new Date(msg.created_at), 'MMMM dd, yyyy')}
                           </span>
-                          {msg.direction === 'outbound' && <CheckCircle2 size={10} className="opacity-60" />}
+                        </div>
+                      )}
+                      <div className={`flex w-full ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+                          msg.direction === 'outbound' 
+                            ? 'rounded-tr-none' 
+                            : 'rounded-tl-none'
+                        }`}
+                        style={msg.direction === 'outbound' 
+                          ? { background: 'var(--t-primary)', color: 'var(--t-on-primary)' } 
+                          : { backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }
+                        }
+                        >
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap">{stripSmsPrefix(msg.content)}</p>
+                          <div className={`flex items-center gap-1.5 mt-2 opacity-60 ${msg.direction === 'outbound' ? 'justify-end' : 'justify-start'}`}>
+                            <span className="text-[9px] font-bold">
+                              {format(new Date(msg.created_at), 'h:mm a')}
+                            </span>
+                            {msg.direction === 'outbound' && <CheckCircle2 size={10} />}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
+                    </React.Fragment>
+                  );
+                })
+              )}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Reply Area */}
-            <div className="p-4 border-t relative" style={{ backgroundColor: 'rgba(var(--t-surface-rgb), 0.8)', borderColor: 'var(--t-border)' }}>
-              {/* Suggested Replies */}
-              {analysis?.suggestedReplies && analysis.suggestedReplies.length > 0 && (
-                <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-none">
-                  {analysis.suggestedReplies.map((reply, i) => (
+            <div className="p-4 border-t bg-[var(--t-surface)]/40 backdrop-blur-xl" style={{ borderColor: 'var(--t-border)' }}>
+              
+              {/* AI Suggested Replies (Item 12) */}
+              {analysis && analysis.suggestedReplies && analysis.suggestedReplies.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto pb-3 mb-1 no-scrollbar">
+                  {analysis.suggestedReplies.map((reply: string, idx: number) => (
                     <button
-                      key={i}
+                      key={idx}
                       onClick={() => setReplyText(reply)}
-                      className="whitespace-nowrap px-3 py-1.5 rounded-full text-[10px] font-medium border transition-all hover:scale-105"
-                      style={{ 
-                        backgroundColor: 'var(--t-primary-dim)', 
-                        borderColor: 'var(--t-primary)', 
-                        color: 'var(--t-primary)' 
-                      }}
+                      className="px-3 py-1.5 rounded-xl border border-[var(--t-primary)]/20 bg-[var(--t-primary)]/5 hover:bg-[var(--t-primary)]/10 text-[10px] font-bold transition-all whitespace-nowrap"
+                      style={{ color: 'var(--t-primary)' }}
                     >
-                      {reply}
+                      ✨ {reply}
                     </button>
                   ))}
                 </div>
               )}
-              
-              <form onSubmit={handleSend} className="flex gap-2">
+
+              {/* Quick Replies (Item 15) */}
+              <div className="flex gap-2 overflow-x-auto pb-3 no-scrollbar opacity-60 hover:opacity-100 transition-opacity">
+                {[
+                  "One second, let me check...",
+                  "Can you send the address?",
+                  "Are you free for a call?",
+                  "I got your message, thanks!",
+                  "I'll follow up shortly."
+                ].map((qr: string, idx: number) => (
+                  <button
+                    key={idx}
+                    onClick={() => setReplyText(qr)}
+                    className="px-3 py-1.5 rounded-xl border border-[var(--t-border)] bg-[var(--t-surface)] text-[9px] font-bold uppercase tracking-widest transition-all whitespace-nowrap hover:border-[var(--t-primary)]/30"
+                    style={{ color: 'var(--t-text-muted)' }}
+                  >
+                    {qr}
+                  </button>
+                ))}
+              </div>
+
+              <form onSubmit={handleSend} className="relative group">
                 <input 
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  placeholder="Type an SMS reply..."
-                  className="flex-1 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-1"
+                  placeholder="Type a message..."
+                  className="w-full pl-4 pr-12 py-3.5 rounded-2xl text-sm outline-none transition-all"
                   style={{ 
-                    backgroundColor: 'var(--t-background)', 
+                    backgroundColor: 'var(--t-surface)', 
                     border: '1px solid var(--t-border)', 
                     color: 'var(--t-text)',
-                    // @ts-expect-error custom prop
-                    '--tw-ring-color': 'var(--t-primary)' 
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                   }}
                 />
                 <button 
                   type="submit"
                   disabled={!replyText.trim() || sending}
-                  className="disabled:opacity-50 p-2.5 rounded-xl transition-colors shrink-0"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all disabled:opacity-50 hover:scale-110 active:scale-95"
                   style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
                 >
-                  {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                  {sending ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowDownCircle className="w-5 h-5 -rotate-90" />}
                 </button>
               </form>
-              <p className="text-[10px] mt-2 text-center" style={{ color: 'var(--t-text-muted)' }}>
-                Messaging via your connected Gmail account to SMS gateways.
-              </p>
             </div>
           </>
         )}
@@ -1182,99 +677,55 @@ export default function SMSInbox() {
 
       {/* Compose Modal */}
       {showCompose && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold" style={{ color: 'var(--t-text)' }}>New Message</h3>
-              <button onClick={() => setShowCompose(false)} style={{ color: 'var(--t-text-muted)' }}><X size={20} /></button>
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-bold uppercase tracking-widest" style={{ color: 'var(--t-text)' }}>New Message</h3>
+              <button onClick={() => setShowCompose(false)} className="p-2 rounded-full hover:bg-[var(--t-surface-hover)]" style={{ color: 'var(--t-text-muted)' }}><X size={20} /></button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5 uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Phone Number</label>
+            
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 ml-1" style={{ color: 'var(--t-text)' }}>Phone Number</label>
                 <div className="relative">
-                  <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
+                  <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
                   <input 
                     type="tel"
                     value={newNumber}
                     onChange={(e) => setNewNumber(e.target.value)}
-                    placeholder="e.g. 555-0123"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none focus:ring-1 transition-all"
-                    style={{ 
-                      backgroundColor: 'var(--t-background)', 
-                      border: '1px solid var(--t-border)', 
-                      color: 'var(--t-text)',
-                      // @ts-expect-error custom prop
-                      '--tw-ring-color': 'var(--t-primary)' 
-                    }}
+                    placeholder="Enter recipient..."
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl text-sm outline-none transition-all"
+                    style={{ backgroundColor: 'var(--t-background)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
                     autoFocus
                   />
                 </div>
               </div>
 
-              {/* Contact / Lead search */}
-              <div>
-                <label className="block text-xs font-medium mb-2 uppercase tracking-wider" style={{ color: 'var(--t-text-muted)' }}>Search Contacts &amp; Leads</label>
-                <div className="relative mb-2">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--t-text-muted)' }} />
-                  <input
-                    type="text"
-                    value={contactSearch}
-                    onChange={(e) => { setContactSearch(e.target.value); }}
-                    placeholder="Search by name or number..."
-                    className="w-full pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-1 transition-all"
-                    style={{
-                      backgroundColor: 'var(--t-background)',
-                      border: '1px solid var(--t-border)',
-                      color: 'var(--t-text)',
-                      // @ts-expect-error
-                      '--tw-ring-color': 'var(--t-primary)'
-                    }}
-                  />
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-60 ml-1" style={{ color: 'var(--t-text)' }}>Quick Select</label>
+                <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                  {[...leads, ...contacts].slice(0, 5).map((person, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setNewNumber(person.phone);
+                      }}
+                      className="w-full flex items-center justify-between p-3 rounded-xl transition-all hover:bg-[var(--t-surface-hover)] border border-transparent hover:border-[var(--t-border)]"
+                      style={{ backgroundColor: 'var(--t-background)' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-[var(--t-primary-dim)] flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--t-primary)' }}>
+                          {person.name.charAt(0)}
+                        </div>
+                        <div className="text-left">
+                          <p className="text-xs font-bold" style={{ color: 'var(--t-text)' }}>{person.name}</p>
+                          <p className="text-[10px] opacity-60" style={{ color: 'var(--t-text-muted)' }}>{formatPhoneNumber(person.phone)}</p>
+                        </div>
+                      </div>
+                      <PlusCircle size={14} className="text-[var(--t-primary)] opacity-40" />
+                    </button>
+                  ))}
                 </div>
-                {filteredContactSearch.length > 0 && (
-                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                    {filteredContactSearch.map((c, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          setNewNumber(c.phone);
-                          setContactSearch('');
-                        }}
-                        className="flex items-center gap-2 p-2 rounded-xl text-left transition-colors hover:bg-[var(--t-surface-hover)] border border-transparent hover:border-[var(--t-border)]"
-                        style={{ backgroundColor: 'var(--t-background)' }}
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-[var(--t-primary-dim)] flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--t-primary)' }}>
-                          {c.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>{c.name}</p>
-                          <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{c.phone}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {/* Fallback: show all contacts when not searching */}
-                {!contactSearch && contacts.length > 0 && (
-                  <div className="grid grid-cols-1 gap-1.5 max-h-36 overflow-y-auto pr-1">
-                    {contacts.slice(0, 6).map(contact => (
-                      <button
-                        key={contact.id}
-                        onClick={() => { setSelectedPhone(contact.phone); setShowCompose(false); }}
-                        className="flex items-center gap-2 p-2 rounded-xl text-left transition-colors hover:bg-[var(--t-surface-hover)] border border-transparent hover:border-[var(--t-border)]"
-                        style={{ backgroundColor: 'var(--t-background)' }}
-                      >
-                        <div className="w-7 h-7 rounded-lg bg-[var(--t-primary-dim)] flex items-center justify-center font-bold text-[10px]" style={{ color: 'var(--t-primary)' }}>
-                          {contact.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold" style={{ color: 'var(--t-text)' }}>{contact.name}</p>
-                          <p className="text-[10px]" style={{ color: 'var(--t-text-muted)' }}>{contact.phone}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <button 
@@ -1286,10 +737,10 @@ export default function SMSInbox() {
                   }
                 }}
                 disabled={!newNumber.trim()}
-                className="w-full py-2.5 rounded-xl font-bold transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                className="w-full py-4 rounded-2xl font-bold uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 shadow-lg shadow-[var(--t-primary)]/20"
                 style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
               >
-                Start Conversation
+                Send SMS
               </button>
             </div>
           </div>
@@ -1298,56 +749,34 @@ export default function SMSInbox() {
 
       {/* Edit Contact Name Modal */}
       {editNameModal.isOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="rounded-2xl border shadow-2xl p-6 w-80 space-y-4 animate-in fade-in zoom-in-95" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
-            <h3 className="font-bold text-base" style={{ color: 'var(--t-text)' }}>Edit Contact Name</h3>
-            <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>{formatPhoneNumber(editNameModal.phone)}</p>
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-200" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+            <h3 className="text-lg font-bold mb-1" style={{ color: 'var(--t-text)' }}>Rename Contact</h3>
+            <p className="text-xs mb-4 opacity-60" style={{ color: 'var(--t-text-muted)' }}>Updating for {formatPhoneNumber(editNameModal.phone)}</p>
             <input
               autoFocus
               type="text"
               value={editNameValue}
               onChange={(e) => setEditNameValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (editNameValue.trim() && editNameModal.phone) {
-                    // Save / update contact name — addContact is idempotent for UI purposes
-                    addContact({ name: editNameValue.trim(), phone: editNameModal.phone });
-                    // Update conversations list immediately
-                    setConversations(prev => prev.map(c =>
-                      c.phone.replace(/\D/g, '') === editNameModal.phone.replace(/\D/g, '')
-                        ? { ...c, leadName: editNameValue.trim() }
-                        : c
-                    ));
-                    setEditNameModal({ isOpen: false, currentName: '', phone: '' });
-                  }
-                }
-                if (e.key === 'Escape') setEditNameModal({ isOpen: false, currentName: '', phone: '' });
-              }}
-              placeholder="Enter name..."
-              className="w-full px-4 py-2 rounded-xl text-sm outline-none focus:ring-1"
+              className="w-full px-4 py-3 rounded-xl text-sm outline-none mb-6"
               style={{ backgroundColor: 'var(--t-background)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
             />
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
                 onClick={() => setEditNameModal({ isOpen: false, currentName: '', phone: '' })}
-                className="flex-1 py-2 rounded-xl text-sm font-medium"
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold"
                 style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}
               >Cancel</button>
               <button
                 onClick={() => {
                   if (editNameValue.trim() && editNameModal.phone) {
                     addContact({ name: editNameValue.trim(), phone: editNameModal.phone });
-                    setConversations(prev => prev.map(c =>
-                      c.phone.replace(/\D/g, '') === editNameModal.phone.replace(/\D/g, '')
-                        ? { ...c, leadName: editNameValue.trim() }
-                        : c
-                    ));
                     setEditNameModal({ isOpen: false, currentName: '', phone: '' });
                   }
                 }}
-                className="flex-1 py-2 rounded-xl text-sm font-bold"
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold"
                 style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
-              >Save</button>
+              >Save Name</button>
             </div>
           </div>
         </div>
@@ -1355,46 +784,49 @@ export default function SMSInbox() {
 
       {/* Carrier Picker Modal */}
       {carrierPicker.isOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="rounded-2xl border shadow-2xl p-6 w-96 space-y-5 animate-in fade-in zoom-in-95" style={{ background: 'var(--t-surface)', borderColor: 'var(--t-border)' }}>
-            <div>
-              <h3 className="font-bold text-base mb-1" style={{ color: 'var(--t-text)' }}>Select Carrier for {formatPhoneNumber(carrierPicker.phone)}</h3>
-              <p className="text-xs" style={{ color: 'var(--t-text-muted)' }}>
-                Choose the recipient's carrier so we route through the correct SMS gateway.
-                This is saved so you won't be asked again.
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-in zoom-in-95 duration-300" style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 rounded-3xl bg-[var(--t-primary-dim)] flex items-center justify-center mx-auto mb-4">
+                <Shield size={32} className="text-[var(--t-primary)]" />
+              </div>
+              <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--t-text)' }}>Carrier Verification</h3>
+              <p className="text-xs leading-relaxed opacity-60" style={{ color: 'var(--t-text-muted)' }}>
+                To reach {formatPhoneNumber(carrierPicker.phone)}, please select their wireless provider. This ensures delivery through the proper gateway.
               </p>
             </div>
-            <select
-              value={carrierPicker.selectedCarrier}
-              onChange={(e) => setCarrierPicker(prev => ({ ...prev, selectedCarrier: e.target.value }))}
-              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-              style={{ backgroundColor: 'var(--t-background)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
-            >
-              {CARRIER_OPTIONS.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCarrierPicker({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' })}
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium"
-                style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}
-              >Cancel</button>
-              <button
-                onClick={() => {
-                  const { phone, message, selectedCarrier } = carrierPicker;
-                  // Save carrier for this phone
-                  saveCarrier(phone, selectedCarrier);
-                  setCarrierPicker({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' });
-                  // Only send if we have a message (not just a carrier-save from the menu)
-                  if (message) {
-                    setReplyText('');
-                    executeSend(phone, message, selectedCarrier === 'Auto-Detect (Universal Blast)' ? undefined : selectedCarrier);
-                  }
-                }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold"
-                style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
-              >{carrierPicker.message ? 'Save & Send' : 'Save Carrier'}</button>
+            
+            <div className="space-y-6">
+              <select
+                value={carrierPicker.selectedCarrier}
+                onChange={(e) => setCarrierPicker(prev => ({ ...prev, selectedCarrier: e.target.value }))}
+                className="w-full px-4 py-4 rounded-2xl text-sm outline-none appearance-none cursor-pointer"
+                style={{ backgroundColor: 'var(--t-background)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
+              >
+                {CARRIER_OPTIONS.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCarrierPicker({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' })}
+                  className="flex-1 py-4 rounded-2xl text-sm font-bold"
+                  style={{ background: 'var(--t-surface-hover)', color: 'var(--t-text-muted)' }}
+                >Cancel</button>
+                <button
+                  onClick={() => {
+                    const { phone, message, selectedCarrier } = carrierPicker;
+                    saveCarrier(phone, selectedCarrier);
+                    setCarrierPicker({ isOpen: false, phone: '', message: '', selectedCarrier: 'Auto-Detect (Universal Blast)' });
+                    if (message) {
+                      executeSend(phone, message, selectedCarrier === 'Auto-Detect (Universal Blast)' ? undefined : selectedCarrier);
+                    }
+                  }}
+                  className="flex-1 py-4 rounded-2xl text-sm font-bold shadow-lg shadow-[var(--t-primary)]/20"
+                  style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}
+                >Confirm</button>
+              </div>
             </div>
           </div>
         </div>

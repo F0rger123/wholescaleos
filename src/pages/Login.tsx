@@ -647,7 +647,7 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-start lg:justify-center p-6 sm:p-8 overflow-y-auto bg-black scrollbar-hide py-12 lg:py-8">
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black scrollbar-hide py-6 lg:py-4">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[20%] right-[10%] w-64 h-64 bg-indigo-500/5 blur-[100px] rounded-full" />
           <div className="absolute bottom-[20%] left-[10%] w-64 h-64 bg-purple-500/5 blur-[100px] rounded-full" />
@@ -655,12 +655,12 @@ export default function Login({ defaultMode = 'login' }: LoginProps) {
 
         <div className="w-full max-w-md relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <Logo size={40} showText={true} />
+          <div className="flex items-center gap-3 mb-6 lg:hidden">
+            <Logo size={32} showText={true} />
           </div>
 
-          <div className="mb-6 text-center lg:text-left">
-            <h2 className="text-3xl font-black tracking-tight text-white mb-2">
+          <div className="mb-4 text-center lg:text-left">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-1">
               {mode === 'login' ? 'Mission Control' : 
                mode === 'signup' ? 'Initiate Sequence' : 
                mode === 'mfa' ? 'Neural Shield' :

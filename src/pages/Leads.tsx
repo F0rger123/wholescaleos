@@ -10,7 +10,7 @@ import {
   Users, Mic, Play, Pause, Square, Bot as Brain,
   Target, Zap, RefreshCw,
   FileText, Camera, Globe, ArrowRight, Volume2, Eye,
-  Share2, UserMinus, ExternalLink, Folder
+  MessageSquare, Share2, UserMinus, ExternalLink, Folder
 } from 'lucide-react';
 import { LeadsSkeleton } from '../components/Skeleton';
 import { googleEcosystem } from '../lib/google-ecosystem';
@@ -36,6 +36,7 @@ const TIMELINE_ICONS: Record<string, { icon: any; color: string }> = {
   'meeting': { icon: Users, color: 'text-[var(--t-primary)] bg-[var(--t-primary)]/20' },
   'status-change': { icon: ArrowRight, color: 'text-[var(--t-warning)] bg-[var(--t-warning)]/20' },
   'task': { icon: Check, color: 'text-[var(--t-success)] bg-[var(--t-success)]/20' },
+  'sms': { icon: MessageSquare, color: 'text-[var(--t-primary)] bg-[var(--t-primary)]/20' },
 };
 
 const SOURCE_BADGE: Record<string, string> = {

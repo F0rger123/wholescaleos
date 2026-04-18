@@ -37,6 +37,7 @@ import {
   FileCode // Added
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { LeadDetailSkeleton } from '../components/Skeleton';
 import { CallScriptModal } from '../components/CallScriptModal';
 
 export default function LeadManagement() {

@@ -357,6 +357,7 @@ export function App() {
             <Route path="/sms" element={<SMSInbox />} />
             <Route path="/email" element={<EmailInbox />} />
             <Route path="/notifications" element={<NotificationInbox />} />
+            <Route path="/ai-bot" element={<AITest />} />
 
           </Route>
         </Route>

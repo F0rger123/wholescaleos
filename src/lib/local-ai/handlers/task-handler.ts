@@ -73,8 +73,7 @@ export class TaskHandler extends BaseHandler {
     
     if (!task) return this.wrapError(`Couldn't find task: "${title}"`);
     
-    store.updateTask(task.id, { status: 'completed' });
+    store.updateTask(task.id, { status: 'done' });
     return this.wrapSuccess(`Marked task "${task.title}" as complete.`);
   }
 }
-

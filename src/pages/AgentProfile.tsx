@@ -4,10 +4,27 @@ import {
   Mail, Globe, Facebook, Instagram, Linkedin, Twitter, 
   MapPin, Award, Star, 
   Download, QrCode, MessageSquare, ShieldCheck, ExternalLink,
-  ChevronLeft, Loader2, Sparkles
+  ChevronLeft, Sparkles
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { supabase } from '../lib/supabase';
+
+function ProfileSkeleton() {
+  return (
+    <div className="min-h-screen bg-[var(--t-bg)] animate-pulse">
+      <div className="h-[40vh] bg-blue-900/20" />
+      <div className="max-w-7xl mx-auto px-6 -mt-20">
+        <div className="flex flex-col md:flex-row items-end gap-8">
+          <div className="w-40 h-40 md:w-56 md:h-56 rounded-3xl bg-[var(--t-surface)]" />
+          <div className="flex-1 space-y-4 pb-4">
+            <div className="h-12 w-64 bg-[var(--t-surface)] rounded-xl" />
+            <div className="h-4 w-48 bg-[var(--t-surface)] rounded-lg" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AgentProfile() {
   const { name } = useParams();

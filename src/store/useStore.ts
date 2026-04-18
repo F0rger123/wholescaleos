@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { leadsService, tasksService, teamService, chatService, notificationsService, mapService } from '../lib/supabase-service';
 import { themes } from '../styles/themes';
 import { automationEngine } from '../lib/automation-engine';
+import { toast } from 'react-hot-toast';
 
 const normalizePhone = (p: string) => p.replace(/\D/g, '');
 
@@ -36,7 +37,7 @@ export type LeadSource =
   | 'ai_bot'
   | 'other';
 export type PropertyType = 'single-family' | 'multi-family' | 'commercial' | 'land' | 'condo';
-export type TimelineType = 'call' | 'email' | 'note' | 'status-change' | 'meeting' | 'task';
+export type TimelineType = 'call' | 'email' | 'note' | 'status-change' | 'meeting' | 'task' | 'sms';
 
 export interface LeadDocument {
   id: string;
@@ -1556,7 +1557,9 @@ interface AppState {
   isQuickNotesOpen: boolean;
   setQuickNotesOpen: (v: boolean) => void;
   isAiOpen: boolean;
+  isAiFullScreen: boolean;
   setAiOpen: (v: boolean) => void;
+  setAiFullScreen: (v: boolean) => void;
   notesDocked: boolean;
   setNotesDocked: (v: boolean) => void;
   quickNotesSize: 'small' | 'medium' | 'large';
@@ -1747,11 +1750,16 @@ export const useStore = create<AppState>((set, get) => ({
   })(),
   currentAiThreadId: typeof window !== 'undefined' ? localStorage.getItem('current-ai-thread-id') : null,
   isAiDocked: typeof window !== 'undefined' ? localStorage.getItem('ai_widget_docked') === 'true' : false,
+  isAiFullScreen: typeof window !== 'undefined' ? localStorage.getItem('ai_widget_fullscreen') === 'true' : false,
   isAiOpen: false,
   setAiOpen: (v: boolean) => set({ isAiOpen: v }),
   setAiDocked: (docked: boolean) => {
     localStorage.setItem('ai_widget_docked', docked.toString());
     set({ isAiDocked: docked });
+  },
+  setAiFullScreen: (fullScreen: boolean) => {
+    localStorage.setItem('ai_widget_fullscreen', fullScreen.toString());
+    set({ isAiFullScreen: fullScreen });
   },
   aiMessages: (() => {
     try {
@@ -2758,8 +2766,22 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
   addTeamMember: (member: Omit<TeamMember, 'id'>) => {
+    const { team, teamConfig } = get();
+    if (team.length >= (teamConfig?.maxSeats || 5)) {
+      toast.error(`Team limit reached (${teamConfig?.maxSeats || 5} seats). Upgrade your plan to add more members.`, {
+        icon: '🚫',
+        style: {
+          borderRadius: '10px',
+          background: 'var(--t-surface)',
+          color: 'var(--t-error)',
+          border: '1px solid var(--t-error)'
+        },
+      });
+      return;
+    }
     get().saveToHistory();
     set((s: any) => ({ team: [...s.team, { ...member, id: uuidv4() }] }));
+    toast.success(`${member.name} added to the team!`);
   },
   removeTeamMember: (id: string) => {
     get().saveToHistory();
@@ -3559,6 +3581,16 @@ export const useStore = create<AppState>((set, get) => ({
   },
   incrementAiUsage: async (amount = 1) => {
     const { currentUser, credits_remaining, total_credits_used_today } = get();
+    
+    // Safety check for exhausted credits
+    if ((credits_remaining || 0) <= 0) {
+      toast.error('AI Premium Credits exhausted. Please upgrade or refill to continue.', {
+        icon: '⚠️',
+        duration: 5000
+      });
+      return;
+    }
+
     const newRemaining = Math.max(0, (credits_remaining || 0) - amount);
     const newUsedToday = (total_credits_used_today || 0) + amount;
     
@@ -4036,7 +4068,7 @@ export const useStore = create<AppState>((set, get) => ({
     // Add to Lead Timeline
     const timelineEntry: TimelineEntry = {
       id: uuidv4(),
-      type: 'call', // Using 'call' icon for SMS for now or 'note'
+      type: 'sms', 
       content: `[Automation] SMS Sent: ${content}`,
       timestamp: now,
       user: 'Automation Bot'
@@ -4064,7 +4096,7 @@ export const useStore = create<AppState>((set, get) => ({
       
       await supabase.from('timeline_entries').insert({
         lead_id: leadId,
-        type: 'call',
+        type: 'sms',
         content: `[Automation] SMS Sent: ${content}`,
         user_name: 'Automation Bot',
         created_at: now

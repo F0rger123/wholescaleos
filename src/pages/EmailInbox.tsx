@@ -9,15 +9,16 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
-import { useStore } from '../store/useStore';
 import { 
-  listThreads, getThread, EmailThread, 
+  listThreads, getThread, EmailThread,
   fetchEmailTemplates, saveEmailTemplate, updateEmailTemplate, deleteEmailTemplate,
   fetchEmailCampaigns, saveEmailCampaign, deleteEmailCampaign,
   fetchEmailSchedules, deleteEmailSchedule, dbEmailSchedule, dbEmailTemplate, dbEmailCampaign
 } from '../lib/email';
 import { AGENT_EMAIL_TEMPLATES, PRO_CAMPAIGN_TEMPLATES, AgentTemplate } from '../lib/default-templates';
-import { EmailInboxSkeleton } from '../components/Skeleton';
+import EmailComposeModal from '../components/EmailComposeModal';
+import RichTextEditor from '../components/admin/RichTextEditor';
+import { useStore } from '../store/useStore';
 
 type EmailView = 'inbox' | 'sent' | 'starred' | 'trash' | 'templates' | 'campaigns' | 'scheduled';
 

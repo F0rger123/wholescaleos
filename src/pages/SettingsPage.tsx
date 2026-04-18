@@ -9,7 +9,7 @@ import {
   Upload, Download, Trash2, RefreshCw, Smartphone, Lock,
   Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
   Users, UserMinus, Plus, Keyboard,
-  HardDrive, Send, Sparkles, ExternalLink, QrCode, Award, 
+  HardDrive, Sparkles, ExternalLink, QrCode, Award, 
   Linkedin, Facebook, Instagram, Twitter, Share2
 } from 'lucide-react';
 import { SettingsSkeleton } from '../components/Skeleton';
@@ -44,11 +44,10 @@ function GeneralTab() {
   const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [formData, setFormData] = useState({
+  const [settings, setSettings] = useState({
     companyName: teamConfig?.name || '',
     companyAddress: '',
     companyPhone: '',
-    companyEmail: '',
     timezone: 'America/Chicago',
     logoUrl: '',
   });
@@ -70,7 +69,6 @@ function GeneralTab() {
             companyName: data.name || teamConfig?.name || '',
             companyAddress: s.address || '',
             companyPhone: s.phone || '',
-            companyEmail: s.email || '',
             timezone: s.timezone || 'America/Chicago',
             logoUrl: s.logoUrl || '',
           });
@@ -103,7 +101,6 @@ function GeneralTab() {
             settings: {
               address: formData.companyAddress,
               phone: formData.companyPhone,
-              email: formData.companyEmail,
               timezone: formData.timezone,
               logoUrl: formData.logoUrl,
             },
@@ -181,18 +178,7 @@ function GeneralTab() {
               style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
             />
           </div>
-          <div>
-            <label className="block text-sm mb-1" style={{ color: 'var(--t-text-secondary)' }}>
-              <Mail size={14} className="inline mr-1" /> Email
-            </label>
-            <input
-              type="email"
-              value={formData.companyEmail}
-              onChange={(e) => updateField('companyEmail', e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm"
-              style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
-            />
-          </div>
+          {/* Email field removed as per stabilization audit */}
           <div>
             <label className="block text-sm mb-1" style={{ color: 'var(--t-text-secondary)' }}>
               <MapPin size={14} className="inline mr-1" /> Address
@@ -1662,57 +1648,7 @@ function TeamTab() {
   );
 }
 
-/* ============================================================
-   EMAIL TAB
-   ============================================================ */
-function EmailTab() {
-  const [testEmail, setTestEmail] = useState('');
 
-  return (
-    <div className="space-y-6">
-      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <h2 className="text-lg font-semibold mb-2" style={{ color: 'var(--t-text)' }}>Email Provider</h2>
-        <p className="text-sm mb-4" style={{ color: 'var(--t-text-secondary)' }}>Configure email sending for notifications and campaigns</p>
-
-        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)' }}>
-          <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--t-text)' }}>
-            <Mail size={14} className="inline mr-1" /> Resend (Recommended)
-          </h3>
-          <p className="text-xs mb-3" style={{ color: 'var(--t-text-secondary)' }}>3,000 emails/month free. Set up SMTP in Supabase → Authentication → SMTP Settings</p>
-          <div className="space-y-2">
-            <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Host: <code className="px-1 rounded" style={{ backgroundColor: 'var(--t-surface)' }}>smtp.resend.com</code></p>
-            <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Port: <code className="px-1 rounded" style={{ backgroundColor: 'var(--t-surface)' }}>465</code></p>
-            <p className="text-xs" style={{ color: 'var(--t-text-secondary)' }}>Username: <code className="px-1 rounded" style={{ backgroundColor: 'var(--t-surface)' }}>resend</code></p>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
-        <h2 className="text-lg font-semibold mb-3" style={{ color: 'var(--t-text)' }}>Send Test Email</h2>
-        <div className="flex gap-2">
-          <input
-            type="email"
-            value={testEmail}
-            onChange={(e) => setTestEmail(e.target.value)}
-            placeholder="Enter email address"
-            className="flex-1 px-3 py-2 rounded-lg text-sm"
-            style={{ backgroundColor: 'var(--t-bg)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }}
-          />
-          <button 
-            className="px-4 py-2 rounded-lg text-sm font-black uppercase tracking-[0.1em] flex items-center gap-2 shadow-lg shadow-[var(--t-primary-dim)]" 
-            style={{ 
-              backgroundColor: 'var(--t-primary)', 
-              color: 'var(--t-on-primary)',
-              fontFamily: 'Inter, sans-serif'
-            }}
-          >
-            <Send size={14} /> Send Test
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ============================================================
    BACKUP TAB
@@ -1966,7 +1902,7 @@ export default function SettingsPage() {
       <div className="flex gap-6">
         {/* Sidebar */}
         <div className="w-56 flex-shrink-0">
-          <div className="rounded-xl overflow-hidden" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
+          <div className="rounded-xl overflow-hidden sticky top-8" style={{ backgroundColor: 'var(--t-surface)', border: '1px solid var(--t-border)' }}>
             {TABS.map((tab) => (
               <button
                 key={tab.id}

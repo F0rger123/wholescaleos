@@ -1,4 +1,23 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+
+/**
+ * Prevents "skeleton flicker" by delaying the render of children.
+ * If the content loads within the threshold (default 200ms), no skeleton is shown.
+ */
+export const DelayedRender: React.FC<{ children: React.ReactNode; threshold?: number }> = ({ 
+  children, 
+  threshold = 200 
+}) => {
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShouldRender(true), threshold);
+    return () => clearTimeout(timer);
+  }, [threshold]);
+
+  if (!shouldRender) return null;
+  return <>{children}</>;
+};
 
 interface SkeletonProps {
   className?: string;

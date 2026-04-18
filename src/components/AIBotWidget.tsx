@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bot, X, Send, User, Mic, Volume2, VolumeX, Layout as LayoutIcon, MessageSquare, CheckCircle2, FileText, Shield, Zap } from 'lucide-react';
+import { Bot, X, Send, User, Mic, Volume2, VolumeX, Layout as LayoutIcon, MessageSquare, CheckCircle2, FileText, Shield, Zap, Maximize2, Minimize2 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { AIBotSkeleton } from './Skeleton';
 import { ConfirmModal } from './ConfirmModal';
@@ -144,6 +144,7 @@ export function AIBotWidget() {
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiModel, isAiDocked, setAiDocked,
+    isAiFullScreen, setAiFullScreen,
     sidebarOpen, aiName, onboarding_ai_choice_seen,
     credits_remaining, refreshCredits, setOnboardingAiChoiceSeen
   } = useStore();
@@ -201,7 +202,7 @@ export function AIBotWidget() {
       const generateInsights = async () => {
         setInsightsLoading(true);
         try {
-          const res = await generatePageInsights(path, { pageData });
+          const res = await generatePageInsights(path, {});
           setInsights(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error('[🤖 Insights] Failed to generate:', err);
@@ -1012,15 +1013,26 @@ export function AIBotWidget() {
       {/* Expanded Chat Window */}
       {isAiOpen && !isMinimized && (
         <div
-          className={`w-80 md:w-96 h-[500px] border rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto mb-4 animate-in zoom-in-95 duration-200 
-            ${position.y > window.innerHeight / 2 ? 'order-last mt-4 mb-0 origin-top-right' : 'mb-4 origin-bottom-right'}`}
+          className={`border rounded-2xl shadow-2xl flex flex-col overflow-hidden pointer-events-auto animate-in zoom-in-95 duration-200 
+            ${isAiFullScreen 
+              ? 'fixed inset-4 w-auto h-auto z-[300] !mb-0' 
+              : `w-80 md:w-96 h-[500px] ${position.y > window.innerHeight / 2 ? 'order-last mt-4 mb-0 origin-top-right' : 'mb-4 origin-bottom-right'}`
+            }`}
           style={{
             background: 'var(--t-surface)',
             borderColor: 'var(--t-border)',
-            position: 'absolute',
-            bottom: position.y > window.innerHeight / 2 ? 'auto' : '100%',
-            top: position.y > window.innerHeight / 2 ? '100%' : 'auto',
-            right: 0
+            ...(isAiFullScreen ? {
+              position: 'fixed',
+              top: '1rem',
+              left: '1rem',
+              right: '1rem',
+              bottom: '1rem'
+            } : {
+              position: 'absolute',
+              bottom: position.y > window.innerHeight / 2 ? 'auto' : '100%',
+              top: position.y > window.innerHeight / 2 ? '100%' : 'auto',
+              right: 0
+            })
           }}
         >
 
@@ -1079,6 +1091,22 @@ export function AIBotWidget() {
                   <VolumeX size={16} />
                 )}
               </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAiFullScreen(!isAiFullScreen);
+                }}
+                className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
+                title={isAiFullScreen ? "Restore" : "Full Screen"}
+              >
+                {isAiFullScreen ? (
+                  <Minimize2 size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
+                ) : (
+                  <Maximize2 size={16} className="text-[var(--t-text-muted)] group-hover:text-[var(--t-primary)]" />
+                )}
+              </button>
+
               <button
                 onClick={() => {
                   setAiDocked(true);
@@ -1091,7 +1119,6 @@ export function AIBotWidget() {
               </button>
               <button
                 onClick={() => {
-                  setAiDocked(true);
                   setAiOpen(false);
                 }}
                 className="p-1.5 hover:bg-black/10 rounded-lg transition-colors group"
