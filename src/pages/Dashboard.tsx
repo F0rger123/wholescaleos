@@ -153,7 +153,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const { 
-    leads, team,
+    leads, team, tasks,
     loginStreak, taskStreak, memberStreaks,
     dashboardLayout, setDashboardLayout,
     dataLoaded, currentUser
