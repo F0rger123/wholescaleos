@@ -54,9 +54,9 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
         </div>
         <div className="text-left hidden sm:block">
           <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 italic" style={{ color: 'var(--t-text)' }}>{currentUser.name.split(' ')[0]}</p>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-[#6d758c] leading-none">System Operator</p>
+          <p className="text-[9px] font-bold uppercase tracking-widest leading-none" style={{ color: 'var(--t-text-muted)' }}>System Operator</p>
         </div>
-        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} text-[#6d758c]`} />
+        <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} style={{ color: 'var(--t-text-muted)' }} />
       </button>
 
       {isOpen && (
@@ -71,12 +71,11 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
           <div
             className="absolute right-0 mt-4 w-64 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[var(--z-toast)] border border-white/10 overflow-hidden astral-glass backdrop-blur-3xl p-1 animate-astral-fade-up"
           >
-            {/* User info */}
-            <div className="p-5 border-b border-white/5 mb-1">
+            <div className="p-5 border-b mb-1" style={{ borderColor: 'var(--t-border)' }}>
               <p className="text-xs font-black uppercase tracking-widest italic" style={{ color: 'var(--t-text)' }}>
                 {currentUser.name}
               </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[#6d758c] mt-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: 'var(--t-text-muted)' }}>
                 {currentUser.email}
               </p>
             </div>
@@ -91,7 +90,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
-                  color: 'var(--t-text-secondary)',
+                  color: 'var(--t-text-muted)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
@@ -99,7 +98,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--t-text-secondary)';
+                  e.currentTarget.style.color = 'var(--t-text-muted)';
                 }}
               >
                 <Settings size={16} />
@@ -114,7 +113,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
-                  color: 'var(--t-text-secondary)',
+                  color: 'var(--t-text-muted)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
@@ -122,7 +121,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--t-text-secondary)';
+                  e.currentTarget.style.color = 'var(--t-text-muted)';
                 }}
               >
                 <CreditCard size={16} />
@@ -137,7 +136,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
-                  color: 'var(--t-text-secondary)',
+                  color: 'var(--t-text-muted)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
@@ -145,7 +144,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--t-text-secondary)';
+                  e.currentTarget.style.color = 'var(--t-text-muted)';
                 }}
               >
                 <Users size={16} />
@@ -160,7 +159,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors"
                 style={{
-                  color: 'var(--t-text-secondary)',
+                  color: 'var(--t-text-muted)',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'var(--t-surface-hover)';
@@ -168,7 +167,7 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--t-text-secondary)';
+                  e.currentTarget.style.color = 'var(--t-text-muted)';
                 }}
               >
                 <User size={16} />

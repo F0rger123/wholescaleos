@@ -1513,6 +1513,7 @@ interface AppState {
   addSMSMessage: (message: SMSMessage) => void;
   markSMSAsRead: (phoneNumber: string) => void;
   syncSMSUnreadCount: () => Promise<void>;
+  syncGoogleContacts: () => Promise<{ success: boolean; count: number }>;
   showFloatingAIWidget: boolean;
   isAiDocked: boolean;
   setShowFloatingAIWidget: (v: boolean) => void;
@@ -3729,6 +3730,61 @@ export const useStore = create<AppState>((set, get) => ({
       }
       return { contacts: next };
     });
+  },
+
+  syncGoogleContacts: async () => {
+    const { currentUser, addLead } = get();
+    if (!currentUser?.id) throw new Error('Not logged in');
+
+    try {
+      const { googleEcosystem } = await import('../lib/google-ecosystem');
+      const data = await googleEcosystem.getContacts(currentUser.id);
+      
+      if (data.connections) {
+        let importedCount = 0;
+        for (const person of data.connections) {
+          const name = person.names?.[0]?.displayName || 'Google Contact';
+          const email = person.emailAddresses?.[0]?.value || '';
+          const phone = person.phoneNumbers?.[0]?.value || '';
+          
+          if (phone) {
+            // Check if already exists in leads
+            const exists = get().leads.some(l => l.phone === phone);
+            if (!exists) {
+              addLead({
+                name,
+                email,
+                phone,
+                status: 'new',
+                source: 'other',
+                propertyAddress: '',
+                propertyType: 'single-family',
+                estimatedValue: 0,
+                bedrooms: 0,
+                bathrooms: 0,
+                sqft: 0,
+                offerAmount: 0,
+                lat: 0,
+                lng: 0,
+                assignedTo: currentUser.id,
+                probability: 0,
+                engagementLevel: 1,
+                timelineUrgency: 1,
+                competitionLevel: 1,
+                notes: 'Imported from Google Contacts',
+                documents: []
+              });
+              importedCount++;
+            }
+          }
+        }
+        return { success: true, count: importedCount };
+      }
+      return { success: true, count: 0 };
+    } catch (err: any) {
+      console.error('[Sync Contacts] Error:', err);
+      throw err;
+    }
   },
 
   setQuickNotes: (v: string) => {

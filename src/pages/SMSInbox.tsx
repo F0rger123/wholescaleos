@@ -12,7 +12,8 @@ import {
   ArrowDownCircle,
   Brain,
   Loader2,
-  UserPlus
+  UserPlus,
+  RefreshCw
 } from 'lucide-react';
 
 import { useStore } from '../store/useStore';
@@ -21,17 +22,6 @@ import { toast } from 'react-hot-toast';
 import { SMSAnalysis, analyzeSMSConversation } from '../lib/sms-analysis-service';
 
 // --- Types ---
-interface SMSMessage {
-  id: string;
-  content: string;
-  sender: string;
-  phone_number: string;
-  direction: 'inbound' | 'outbound';
-  created_at: string;
-  read: boolean;
-  metadata?: any;
-}
-
 interface Conversation {
   phone: string;
   lastMessage: string;
@@ -117,11 +107,14 @@ export default function SMSInbox() {
   const { 
     currentUser, 
     leads, 
-    addTimelineEntry
+    addTimelineEntry,
+    smsMessages,
+    addSMSMessage,
+    syncSMSUnreadCount,
+    syncGoogleContacts
   } = useStore();
   
-  // Real messages state (fetched via Gmail API mocked here or connected to Supabase)
-  const [messages, setMessages] = useState<SMSMessage[]>([]);
+  // Local filtered messages
   const [loading, setLoading] = useState(true);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -153,10 +146,10 @@ export default function SMSInbox() {
   const selectedMessages = useMemo(() => {
     if (!selectedPhone) return [];
     const p = selectedPhone.replace(/\D/g, '');
-    return messages
+    return (smsMessages || [])
       .filter(m => m.phone_number.replace(/\D/g, '') === p)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  }, [messages, selectedPhone]);
+  }, [smsMessages, selectedPhone]);
 
   // Analyze conversation on phone selection
   useEffect(() => {
@@ -196,26 +189,41 @@ export default function SMSInbox() {
     const savedPinned = localStorage.getItem('ws_pinned_sms');
     if (savedPinned) setPinnedPhones(new Set(JSON.parse(savedPinned)));
 
-    const savedContacts = localStorage.getItem('ws_sms_contacts');
-    if (savedContacts) setContacts(JSON.parse(savedContacts));
+    // Initial fetch
+    const init = async () => {
+      setLoading(true);
+      try {
+        await syncSMSUnreadCount();
+        const { pollSMSMessages } = await import('../lib/sms-polling');
+        await pollSMSMessages();
+      } catch (err) {
+        console.error('Failed to poll SMS:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, [syncSMSUnreadCount]);
 
-    // Initial mock data
-    setMessages([
-      { id: '1', content: 'Is the house still for sale?', phone_number: '5550123', sender: '5550123', direction: 'inbound', created_at: new Date(Date.now() - 3600000).toISOString(), read: false },
-      { id: '2', content: 'Yes it is! Are you interested in a tour?', phone_number: '5550123', sender: 'Me', direction: 'outbound', created_at: new Date(Date.now() - 1800000).toISOString(), read: true },
-    ]);
-    setLoading(false);
-  }, []);
+  const handleSyncContacts = async () => {
+    const toastId = toast.loading('Syncing Google Contacts...');
+    try {
+      const result = await syncGoogleContacts();
+      toast.success(`Successfully imported ${result.count} contacts as leads!`, { id: toastId });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to sync contacts', { id: toastId });
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, selectedPhone]);
+  }, [smsMessages, selectedPhone]);
 
   // Aggregate messages into conversations
   const conversations = useMemo(() => {
     const map: Record<string, Conversation> = {};
     
-    messages.forEach(msg => {
+    (smsMessages || []).forEach(msg => {
       const p = msg.phone_number.replace(/\D/g, '');
       const existing = map[p];
       
@@ -227,7 +235,7 @@ export default function SMSInbox() {
           phone: p,
           lastMessage: msg.content,
           timestamp: msg.created_at,
-          unreadCount: (existing?.unreadCount || 0) + (msg.direction === 'inbound' && !msg.read ? 1 : 0),
+          unreadCount: (existing?.unreadCount || 0) + (msg.direction === 'inbound' && !msg.is_read ? 1 : 0),
           leadName: lead?.name || contact?.name || formatPhoneNumber(p),
           leadId: lead?.id
         };
@@ -240,7 +248,7 @@ export default function SMSInbox() {
       if (aPinned !== bPinned) return bPinned - aPinned;
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
-  }, [messages, leads, contacts, pinnedPhones]);
+  }, [smsMessages, leads, contacts, pinnedPhones]);
 
   const filteredConversations = conversations.filter(c => 
     c.phone.includes(searchQuery) || 
@@ -250,10 +258,8 @@ export default function SMSInbox() {
   const activeConversation = conversations.find(c => c.phone === selectedPhone?.replace(/\D/g, ''));
 
   const markAsRead = (phone: string) => {
-    const p = phone.replace(/\D/g, '');
-    setMessages(prev => prev.map(m => 
-      m.phone_number.replace(/\D/g, '') === p ? { ...m, read: true } : m
-    ));
+    const { markSMSAsRead } = useStore.getState();
+    markSMSAsRead(phone);
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -282,17 +288,17 @@ export default function SMSInbox() {
       // Mock Gmail/Gateway send
       await new Promise(r => setTimeout(r, 800));
       
-      const newMsg: SMSMessage = {
+      const newMsg: any = {
         id: Math.random().toString(36).substring(7),
         content: text,
+        user_id: currentUser?.id || '',
         phone_number: phone,
-        sender: 'Me',
         direction: 'outbound',
         created_at: new Date().toISOString(),
-        read: true
+        is_read: true
       };
       
-      setMessages(prev => [...prev, newMsg]);
+      addSMSMessage(newMsg);
       setReplyText('');
       
       // Update timeline if it's a lead
@@ -375,6 +381,22 @@ export default function SMSInbox() {
                 '--tw-ring-color': 'var(--t-primary)'
               }}
             />
+          </div>
+          
+          {/* Sync Google Contacts Section */}
+          <div className="mx-2 p-4 rounded-2xl space-y-3 shadow-lg relative overflow-hidden group" style={{ background: 'var(--t-primary)', color: 'var(--t-on-primary)' }}>
+            <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <div className="flex items-center gap-2 mb-1">
+              <RefreshCw className="w-4 h-4 animate-spin-slow" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Data Sync</span>
+            </div>
+            <p className="text-[11px] font-medium leading-relaxed opacity-90">Restore missing conversations by syncing your Google Contacts.</p>
+            <button 
+              onClick={handleSyncContacts}
+              className="w-full py-2.5 rounded-xl bg-white text-black text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-md"
+            >
+              Sync Google Contacts
+            </button>
           </div>
         </div>
 
@@ -530,7 +552,8 @@ export default function SMSInbox() {
                           title: 'Delete Conversation?',
                           message: `Are you sure you want to delete all messages with ${activeConversation?.leadName}? This cannot be undone.`,
                           onConfirm: () => {
-                            setMessages(prev => prev.filter(m => m.phone_number.replace(/\D/g, '') !== selectedPhone?.replace(/\D/g, '')));
+                            // Local delete was removed to use store. 
+                            // TODO: Implement deleteSMSByPhone in useStore if needed.
                             setSelectedPhone(null);
                           }
                         });

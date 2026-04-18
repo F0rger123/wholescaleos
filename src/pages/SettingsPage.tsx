@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { themes } from '../styles/themes';
 import {
   Bell, Shield, Palette, Database, Save,
-  Check, Globe, Building, Mail, Phone, MapPin,
+  Check, Globe, Building, Phone, MapPin,
   Upload, Download, Trash2, RefreshCw, Smartphone, Lock,
   Monitor, AlertTriangle, Copy, Loader2, MousePointer2,
   Users, UserMinus, Plus, Keyboard,
@@ -44,7 +44,7 @@ function GeneralTab() {
   const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [settings, setSettings] = useState({
+  const [formData, setFormData] = useState({
     companyName: teamConfig?.name || '',
     companyAddress: '',
     companyPhone: '',
