@@ -165,6 +165,8 @@ export function AIBotWidget() {
   const [isDragging, setIsDragging] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [bars, setBars] = useState<number[]>(new Array(20).fill(5));
+  const [insights, setInsights] = useState<string[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
   // Fetch usage on mount and after every response
   const fetchUsage = async () => {
@@ -198,6 +200,20 @@ export function AIBotWidget() {
     if (path.length > 1) {
       console.log(`[🤖 OS BOT] Syncing context for page: ${path}`);
       setActivePage(path);
+      
+      // Proactive Insight Generation
+      const generateInsights = async () => {
+        setInsightsLoading(true);
+        try {
+          const newInsights = await generatePageInsights(path);
+          setInsights(newInsights);
+        } catch (err) {
+          console.error('[🤖 Insights] Failed to generate:', err);
+        } finally {
+          setInsightsLoading(false);
+        }
+      };
+      generateInsights();
     }
   }, [location.pathname]);
 
@@ -1121,7 +1137,7 @@ export function AIBotWidget() {
 
                 {/* Messages */}
                 <div className="space-y-4">
-                  {insights.map((insight, i) => (
+                  {insights.map((insight: string, i: number) => (
                     <div key={i} className="flex gap-2 items-start text-[11px] text-[var(--t-text)] leading-snug">
                       <div className="w-1 h-1 rounded-full bg-[var(--t-primary)] mt-1.5 shrink-0" />
                       <p>{insight}</p>
