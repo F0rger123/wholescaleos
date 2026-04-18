@@ -289,7 +289,7 @@ export const AIProviderSettings: React.FC = () => {
                       p.id === 'gemini' ? 'https://aistudio.google.com/app/apikey' : 
                       p.id === 'openai' ? 'https://platform.openai.com/api-keys' : 
                       p.id === 'claude' ? 'https://console.anthropic.com/settings/keys' :
-                      p.id === 'minimax' ? 'https://platform.minimax.io/api-keys' : '#'
+                      p.id === 'minimax' ? 'https://platform.minimaxi.com/user-center/api-key' : '#'
                     } 
                     target="_blank" 
                     rel="noopener noreferrer"

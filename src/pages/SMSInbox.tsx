@@ -186,21 +186,6 @@ export default function SMSInbox() {
     setPinnedPhones(next);
     localStorage.setItem('sms_pinned', JSON.stringify([...next]));
   };
-  const toggleArchive = (phone: string) => {
-    const next = new Set(archivedPhones);
-    next.has(phone) ? next.delete(phone) : next.add(phone);
-    setArchivedPhones(next);
-    localStorage.setItem('sms_archived', JSON.stringify([...next]));
-    if (next.has(phone) && selectedPhone === phone) setSelectedPhone(null);
-  };
-  const toggleBlock = (phone: string) => {
-    if (!blockedPhones.has(phone) && !confirm(`Block ${formatPhoneNumber(phone)}? You won't receive messages from this number.`)) return;
-    const next = new Set(blockedPhones);
-    next.has(phone) ? next.delete(phone) : next.add(phone);
-    setBlockedPhones(next);
-    localStorage.setItem('sms_blocked', JSON.stringify([...next]));
-    if (next.has(phone) && selectedPhone === phone) setSelectedPhone(null);
-  };
 
   // Carrier picker modal: shown before sending to a phone with unknown carrier
   const [carrierPicker, setCarrierPicker] = useState<{
@@ -539,9 +524,6 @@ export default function SMSInbox() {
 
   const filteredConversations = conversations
     .filter(c => {
-      const raw = c.phone.replace(/\D/g, '');
-      if (blockedPhones.has(raw)) return false;     // Never show blocked
-      if (archivedPhones.has(raw) && !searchQuery) return false; // Hide archived unless searching
       return (
         c.phone.includes(searchQuery) ||
         c.leadName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -857,15 +839,7 @@ export default function SMSInbox() {
                         style={{ color: 'var(--t-text)' }}
                         onClick={() => { setMenuOpen(false); if (selectedPhone) togglePin(selectedPhone.replace(/\D/g, '')); }}
                       >
-                        {pinnedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? '📌 Unpin' : '📌 Pin to Top'}
-                      </button>
-                      {/* Archive */}
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                        style={{ color: 'var(--t-text)' }}
-                        onClick={() => { setMenuOpen(false); if (selectedPhone) toggleArchive(selectedPhone.replace(/\D/g, '')); }}
-                      >
-                        {archivedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? '📥 Unarchive' : '📦 Archive'}
+                        {pinnedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? '📍 Unpin from Top' : '📌 Pin to Top'}
                       </button>
                       {/* Set carrier */}
                       <button
@@ -916,15 +890,6 @@ export default function SMSInbox() {
                           👤 View Lead Profile
                         </button>
                       )}
-                      <div style={{ borderTop: '1px solid var(--t-border)', margin: '4px 0' }} />
-                      {/* Block */}
-                      <button
-                        className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"
-                        style={{ color: 'var(--t-error)' }}
-                        onClick={() => { setMenuOpen(false); if (selectedPhone) toggleBlock(selectedPhone.replace(/\D/g, '')); }}
-                      >
-                        🚫 {blockedPhones.has(selectedPhone?.replace(/\D/g, '') || '') ? 'Unblock Number' : 'Block Number'}
-                      </button>
                       {/* Delete */}
                       <button
                         className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-[var(--t-surface-hover)] transition-colors"

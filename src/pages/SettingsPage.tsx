@@ -26,7 +26,6 @@ const TABS = [
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'team', label: 'Team', icon: Users },
-  { id: 'email', label: 'Email', icon: Mail },
   { id: 'ai', label: 'AI Assistant', icon: Sparkles },
   { id: 'sms', label: 'SMS Messaging', icon: Smartphone },
   { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
@@ -2007,7 +2006,6 @@ export default function SettingsPage() {
               {activeTab === 'security' && <SecurityTab />}
               {activeTab === 'appearance' && <AppearanceTab />}
               {activeTab === 'team' && <TeamTab />}
-              {activeTab === 'email' && <EmailTab />}
               {activeTab === 'ai' && <AISettings hideHeader />}
               {activeTab === 'sms' && <SMSSettings />}
               {activeTab === 'shortcuts' && <ShortcutSettings />}

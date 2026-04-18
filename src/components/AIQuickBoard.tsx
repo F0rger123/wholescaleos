@@ -44,20 +44,27 @@ export function AIQuickBoard() {
     const taskCount = agenda.todayTasks.length;
     const leadCount = agenda.hotLeads.length;
     
-    let text = `Good morning, ${name}! This is ${aiName}. `;
-    
-    if (taskCount > 0 || leadCount > 0) {
-      text += `I've analyzed your pipeline. You have ${taskCount} tasks due today and ${leadCount} high-priority leads waiting for follow-up. `;
-    } else {
-      text += `Your pipeline looks steady today. It's a great time to focus on prospecting or organizing your database. `;
-    }
+    const hour = new Date().getHours();
+    let greeting = 'Good morning';
+    if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
+    else if (hour >= 17) greeting = 'Good evening';
 
+    const templates = [
+      `${greeting}, ${name}! This is ${aiName}. I've combed through your pipeline. ${taskCount > 0 ? `You have ${taskCount} tasks due today.` : 'No tasks due today.'} ${leadCount > 0 ? `Plus, ${leadCount} hot leads are ready for follow-up.` : ''}`,
+      `Welcome back, ${name}. ${aiName} here. ${taskCount > 0 || leadCount > 0 ? `We have some momentum! ${taskCount} tasks and ${leadCount} leads to handle.` : 'Pipeline is stable. Ready for some prospecting?'}`,
+      `Hey ${name}, let's make today count. ${aiName} is standing by. ${leadCount > 0 ? `Those ${leadCount} hot leads won't close themselves!` : 'Ready to find some new opportunities?'}`,
+      `${greeting}! ${aiName} has analyzed the market data. Your focus should be on the ${taskCount} tasks on your plate.`,
+      `Ready to crush it, ${name}? ${aiName} at your service. ${taskCount} tasks and ${leadCount} leads are waiting for your magic touch.`
+    ];
+
+    let text = templates[Math.floor(Math.random() * templates.length)];
+    
     if (aiPersonality.toLowerCase().includes('aggressive')) {
-      text += "Let's crush these targets and secure those listings!";
+      text += " Let's dominate this market and close those deals now!";
     } else if (aiPersonality.toLowerCase().includes('friendly')) {
-      text += "I'm here to help you have a productive and smooth day!";
+      text += " I'm excited to help you have a fantastic and productive day!";
     } else {
-      text += "Let's maintain this momentum.";
+      text += " Let's keep moving forward with precision.";
     }
 
     return text;
@@ -109,6 +116,27 @@ export function AIQuickBoard() {
                 {displayText}
                 {isTyping && <span className="inline-block w-2 h-5 ml-1 bg-[var(--t-primary)] animate-pulse align-middle" />}
               </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3 pt-6">
+              <button 
+                onClick={() => navigate('/leads?filter=hot')}
+                className="px-4 py-2 rounded-xl bg-[var(--t-primary-dim)] hover:bg-[var(--t-primary)] text-[var(--t-primary-text)] hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all border border-[var(--t-primary)]/20 shadow-sm"
+              >
+                Review Hot Leads
+              </button>
+              <button 
+                onClick={() => navigate('/tasks')}
+                className="px-4 py-2 rounded-xl bg-[var(--t-surface-hover)] border border-[var(--t-border)] text-[var(--t-text)] hover:border-[var(--t-primary)] text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm"
+              >
+                Check Today's Tasks
+              </button>
+              <button 
+                onClick={() => navigate('/sms')}
+                className="px-4 py-2 rounded-xl bg-[var(--t-surface-hover)] border border-[var(--t-border)] text-[var(--t-text)] hover:border-[var(--t-primary)] text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm"
+              >
+                Send Follow-up SMS
+              </button>
             </div>
 
             <div className="flex flex-wrap gap-4 pt-4 border-t border-[var(--t-border)]/50">

@@ -66,10 +66,18 @@ export async function sendSMSViaAI(target: string, message: string, carrier?: st
   return { success: res.success, message: res.message };
 }
 
-export async function generatePageInsights(url: string, context: any) {
-  const prompt = `Analyze this page: ${url}. Context: ${JSON.stringify(context)}. Provide 3 strategic insights.`;
+export async function generatePageInsights(url: string, context: any): Promise<string[]> {
+  const prompt = `Analyze this page: ${url}. Context: ${JSON.stringify(context)}. Provide 3 individual strategic insights as a list. Each insight should be a separate line.`;
   const response = await callExternalAPI(prompt, context || {});
-  return response || "No insights available at this time.";
+  
+  if (!response) return ["No insights available at this time."];
+  
+  // Split by newline and clean up numbering/bullets
+  return response
+    .split('\n')
+    .map(line => line.replace(/^(\d+\.|-|\*)\s*/, '').trim())
+    .filter(line => line.length > 0)
+    .slice(0, 3);
 }
 
 export interface CallScriptTemplate {

@@ -201,10 +201,11 @@ export function AIBotWidget() {
       const generateInsights = async () => {
         setInsightsLoading(true);
         try {
-          const newInsights = await generatePageInsights(path);
-          setInsights(newInsights);
+          const res = await generatePageInsights(path, { pageData });
+          setInsights(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error('[🤖 Insights] Failed to generate:', err);
+          setInsights([]);
         } finally {
           setInsightsLoading(false);
         }
@@ -349,7 +350,7 @@ export function AIBotWidget() {
 
         // Load combined history from memory store after sync
         const memory = getMemory();
-        if (memory.history.length > 0) {
+        if (memory?.history && Array.isArray(memory.history)) {
           const chatHistory: ChatMessage[] = memory.history.map((m, i) => ({
             id: `hist-${i}-${m.timestamp}`,
             role: m.role === 'assistant' ? 'ai' : 'user',
@@ -1110,7 +1111,7 @@ export function AIBotWidget() {
             }}
           >
             {/* Proactive Insights */}
-            {insights.length > 0 && (
+            {Array.isArray(insights) && insights.length > 0 && (
               <div className="bg-[var(--t-primary)]/5 border border-[var(--t-primary)]/10 rounded-2xl p-3 mb-2 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--t-primary)] flex items-center gap-1.5">
@@ -1147,7 +1148,7 @@ export function AIBotWidget() {
               </div>
             )}
 
-            {messages.map((msg) => {
+            {messages?.map((msg) => {
               if (msg.type === 'learning-buttons') {
                 return (
                   <AIBotLearningButtons

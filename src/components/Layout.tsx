@@ -21,6 +21,8 @@ import { AIBotWidget } from './AIBotWidget';
 import { QuickNotes } from './QuickNotes';
 import { LeadFormModal } from './LeadFormModal';
 import { Logo } from './Logo';
+import { ThemeSwitcher } from './ThemeSwitcher';
+import { CustomCursor } from './CustomCursor';
 
 interface UserTeam {
   teamId: string;
@@ -725,6 +727,9 @@ export function Layout() {
                 </>
               )}
 
+              <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5 opacity-50" />
+              <div className="hover:scale-110 transition-transform"><ThemeSwitcher /></div>
+              <div className="w-[1px] h-3 bg-[var(--t-border)] mx-0.5 opacity-50" />
               <div className="hover:scale-110 transition-transform"><NotificationPanel /></div>
             </div>
             <div className="hover:scale-105 active:scale-95 transition-all">
@@ -739,6 +744,7 @@ export function Layout() {
       </div>
 
       <AIBotWidget />
+      <CustomCursor />
       
       {activeLeadModalId && (
         <LeadFormModal leadId={activeLeadModalId} isOpen={!!activeLeadModalId} onClose={() => setActiveLeadModalId(null)} />
