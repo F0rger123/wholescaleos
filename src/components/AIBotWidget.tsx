@@ -148,7 +148,7 @@ export function AIBotWidget() {
     isAiOpen, setAiOpen,
     currentUser, showFloatingAIWidget, incrementAiUsage,
     aiModel, isAiDocked, setAiDocked,
-    sidebarOpen, aiName,
+    sidebarOpen, aiName, onboarding_ai_choice_seen,
     credits_remaining, refreshCredits, setOnboardingAiChoiceSeen
   } = useStore();
   const [speechEnabled, setSpeechEnabled] = useState(() => voiceService.isSpeechEnabled());

@@ -39,10 +39,18 @@ export function UserMenu({ onOpenChange }: UserMenuProps) {
         className="flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-300 hover-lift astral-glass border border-white/10 group"
       >
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black italic shadow-lg shadow-indigo-600/20 group-hover:scale-110 transition-transform"
+          className="w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black italic shadow-lg shadow-indigo-600/20 group-hover:scale-110 transition-transform overflow-hidden"
           style={{ background: 'var(--t-gradient)', color: 'var(--t-on-primary)' }}
         >
-          {getInitials()}
+          {currentUser.avatarUrl || (currentUser.avatar && currentUser.avatar.includes('http')) ? (
+            <img 
+              src={currentUser.avatarUrl || currentUser.avatar} 
+              alt={currentUser.name} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            getInitials()
+          )}
         </div>
         <div className="text-left hidden sm:block">
           <p className="text-[10px] font-black uppercase tracking-widest leading-none mb-1 italic" style={{ color: 'var(--t-text)' }}>{currentUser.name.split(' ')[0]}</p>
