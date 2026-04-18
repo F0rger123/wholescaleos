@@ -78,14 +78,6 @@ function AnimatedCounter({ value, formatter, duration = 1200 }: {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const statusBarColors: Record<string, string> = {
-  new: 'bg-[var(--t-info)]', 
-  contacted: 'bg-[var(--t-warning)]', 
-  qualified: 'bg-[var(--t-accent)]',
-  negotiating: 'bg-[var(--t-warning)]', 
-  'closed-won': 'bg-[var(--t-success)]', 
-  'closed-lost': 'bg-[var(--t-error)]',
-};
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string; bar: string; label: string }> = {
   'bandit-signs': { bg: 'rgba(239, 68, 68, 0.15)', text: 'rgb(248, 113, 113)', bar: 'rgb(239, 68, 68)', label: 'Bandit Signs' },
@@ -301,14 +293,6 @@ export default function Dashboard() {
   ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
    .slice(0, 8);
 
-  const recentLeads = [...dataToUse]
-    .filter(l => l && l.name && l.updatedAt)
-    .sort((a, b) => {
-      const db = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-      const da = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-      return db - da;
-    })
-    .slice(0, 6);
 
   const pipelineStages = [
     { label: 'New', key: 'new' },
